@@ -35,19 +35,23 @@ MediaTypeGroup["static"] =      MediaTypes[[{1, 2, 3, 4, 6, 7, 8, 9}]];*)
 (*Regular expression macros (alphabetical)*)
 
 
-(* ::Text:: *)
-(*REs are defined using strings and have their own requirements, e.g. the complete list of characters that need to be escaped in a RE consists of . \ ? ( ) { } [ ] ^ $ * + |*)
-(*Inside a RE character class [], the complete list of escaped characters is ^ - \ [ ]*)
-(*Thus, using strings to define a RE can be tricky. Special cases:*)
-(*\\\\ defines a literal backslash*)
-(*\\. defines a literal period*)
-(*Though double quotes do not need to be escaped in the RE, WL strings still need to have the character escaped.*)
-(*CSS is case-insensitive, so A-Z ranges are included alongside a-z ranges, even though this is not in the specification.*)
-(*For clarity, all macros are surround by parenthesis to keep them isolated from other RE patterns when combining them into larger patterns.*)
+(*
+	WL strings use the backslash \ as the escape character. 
+	WL string characters that require escaping consist of double quote and backslash i.e. "\
+	REs are defined using strings and have their own additional rules:
+		The complete list of characters that need to be escaped in a RE consists of .\?(){}[]^$*+|
+		Inside a RE character class [...], the complete list of escaped characters is ^-\[]
+	Special cases to watch out for:
+		\\\\ defines a literal backslash
+		\\.  defines a literal period
+	Though double quotes do not need to be escaped in the RE, WL strings still need to have the character escaped.
+	CSS is case-insensitive, so A-Z ranges are included alongside a-z ranges, even though this is not in the specification.
+	For clarity, all macros are surround by parenthesis to keep them isolated from other RE patterns.
+*)
 
 
 RE["badcomment"]  = "(" ~~ RE["badcomment1"] ~~ "|" ~~ RE["badcomment2"] ~~ ")";
-RE["badcomment1"] = "(\\/\\*[^*]*\\*+([^/*][^*]*\\*+)*)"; (* literal asterisks in RE only outside [] *)
+RE["badcomment1"] = "(\\/\\*[^*]*\\*+([^/*][^*]*\\*+)*)"; (* literal asterisks in RE only outside of RE character class [] *)
 RE["badcomment2"] = "(\\/\\*[^*]*(\\*+[^/*][^*]*)*)";
 RE["badstring"]   = "(" ~~ RE["badstring1"] ~~ "|" ~~ RE["badstring2"] ~~ ")";
 RE["badstring1"]  = "(\\\"([^\n\r\f\\\"]|\\\\" ~~ RE["nl"] ~~ "|" ~~ RE["escape"] ~~ ")*\\\\?)"; 
@@ -146,6 +150,7 @@ T["PAGE_SYM"]   = "(@" ~~ RE["P"] ~~ RE["A"] ~~ RE["G"] ~~ RE["E"] ~~ ")";
 T["PERCENTAGE"] = "(" ~~ RE["num"] ~~ "%)";
 
 T["S"]      = RE["s"];
+T["S*"]     = "(" ~~ RE["s"] ~~ "*" ~~ ")"; (* this is not in the spec, but makes productions cleaner *)
 T["STRING"] = RE["string"];
 
 T["TIME"] = "((" ~~ RE["num"] ~~ RE["M"] ~~ RE["S"] ~~ ")|(" ~~ RE["num"] ~~ RE["H"] ~~ RE["Z"] ~~ "))";
@@ -160,44 +165,44 @@ T["URI"] =
 (*Productions (TODO, not all used)*)
 
 
-P["declaration"] := "(" ~~ P["property"] ~~ ":" ~~ T["S"] ~~ "*" ~~ P["expr"] ~~ P["prio"] ~~ "?)";
-P["prio"]        := "(" ~~ T["IMPORTANT_SYM"] ~~ T["S"] ~~ "*" ~~ ")";
+P["declaration"] := "(" ~~ P["property"] ~~ ":" ~~ T["S*"] ~~ P["expr"] ~~ P["prio"] ~~ "?)";
+P["prio"]        := "(" ~~ T["IMPORTANT_SYM"] ~~ T["S*"] ~~ ")";
 P["expr"]        := "(" ~~ P["term"] ~~ "(" ~~ P["operator"] ~~ "?" ~~ P["term"] ~~ ")*)";
-P["property"]    := "(" ~~ T["IDENT"] ~~ T["S"] ~~ "*" ~~ ")";
-P["operator"]    := "((/" ~~ T["S"] ~~ "*)|(," ~~ T["S"] ~~ "*))";
+P["property"]    := "(" ~~ T["IDENT"] ~~ T["S*"] ~~ ")";
+P["operator"]    := "((/" ~~ T["S*"] ~~ ")|(," ~~ T["S*"] ~~ "))";
 
 P["term"] := 
 	StringExpression[
-		"(" ~~ T["STRING"]   ~~ T["S"] ~~ "*" ~~ ")" ~~ "|",
-		"(" ~~ T["URI"]      ~~ T["S"] ~~ "*" ~~ ")" ~~ "|",
-		(*"(" ~~ P["function"] ~~ T["S"] ~~ "*" ~~ ")" ~~ "|",*) (* avoid recursion by only looking for function head *)
-		"(" ~~ T["FUNCTION"] ~~ T["S"] ~~ "*" ~~ ")" ~~ "|",
-		"(" ~~ T["IDENT"]    ~~ T["S"] ~~ "*" ~~ ")" ~~ "|",
-		"(" ~~ P["hexcolor"] ~~ T["S"] ~~ "*" ~~ ")" ~~ "|",
+		"(" ~~ T["STRING"]   ~~ T["S*"] ~~ ")" ~~ "|",
+		"(" ~~ T["URI"]      ~~ T["S*"] ~~ ")" ~~ "|",
+		(*"(" ~~ P["function"] ~~ T["S*"] ~~ ")" ~~ "|",*) (* avoid recursion by only looking for function head *)
+		"(" ~~ T["FUNCTION"] ~~ T["S*"] ~~ ")" ~~ "|",
+		"(" ~~ T["IDENT"]    ~~ T["S*"] ~~ ")" ~~ "|",
+		"(" ~~ P["hexcolor"] ~~ T["S*"] ~~ ")" ~~ "|",
 		"(" ~~ 
-			"(" ~~ T["TIME"]        ~~ T["S"] ~~ "*" ~~ ")" ~~ "|" ~~
-			"(" ~~ T["LENGTH"]      ~~ T["S"] ~~ "*" ~~ ")" ~~ "|" ~~
-			"(" ~~ T["FREQ"]        ~~ T["S"] ~~ "*" ~~ ")" ~~ "|" ~~
-			"(" ~~ T["ANGLE"]       ~~ T["S"] ~~ "*" ~~ ")" ~~ "|" ~~
-			"(" ~~ T["EMS"]         ~~ T["S"] ~~ "*" ~~ ")" ~~ "|" ~~
-			"(" ~~ T["EXS"]         ~~ T["S"] ~~ "*" ~~ ")" ~~ "|" ~~
-			"(" ~~ T["PERCENTAGE"]  ~~ T["S"] ~~ "*" ~~ ")" ~~ "|" ~~
-			"(" ~~ T["NUMBER"]      ~~ T["S"] ~~ "*" ~~ ")" ~~ 
+			"(" ~~ T["TIME"]        ~~ T["S*"] ~~ ")" ~~ "|" ~~
+			"(" ~~ T["LENGTH"]      ~~ T["S*"] ~~ ")" ~~ "|" ~~
+			"(" ~~ T["FREQ"]        ~~ T["S*"] ~~ ")" ~~ "|" ~~
+			"(" ~~ T["ANGLE"]       ~~ T["S*"] ~~ ")" ~~ "|" ~~
+			"(" ~~ T["EMS"]         ~~ T["S*"] ~~ ")" ~~ "|" ~~
+			"(" ~~ T["EXS"]         ~~ T["S*"] ~~ ")" ~~ "|" ~~
+			"(" ~~ T["PERCENTAGE"]  ~~ T["S*"] ~~ ")" ~~ "|" ~~
+			"(" ~~ T["NUMBER"]      ~~ T["S*"] ~~ ")" ~~ 
 		")"];
 		
-P["function"] := "(" ~~ T["FUNCTION"] ~~ T["S"] ~~ "*" ~~ P["expr"] ~~ "\\)" ~~ T["S"] ~~ "*" ~~ ")";
-P["hexcolor"] := "(" ~~ T["HASH"] ~~ T["S"] ~~ "*" ~~ ")";
+P["function"] := "(" ~~ T["FUNCTION"] ~~ T["S*"] ~~ P["expr"] ~~ "\\)" ~~ T["S*"] ~~ ")";
+P["hexcolor"] := "(" ~~ T["HASH"] ~~ T["S*"] ~~ ")";
 
 
 (*StringMatchQ["rect(1px,1px,1px,1px)", RegularExpression[
-T["FUNCTION"] ~~ T["S"] ~~ "*" ~~ 
+T["FUNCTION"] ~~ T["S*"] ~~ 
 	"(" ~~
-		"(" ~~ T["LENGTH"] ~~ T["S"] ~~ T["LENGTH"] ~~ T["S"] ~~ T["LENGTH"] ~~ T["S"] ~~ T["LENGTH"] ~~ T["S"] ~~ "*" ~~ ")" ~~ "|" ~~
+		"(" ~~ T["LENGTH"] ~~ T["S"] ~~ T["LENGTH"] ~~ T["S"] ~~ T["LENGTH"] ~~ T["S"] ~~ T["LENGTH"] ~~ T["S*"] ~~ ")" ~~ "|" ~~
 		"(" ~~ 
-			T["LENGTH"] ~~ T["S"] ~~ "*" ~~ "," ~~ T["S"] ~~ "*" ~~ 
-			T["LENGTH"] ~~ T["S"] ~~ "*" ~~ "," ~~ T["S"] ~~ "*" ~~ 
-			T["LENGTH"] ~~ T["S"] ~~ "*" ~~ "," ~~ T["S"] ~~ "*" ~~ 
-			T["LENGTH"] ~~ T["S"] ~~ "*" ~~ ")" ~~ 
+			T["LENGTH"] ~~ T["S*"] ~~ "," ~~ T["S*"] ~~ 
+			T["LENGTH"] ~~ T["S*"] ~~ "," ~~ T["S*"] ~~ 
+			T["LENGTH"] ~~ T["S*"] ~~ "," ~~ T["S*"] ~~ 
+			T["LENGTH"] ~~ T["S*"] ~~ ")" ~~ 
 	")" ~~ "\)"]]*)
 
 
