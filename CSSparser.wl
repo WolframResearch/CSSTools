@@ -311,7 +311,7 @@ label["term", x_String] :=
 	Within Style, graphics directives are first converted to options.
 	
 	For border/margin properties, converting the number of provided CSS values to WL {{left, right}, {bottom, top}}
-		1: applies to all sides                          {{1, 1}, {1, 1}}
+		1: applies to all sides                         {{1, 1}, {1, 1}}
 		2: 1 -> top + bottom, 2 -> right + left         {{2, 2}, {1, 1}}
 		3: 1 -> top, 2 -> right + left, 3 -> bottom     {{2, 2}, {3, 1}}
 		4: 1 -> top, 2 -> right, 3 -> bottom, 4 -> left {{4, 2}, {3, 1}}
@@ -539,19 +539,13 @@ parse[prop:"border-collapse", tokens:{{_String, _String}..}] :=
 
 (* Setting a single border/frame is only possible in WL if all 4 edges are specified at the same time. *)
 parse[prop:"border-top-color"|"border-right-color"|"border-bottom-color"|"border-left-color", tokens:{{_String, _String}..}] := 
-	Module[{value, init},
+	Module[{value, wrapper},
 		value = parseSingleColor[prop, tokens];
 		If[FailureQ[value], 
 			value
 			, 
-			init = {{None, None}, {None, None}};
-			Switch[prop,
-				"border-top-color",    init[[2, 2]] = value,
-				"border-right-color",  init[[1, 2]] = value,
-				"border-bottom-color", init[[2, 1]] = value,
-				"border-left-color",   init[[1, 1]] = value
-			];
-			{FrameStyle -> init, CellFrameColor -> value}
+			wrapper = Switch[prop, "border-top-color", Top, "border-right-color", Right, "border-bottom-color", Bottom, "border-left-color", Left];
+			{FrameStyle -> wrapper[value], Cell[CellFrameColor -> value]}
 		]
 	]	
 
@@ -568,10 +562,10 @@ parse[prop:"border-color", tokens:{{_String, _String}..}] :=
 			];
 		];
 		Switch[Length[results],
-			1, {FrameStyle -> results[[1]], CellFrameColor -> results[[1]]},
-			2, {FrameStyle -> {{results[[2]], results[[2]]}, {results[[1]], results[[1]]}}, CellFrameColor -> First @ results},
-			3, {FrameStyle -> {{results[[2]], results[[2]]}, {results[[3]], results[[1]]}}, CellFrameColor -> First @ results},
-			4, {FrameStyle -> {{results[[4]], results[[2]]}, {results[[3]], results[[1]]}}, CellFrameColor -> First @ results},
+			1, {FrameStyle -> {{results[[1]], results[[1]]}, {results[[1]], results[[1]]}}, Cell[CellFrameColor -> First @ results]},
+			2, {FrameStyle -> {{results[[2]], results[[2]]}, {results[[1]], results[[1]]}}, Cell[CellFrameColor -> First @ results]},
+			3, {FrameStyle -> {{results[[2]], results[[2]]}, {results[[3]], results[[1]]}}, Cell[CellFrameColor -> First @ results]},
+			4, {FrameStyle -> {{results[[4]], results[[2]]}, {results[[3]], results[[1]]}}, Cell[CellFrameColor -> First @ results]},
 			_, tooManyTokensFailure @ tokens
 		]
 	]
@@ -582,7 +576,7 @@ parse[prop:"border-color", tokens:{{_String, _String}..}] :=
 
 
 (* 
-	'border-spacing' isn't a 1-to-1 match with Spacings, but it's close.
+	'border-spacing' isn't a 1-to-1 match with WL Grid's Spacings option, but it's close.
 	WL Grid does not allow gaps between items. Spacings is already in units of the current FontSize.
 	Also Spacings applies to the outer margins as well, but 'border-spacing' is internal only.
 	Because each item is padded on either side, divide the result in half.
@@ -641,20 +635,14 @@ parseSingleBorderStyle[prop_String, token:{_String, _String}] :=
 	As a compromise set the other edges to Inherited.
 *)
 parse[prop:"border-top-style"|"border-right-style"|"border-bottom-style"|"border-left-style", tokens:{{_String, _String}..}] := 
-	Module[{value, init},
+	Module[{value, wrapper},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBorderStyle[prop, tokens[[1]]];
 		If[FailureQ[value], 
 			value
 			, 
-			init = {{None, None}, {None, None}};
-			Switch[prop,
-				"border-top-style",    init[[2, 2]] = value,
-				"border-right-style",  init[[1, 2]] = value,
-				"border-bottom-style", init[[2, 1]] = value,
-				"border-left-style",   init[[1, 1]] = value
-			];
-			FrameStyle -> init
+			wrapper = Switch[prop, "border-top-style", Top, "border-right-style", Right, "border-bottom-style", Bottom, "border-left-style", Left];
+			FrameStyle -> wrapper[value]
 		]
 	]	
 	
@@ -666,7 +654,7 @@ parse[prop:"border-style", tokens:{{_String, _String}..}] :=
 			If[FailureQ[value], Return @ value, AppendTo[results, value]; pos++];
 		];
 		Switch[Length[results],
-			1, FrameStyle -> results[[1]],
+			1, FrameStyle -> {{results[[1]], results[[1]]}, {results[[1]], results[[1]]}},
 			2, FrameStyle -> {{results[[2]], results[[2]]}, {results[[1]], results[[1]]}},
 			3, FrameStyle -> {{results[[2]], results[[2]]}, {results[[3]], results[[1]]}}, 
 			4, FrameStyle -> {{results[[4]], results[[2]]}, {results[[3]], results[[1]]}},
@@ -697,25 +685,22 @@ parseSingleBorderWidth[prop_String, token:{_String, _String}] :=
 	]
 
 
+convertToCellThickness[x_] := Switch[x, AbsoluteThickness[_], First[x], Thickness[_], First[x] /. {Small -> 1, Medium -> 2, Large -> 4}, _, x]
+
+
 (*
 	Setting a single border/frame is only possible in WL if all 4 edges are specified at the same time.
 	As a compromise set the other edges to Inherited.
 *)
 parse[prop:"border-top-width"|"border-right-width"|"border-bottom-width"|"border-left-width", tokens:{{_String, _String}..}] := 
-	Module[{value, init},
+	Module[{value, wrapper},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBorderWidth[prop, tokens[[1]]];
 		If[FailureQ[value], 
 			value
 			, 
-			init = {{None, None}, {None, None}};
-			Switch[prop,
-				"border-top-width",    init[[2, 2]] = value,
-				"border-right-width",  init[[1, 2]] = value,
-				"border-bottom-width", init[[2, 1]] = value,
-				"border-left-width",   init[[1, 1]] = value
-			];
-			FrameStyle -> init
+			Switch[prop, "border-top-width", Top, "border-right-width",  Right, "border-bottom-width", Bottom, "border-left-width", Left];
+			{FrameStyle -> wrapper[value], Cell[CellFrame -> wrapper[convertToCellThickness @ value]]}
 		]
 	]	
 	
@@ -727,13 +712,16 @@ parse[prop:"border-width", tokens:{{_String, _String}..}] :=
 			value = parseSingleBorderWidth[prop, tokens[[pos]]];
 			If[FailureQ[value], Return @ value, AppendTo[results, value]; pos++];
 		];
-		Switch[Length[results],
-			1, FrameStyle -> results[[1]],
-			2, FrameStyle -> {{results[[2]], results[[2]]}, {results[[1]], results[[1]]}},
-			3, FrameStyle -> {{results[[2]], results[[2]]}, {results[[3]], results[[1]]}}, 
-			4, FrameStyle -> {{results[[4]], results[[2]]}, {results[[3]], results[[1]]}},
-			_, tooManyTokensFailure @ tokens
-		]
+		(* expand out results  to {{L,R},{B,T}} *)
+		results = 
+			Switch[Length[results],
+				1, {{results[[1]], results[[1]]}, {results[[1]], results[[1]]}},
+				2, {{results[[2]], results[[2]]}, {results[[1]], results[[1]]}},
+				3, {{results[[2]], results[[2]]}, {results[[3]], results[[1]]}}, 
+				4, {{results[[4]], results[[2]]}, {results[[3]], results[[1]]}},
+				_, Return @ tooManyTokensFailure @ tokens
+			];
+		{FrameStyle -> results, Cell[CellFrame -> Map[convertToCellThickness, results, {2}]]}
 	]
 
 
@@ -742,12 +730,13 @@ parse[prop:"border-width", tokens:{{_String, _String}..}] :=
 
 
 (* 
-	Shorthand for border-*-width/style/color. Any property not specified takes on its default value. 
+	Shorthand for border-*-width/style/color. 
+	This effectively resets all edges because any property not specified takes on its default value. 
 	'border' by itself sets all 4 edges to be the same.
 *)
 parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], p, value, init, initAll, start, stop, acquiredColor = False, acquiredDashing = False, acquiredThickness = False},
-		init = {}; (* to hold possible color, dashing, thicknes *)
+	Module[{pos = 1, l = Length[tokens], p, value, init, dirAll, dir, start, stop, acquiredColor = False, acquiredDashing = False, acquiredThickness = False},
+		init = <|"color" -> None, "dashing" -> None, "thickness" -> None|>; 
 		
 		If[l == 1, (* if only one token is present, then it should be a keyword *)
 			Return @  
@@ -755,7 +744,7 @@ parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", t
 					"inherit", Inherited,
 					"initial", None, (* because border-style is 'none', all properties are reset *)
 					"none",    None,
-					_, unrecognizedKeyWordFailure @ prop
+					_,         unrecognizedKeyWordFailure @ prop
 				]
 		];
 		
@@ -769,26 +758,43 @@ parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", t
 					parseSingleBorderWidth[prop, First @ tokens[[start ;; stop]]]};
 				p = FirstPosition[value, Except[_?FailureQ], Return @ unrecognizedValueFailure @ prop, {1}, Heads -> False][[1]];
 				Switch[p, 
-					1, If[acquiredColor,     Return @ repeatedPropValueFailure @ "color", acquiredColor = True], 
-					2, If[acquiredDashing,   Return @ repeatedPropValueFailure @ "style", acquiredDashing = True], 
-					3, If[acquiredThickness, Return @ repeatedPropValueFailure @ "width", acquiredThickness = True]
+					1, If[acquiredColor,     Return @ repeatedPropValueFailure @ "color", init["color"] = value[[p]];     acquiredColor = True], 
+					2, If[acquiredDashing,   Return @ repeatedPropValueFailure @ "style", init["dashing"] = value[[p]];   acquiredDashing = True], 
+					3, If[acquiredThickness, Return @ repeatedPropValueFailure @ "width", init["thickness"] = value[[p]]; acquiredThickness = True]
 				];
-				AppendTo[init, value[[p]]];
 				,
 				Return @ unrecognizedValueFailure @ prop
 			];
 			pos++; skipWhitespace[pos, l, tokens];
 		];
-		init = Directive @@ init;
-		initAll ={{initialValues @ "border-left", initialValues @ "border-right"}, {initialValues @ "border-bottom", initialValues @ "border-top"}};
-		FrameStyle -> 
-			Switch[prop,
-				"border",        init,
-				"border-top",    initAll[[2, 2]] = init; initAll,
-				"border-right",  initAll[[1, 2]] = init; initAll,
-				"border-bottom", initAll[[2, 1]] = init; initAll,
-				"border-left",   initAll[[1, 1]] = init; initAll
-			]
+		(* reset all sides to their initial values *)
+		{
+			FrameStyle -> (
+				dirAll = Map[initialValues, {{"border-left", "border-right"}, {"border-bottom", "border-top"}}, {2}];
+				dir = Directive @@ {If[acquiredColor, init["color"], Nothing], If[acquiredDashing, init["dashing"], Nothing], If[acquiredThickness, init["thickness"], Nothing]};
+				Switch[prop,
+					"border",        dirAll = {{dir, dir}, {dir, dir}},
+					"border-top",    dirAll[[2, 2]] = dir,
+					"border-right",  dirAll[[1, 2]] = dir,
+					"border-bottom", dirAll[[2, 1]] = dir,
+					"border-left",   dirAll[[1, 1]] = dir
+				];
+				dirAll),
+			
+			Cell[
+				CellFrameColor -> If[acquiredColor, init["color"], Black],
+				CellFrame -> (
+					dirAll = Map[initialValues, {{"border-left", "border-right"}, {"border-bottom", "border-top"}}, {2}];
+					dir = If[acquiredThickness, convertToCellThickness @ init["thickness"], None];
+					Switch[prop,
+						"border",        dirAll = {{dir, dir}, {dir, dir}},
+						"border-top",    dirAll[[2, 2]] = dir,
+						"border-right",  dirAll[[1, 2]] = dir,
+						"border-bottom", dirAll[[2, 1]] = dir,
+						"border-left",   dirAll[[1, 1]] = dir
+					];
+					dirAll)]
+		}
 	]
 
 
@@ -1227,24 +1233,18 @@ parseSingleMargin[prop_String, token:{_String, _String}] :=
 
 
 (* 
-	CSS margins --> WL ImageMargins
-	CSS padding --> WL FrameMargins 
+	CSS margins --> WL ImageMargins and CellMargins
+	CSS padding --> WL FrameMargins and CellFrameMargins
 *)
 parse[prop:"margin-top"|"margin-right"|"margin-bottom"|"margin-left", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], init, value},
+	Module[{pos = 1, l = Length[tokens], wrapper, value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleMargin[prop, tokens[[1]]];
 		If[FailureQ[value], 
 			value
 			, 
-			init = {{None, None}, {None, None}};
-			Switch[prop,
-				"margin-left",   init[[1, 1]] = value,
-				"margin-right",  init[[1, 2]] = value,
-				"margin-bottom", init[[2, 1]] = value,
-				"margin-top",    init[[2, 2]] = value
-			];
-			ImageMargins -> init
+			wrapper = Switch[prop, "margin-left", Left, "margin-right", Right, "margin-bottom", Bottom, "margin-top", Top];
+			{ImageMargins -> wrapper[value], Cell[CellMargins -> wrapper[value]]}
 		]
 	]
 		
@@ -1258,13 +1258,16 @@ parse[prop:"margin", tokens:{{_String, _String}..}] :=
 				AppendTo[results, value]; pos++; skipWhitespace[pos, l, tokens];
 			];
 		];
-		Switch[Length[results],
-			1, ImageMargins -> results[[1]],
-			2, ImageMargins -> {{results[[2]], results[[2]]}, {results[[1]], results[[1]]}},
-			3, ImageMargins -> {{results[[2]], results[[2]]}, {results[[3]], results[[1]]}}, 
-			4, ImageMargins -> {{results[[4]], results[[2]]}, {results[[3]], results[[1]]}},
-			_, tooManyTokensFailure @ tokens
-		]
+		(* expand out results  to {{L,R},{B,T}} *)
+		results = 
+			Switch[Length[results],
+				1, {{results[[1]], results[[1]]}, {results[[1]], results[[1]]}},
+				2, {{results[[2]], results[[2]]}, {results[[1]], results[[1]]}},
+				3, {{results[[2]], results[[2]]}, {results[[3]], results[[1]]}}, 
+				4, {{results[[4]], results[[2]]}, {results[[3]], results[[1]]}},
+				_, Return @ tooManyTokensFailure @ tokens
+			];
+		{ImageMargins -> results, Cell[CellMargins -> results]}
 	]
 
 
@@ -1307,24 +1310,18 @@ parseSinglePadding[prop_String, token:{_String, _String}] :=
 
 
 (* 
-	CSS margins --> WL ImageMargins
-	CSS padding --> WL FrameMargins 
+	CSS margins --> WL ImageMargins and CellMargins
+	CSS padding --> WL FrameMargins and CellFrameMargins
 *)
 parse[prop:"padding-top"|"padding-right"|"padding-bottom"|"padding-left", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], init, value},
+	Module[{pos = 1, l = Length[tokens], wrapper, value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSinglePadding[prop, tokens[[1]]];
 		If[FailureQ[value], 
 			value
 			, 
-			init = {{None, None}, {None, None}};
-			Switch[prop,
-				"padding-left",   init[[1, 1]] = value,
-				"padding-right",  init[[1, 2]] = value,
-				"padding-bottom", init[[2, 1]] = value,
-				"padding-top",    init[[2, 2]] = value
-			];
-			FrameMargins -> init
+			wrapper = Switch[prop, "padding-left", Left, "padding-right", Right, "padding-bottom", Bottom, "padding-top", Top];
+			{FrameMargins -> wrapper[value], Cell[CellFrameMargins -> wrapper[value]]}
 		]
 	]
 		
@@ -1338,13 +1335,16 @@ parse[prop:"padding", tokens:{{_String, _String}..}] :=
 				AppendTo[results, value]; pos++; skipWhitespace[pos, l, tokens];
 			];
 		];
-		Switch[Length[results],
-			1, FrameMargins -> results[[1]],
-			2, FrameMargins -> {{results[[2]], results[[2]]}, {results[[1]], results[[1]]}},
-			3, FrameMargins -> {{results[[2]], results[[2]]}, {results[[3]], results[[1]]}}, 
-			4, FrameMargins -> {{results[[4]], results[[2]]}, {results[[3]], results[[1]]}},
-			_, tooManyTokensFailure @ tokens
-		]
+		(* expand out results  to {{L,R},{B,T}} *)
+		results = 
+			Switch[Length[results],
+				1, {{results[[1]], results[[1]]}, {results[[1]], results[[1]]}},
+				2, {{results[[2]], results[[2]]}, {results[[1]], results[[1]]}},
+				3, {{results[[2]], results[[2]]}, {results[[3]], results[[1]]}}, 
+				4, {{results[[4]], results[[2]]}, {results[[3]], results[[1]]}},
+				_, Return @ tooManyTokensFailure @ tokens
+			];
+		{FrameMargins -> results, Cell[CellFrameMargins -> results]}
 	]
 
 
@@ -1416,7 +1416,7 @@ parseCellBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] :=
 				"ems" | "exs" | "percentage", Missing["Not available."],
 				_, unrecognizedValueFailure @ prop
 			];
-		If[FailureQ[value], value, CellBaseline -> value]
+		If[FailureQ[value], value, Cell[CellBaseline -> value]]
 	]
 
 
@@ -1619,15 +1619,15 @@ processUnknowns[a:{__Association}] :=
 	]*)
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Properties*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*List of properties*)
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Strictly only CSS2.1 properties.*)
 
 
