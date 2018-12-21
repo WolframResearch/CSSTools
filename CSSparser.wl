@@ -338,7 +338,7 @@ positiveLengthFailure[prop_String] :=      Failure["UnexpectedParse", <|"Message
 invalidFunctionFailure[function_string] := Failure["UnexpectedParse", <|"Message" -> "Invalid function.", "Function" -> function|>];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*initial values*)
 
 
@@ -375,6 +375,7 @@ initialValues = <|
 	"font-weight"    -> Plain,    (* 'normal' *)
 	"height"         -> Automatic, (* 'auto' *)
 	"line-height"    -> {1.2, 0}, (* 'normal' *)
+	"list-style-type" -> "\[FilledCircle]",
 	"margin-top"     -> 0,
 	"margin-bottom"  -> 0,
 	"margin-left"    -> 0,
@@ -1211,6 +1212,58 @@ parse[prop:"line-height", tokens:{{_String, _String}..}] :=
 
 (* ::Subsection:: *)
 (*list-style (TODO: must be CellDingbat on Item style cell)*)
+
+
+(* ::Subsubsection:: *)
+(*list-style-image (TODO)*)
+
+
+(* ::Subsubsection:: *)
+(*list-style-position (TODO)*)
+
+
+(* ::Subsubsection:: *)
+(*list-style-type (TODO)*)
+
+
+parse[prop:"list-style-type", tokens:{{_String, _String}..}] := 
+	Module[{value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"inherit",              Inherited,
+						"initial",              initialValues @ prop, 
+						"disc",                 "\[FilledCircle]",
+						"circle",               "\[EmptyCircle]",
+						"square",               "\[FilledSquare]",
+						"decimal",              Cell[TextData[{CounterBox["Item"], "."}]],
+						"decimal-leading-zero", ,
+						"lower-roman",          Cell[TextData[{CounterBox["Item", CounterFunction :> FrontEnd`RomanNumeral], "."}]],
+						"upper-roman",          Cell[TextData[{CounterBox["Item", CounterFunction :> FrontEnd`CapitalRomanNumeral], "."}]],
+						"lower-greek",          ,
+						"lower-latin",          ,
+						"upper-latin",          ,
+						"armenian",             ,
+						"georgian",             ,
+						"lower-alpha",          ,
+						"upper-alpha",          ,
+						"none",                 None,
+						_,                      unrecognizedKeyWordFailure @ prop
+					],
+				"number",      With[{n = Interpreter["Number"] @ tokens[[1, 2]]}, negativeQ[n, prop, {n, 0}]],
+				"length",      With[{n = parseLength @ tokens[[1, 2]]},           negativeQ[n, prop, {n, 0}]],
+				"ems" | "exs", With[{n = parseEmNonRelative @ tokens[[1, 2]]},    negativeQ[n, prop, {n, 0}]],
+				"percentage",  With[{n = parsePercentage @ tokens[[1, 2]]},       negativeQ[n, prop, {n/100, 0}]],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, LineSpacing -> value]
+	]
+
+
+(* ::Subsubsection:: *)
+(*list-style (TODO)*)
 
 
 (* ::Subsection::Closed:: *)
