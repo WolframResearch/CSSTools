@@ -336,6 +336,8 @@ unrecognizedValueFailure[prop_String] :=   Failure["UnexpectedParse", <|"Message
 negativeLengthFailure[prop_String] :=      Failure["UnexpectedParse", <|"Message" -> prop <> "length must be non-negative."|>];
 positiveLengthFailure[prop_String] :=      Failure["UnexpectedParse", <|"Message" -> prop <> "length must be positive."|>];
 invalidFunctionFailure[function_string] := Failure["UnexpectedParse", <|"Message" -> "Invalid function.", "Function" -> function|>];
+couldNotImportFailure[uri_String] :=       Failure["UnexpectedParse", <|"Message" -> "Failed to import from URI.", "URI" -> uri|>];
+notAnImageFailure[uri_String] :=           Failure["UnexpectedParse", <|"Message" -> "Asset is not an image.", "URI" -> uri|>]
 
 
 (* ::Subsection:: *)
@@ -375,7 +377,10 @@ initialValues = <|
 	"font-weight"    -> Plain,    (* 'normal' *)
 	"height"         -> Automatic, (* 'auto' *)
 	"line-height"    -> {1.2, 0}, (* 'normal' *)
-	"list-style-type" -> "\[FilledCircle]",
+	"list-style-image"    -> None,
+	"list-style-type"     -> "\[FilledCircle]",
+	"list-style-position" -> Automatic,
+	"list-style"          -> None,
 	"margin-top"     -> 0,
 	"margin-bottom"  -> 0,
 	"margin-left"    -> 0,
@@ -1210,60 +1215,159 @@ parse[prop:"line-height", tokens:{{_String, _String}..}] :=
 	]
 
 
-(* ::Subsection:: *)
-(*list-style (TODO: must be CellDingbat on Item style cell)*)
+(* ::Subsection::Closed:: *)
+(*list-style*)
 
 
-(* ::Subsubsection:: *)
-(*list-style-image (TODO)*)
+(* ::Subsubsection::Closed:: *)
+(*list-style-image*)
 
 
-(* ::Subsubsection:: *)
-(*list-style-position (TODO)*)
-
-
-(* ::Subsubsection:: *)
-(*list-style-type (TODO)*)
-
-
-parse[prop:"list-style-type", tokens:{{_String, _String}..}] := 
+parseSingleListStyleImage[prop_String, token:{_String, _String}] := 
+	Switch[token[[1]],
+		"ident",
+			Switch[ToLowerCase @ token[[2]],
+				"inherit", Inherited,
+				"initial", initialValues @ prop, 
+				"none",    None,
+				_,         unrecognizedKeyWordFailure @ prop
+			],
+		"uri", 
+			With[{im = Import[token[[2]]]}, 
+				Which[
+					FailureQ[im], couldNotImportFailure @ token[[2]], 
+					!ImageQ[im],  notAnImageFailure @ token[[2]],
+					_,            ToBoxes @ Dynamic @ Image[im, ImageSize -> CurrentValue[FontSize]]
+				]
+			],
+		_, unrecognizedValueFailure @ prop
+	]
+	
+parse[prop:"list-style-image", tokens:{{_String, _String}..}] := 
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
-		value = 
-			Switch[tokens[[1, 1]],
-				"ident",
-					Switch[ToLowerCase @ tokens[[1, 2]],
-						"inherit",              Inherited,
-						"initial",              initialValues @ prop, 
-						"disc",                 "\[FilledCircle]",
-						"circle",               "\[EmptyCircle]",
-						"square",               "\[FilledSquare]",
-						"decimal",              Cell[TextData[{CounterBox["Item"], "."}]],
-						"decimal-leading-zero", ,
-						"lower-roman",          Cell[TextData[{CounterBox["Item", CounterFunction :> FrontEnd`RomanNumeral], "."}]],
-						"upper-roman",          Cell[TextData[{CounterBox["Item", CounterFunction :> FrontEnd`CapitalRomanNumeral], "."}]],
-						"lower-greek",          ,
-						"lower-latin",          ,
-						"upper-latin",          ,
-						"armenian",             ,
-						"georgian",             ,
-						"lower-alpha",          ,
-						"upper-alpha",          ,
-						"none",                 None,
-						_,                      unrecognizedKeyWordFailure @ prop
-					],
-				"number",      With[{n = Interpreter["Number"] @ tokens[[1, 2]]}, negativeQ[n, prop, {n, 0}]],
-				"length",      With[{n = parseLength @ tokens[[1, 2]]},           negativeQ[n, prop, {n, 0}]],
-				"ems" | "exs", With[{n = parseEmNonRelative @ tokens[[1, 2]]},    negativeQ[n, prop, {n, 0}]],
-				"percentage",  With[{n = parsePercentage @ tokens[[1, 2]]},       negativeQ[n, prop, {n/100, 0}]],
-				_, unrecognizedValueFailure @ prop
-			];
-		If[FailureQ[value], value, LineSpacing -> value]
+		value = parseSingleListStyleImage[prop, First @ tokens];
+		If[FailureQ[value], value, Cell[CellDingbat -> value]]
 	]
 
 
-(* ::Subsubsection:: *)
-(*list-style (TODO)*)
+(* ::Subsubsection::Closed:: *)
+(*list-style-position*)
+
+
+(* 
+	CellDingbat position is always outside the cell content and aligned with the first line of content.
+	Though the following validates the CSS, Mathematica does not include any position option.
+*)
+parseSingleListStylePosition[prop_String, token:{_String, _String}] := 
+	Switch[token[[1]],
+		"ident",
+			Switch[ToLowerCase @ token[[2]],
+				"inherit", Inherited,
+				"initial", initialValues @ prop, 
+				"inside",  Missing["Not supported."],
+				"outside", Automatic,
+				_,         unrecognizedKeyWordFailure @ prop
+			],
+		_, unrecognizedValueFailure @ prop
+	]
+	
+parse[prop:"list-style-position", tokens:{{_String, _String}..}] := 
+	Module[{value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = parseSingleListStylePosition[prop, First @ tokens];
+		If[FailureQ[value], value, Cell[Missing["Not supported."]]]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*list-style-type*)
+
+
+parseSingleListStyleType[prop_String, token:{_String, _String}] := 
+	Switch[token[[1]],
+		"ident",
+			Switch[ToLowerCase @ token[[2]],
+				"inherit",              Inherited,
+				"initial",              initialValues @ prop, 
+				"disc",                 "\[FilledCircle]",
+				"circle",               "\[EmptyCircle]",
+				"square",               "\[FilledSquare]",
+				"decimal",              Cell[TextData[{CounterBox["Item"], "."}]],
+				"decimal-leading-zero", Cell[TextData[{CounterBox["Item", CounterFunction :> (FEPrivate`If[FEPrivate`Greater[#, 9], #, FEPrivate`StringJoin["0", FEPrivate`ToString[#]]]&)], "."}]],
+				"lower-roman",          Cell[TextData[{CounterBox["Item", CounterFunction :> FrontEnd`RomanNumeral], "."}]],
+				"upper-roman",          Cell[TextData[{CounterBox["Item", CounterFunction :> FrontEnd`CapitalRomanNumeral], "."}]],
+				"lower-greek",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["\[Alpha]", "\[Omega]"], #]&)], "."}]],
+				"lower-latin",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["a", "z"], #]&)], "."}]],
+				"upper-latin",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["A", "Z"], #]&)], "."}]],
+				"armenian",             Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["\:0531", "\:0556"], #]&)], "."}]],
+				"georgian",             Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["\:10d0", "\:10fa"], #]&)], "."}]],
+				"lower-alpha",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["a", "z"], #]&)], "."}]],
+				"upper-alpha",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["A", "Z"], #]&)], "."}]],
+				"none",                 None,
+				_,                      unrecognizedKeyWordFailure @ prop
+			],
+		_, unrecognizedValueFailure @ prop
+	]
+	
+parse[prop:"list-style-type", tokens:{{_String, _String}..}] := 
+	Module[{value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = parseSingleListStyleType[prop, First @ tokens];
+		If[FailureQ[value], value, Cell[CellDingbat -> value]]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*list-style*)
+
+
+(* short-hand for list-style-image/position/type properties given in any order *)
+parse[prop:"list-style", tokens:{{_String, _String}..}] :=
+	Module[{pos = 1, l = Length[tokens], value, p, noneCount = 0, acquiredImage = False, acquiredPos = False, acquiredType = False},
+		(* parse and assign new font values *)
+		If[l == 1, 
+			value = 
+				Switch[ToLowerCase @ tokens[[1, 2]],
+					(* not sure why you would use this since list-style properties are inherited anyway...? *)
+					"inherit", Inherited,
+					"initial", None,
+					"none",    None,
+					_,         unrecognizedKeyWordFailure @ prop
+				];
+			Return @ If[FailureQ[value], value, Cell[CellDingbat -> value]]
+		];
+		
+		(* 
+			li-image, li-position, and li-type can appear in any order.
+			A value of 'none' sets whichever of li-type and li-image are not otherwise specified to 'none'. 
+			If both are specified, then an additional 'none' is an error.
+		*)
+		value = <|"image" -> None, "pos" -> Missing["Not available."], "type" -> None|>;
+		While[pos <= l,
+			If[TrueQ[ToLowerCase @ tokens[[pos, 2]] == "none"], 
+				noneCount++
+				,
+				value = {
+					parseSingleListStyleImage[prop, First @ tokens[[pos]]],
+					parseSingleListStylePosition[prop, First @ tokens[[pos]]],
+					parseSingleListStyleType[prop, First @ tokens[[pos]]]};
+					p = FirstPosition[value, Except[_?FailureQ], Return @ unrecognizedValueFailure @ prop, {1}, Heads -> False][[1]];
+				Switch[p, 
+					1, If[acquiredImage, Return @ repeatedPropValueFailure @ "image",    value["image"] = value[[p]]; acquiredImage = True], 
+					2, If[acquiredPos,   Return @ repeatedPropValueFailure @ "position", value["pos"] = value[[p]];   acquiredPos = True], 
+					3, If[acquiredType,  Return @ repeatedPropValueFailure @ "type",     value["type"] = value[[p]];  acquiredType = True]
+				];
+			];
+			pos++; skipWhitespace[pos, l, tokens];
+		];
+		Which[
+			acquiredImage && acquiredType && noneCount > 0, repeatedPropValueFailure @ "none",
+			acquiredImage, Cell[CellDingbat -> value["image"]], (* default to Image if it could be found *)
+			acquiredType,  Cell[CellDingbat -> value["type"]],
+			True,          Cell[CellDingbat -> None]]
+		]
+	]
 
 
 (* ::Subsection::Closed:: *)
@@ -1721,7 +1825,7 @@ visual = {
 	"empty-cells", "float", 
 	(*"font", "font-family", "font-size", "font-style", "font-variant", "font-weight",*) 
 	(*"height", *)"left", "letter-spacing", (*"line-height", *)
-	"list-style", "list-style-image", "list-style-position", "list-style-type", 
+	(*"list-style", "list-style-image", "list-style-position", "list-style-type",*) 
 	(*"margin", "margin-bottom", "margin-left", "margin-right", "margin-top", *)
 	(*"max-height", "max-width", "min-height", "min-width", *)
 	(*"overflow", *)
