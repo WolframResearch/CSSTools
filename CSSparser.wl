@@ -368,6 +368,7 @@ initialValues = <|
 	"border-left"    -> None,
 	"border"         -> None,
 	"border-spacing" -> 0,
+	"bottom"         -> Automatic, (* 'auto' *)
 	"clip"           -> Missing["Not supported."],
 	"color"          -> Black,    (* no set CSS specification, so use reasonable setting *)
 	"font-family"    :> CurrentValue[{StyleDefinitions, "Text", FontFamily}], (* no set CSS specification, so use reasonable setting *)
@@ -376,6 +377,7 @@ initialValues = <|
 	"font-variant"   -> "Normal", (* 'normal' *)
 	"font-weight"    -> Plain,    (* 'normal' *)
 	"height"         -> Automatic, (* 'auto' *)
+	"left"           -> Automatic, (* 'auto' *)
 	"line-height"    -> {1.2, 0}, (* 'normal' *)
 	"list-style-image"    -> None,
 	"list-style-type"     -> "\[FilledCircle]",
@@ -396,6 +398,9 @@ initialValues = <|
 	"padding-left"   -> 0,
 	"padding-right"  -> 0,
 	"padding"        -> 0, (* sets all 4 sides *)
+	"position"       -> Automatic, (* 'static' *)
+	"right"          -> Automatic, (* 'auto' *)
+	"top"            -> Automatic, (* 'auto' *)
 	"vertical-align" -> Baseline, (* 'baseline' *)
 	"width"          -> Automatic (* 'auto' *)
 	|>;
@@ -1503,6 +1508,62 @@ parse[prop:"padding", tokens:{{_String, _String}..}] :=
 			];
 		{FrameMargins -> results, Cell[CellFrameMargins -> results]}
 	]
+
+
+(* ::Subsection::Closed:: *)
+(*position (and top, left, bottom, right) (TODO)*)
+
+
+(*
+	Unless using Alignment, WL does not support absolute positioning of cells and boxes.
+	Attached cells can be floated or positions absolutely, but are ephemeral and easily invalidated.
+	Moreover, attached cells
+*)
+parse[prop:"position", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens]},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		Switch[ToLowerCase @ tokens[[1, 2]],
+			"static",   Automatic,
+			"relative", Automatic,
+			"absolute", Automatic,
+			"fixed",    Automatic,
+			"inherit",  Automatic,
+			"initial",  initialValues @ prop,
+			_,          unrecognizedKeyWordFailure @ prop
+		]
+	]
+
+
+(* ::Subsection:: *)
+(*text (TODO)*)
+
+
+(* ::Subsubsection:: *)
+(*text-align (TODO)*)
+
+
+(* ::Subsubsection:: *)
+(*text-indent (TODO)*)
+
+
+(* ::Subsubsection:: *)
+(*text-decoration (TODO)*)
+
+
+(* ::Subsubsection:: *)
+(*letter-spacing (TODO)*)
+
+
+(* ::Subsubsection:: *)
+(*word-spacing (TODO)*)
+
+
+(* ::Subsubsection:: *)
+(*text-transform (TODO)*)
+
+
+(* ::Subsubsection:: *)
+(*white-space (TODO)*)
 
 
 (* ::Subsection::Closed:: *)
