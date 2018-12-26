@@ -400,6 +400,8 @@ initialValues = <|
 	"padding"        -> 0, (* sets all 4 sides *)
 	"position"       -> Automatic, (* 'static' *)
 	"right"          -> Automatic, (* 'auto' *)
+	"text-align"      -> Automatic, (* a nameless value that acts as 'left' if LTR, 'right' if RTL *)
+	"text-decoration" -> {}, (* 'none' *)
 	"top"            -> Automatic, (* 'auto' *)
 	"vertical-align" -> Baseline, (* 'baseline' *)
 	"width"          -> Automatic (* 'auto' *)
@@ -1214,7 +1216,7 @@ parse[prop:"line-height", tokens:{{_String, _String}..}] :=
 				"length",      With[{n = parseLength @ tokens[[1, 2]]},           negativeQ[n, prop, {n, 0}]],
 				"ems" | "exs", With[{n = parseEmNonRelative @ tokens[[1, 2]]},    negativeQ[n, prop, {n, 0}]],
 				"percentage",  With[{n = parsePercentage @ tokens[[1, 2]]},       negativeQ[n, prop, {n/100, 0}]],
-				_, unrecognizedValueFailure @ prop
+				_,             unrecognizedValueFailure @ prop
 			];
 		If[FailureQ[value], value, LineSpacing -> value]
 	]
@@ -1437,17 +1439,25 @@ parse[prop:"margin", tokens:{{_String, _String}..}] :=
 (*overflow*)
 
 
+(* 
+	This would mostly be found with WL Pane expression as PaneBox supports scrollbars. 
+	Other boxes may support ImageSizeAction.
+*)
 parse[prop:"overflow", tokens:{{_String, _String}..}] := 
 	Module[{pos = 1, l = Length[tokens]},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
-		Switch[ToLowerCase @ tokens[[1, 2]],
-			"visible", Missing["Not supported."],
-			"hidden",  {ImageSizeAction -> "Clip", Scrollbars -> False},
-			"scroll",  {ImageSizeAction -> "Clip", Scrollbars -> True},
-			"auto",    ImageSizeAction -> "Scrollable",
-			"inherit", ImageSizeAction -> Inherited,
-			"initial", initialValues @ prop,
-			_, unrecognizedKeyWordFailure @ prop
+		Switch[tokens[[1, 1]],
+			"ident",
+				Switch[ToLowerCase @ tokens[[1, 2]],
+					"visible", Missing["Not supported."],
+					"hidden",  {ImageSizeAction -> "Clip", Scrollbars -> False},
+					"scroll",  {ImageSizeAction -> "Clip", Scrollbars -> True},
+					"auto",    ImageSizeAction -> "Scrollable",
+					"inherit", ImageSizeAction -> Inherited,
+					"initial", initialValues @ prop,
+					_,         unrecognizedKeyWordFailure @ prop
+				],
+			_, unrecognizedValueFailure @ prop
 		]
 	]
 
@@ -1467,7 +1477,7 @@ parseSinglePadding[prop_String, token:{_String, _String}] :=
 		"length" | "number", With[{n = parseLength @ token[[2]]},     negativeQ[n, prop, n]],
 		"ems" | "exs",       With[{n = parseLength @ token[[2]]},     negativeQ[First @ n, prop, n]],
 		"percentage",        With[{n = parsePercentage @ token[[2]]}, negativeQ[n, prop, Scaled[n/100]]],
-		_, unrecognizedValueFailure @ prop
+		_,                   unrecognizedValueFailure @ prop
 	]
 
 
@@ -1517,19 +1527,23 @@ parse[prop:"padding", tokens:{{_String, _String}..}] :=
 (*
 	Unless using Alignment, WL does not support absolute positioning of cells and boxes.
 	Attached cells can be floated or positions absolutely, but are ephemeral and easily invalidated.
-	Moreover, attached cells
+	Moreover, attached cells aren't an option, but rather a cell
 *)
 parse[prop:"position", tokens:{{_String, _String}..}] := 
 	Module[{pos = 1, l = Length[tokens]},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
-		Switch[ToLowerCase @ tokens[[1, 2]],
-			"static",   Automatic,
-			"relative", Automatic,
-			"absolute", Automatic,
-			"fixed",    Automatic,
-			"inherit",  Automatic,
-			"initial",  initialValues @ prop,
-			_,          unrecognizedKeyWordFailure @ prop
+		Switch[tokens[[1, 1]],
+			"ident",
+				Switch[ToLowerCase @ tokens[[1, 2]],
+					"static",   Automatic,
+					"relative", Automatic,
+					"absolute", Automatic,
+					"fixed",    Automatic,
+					"inherit",  Automatic,
+					"initial",  initialValues @ prop,
+					_,          unrecognizedKeyWordFailure @ prop
+				],
+			_, unrecognizedValueFailure @ prop
 		]
 	]
 
@@ -1538,16 +1552,66 @@ parse[prop:"position", tokens:{{_String, _String}..}] :=
 (*text (TODO)*)
 
 
-(* ::Subsubsection:: *)
-(*text-align (TODO)*)
+(* ::Subsubsection::Closed:: *)
+(*text-align*)
+
+
+(* WL distinguishes between alignment and justification, but CSS does not *)
+parse[prop:"text-align", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens]},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		Switch[tokens[[1, 1]],
+			"ident",
+				Switch[ToLowerCase @ tokens[[1, 2]],
+					"left",    TextAlignment -> Left,
+					"right",   TextAlignment -> Right,
+					"center",  TextAlignment -> Center,
+					"justify", TextJustification -> 1,
+					"inherit", TextAlignment -> Automatic,
+					"initial", TextAlignment -> initialValues @ prop,
+					_,         unrecognizedKeyWordFailure @ prop
+				],
+			_, unrecognizedValueFailure @ prop
+		]
+	]
 
 
 (* ::Subsubsection:: *)
 (*text-indent (TODO)*)
 
 
+(* ::Subsubsection::Closed:: *)
+(*text-decoration*)
+
+
+(* WL distinguishes between alignment and justification, but CSS does not *)
+parse[prop:"text-decoration", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value, values = {}},
+		While[pos <= l,
+			value =
+				Switch[tokens[[1, 1]],
+					"ident",
+						Switch[ToLowerCase @ tokens[[1, 2]],
+							"none",         If[pos > 1, tooManyTokensFailure @ "none",    Nothing],
+							"inherit",      If[pos > 1, tooManyTokensFailure @ "inherit", Inherited],
+							"initial",      If[pos > 1, tooManyTokensFailure @ "initial", Nothing],
+							"underline",    "Underline" -> True,
+							"overline",     "Overline" -> Missing["Not supported."], (* OverBar is a function, not an option in WL *)
+							"line-through", "StrikeThrough" -> True,
+							"blink",        "Blink" -> Missing["Not supported."],
+							_,              unrecognizedKeyWordFailure @ prop
+						],
+					_, unrecognizedValueFailure @ prop
+				];
+			If[FailureQ[value], Return @ value, AppendTo[values, value]];
+			pos++; skipWhitespace[pos, l, tokens];
+		];
+		FontVariations -> values
+	]
+
+
 (* ::Subsubsection:: *)
-(*text-decoration (TODO)*)
+(*text-transform (TODO)*)
 
 
 (* ::Subsubsection:: *)
@@ -1556,10 +1620,6 @@ parse[prop:"position", tokens:{{_String, _String}..}] :=
 
 (* ::Subsubsection:: *)
 (*word-spacing (TODO)*)
-
-
-(* ::Subsubsection:: *)
-(*text-transform (TODO)*)
 
 
 (* ::Subsubsection:: *)
@@ -1645,7 +1705,7 @@ parseCellBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] :=
 parse[prop_String, {}] := noValueFailure @ prop
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Process *)
 
 
