@@ -302,7 +302,7 @@ label["term", x_String] :=
 	]
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Parse Properties*)
 
 
@@ -340,7 +340,7 @@ couldNotImportFailure[uri_String] :=       Failure["UnexpectedParse", <|"Message
 notAnImageFailure[uri_String] :=           Failure["UnexpectedParse", <|"Message" -> "Asset is not an image.", "URI" -> uri|>]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*initial values*)
 
 
@@ -378,6 +378,7 @@ initialValues = <|
 	"font-weight"    -> Plain,    (* 'normal' *)
 	"height"         -> Automatic, (* 'auto' *)
 	"left"           -> Automatic, (* 'auto' *)
+	"letter-spacing" -> "Plain", (* 'normal' *)
 	"line-height"    -> {1.2, 0}, (* 'normal' *)
 	"list-style-image"    -> None,
 	"list-style-type"     -> "\[FilledCircle]",
@@ -401,10 +402,14 @@ initialValues = <|
 	"position"       -> Automatic, (* 'static' *)
 	"right"          -> Automatic, (* 'auto' *)
 	"text-align"      -> Automatic, (* a nameless value that acts as 'left' if LTR, 'right' if RTL *)
-	"text-decoration" -> {}, (* 'none' *)
+	"text-decoration" -> {},       (* 'none' *)
+	"text-indent"     -> 0,
+	"text-transform"  -> None,      (* 'none' *)
 	"top"            -> Automatic, (* 'auto' *)
-	"vertical-align" -> Baseline, (* 'baseline' *)
-	"width"          -> Automatic (* 'auto' *)
+	"vertical-align" -> Baseline,  (* 'baseline' *)
+	"white-space"    -> Missing["Not supported."], (* 'normal' *)
+	"width"          -> Automatic, (* 'auto' *)
+	"word-spacing"   -> "Plain"    (* 'normal' *)
 	|>;
 
 
@@ -607,7 +612,8 @@ parse[prop:"border-spacing", tokens:{{_String, _String}..}] :=
 		While[pos <= l,
 			value = 
 				Switch[tokens[[pos, 1]],
-					"ems" | "exs",       With[{n = parseEmNonRelative @ tokens[[pos, 2]]}, negativeQ[n, prop, n/2]],
+					"ems"                With[{n = parseEmNonRelative @ tokens[[pos, 2]]}, negativeQ[n, prop, n/2]],
+					"exs",               With[{n = parseEmNonRelative @ tokens[[pos, 2]]}, negativeQ[n, prop, n/4]],
 					"number" | "length", With[{n = parseLength @ tokens[[pos, 2]]},        negativeQ[n, prop, Dynamic[n/CurrentValue[FontSize]]]],
 					_,                   unrecognizedValueFailure @ prop
 				];
@@ -939,7 +945,7 @@ parse[prop:"font-family", tokens:{{_String, _String}..}] :=
 	Module[{fontTokens, parsed, result},
 		fontTokens = DeleteCases[SplitBy[tokens, MatchQ[{"operator", ","}]], {{"operator", ","}}];
 		parsed = parseSingleFontFamily /@ fontTokens;
-		result = FirstCase[parsed, _Failure, None];
+		result = FirstCase[parsed, _Failure, None]; (* FIXME: perhaps use FontSubstitutions here? *)
 		If[FailureQ[result], Return @ result];
 		FirstCase[parsed, _Rule, Failure["UnexpectedParse", <|"Message" -> "No font-family found."|>]]
 	]
@@ -1214,7 +1220,8 @@ parse[prop:"line-height", tokens:{{_String, _String}..}] :=
 					],
 				"number",      With[{n = Interpreter["Number"] @ tokens[[1, 2]]}, negativeQ[n, prop, {n, 0}]],
 				"length",      With[{n = parseLength @ tokens[[1, 2]]},           negativeQ[n, prop, {n, 0}]],
-				"ems" | "exs", With[{n = parseEmNonRelative @ tokens[[1, 2]]},    negativeQ[n, prop, {n, 0}]],
+				"ems",         With[{n = parseEmNonRelative @ tokens[[1, 2]]},    negativeQ[n, prop, {n, 0}]],
+				"exs",         With[{n = parseEmNonRelative @ tokens[[1, 2]]},    negativeQ[n, prop, {n/2, 0}]],
 				"percentage",  With[{n = parsePercentage @ tokens[[1, 2]]},       negativeQ[n, prop, {n/100, 0}]],
 				_,             unrecognizedValueFailure @ prop
 			];
@@ -1548,8 +1555,8 @@ parse[prop:"position", tokens:{{_String, _String}..}] :=
 	]
 
 
-(* ::Subsection:: *)
-(*text (TODO)*)
+(* ::Subsection::Closed:: *)
+(*text*)
 
 
 (* ::Subsubsection::Closed:: *)
@@ -1576,8 +1583,29 @@ parse[prop:"text-align", tokens:{{_String, _String}..}] :=
 	]
 
 
-(* ::Subsubsection:: *)
-(*text-indent (TODO)*)
+(* ::Subsubsection::Closed:: *)
+(*text-indent*)
+
+
+parse[prop:"text-indent", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				"length",      With[{n = parseLength @ tokens[[1, 2]]},        n],
+				"ems",         With[{n = parseEmNonRelative @ tokens[[1, 2]]}, n],
+				"exs",         With[{n = parseEmNonRelative @ tokens[[1, 2]]}, n/2],
+				"percentage",  Missing["Not supported."],
+				_,             unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, {LineIndent -> value, Cell[ParagraphIndent -> value]}]
+	]
 
 
 (* ::Subsubsection::Closed:: *)
@@ -1610,20 +1638,139 @@ parse[prop:"text-decoration", tokens:{{_String, _String}..}] :=
 	]
 
 
-(* ::Subsubsection:: *)
-(*text-transform (TODO)*)
+(* ::Subsubsection::Closed:: *)
+(*text-transform*)
 
 
-(* ::Subsubsection:: *)
-(*letter-spacing (TODO)*)
+parse[prop:"text-transform", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens]},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		Switch[tokens[[1, 1]],
+			"ident",
+				Switch[ToLowerCase @ tokens[[1, 2]],
+					"capitalize", Missing["Not supported."], (* Not by the FE at least, but see WL Capitalize[..., "AllWords"] *)
+					"uppercase",  FontVariations -> {"CapsType" -> "AllCaps"},
+					"lowercase",  FontVariations -> {"CapsType" -> "AllLower"},
+					"none",       FontVariations -> {"CapsType" -> "Normal"},
+					"inherit",    FontVariations -> {"CapsType" -> Inherited},
+					"initial",    FontVariations -> {"CapsType" -> initialValues @ prop},
+					_,            unrecognizedKeyWordFailure @ prop
+				],
+			_, unrecognizedValueFailure @ prop
+		]
+	]
 
 
-(* ::Subsubsection:: *)
-(*word-spacing (TODO)*)
+(* ::Subsubsection::Closed:: *)
+(*letter-spacing*)
 
 
-(* ::Subsubsection:: *)
-(*white-space (TODO)*)
+(* 
+	General letter and word spacing is controlled by the Mathematica Front End.
+	The FontTracking options gives some additional control, but appears to be mis-appropriated to CSS font-stretch.
+	Not to be confused with CSS font-stretch.
+*)
+parse[prop:"letter-spacing", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						"normal",  "Plain",
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				"length" | "ems" | "exs", parseLength @ tokens[[1, 2]],
+				_,                        unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, FontTracking -> value]
+	]
+
+
+(*(* 
+	This was originally in CSS 2, but removed in CSS 2.1 due to lack of UA support.
+	Added back in Level 3. CSS Fonts Module Level 4 supports percentages as well.
+	Mathematica supports both level 3 and 4 features in FontTracking.
+*)
+parse[prop:"font-stretch", tokens:{{_String, _String}..}] := 
+	Module[{value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident", 
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"initial",         initialValues @ prop,
+						"inherit",         Inherited,
+						"ultra-condensed", "Narrow",        (* CSSFM4 50% *)
+						"extra-condensed", "Narrow",        (* CSSFM4 62.5% *)
+						"condensed",       "Condensed",     (* CSSFM4 75% *)
+						"semi-condensed",  "SemiCondensed", (* CSSFM4 87.5% *)
+						"normal",          Plain,           (* CSSFM4 100% *)
+						"semi-expanded",   "Extended",      (* CSSFM4 112.5% *)
+						"expanded",        "Extended",      (* CSSFM4 125% *)
+						"extra-expanded",  "Wide",          (* CSSFM4 150% *)
+						"ultra-expanded",  "Wide",          (* CSSFM4 200% *)
+						_,                 unrecognizedKeyWordFailure @ prop
+					],
+				"percentage", With[{n = parsePercentage @ tokens[[1, 2]]}, negativeQ[n, prop, n/100]],
+				_,            unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, FontTracking -> value]
+	]*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*word-spacing*)
+
+
+(* 
+	General letter and word spacing is controlled by the Mathematica Front End. 
+	The CSS is still validated.
+*)
+parse[prop:"word-spacing", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						"normal",  "Plain",
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				"length" | "ems" | "exs", parseLength @ tokens[[1, 2]],
+				_,                        unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, Missing["Not supported."]]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*white-space*)
+
+
+(* Whitespace is controlled by the Mathematica Front End. The CSS is still validated. *)
+parse[prop:"white-space", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens]},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		Switch[tokens[[1, 1]],
+			"ident",
+				Switch[ToLowerCase @ tokens[[1, 2]],
+					"inherit",  Missing["Not supported."],
+					"initial",  initialValues @ prop,
+					"normal",   Missing["Not supported."],
+					"pre",      Missing["Not supported."],
+					"nowrap",   Missing["Not supported."],
+					"pre-wrap", Missing["Not supported."],
+					"pre-line", Missing["Not supported."],
+					_,          unrecognizedKeyWordFailure @ prop
+				],
+			_, unrecognizedValueFailure @ prop
+		]
+	]
 
 
 (* ::Subsection::Closed:: *)
@@ -1705,7 +1852,7 @@ parseCellBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] :=
 parse[prop_String, {}] := noValueFailure @ prop
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Process *)
 
 
@@ -1897,15 +2044,15 @@ processUnknowns[a:{__Association}] :=
 	]*)
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Properties*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*List of properties*)
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Strictly only CSS2.1 properties.*)
 
 
@@ -1945,16 +2092,16 @@ visual = {
 	"direction", 
 	"empty-cells", "float", 
 	(*"font", "font-family", "font-size", "font-style", "font-variant", "font-weight",*) 
-	(*"height", *)"left", "letter-spacing", (*"line-height", *)
+	(*"height", *)"left", (*"letter-spacing", *)(*"line-height", *)
 	(*"list-style", "list-style-image", "list-style-position", "list-style-type",*) 
 	(*"margin", "margin-bottom", "margin-left", "margin-right", "margin-top", *)
 	(*"max-height", "max-width", "min-height", "min-width", *)
 	(*"overflow", *)
 	(*"padding", "padding-bottom", "padding-left", "padding-right", "padding-top", *)
 	"position", "quotes", "right", "table-layout", 
-	"text-align", "text-decoration", "text-indent", "text-transform", 
+	(*"text-align", "text-decoration", "text-indent", "text-transform", *)
 	"top", "unicode-bidi", (*"vertical-align",*) 
-	"visibility", "white-space", "width", "word-spacing", "z-index"};
+	"visibility", (*"white-space", *)"width", (*"word-spacing", *)"z-index"};
 
 
 Length[visual]
