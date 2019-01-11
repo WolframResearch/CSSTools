@@ -302,7 +302,7 @@ label["term", x_String] :=
 	]
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Parse Properties*)
 
 
@@ -1469,7 +1469,7 @@ parse[prop:"overflow", tokens:{{_String, _String}..}] :=
 	]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*padding(-left, -right, -top, -bottom)*)
 
 
@@ -1527,31 +1527,114 @@ parse[prop:"padding", tokens:{{_String, _String}..}] :=
 	]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*position (and top, left, bottom, right) (TODO)*)
 
 
 (*
-	Unless using Alignment, WL does not support absolute positioning of cells and boxes.
-	Attached cells can be floated or positions absolutely, but are ephemeral and easily invalidated.
-	Moreover, attached cells aren't an option, but rather a cell
+	WL does not support absolute positioning of cells and boxes.
+	Attached cells can be floated or positioned absolutely, but are ephemeral and easily invalidated.
+	Moreover, attached cells aren't an option, but rather a cell.
+	'position' is most like WL's Alignment, but only relative to the parent box.
 *)
 parse[prop:"position", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens]},
+	Module[{pos = 1, l = Length[tokens], value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
-		Switch[tokens[[1, 1]],
-			"ident",
-				Switch[ToLowerCase @ tokens[[1, 2]],
-					"static",   Automatic,
-					"relative", Automatic,
-					"absolute", Automatic,
-					"fixed",    Automatic,
-					"inherit",  Automatic,
-					"initial",  initialValues @ prop,
-					_,          unrecognizedKeyWordFailure @ prop
-				],
-			_, unrecognizedValueFailure @ prop
-		]
+		value =
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"static",   Automatic, (* normal layout, ignoring any offsets *)
+						"relative", Automatic, (* normal layout, but only offset floats above "siblings" *)
+						"absolute", Automatic, (* not part of normal layout; like an attached cell attached to a parent box with absolute offset *)
+						"fixed",    Automatic, (* notebook attached cell in Working mode (ignores scrolling), appears on each page in Printout mode (header/footer?) *)
+						"inherit",  Automatic,
+						"initial",  initialValues @ prop,
+						_,          unrecognizedKeyWordFailure @ prop
+					],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, Missing["Not available."]]
+	]
+
+
+parse[prop:"left", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value =
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"auto",    Automatic,
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				"percentage",             With[{n = parsePercentage @ tokens[[1, 2]]}, If[n > 100 || n < 0, Missing["Not available."], Rescale[n, {0, 100}, {-1, 1}]]],
+				"length" | "ems" | "exs", With[{n = parseLength @ tokens[[1, 2]]}, If[n == 0, Left, Missing["Not available."]]],
+				_,                        unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value] || MissingQ[value], value, Alignment -> {value, Automatic}]
+	]
+
+
+parse[prop:"right", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value =
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"auto",    Automatic,
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				"percentage",             With[{n = parsePercentage @ tokens[[1, 2]]}, If[n > 100 || n < 0, Missing["Not available."], -Rescale[n, {0, 100}, {-1, 1}]]],
+				"length" | "ems" | "exs", With[{n = parseLength @ tokens[[1, 2]]}, If[n == 0, Right, Missing["Not available."]]],
+				_,                        unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value] || MissingQ[value], value, Alignment -> {value, Automatic}]
+	]
+
+
+parse[prop:"top", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value =
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"auto",    Automatic,
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				"percentage",             With[{n = parsePercentage @ tokens[[1, 2]]}, If[n > 100 || n < 0, Missing["Not available."], -Rescale[n, {0, 100}, {-1, 1}]]],
+				"length" | "ems" | "exs", With[{n = parseLength @ tokens[[1, 2]]}, If[n == 0, Top, Missing["Not available."]]],
+				_,                        unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value] || MissingQ[value], value, Alignment -> {Automatic, value}]
+	]
+
+
+parse[prop:"bottom", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value =
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"auto",    Automatic,
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				"percentage",             With[{n = parsePercentage @ tokens[[1, 2]]}, If[n > 100 || n < 0, Missing["Not available."], Rescale[n, {0, 100}, {-1, 1}]]],
+				"length" | "ems" | "exs", With[{n = parseLength @ tokens[[1, 2]]}, If[n == 0, Bottom, Missing["Not available."]]],
+				_,                        unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value] || MissingQ[value], value, Alignment -> {Automatic, value}]
 	]
 
 
@@ -2044,15 +2127,15 @@ processUnknowns[a:{__Association}] :=
 	]*)
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Properties*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*List of properties*)
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Strictly only CSS2.1 properties.*)
 
 
