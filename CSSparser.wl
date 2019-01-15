@@ -335,9 +335,11 @@ unrecognizedKeyWordFailure[prop_String] := Failure["UnexpectedParse", <|"Message
 unrecognizedValueFailure[prop_String] :=   Failure["UnexpectedParse", <|"Message" -> "Unrecognized " <> prop <> " value."|>];
 negativeLengthFailure[prop_String] :=      Failure["UnexpectedParse", <|"Message" -> prop <> "length must be non-negative."|>];
 positiveLengthFailure[prop_String] :=      Failure["UnexpectedParse", <|"Message" -> prop <> "length must be positive."|>];
+negativeIntegerFailure[prop_String] :=     Failure["UnexpectedParse", <|"Message" -> prop <> "integer must be non-negative."|>];
 invalidFunctionFailure[function_string] := Failure["UnexpectedParse", <|"Message" -> "Invalid function.", "Function" -> function|>];
 couldNotImportFailure[uri_String] :=       Failure["UnexpectedParse", <|"Message" -> "Failed to import from URI.", "URI" -> uri|>];
-notAnImageFailure[uri_String] :=           Failure["UnexpectedParse", <|"Message" -> "Asset is not an image.", "URI" -> uri|>]
+notAnImageFailure[uri_String] :=           Failure["UnexpectedParse", <|"Message" -> "Asset is not an image.", "URI" -> uri|>];
+illegalIdentifierFailure[ident_String] :=  Failure["UnexpectedParse", <|"Message" -> "Illegal identifier.", "Ident" -> ident|>];
 
 
 (* ::Subsection::Closed:: *)
@@ -371,6 +373,12 @@ initialValues = <|
 	"bottom"         -> Automatic, (* 'auto' *)
 	"clip"           -> Missing["Not supported."],
 	"color"          -> Black,    (* no set CSS specification, so use reasonable setting *)
+	"content"        -> Automatic, (* 'normal' *)
+	"counter-increment" -> {},     (* 'none' *)
+	"counter-reset"  -> {},        (* 'none' *)
+	"direction"      -> Automatic, (* 'ltr' *)
+	"display"        -> Automatic, (* 'inline' *)
+	"float"          -> Automatic, (* 'none' *)
 	"font-family"    :> CurrentValue[{StyleDefinitions, "Text", FontFamily}], (* no set CSS specification, so use reasonable setting *)
 	"font-size"      -> Medium,   (* 'medium' *)
 	"font-style"     -> Plain,    (* 'normal' *)
@@ -406,6 +414,7 @@ initialValues = <|
 	"text-indent"     -> 0,
 	"text-transform"  -> None,      (* 'none' *)
 	"top"            -> Automatic, (* 'auto' *)
+	"unicode-bidi"   -> Automatic, (* 'normal' *)
 	"vertical-align" -> Baseline,  (* 'baseline' *)
 	"white-space"    -> Missing["Not supported."], (* 'normal' *)
 	"width"          -> Automatic, (* 'auto' *)
@@ -527,10 +536,18 @@ parse[prop:"background-color", tokens:{{_String, _String}..}] :=
 (*
 	WL specified border style (dashing), width, and color all at once via Directive[].
 	Post-processing is required to combine individual properties correctly.
+	WL Grid only allows collapsed borders. However, each item can be wrapped in Frame.
+		Grid[
+			Map[
+				Framed[#,ImageSize\[Rule]Full,Alignment\[Rule]Center]&, 
+				{{"Client Name","Age"},{"",25},{"Louise Q.",""},{"Owen",""},{"Stan",71}}, 
+				{2}],
+			Frame\[Rule]None,
+			ItemSize\[Rule]{{7,3}}]
 *)
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*border-collapse*)
 
 
@@ -817,6 +834,32 @@ parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", t
 	]
 
 
+(* ::Subsubsection::Closed:: *)
+(*empty-cells*)
+
+
+(*
+	There is no WL equivalent because WL uses only 'border-collapse' in Grid.
+*)
+parse[prop:"empty-cells", tokens:{{_String, _String}..}] := 
+	Module[{value, wrapper},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"show",    Automatic,
+						"hide",    Automatic,
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_, unrecognizedKeyWordFailure @ prop
+					],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, Missing["Not supported."]]
+	]
+
+
 (* ::Subsection::Closed:: *)
 (*clip*)
 
@@ -856,6 +899,347 @@ parse[prop:"clip", tokens:{{_String, _String}..}] :=
 	It would be nice if it gave a more detailed failure message, but let's not reinvent the wheel.
 *)
 parse[prop:"color", tokens:{{_String, _String}..}] := parseSingleColor[prop, tokens]
+
+
+(* ::Subsection::Closed:: *)
+(*content, lists, and quotes (TODO)*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*content (TODO)*)
+
+
+(*TODO*)
+parse[prop:"content", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		value = 
+			Switch[tokens[[pos, 1]],
+				"ident", 
+					Switch[ToLowerCase @ tokens[[pos, 2]],
+						"normal",  Automatic,
+						"none",    Automatic,
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value] || MissingQ[value], value, Missing["Not supported."]]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*counter-increment*)
+
+
+(* In WL each style must be repeated n times to get an increment of n *)
+parse[prop:"counter-increment", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], v, values = {}},
+		While[pos <= l,
+			Switch[tokens[[pos, 1]],
+				"ident", 
+					Switch[ToLowerCase @ tokens[[pos, 2]],
+						"none",    If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = {}],
+						"inherit", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = Inherited],
+						"initial", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = initialValues @ prop],
+						_,         
+							If[pos == l, 
+								(* if the end is an ident then it simply adds itself once to the list of styles to increment *)
+								values = Join[values, {tokens[[pos, 2]]}]; pos++
+								,
+								(* otherwise check for a non-negative integer and add that style name n times *)
+								v = tokens[[pos, 2]]; pos++; skipWhitespace[pos, l, tokens];
+								With[{i = Interpreter["Integer"][tokens[[pos, 2]]]}, 
+									If[IntegerQ[i],
+										If[i < 0, 
+											Return @ negativeIntegerFailure @ prop
+											,
+											values = Join[values, ConstantArray[v, i]]; pos++; skipWhitespace[pos, l, tokens]
+										]
+										,
+										values = Join[values, {v}];
+									]
+								];
+							];
+					],
+				_, values = unrecognizedValueFailure @ prop; Break[]
+			];
+		];
+		If[FailureQ[values], values, CounterIncrements -> values]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*counter-reset*)
+
+
+parse[prop:"counter-reset", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], v = {}, values = {}},
+		While[pos <= l,
+			Switch[tokens[[pos, 1]],
+				"ident", 
+					Switch[ToLowerCase @ tokens[[pos, 2]],
+						"none",    If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = {}],
+						"inherit", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = Inherited],
+						"initial", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = initialValues @ prop],
+						_,         
+							If[pos == l, 
+								(* if the end is an ident then it has 0 as its counter assignment *)
+								AppendTo[values, {tokens[[pos, 2]], 0}]; pos++
+								,
+								(* otherwise check for an integer *)
+								v = tokens[[pos, 2]]; pos++; skipWhitespace[pos, l, tokens];
+								With[{i = Interpreter["Integer"][tokens[[pos, 2]]]}, 
+									If[IntegerQ[i], (* if integer exists, use it and skip ahead, otherwise use 0 and don't increment pos *)
+										AppendTo[values, {v, i}]; pos++; skipWhitespace[pos, l, tokens]
+										,
+										AppendTo[values, {v, 0}];
+									]
+								];
+							];
+					],
+				_, values = unrecognizedValueFailure @ prop; Break[]
+			];
+		];
+		If[FailureQ[values], values, CounterAssignments -> values]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*list-style-image*)
+
+
+parseSingleListStyleImage[prop_String, token:{_String, _String}] := 
+	Switch[token[[1]],
+		"ident",
+			Switch[ToLowerCase @ token[[2]],
+				"inherit", Inherited,
+				"initial", initialValues @ prop, 
+				"none",    None,
+				_,         unrecognizedKeyWordFailure @ prop
+			],
+		"uri", 
+			With[{im = Import[token[[2]]]}, 
+				Which[
+					FailureQ[im], couldNotImportFailure @ token[[2]], 
+					!ImageQ[im],  notAnImageFailure @ token[[2]],
+					_,            ToBoxes @ Dynamic @ Image[im, ImageSize -> CurrentValue[FontSize]]
+				]
+			],
+		_, unrecognizedValueFailure @ prop
+	]
+	
+parse[prop:"list-style-image", tokens:{{_String, _String}..}] := 
+	Module[{value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = parseSingleListStyleImage[prop, First @ tokens];
+		If[FailureQ[value], value, Cell[CellDingbat -> value]]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*list-style-position*)
+
+
+(* 
+	CellDingbat position is always outside the cell content and aligned with the first line of content.
+	Though the following validates the CSS, Mathematica does not include any position option.
+*)
+parseSingleListStylePosition[prop_String, token:{_String, _String}] := 
+	Switch[token[[1]],
+		"ident",
+			Switch[ToLowerCase @ token[[2]],
+				"inherit", Inherited,
+				"initial", initialValues @ prop, 
+				"inside",  Missing["Not supported."],
+				"outside", Automatic,
+				_,         unrecognizedKeyWordFailure @ prop
+			],
+		_, unrecognizedValueFailure @ prop
+	]
+	
+parse[prop:"list-style-position", tokens:{{_String, _String}..}] := 
+	Module[{value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = parseSingleListStylePosition[prop, First @ tokens];
+		If[FailureQ[value], value, Cell[Missing["Not supported."]]]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*list-style-type*)
+
+
+parseSingleListStyleType[prop_String, token:{_String, _String}] := 
+	Switch[token[[1]],
+		"ident",
+			Switch[ToLowerCase @ token[[2]],
+				"inherit",              Inherited,
+				"initial",              initialValues @ prop, 
+				"disc",                 "\[FilledCircle]",
+				"circle",               "\[EmptyCircle]",
+				"square",               "\[FilledSquare]",
+				"decimal",              Cell[TextData[{CounterBox["Item"], "."}]],
+				"decimal-leading-zero", Cell[TextData[{CounterBox["Item", CounterFunction :> (FEPrivate`If[FEPrivate`Greater[#, 9], #, FEPrivate`StringJoin["0", FEPrivate`ToString[#]]]&)], "."}]],
+				"lower-roman",          Cell[TextData[{CounterBox["Item", CounterFunction :> FrontEnd`RomanNumeral], "."}]],
+				"upper-roman",          Cell[TextData[{CounterBox["Item", CounterFunction :> FrontEnd`CapitalRomanNumeral], "."}]],
+				"lower-greek",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["\[Alpha]", "\[Omega]"], #]&)], "."}]],
+				"lower-latin",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["a", "z"], #]&)], "."}]],
+				"upper-latin",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["A", "Z"], #]&)], "."}]],
+				"armenian",             Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["\:0531", "\:0556"], #]&)], "."}]],
+				"georgian",             Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["\:10d0", "\:10fa"], #]&)], "."}]],
+				"lower-alpha",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["a", "z"], #]&)], "."}]],
+				"upper-alpha",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["A", "Z"], #]&)], "."}]],
+				"none",                 None,
+				_,                      unrecognizedKeyWordFailure @ prop
+			],
+		_, unrecognizedValueFailure @ prop
+	]
+	
+parse[prop:"list-style-type", tokens:{{_String, _String}..}] := 
+	Module[{value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = parseSingleListStyleType[prop, First @ tokens];
+		If[FailureQ[value], value, Cell[CellDingbat -> value]]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*list-style*)
+
+
+(* short-hand for list-style-image/position/type properties given in any order *)
+parse[prop:"list-style", tokens:{{_String, _String}..}] :=
+	Module[{pos = 1, l = Length[tokens], value, p, noneCount = 0, acquiredImage = False, acquiredPos = False, acquiredType = False},
+		(* parse and assign new font values *)
+		If[l == 1, 
+			value = 
+				Switch[ToLowerCase @ tokens[[1, 2]],
+					(* not sure why you would use this since list-style properties are inherited anyway...? *)
+					"inherit", Inherited,
+					"initial", None,
+					"none",    None,
+					_,         unrecognizedKeyWordFailure @ prop
+				];
+			Return @ If[FailureQ[value], value, Cell[CellDingbat -> value]]
+		];
+		
+		(* 
+			li-image, li-position, and li-type can appear in any order.
+			A value of 'none' sets whichever of li-type and li-image are not otherwise specified to 'none'. 
+			If both are specified, then an additional 'none' is an error.
+		*)
+		value = <|"image" -> None, "pos" -> Missing["Not available."], "type" -> None|>;
+		While[pos <= l,
+			If[TrueQ[ToLowerCase @ tokens[[pos, 2]] == "none"], 
+				noneCount++
+				,
+				value = {
+					parseSingleListStyleImage[prop, First @ tokens[[pos]]],
+					parseSingleListStylePosition[prop, First @ tokens[[pos]]],
+					parseSingleListStyleType[prop, First @ tokens[[pos]]]};
+					p = FirstPosition[value, Except[_?FailureQ], Return @ unrecognizedValueFailure @ prop, {1}, Heads -> False][[1]];
+				Switch[p, 
+					1, If[acquiredImage, Return @ repeatedPropValueFailure @ "image",    value["image"] = value[[p]]; acquiredImage = True], 
+					2, If[acquiredPos,   Return @ repeatedPropValueFailure @ "position", value["pos"] = value[[p]];   acquiredPos = True], 
+					3, If[acquiredType,  Return @ repeatedPropValueFailure @ "type",     value["type"] = value[[p]];  acquiredType = True]
+				];
+			];
+			pos++; skipWhitespace[pos, l, tokens];
+		];
+		Which[
+			acquiredImage && acquiredType && noneCount > 0, repeatedPropValueFailure @ "none",
+			acquiredImage, Cell[CellDingbat -> value["image"]], (* default to Image if it could be found *)
+			acquiredType,  Cell[CellDingbat -> value["type"]],
+			True,          Cell[CellDingbat -> None]]
+		]
+	]
+
+
+(* ::Subsection::Closed:: *)
+(*display (TODO)*)
+
+
+(*
+	WL automatically lays out blocks either inline or as nested boxes. 
+	If a Cell appears within TextData or BoxData then it is considered inline.
+*)
+parse[prop:"display", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[l > 1, Return @ tooManyTokensFailure @ prop];
+		value = 
+			Switch[tokens[[pos, 1]],
+				"ident", 
+					Switch[ToLowerCase @ tokens[[pos, 2]],
+						"inline",             Automatic, (* wrap in Cell[]? *)
+						"block",              Automatic,
+						"list-item",          Automatic,
+						"inline-block",       Automatic,
+						"table",              Automatic,
+						"inline-table",       Automatic,
+						"table-row-group",    Automatic,
+						"table-header-group", Automatic,
+						"table-footer-group", Automatic,
+						"table-row",          Automatic,
+						"table-column-group", Automatic,
+						"table-column",       Automatic,
+						"table-cell",         Automatic,
+						"table-caption",      Automatic,
+						"none",               Automatic,
+						"inherit",            Inherited,
+						"initial",            initialValues @ prop,
+						_,                    unrecognizedKeyWordFailure @ prop
+					],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value] || MissingQ[value], value, Missing["Not supported."]]
+	]
+
+
+(* ::Subsection::Closed:: *)
+(*float, clear*)
+
+
+(* WL does not support the flow of boxes around other boxes. *)
+parse[prop:"float", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[l > 1, Return @ tooManyTokensFailure @ prop];
+		value = 
+			Switch[tokens[[pos, 1]],
+				"ident", 
+					Switch[ToLowerCase @ tokens[[pos, 2]],
+						"left",    Automatic,
+						"right",   Automatic,
+						"none",    Automatic,
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value] || MissingQ[value], value, Missing["Not supported."]]
+	]
+
+
+parse[prop:"clear", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[l > 1, Return @ tooManyTokensFailure @ prop];
+		value = 
+			Switch[tokens[[pos, 1]],
+				"ident", 
+					Switch[ToLowerCase @ tokens[[pos, 2]],
+						"left",    Automatic,
+						"right",   Automatic,
+						"both",    Automatic,
+						"none",    Automatic,
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value] || MissingQ[value], value, Missing["Not supported."]]
+	]
 
 
 (* ::Subsection::Closed:: *)
@@ -1230,161 +1614,6 @@ parse[prop:"line-height", tokens:{{_String, _String}..}] :=
 
 
 (* ::Subsection::Closed:: *)
-(*list-style*)
-
-
-(* ::Subsubsection::Closed:: *)
-(*list-style-image*)
-
-
-parseSingleListStyleImage[prop_String, token:{_String, _String}] := 
-	Switch[token[[1]],
-		"ident",
-			Switch[ToLowerCase @ token[[2]],
-				"inherit", Inherited,
-				"initial", initialValues @ prop, 
-				"none",    None,
-				_,         unrecognizedKeyWordFailure @ prop
-			],
-		"uri", 
-			With[{im = Import[token[[2]]]}, 
-				Which[
-					FailureQ[im], couldNotImportFailure @ token[[2]], 
-					!ImageQ[im],  notAnImageFailure @ token[[2]],
-					_,            ToBoxes @ Dynamic @ Image[im, ImageSize -> CurrentValue[FontSize]]
-				]
-			],
-		_, unrecognizedValueFailure @ prop
-	]
-	
-parse[prop:"list-style-image", tokens:{{_String, _String}..}] := 
-	Module[{value},
-		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
-		value = parseSingleListStyleImage[prop, First @ tokens];
-		If[FailureQ[value], value, Cell[CellDingbat -> value]]
-	]
-
-
-(* ::Subsubsection::Closed:: *)
-(*list-style-position*)
-
-
-(* 
-	CellDingbat position is always outside the cell content and aligned with the first line of content.
-	Though the following validates the CSS, Mathematica does not include any position option.
-*)
-parseSingleListStylePosition[prop_String, token:{_String, _String}] := 
-	Switch[token[[1]],
-		"ident",
-			Switch[ToLowerCase @ token[[2]],
-				"inherit", Inherited,
-				"initial", initialValues @ prop, 
-				"inside",  Missing["Not supported."],
-				"outside", Automatic,
-				_,         unrecognizedKeyWordFailure @ prop
-			],
-		_, unrecognizedValueFailure @ prop
-	]
-	
-parse[prop:"list-style-position", tokens:{{_String, _String}..}] := 
-	Module[{value},
-		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
-		value = parseSingleListStylePosition[prop, First @ tokens];
-		If[FailureQ[value], value, Cell[Missing["Not supported."]]]
-	]
-
-
-(* ::Subsubsection::Closed:: *)
-(*list-style-type*)
-
-
-parseSingleListStyleType[prop_String, token:{_String, _String}] := 
-	Switch[token[[1]],
-		"ident",
-			Switch[ToLowerCase @ token[[2]],
-				"inherit",              Inherited,
-				"initial",              initialValues @ prop, 
-				"disc",                 "\[FilledCircle]",
-				"circle",               "\[EmptyCircle]",
-				"square",               "\[FilledSquare]",
-				"decimal",              Cell[TextData[{CounterBox["Item"], "."}]],
-				"decimal-leading-zero", Cell[TextData[{CounterBox["Item", CounterFunction :> (FEPrivate`If[FEPrivate`Greater[#, 9], #, FEPrivate`StringJoin["0", FEPrivate`ToString[#]]]&)], "."}]],
-				"lower-roman",          Cell[TextData[{CounterBox["Item", CounterFunction :> FrontEnd`RomanNumeral], "."}]],
-				"upper-roman",          Cell[TextData[{CounterBox["Item", CounterFunction :> FrontEnd`CapitalRomanNumeral], "."}]],
-				"lower-greek",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["\[Alpha]", "\[Omega]"], #]&)], "."}]],
-				"lower-latin",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["a", "z"], #]&)], "."}]],
-				"upper-latin",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["A", "Z"], #]&)], "."}]],
-				"armenian",             Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["\:0531", "\:0556"], #]&)], "."}]],
-				"georgian",             Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["\:10d0", "\:10fa"], #]&)], "."}]],
-				"lower-alpha",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["a", "z"], #]&)], "."}]],
-				"upper-alpha",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["A", "Z"], #]&)], "."}]],
-				"none",                 None,
-				_,                      unrecognizedKeyWordFailure @ prop
-			],
-		_, unrecognizedValueFailure @ prop
-	]
-	
-parse[prop:"list-style-type", tokens:{{_String, _String}..}] := 
-	Module[{value},
-		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
-		value = parseSingleListStyleType[prop, First @ tokens];
-		If[FailureQ[value], value, Cell[CellDingbat -> value]]
-	]
-
-
-(* ::Subsubsection::Closed:: *)
-(*list-style*)
-
-
-(* short-hand for list-style-image/position/type properties given in any order *)
-parse[prop:"list-style", tokens:{{_String, _String}..}] :=
-	Module[{pos = 1, l = Length[tokens], value, p, noneCount = 0, acquiredImage = False, acquiredPos = False, acquiredType = False},
-		(* parse and assign new font values *)
-		If[l == 1, 
-			value = 
-				Switch[ToLowerCase @ tokens[[1, 2]],
-					(* not sure why you would use this since list-style properties are inherited anyway...? *)
-					"inherit", Inherited,
-					"initial", None,
-					"none",    None,
-					_,         unrecognizedKeyWordFailure @ prop
-				];
-			Return @ If[FailureQ[value], value, Cell[CellDingbat -> value]]
-		];
-		
-		(* 
-			li-image, li-position, and li-type can appear in any order.
-			A value of 'none' sets whichever of li-type and li-image are not otherwise specified to 'none'. 
-			If both are specified, then an additional 'none' is an error.
-		*)
-		value = <|"image" -> None, "pos" -> Missing["Not available."], "type" -> None|>;
-		While[pos <= l,
-			If[TrueQ[ToLowerCase @ tokens[[pos, 2]] == "none"], 
-				noneCount++
-				,
-				value = {
-					parseSingleListStyleImage[prop, First @ tokens[[pos]]],
-					parseSingleListStylePosition[prop, First @ tokens[[pos]]],
-					parseSingleListStyleType[prop, First @ tokens[[pos]]]};
-					p = FirstPosition[value, Except[_?FailureQ], Return @ unrecognizedValueFailure @ prop, {1}, Heads -> False][[1]];
-				Switch[p, 
-					1, If[acquiredImage, Return @ repeatedPropValueFailure @ "image",    value["image"] = value[[p]]; acquiredImage = True], 
-					2, If[acquiredPos,   Return @ repeatedPropValueFailure @ "position", value["pos"] = value[[p]];   acquiredPos = True], 
-					3, If[acquiredType,  Return @ repeatedPropValueFailure @ "type",     value["type"] = value[[p]];  acquiredType = True]
-				];
-			];
-			pos++; skipWhitespace[pos, l, tokens];
-		];
-		Which[
-			acquiredImage && acquiredType && noneCount > 0, repeatedPropValueFailure @ "none",
-			acquiredImage, Cell[CellDingbat -> value["image"]], (* default to Image if it could be found *)
-			acquiredType,  Cell[CellDingbat -> value["type"]],
-			True,          Cell[CellDingbat -> None]]
-		]
-	]
-
-
-(* ::Subsection::Closed:: *)
 (*margin(-left, -right, -top, -bottom)*)
 
 
@@ -1469,7 +1698,7 @@ parse[prop:"overflow", tokens:{{_String, _String}..}] :=
 	]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*padding(-left, -right, -top, -bottom)*)
 
 
@@ -1527,15 +1756,16 @@ parse[prop:"padding", tokens:{{_String, _String}..}] :=
 	]
 
 
-(* ::Subsection:: *)
-(*position (and top, left, bottom, right) (TODO)*)
+(* ::Subsection::Closed:: *)
+(*position (and top, left, bottom, right)*)
 
 
 (*
+	'position' is most like WL's Alignment, but only relative to the parent box.
 	WL does not support absolute positioning of cells and boxes.
 	Attached cells can be floated or positioned absolutely, but are ephemeral and easily invalidated.
 	Moreover, attached cells aren't an option, but rather a cell.
-	'position' is most like WL's Alignment, but only relative to the parent box.
+	Perhaps can use NotebookDynamicExpression \[Rule] Dynamic[..., TrackedSymbols \[Rule] {}] where "..." includes a list of attached cells.
 *)
 parse[prop:"position", tokens:{{_String, _String}..}] := 
 	Module[{pos = 1, l = Length[tokens], value},
@@ -1544,10 +1774,10 @@ parse[prop:"position", tokens:{{_String, _String}..}] :=
 			Switch[tokens[[1, 1]],
 				"ident",
 					Switch[ToLowerCase @ tokens[[1, 2]],
-						"static",   Automatic, (* normal layout, ignoring any offsets *)
-						"relative", Automatic, (* normal layout, but only offset floats above "siblings" *)
-						"absolute", Automatic, (* not part of normal layout; like an attached cell attached to a parent box with absolute offset *)
-						"fixed",    Automatic, (* notebook attached cell in Working mode (ignores scrolling), appears on each page in Printout mode (header/footer?) *)
+						"static",   Automatic, (* normal layout, ignoring any left/right/top/bottom offsets *)
+						"relative", Automatic, (* normal layout, offset relative to normal position and floats above "siblings" *)
+						"absolute", Automatic, (* non-normal layout, attached cell attached to a parent box with absolute offset *)
+						"fixed",    Automatic, (* non-normal layout, notebook-attached-cell in Working mode (ignores scrolling), appears on each page in Printout mode (header/footer?) *)
 						"inherit",  Automatic,
 						"initial",  initialValues @ prop,
 						_,          unrecognizedKeyWordFailure @ prop
@@ -1558,7 +1788,7 @@ parse[prop:"position", tokens:{{_String, _String}..}] :=
 	]
 
 
-parse[prop:"left", tokens:{{_String, _String}..}] := 
+parse[prop:"left"|"right"|"top"|"bottom", tokens:{{_String, _String}..}] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value =
@@ -1570,76 +1800,45 @@ parse[prop:"left", tokens:{{_String, _String}..}] :=
 						"initial", initialValues @ prop,
 						_,         unrecognizedKeyWordFailure @ prop
 					],
-				"percentage",             With[{n = parsePercentage @ tokens[[1, 2]]}, If[n > 100 || n < 0, Missing["Not available."], Rescale[n, {0, 100}, {-1, 1}]]],
-				"length" | "ems" | "exs", With[{n = parseLength @ tokens[[1, 2]]}, If[n == 0, Left, Missing["Not available."]]],
-				_,                        unrecognizedValueFailure @ prop
-			];
-		If[FailureQ[value] || MissingQ[value], value, Alignment -> {value, Automatic}]
-	]
-
-
-parse[prop:"right", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], value},
-		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
-		value =
-			Switch[tokens[[1, 1]],
-				"ident",
-					Switch[ToLowerCase @ tokens[[1, 2]],
-						"auto",    Automatic,
-						"inherit", Inherited,
-						"initial", initialValues @ prop,
-						_,         unrecognizedKeyWordFailure @ prop
+				"percentage", 
+					With[{n = parsePercentage @ tokens[[1, 2]]}, 
+						If[n > 100 || n < 0, Missing["Out of range."], Rescale[n, {0, 100}, Switch[prop, "left"|"bottom", {-1, 1}, "right"|"top", {1, -1}]]]
 					],
-				"percentage",             With[{n = parsePercentage @ tokens[[1, 2]]}, If[n > 100 || n < 0, Missing["Not available."], -Rescale[n, {0, 100}, {-1, 1}]]],
-				"length" | "ems" | "exs", With[{n = parseLength @ tokens[[1, 2]]}, If[n == 0, Right, Missing["Not available."]]],
-				_,                        unrecognizedValueFailure @ prop
-			];
-		If[FailureQ[value] || MissingQ[value], value, Alignment -> {value, Automatic}]
-	]
-
-
-parse[prop:"top", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], value},
-		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
-		value =
-			Switch[tokens[[1, 1]],
-				"ident",
-					Switch[ToLowerCase @ tokens[[1, 2]],
-						"auto",    Automatic,
-						"inherit", Inherited,
-						"initial", initialValues @ prop,
-						_,         unrecognizedKeyWordFailure @ prop
+				"length" | "ems" | "exs", 
+					With[{n = parseLength @ tokens[[1, 2]]}, 
+						If[n == 0, Switch[prop, "left", Left, "right", Right, "top", Top, "bottom", Bottom], Missing["Not supported."]]
 					],
-				"percentage",             With[{n = parsePercentage @ tokens[[1, 2]]}, If[n > 100 || n < 0, Missing["Not available."], -Rescale[n, {0, 100}, {-1, 1}]]],
-				"length" | "ems" | "exs", With[{n = parseLength @ tokens[[1, 2]]}, If[n == 0, Top, Missing["Not available."]]],
-				_,                        unrecognizedValueFailure @ prop
+				_, unrecognizedValueFailure @ prop
 			];
-		If[FailureQ[value] || MissingQ[value], value, Alignment -> {Automatic, value}]
-	]
-
-
-parse[prop:"bottom", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], value},
-		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
-		value =
-			Switch[tokens[[1, 1]],
-				"ident",
-					Switch[ToLowerCase @ tokens[[1, 2]],
-						"auto",    Automatic,
-						"inherit", Inherited,
-						"initial", initialValues @ prop,
-						_,         unrecognizedKeyWordFailure @ prop
-					],
-				"percentage",             With[{n = parsePercentage @ tokens[[1, 2]]}, If[n > 100 || n < 0, Missing["Not available."], Rescale[n, {0, 100}, {-1, 1}]]],
-				"length" | "ems" | "exs", With[{n = parseLength @ tokens[[1, 2]]}, If[n == 0, Bottom, Missing["Not available."]]],
-				_,                        unrecognizedValueFailure @ prop
-			];
-		If[FailureQ[value] || MissingQ[value], value, Alignment -> {Automatic, value}]
+		If[FailureQ[value] || MissingQ[value], value, Alignment -> Switch[prop, "left"|"right", {value, Automatic}, "top"|"bottom", {Automatic, value}]]
 	]
 
 
 (* ::Subsection::Closed:: *)
 (*text*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*direction*)
+
+
+parse[prop:"direction", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"ltr",     Automatic,
+						"rtl",     Missing["Not supported."],
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value] || MissingQ[value], value, Missing["Not supported."]]
+	]
 
 
 (* ::Subsubsection::Closed:: *)
@@ -1802,6 +2001,30 @@ parse[prop:"font-stretch", tokens:{{_String, _String}..}] :=
 			];
 		If[FailureQ[value], value, FontTracking -> value]
 	]*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*unicode-bidi*)
+
+
+parse[prop:"unicode-bidi", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"normal",        Automatic,
+						"embed",         Missing["Not supported."],
+						"bidi-override", Missing["Not supported."],
+						"inherit",       Inherited,
+						"initial",       initialValues @ prop,
+						_,               unrecognizedKeyWordFailure @ prop
+					],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value] || MissingQ[value], value, Missing["Not supported."]]
+	]
 
 
 (* ::Subsubsection::Closed:: *)
@@ -2127,15 +2350,15 @@ processUnknowns[a:{__Association}] :=
 	]*)
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Properties*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*List of properties*)
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Strictly only CSS2.1 properties.*)
 
 
@@ -2170,21 +2393,21 @@ visual = {
 	(*"border-color", "border-left-color", "border-right-color", "border-top-color", "border-bottom-color", *)
 	(*"border-style", "border-left-style", "border-right-style", "border-top-style", "border-bottom-style", *)
 	(*"border-width", "border-left-width", "border-right-width", "border-top-width", "border-bottom-width", *)
-	"bottom", "caption-side", "clear", (*"clip", *)
+	(*"bottom", *)"caption-side", (*"clear", *)(*"clip", *)
 	(*"color", *)
-	"direction", 
-	"empty-cells", "float", 
+	(*"direction", *)
+	(*"empty-cells", *)(*"float", *)
 	(*"font", "font-family", "font-size", "font-style", "font-variant", "font-weight",*) 
-	(*"height", *)"left", (*"letter-spacing", *)(*"line-height", *)
+	(*"height", *)(*"left", *)(*"letter-spacing", *)(*"line-height", *)
 	(*"list-style", "list-style-image", "list-style-position", "list-style-type",*) 
 	(*"margin", "margin-bottom", "margin-left", "margin-right", "margin-top", *)
 	(*"max-height", "max-width", "min-height", "min-width", *)
 	(*"overflow", *)
 	(*"padding", "padding-bottom", "padding-left", "padding-right", "padding-top", *)
-	"position", "quotes", "right", "table-layout", 
+	(*"position", *)"quotes", (*"right", *)"table-layout", 
 	(*"text-align", "text-decoration", "text-indent", "text-transform", *)
-	"top", "unicode-bidi", (*"vertical-align",*) 
-	"visibility", (*"white-space", *)"width", (*"word-spacing", *)"z-index"};
+	(*"top", *)(*"unicode-bidi", *)(*"vertical-align",*) 
+	"visibility", (*"white-space", *)(*"width", *)(*"word-spacing", *)"z-index"};
 
 
 Length[visual]
@@ -2213,7 +2436,7 @@ Length[visual]
 (*All:*)
 
 
-{"content", "counter-increment", "counter-reset", "display"};
+{"content", (*"counter-increment", "counter-reset", *)"display"};
 
 
 (* ::Subsubsection::Closed:: *)
