@@ -371,11 +371,13 @@ initialValues = <|
 	"border"         -> None,
 	"border-spacing" -> 0,
 	"bottom"         -> Automatic, (* 'auto' *)
+	"caption-side"   -> Missing["Not supported."], (* 'top' *)
 	"clip"           -> Missing["Not supported."],
 	"color"          -> Black,    (* no set CSS specification, so use reasonable setting *)
 	"content"        -> Automatic, (* 'normal' *)
 	"counter-increment" -> {},     (* 'none' *)
 	"counter-reset"  -> {},        (* 'none' *)
+	"cursor"         -> Automatic, (* 'auto' *)
 	"direction"      -> Automatic, (* 'ltr' *)
 	"display"        -> Automatic, (* 'inline' *)
 	"float"          -> Automatic, (* 'none' *)
@@ -401,24 +403,35 @@ initialValues = <|
 	"max-width"      -> Infinity,
 	"min-height"     -> 0,
 	"min-width"      -> 0,
+	"orphans"        -> Missing["Not supported."], (* 2 *)
+	"outline-color"  -> Missing["Not supported."], (* 'invert' *)
+	"outline-style"  -> Missing["Not supported."], (* 'none' *)
+	"outline-width"  -> Missing["Not supported."], (* 'medium' *)
 	"overflow"       -> Missing["Not supported."], (* 'visible' so content can overflow area *)
 	"padding-top"    -> 0,
 	"padding-bottom" -> 0,
 	"padding-left"   -> 0,
 	"padding-right"  -> 0,
 	"padding"        -> 0, (* sets all 4 sides *)
-	"position"       -> Automatic, (* 'static' *)
-	"right"          -> Automatic, (* 'auto' *)
+	"page-break-after"  -> Automatic, (* 'auto' *)
+	"page-break-before" -> Automatic, (* 'auto' *)
+	"page-break-inside" -> Automatic, (* 'auto' *)
+	"position"        -> Automatic, (* 'static' *)
+	"quotes"          -> Automatic,  (* no set value *)
+	"right"           -> Automatic, (* 'auto' *)
 	"text-align"      -> Automatic, (* a nameless value that acts as 'left' if LTR, 'right' if RTL *)
 	"text-decoration" -> {},       (* 'none' *)
 	"text-indent"     -> 0,
 	"text-transform"  -> None,      (* 'none' *)
-	"top"            -> Automatic, (* 'auto' *)
-	"unicode-bidi"   -> Automatic, (* 'normal' *)
-	"vertical-align" -> Baseline,  (* 'baseline' *)
-	"white-space"    -> Missing["Not supported."], (* 'normal' *)
-	"width"          -> Automatic, (* 'auto' *)
-	"word-spacing"   -> "Plain"    (* 'normal' *)
+	"top"             -> Automatic, (* 'auto' *)
+	"unicode-bidi"    -> Automatic, (* 'normal' *)
+	"vertical-align"  -> Baseline,  (* 'baseline' *)
+	"visibility"      -> True, (* 'visible' *)
+	"white-space"     -> Missing["Not supported."], (* 'normal' *)
+	"widows"          -> Missing["Not supported."], (* 2 *)
+	"width"           -> Automatic, (* 'auto' *)
+	"word-spacing"    -> "Plain", (* 'normal' *)
+	"z-index"         -> Missing["Not supported."] (* 'auto' *)
 	|>;
 
 
@@ -547,7 +560,7 @@ parse[prop:"background-color", tokens:{{_String, _String}..}] :=
 *)
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*border-collapse*)
 
 
@@ -590,11 +603,8 @@ parse[prop:"border-color", tokens:{{_String, _String}..}] :=
 		While[pos <= l,
 			start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
 			value = parseSingleColor[prop, tokens[[start ;; stop]]];
-			If[FailureQ[value], 
-				Return @ value
-				, 
-				AppendTo[results, value]; pos++; skipWhitespace[pos, l, tokens];
-			];
+			If[FailureQ[value], Return @ value, AppendTo[results, value]]; 
+			skipWhitespace[pos, l, tokens];
 		];
 		Switch[Length[results],
 			1, {FrameStyle -> {{results[[1]], results[[1]]}, {results[[1]], results[[1]]}}, Cell[CellFrameColor -> First @ results]},
@@ -635,7 +645,7 @@ parse[prop:"border-spacing", tokens:{{_String, _String}..}] :=
 					_,                   unrecognizedValueFailure @ prop
 				];
 			If[FailureQ[value], Return @ value, AppendTo[results, value]];
-			pos++; skipWhitespace[pos, l, tokens];
+			skipWhitespace[pos, l, tokens];
 		];
 		Switch[Length[results],
 			1 | 2, Spacings -> results,
@@ -685,9 +695,9 @@ parse[prop:"border-top-style"|"border-right-style"|"border-bottom-style"|"border
 parse[prop:"border-style", tokens:{{_String, _String}..}] := 
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
-			skipWhitespace[pos, l, tokens];
 			value = parseSingleBorderStyle[prop, tokens[[pos]]];
-			If[FailureQ[value], Return @ value, AppendTo[results, value]; pos++];
+			If[FailureQ[value], Return @ value, AppendTo[results, value]];
+			skipWhitespace[pos, l, tokens]
 		];
 		Switch[Length[results],
 			1, FrameStyle -> {{results[[1]], results[[1]]}, {results[[1]], results[[1]]}},
@@ -744,9 +754,9 @@ parse[prop:"border-top-width"|"border-right-width"|"border-bottom-width"|"border
 parse[prop:"border-width", tokens:{{_String, _String}..}] := 
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
-			skipWhitespace[pos, l, tokens];
 			value = parseSingleBorderWidth[prop, tokens[[pos]]];
-			If[FailureQ[value], Return @ value, AppendTo[results, value]; pos++];
+			If[FailureQ[value], Return @ value, AppendTo[results, value]];
+			skipWhitespace[pos, l, tokens]
 		];
 		(* expand out results  to {{L,R},{B,T}} *)
 		results = 
@@ -801,7 +811,7 @@ parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", t
 				,
 				Return @ unrecognizedValueFailure @ prop
 			];
-			pos++; skipWhitespace[pos, l, tokens];
+			skipWhitespace[pos, l, tokens];
 		];
 		(* reset all sides to their initial values *)
 		{
@@ -831,32 +841,6 @@ parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", t
 					];
 					dirAll)]
 		}
-	]
-
-
-(* ::Subsubsection::Closed:: *)
-(*empty-cells*)
-
-
-(*
-	There is no WL equivalent because WL uses only 'border-collapse' in Grid.
-*)
-parse[prop:"empty-cells", tokens:{{_String, _String}..}] := 
-	Module[{value, wrapper},
-		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
-		value = 
-			Switch[tokens[[1, 1]],
-				"ident",
-					Switch[ToLowerCase @ tokens[[1, 2]],
-						"show",    Automatic,
-						"hide",    Automatic,
-						"inherit", Inherited,
-						"initial", initialValues @ prop,
-						_, unrecognizedKeyWordFailure @ prop
-					],
-				_, unrecognizedValueFailure @ prop
-			];
-		If[FailureQ[value], value, Missing["Not supported."]]
 	]
 
 
@@ -948,13 +932,13 @@ parse[prop:"counter-increment", tokens:{{_String, _String}..}] :=
 								values = Join[values, {tokens[[pos, 2]]}]; pos++
 								,
 								(* otherwise check for a non-negative integer and add that style name n times *)
-								v = tokens[[pos, 2]]; pos++; skipWhitespace[pos, l, tokens];
+								v = tokens[[pos, 2]]; skipWhitespace[pos, l, tokens];
 								With[{i = Interpreter["Integer"][tokens[[pos, 2]]]}, 
 									If[IntegerQ[i],
 										If[i < 0, 
 											Return @ negativeIntegerFailure @ prop
 											,
-											values = Join[values, ConstantArray[v, i]]; pos++; skipWhitespace[pos, l, tokens]
+											values = Join[values, ConstantArray[v, i]]; skipWhitespace[pos, l, tokens]
 										]
 										,
 										values = Join[values, {v}];
@@ -988,10 +972,10 @@ parse[prop:"counter-reset", tokens:{{_String, _String}..}] :=
 								AppendTo[values, {tokens[[pos, 2]], 0}]; pos++
 								,
 								(* otherwise check for an integer *)
-								v = tokens[[pos, 2]]; pos++; skipWhitespace[pos, l, tokens];
+								v = tokens[[pos, 2]]; skipWhitespace[pos, l, tokens];
 								With[{i = Interpreter["Integer"][tokens[[pos, 2]]]}, 
 									If[IntegerQ[i], (* if integer exists, use it and skip ahead, otherwise use 0 and don't increment pos *)
-										AppendTo[values, {v, i}]; pos++; skipWhitespace[pos, l, tokens]
+										AppendTo[values, {v, i}]; skipWhitespace[pos, l, tokens]
 										,
 										AppendTo[values, {v, 0}];
 									]
@@ -1129,7 +1113,7 @@ parse[prop:"list-style", tokens:{{_String, _String}..}] :=
 			A value of 'none' sets whichever of li-type and li-image are not otherwise specified to 'none'. 
 			If both are specified, then an additional 'none' is an error.
 		*)
-		value = <|"image" -> None, "pos" -> Missing["Not available."], "type" -> None|>;
+		value = <|"image" -> None, "pos" -> Missing["Not supported."], "type" -> None|>;
 		While[pos <= l,
 			If[TrueQ[ToLowerCase @ tokens[[pos, 2]] == "none"], 
 				noneCount++
@@ -1145,15 +1129,52 @@ parse[prop:"list-style", tokens:{{_String, _String}..}] :=
 					3, If[acquiredType,  Return @ repeatedPropValueFailure @ "type",     value["type"] = value[[p]];  acquiredType = True]
 				];
 			];
-			pos++; skipWhitespace[pos, l, tokens];
+			skipWhitespace[pos, l, tokens];
 		];
 		Which[
 			acquiredImage && acquiredType && noneCount > 0, repeatedPropValueFailure @ "none",
 			acquiredImage, Cell[CellDingbat -> value["image"]], (* default to Image if it could be found *)
 			acquiredType,  Cell[CellDingbat -> value["type"]],
 			True,          Cell[CellDingbat -> None]]
-		]
 	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*quotes*)
+
+
+(*
+	Quotes could be implemented using DisplayFunction \[Rule] (RowBox[{<open-quote>,#,<close-quote>}]&),
+	but only a handful of boxes accept this WL option e.g. DynamicBoxOptions, ValueBoxOptions, and a few others.
+	There's also ShowStringCharacters, but this only hides/shows the double quote.
+	We treat this then as not available, but we validate the form anyway.
+*)
+parse[prop:"quotes", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], v, values = {}},
+		While[pos <= l,
+			Switch[tokens[[pos, 1]],
+				"ident", 
+					Switch[ToLowerCase @ tokens[[pos, 2]],
+						"none",    If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = {}],
+						"inherit", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = Inherited],
+						"initial", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = initialValues @ prop],
+					],
+				"string",
+					v = tokens[[pos, 2]]; skipWhitespace[pos, l, tokens];
+					If[tokens[[pos, 1]] == "string", 
+						AppendTo[values, {v, tokens[[pos, 2]]}]; skipWhitespace[pos, l, tokens]
+						,
+						Return @ Failure["UnexpectedParse", <|"Message" -> "Expected pairs of strings."|>]
+					],
+				_, values = unrecognizedValueFailure @ prop; Break[]
+			];
+		];
+		If[FailureQ[values], values, Missing["Not supported."]]
+	]
+
+
+(* ::Subsection:: *)
+(*cursor (TODO)*)
 
 
 (* ::Subsection::Closed:: *)
@@ -1298,7 +1319,7 @@ parse[prop:"font", tokens:{{_String, _String}..}] :=
 			If[!MatchQ[ToLowerCase @ tokens[[pos, 2]], "normal" | "initial" | "inherit"],
 				AppendTo[newValue, FirstCase[parse[#, {tokens[[pos]]}]& /@ {"font-style", "font-variant", "font-weight"}, _Rule, Nothing]]
 			];
-			pos++; skipWhitespace[pos, l, tokens];
+			skipWhitespace[pos, l, tokens];
 		];
 		
 		(* font-size must appear next *)
@@ -1309,7 +1330,7 @@ parse[prop:"font", tokens:{{_String, _String}..}] :=
 		If[MatchQ[tokens[[pos]], {"operator", "/"}],
 			pos++; 
 			temp = parse["line-height", {tokens[[pos]]}]; 
-			If[FailureQ[temp], Return @ temp, AppendTo[newValue, temp]; pos++; skipWhitespace[pos, l, tokens]];
+			If[FailureQ[temp], Return @ temp, AppendTo[newValue, temp]; skipWhitespace[pos, l, tokens]];
 		];
 		
 		(* everything else must be a font-family *)
@@ -1623,7 +1644,7 @@ parseSingleMargin[prop_String, token:{_String, _String}] :=
 			Switch[ToLowerCase @ token[[2]],
 				"initial", initialValues @ prop,
 				"inherit", Inherited,
-				"auto",    Automatic, (* let Mathematica decide what to do *)
+				"auto",    Automatic, (* let FE decide what to do *)
 				_,         unrecognizedKeyWordFailure @ prop
 			],
 		"length" | "number" | "ems" | "exs", parseLength @ token[[2]] (* can be positive, negative, or 0 *),
@@ -1652,11 +1673,8 @@ parse[prop:"margin", tokens:{{_String, _String}..}] :=
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleMargin[prop, tokens[[pos]]];
-			If[FailureQ[value], 
-				Return @ value
-				, 
-				AppendTo[results, value]; pos++; skipWhitespace[pos, l, tokens];
-			];
+			If[FailureQ[value], Return @ value, AppendTo[results, value]]; 
+			skipWhitespace[pos, l, tokens];
 		];
 		(* expand out results  to {{L,R},{B,T}} *)
 		results = 
@@ -1668,6 +1686,157 @@ parse[prop:"margin", tokens:{{_String, _String}..}] :=
 				_, Return @ tooManyTokensFailure @ tokens
 			];
 		{ImageMargins -> results, Cell[CellMargins -> results]}
+	]
+
+
+(* ::Subsection::Closed:: *)
+(*outline*)
+
+
+(* 
+	FE does not really have an option to do outlines that take up no space. 
+	E.g. WL Tooltip always appears off to the side and would otherwise cover the original box.
+	E.g. An attached cell overlaying a box would also prevent interaction with the original box.
+	Wrapping an expressing in Framed addes a FrameBox which takes up space.
+*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*outline-width*)
+
+
+parse[prop:"outline-width", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[l > 1, Return @ tooManyTokensFailure @ prop];
+		value = parseSingleBorderWidth[prop, tokens[[pos]]];
+		If[FailureQ[value], 
+			value
+			, 
+			(*With[{t = Round @ convertToCellThickness @ value},
+				Cell[
+					CellFrame -> Dynamic[If[CurrentValue["MouseOver"], t, Inherited]],
+					CellFrameMargins \[Rule] Dynamic[If[CurrentValue["MouseOver"], -t, Inherited]]
+			]*)
+			Missing["Not supported."]
+		]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*outline-style*)
+
+
+(* only a solid border is allowed for cells; 'hidden' is not allowed here *)
+parse[prop:"outline-style", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value, results = {}},
+		If[l > 1, Return @ tooManyTokensFailure @ prop];
+		value =
+			If[tokens[[1, 1]] == "ident" && tokens[[1, 2]] == "hidden",
+				unrecognizedKeyWordFailure @ prop
+			,
+				parseSingleBorderStyle[prop, tokens[[pos]]]
+			];
+		If[FailureQ[value], value, Missing["Not supported."]]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*outline-color*)
+
+
+parse[prop:"outline-color", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value, colorNegate, results = {}, start, stop},
+		If[l == 1 && tokens[[1, 1]] == "ident" && ToLowerCase @ tokens[[1, 2]] == "invert",
+			Cell[CellFrameColor -> Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]]]
+			,
+			While[pos <= l,
+				start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
+				value = parseSingleColor[prop, tokens[[start ;; stop]]];
+				If[FailureQ[value], Return @ value, AppendTo[results, value]]; 
+				skipWhitespace[pos, l, tokens];
+			];
+			Switch[Length[results],
+				1, Missing["Not supported."](*With[{c = First @ results}, Cell[CellFrameColor -> Dynamic[If[CurrentValue["MouseOver"], c, Inherited]]]]*),
+				_, tooManyTokensFailure @ tokens
+			]
+		]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*outline*)
+
+
+(* Shorthand for outline-*-width/style/color. *)
+parse[prop:"outline", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], p, value, init, dirAll, dir, start, stop, acquiredColor = False, acquiredDashing = False, acquiredThickness = False},
+		init = <|"color" -> None, "dashing" -> None, "thickness" -> None|>; 
+		
+		If[l == 1, (* if only one token is present, then it should be a keyword *)
+			Return @  
+				Switch[ToLowerCase @ tokens[[1, 2]],
+					"inherit", Missing["Not supported."](*Cell[Inherited]*),
+					"initial", 
+						(*Cell[
+							CellFrameMargins \[Rule] Dynamic[If[CurrentValue["MouseOver"], -3, Inherited]], 
+							CellFrame \[Rule] Dynamic[If[CurrentValue["MouseOver"], 3, Inherited]], 
+							CellFrameColor \[Rule] Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]]]*)
+						Missing["Not supported."], 
+					_, unrecognizedKeyWordFailure @ prop
+				]
+		];
+		
+		(* Ignore 'inherit' and 'initial' keywords because they are ambiguous. Other keywords are unique. *)
+		While[pos <= l,
+			If[!MatchQ[ToLowerCase @ tokens[[pos, 2]], "initial" | "inherit"],
+				Which[
+					MatchQ[ToLowerCase @ tokens[[pos, 2]], "invert"], 
+						If[acquiredColor, 
+							Return @ repeatedPropValueFailure @ "color"
+							, 
+							init["color"] = Dynamic[ColorNegate @ CurrentValue[CellFrameColor]]; acquiredColor = True
+						],
+					MatchQ[ToLowerCase @ tokens[[pos, 2]], "hidden"], 
+						If[acquiredDashing, Return @ repeatedPropValueFailure @ "style",init["style"] = Cell[Inherited]],						
+					True,
+						start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
+						value = {
+							parseSingleColor[prop, tokens[[start ;; stop]]],
+							parseSingleBorderStyle[prop, First @ tokens[[start ;; stop]]],
+							parseSingleBorderWidth[prop, First @ tokens[[start ;; stop]]]};
+						p = FirstPosition[value, Except[_?FailureQ], Return @ unrecognizedValueFailure @ prop, {1}, Heads -> False][[1]];
+						Switch[p, 
+							1, If[acquiredColor,     Return @ repeatedPropValueFailure @ "color", init["color"] = value[[p]];     acquiredColor = True], 
+							2, If[acquiredDashing,   Return @ repeatedPropValueFailure @ "style", init["dashing"] = value[[p]];   acquiredDashing = True], 
+							3, If[acquiredThickness, Return @ repeatedPropValueFailure @ "width", init["thickness"] = value[[p]]; acquiredThickness = True]
+						]
+				]
+				,
+				Return @ unrecognizedValueFailure @ prop
+			];
+			skipWhitespace[pos, l, tokens];
+		];
+		
+		(*Cell[
+			CellFrameColor -> 
+				If[acquiredColor, 
+					With[{c = init["color"]}, Dynamic[If[CurrentValue["MouseOver"], c, Inherited]]]
+					, 
+					Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]]
+				],
+			CellFrame -> 
+				If[acquiredThickness, 
+					With[{t = convertToCellThickness @ init["thickness"]}, Dynamic[If[CurrentValue["MouseOver"], t, 0]]]
+					,
+					Dynamic[If[CurrentValue["MouseOver"], 3, Inherited]]
+				],
+			CellFrameMargins \[Rule] 
+				If[acquiredThickness, 
+					With[{t = -convertToCellThickness @ init["thickness"]}, Dynamic[If[CurrentValue["MouseOver"], t, 0]]]
+					,
+					Dynamic[If[CurrentValue["MouseOver"], -3, Inherited]]
+				]]*)
+		Missing["Not supported."]
 	]
 
 
@@ -1737,11 +1906,8 @@ parse[prop:"padding", tokens:{{_String, _String}..}] :=
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSinglePadding[prop, tokens[[pos]]];
-			If[FailureQ[value], 
-				Return @ value
-				, 
-				AppendTo[results, value]; pos++; skipWhitespace[pos, l, tokens];
-			];
+			If[FailureQ[value], Return @ value, AppendTo[results, value]]; 
+			skipWhitespace[pos, l, tokens];
 		];
 		(* expand out results  to {{L,R},{B,T}} *)
 		results = 
@@ -1753,6 +1919,93 @@ parse[prop:"padding", tokens:{{_String, _String}..}] :=
 				_, Return @ tooManyTokensFailure @ tokens
 			];
 		{FrameMargins -> results, Cell[CellFrameMargins -> results]}
+	]
+
+
+(* ::Subsection::Closed:: *)
+(*page breaks*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*orphans/widows*)
+
+
+(* 
+	FE uses LinebreakAdjustments with an blackbox algorithm. 
+	AFAIK there's no way to directly prevent orphans/widows.
+*)
+parse[prop:"orphans"|"widows", tokens:{{_String, _String}..}] := 
+	Module[{value, wrapper},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				"number", With[{n = Interpreter["Integer"][tokens[[1, 2]]]}, If[n < 0, negativeIntegerFailure @ prop, n]],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, Missing["Not supported."]]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*page-break-after/before*)
+
+
+parse[prop:("page-break-after"|"page-break-before"), tokens:{{_String, _String}..}] := 
+	Module[{value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"auto",    Automatic,
+						"always",  True,
+						"avoid",   False,
+						"left",    Missing["Not supported."],
+						"right",   Missing["Not supported."],
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value] || MissingQ[value], 
+			value
+			, 
+			Cell[Switch[prop, "page-break-after", PageBreakBelow, "page-break-before", PageBreakAbove] -> value]
+		]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*page-break-inside*)
+
+
+parse[prop:"page-break-inside", tokens:{{_String, _String}..}] := 
+	Module[{value},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"auto",    Automatic, 
+						"avoid",   False,
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value] || MissingQ[value], 
+			value
+			, 
+			Cell[PageBreakWithin -> value, GroupPageBreakWithin -> value]
+		]
 	]
 
 
@@ -1784,7 +2037,7 @@ parse[prop:"position", tokens:{{_String, _String}..}] :=
 					],
 				_, unrecognizedValueFailure @ prop
 			];
-		If[FailureQ[value], value, Missing["Not available."]]
+		If[FailureQ[value], value, Missing["Not supported."]]
 	]
 
 
@@ -1811,6 +2064,82 @@ parse[prop:"left"|"right"|"top"|"bottom", tokens:{{_String, _String}..}] :=
 				_, unrecognizedValueFailure @ prop
 			];
 		If[FailureQ[value] || MissingQ[value], value, Alignment -> Switch[prop, "left"|"right", {value, Automatic}, "top"|"bottom", {Automatic, value}]]
+	]
+
+
+(* ::Subsection::Closed:: *)
+(*table*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*caption-side*)
+
+
+(* WL Grid does not support an option to have a grid caption. *)
+parse[prop:"caption-side", tokens:{{_String, _String}..}] := 
+	Module[{value, wrapper},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"top",     Automatic,
+						"bottom",  Automatic,
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, Missing["Not supported."]]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*empty-cells*)
+
+
+(* There is no WL equivalent because FE uses only 'border-collapse' in Grid.*)
+parse[prop:"empty-cells", tokens:{{_String, _String}..}] := 
+	Module[{value, wrapper},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"show",    Automatic,
+						"hide",    Automatic,
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, Missing["Not supported."]]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*table-layout*)
+
+
+(* The FE does its own formatting passes depending on the column width settings and content. *)
+parse[prop:"table-layout", tokens:{{_String, _String}..}] := 
+	Module[{value, wrapper},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"auto",    Automatic,
+						"fixed",   Automatic,
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, Missing["Not supported."]]
 	]
 
 
@@ -1914,7 +2243,7 @@ parse[prop:"text-decoration", tokens:{{_String, _String}..}] :=
 					_, unrecognizedValueFailure @ prop
 				];
 			If[FailureQ[value], Return @ value, AppendTo[values, value]];
-			pos++; skipWhitespace[pos, l, tokens];
+			skipWhitespace[pos, l, tokens];
 		];
 		FontVariations -> values
 	]
@@ -2136,18 +2465,73 @@ parseCellBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] :=
 					Switch[ToLowerCase @ tokens[[1, 2]],
 						"baseline", Center,
 						"middle",   Baseline,
-						"super" | "sub", Missing["Not available."],
-						"top" | "text-top", Missing["Not available."], (* because top of in-line is at baseline of cell *)
+						"super" | "sub", Missing["Not supported."],
+						"top" | "text-top", Missing["Not supported."], (* because top of in-line is at baseline of cell *)
 						"bottom" | "text-bottom", Bottom,
 						"inherit", Inherited,
 						"initial", Baseline,
 						_, unrecognizedKeyWordFailure @ prop
 					],
 				"length" | "number", parseLength @ tokens[[1, 2]], (* w.r.t. the top of the in-line cell *)
-				"ems" | "exs" | "percentage", Missing["Not available."],
+				"ems" | "exs" | "percentage", Missing["Not supported."],
 				_, unrecognizedValueFailure @ prop
 			];
 		If[FailureQ[value], value, Cell[CellBaseline -> value]]
+	]
+
+
+(* ::Subsection::Closed:: *)
+(*visibility*)
+
+
+(* 
+	WL option ShowContents is only applicable within a StyleBox.
+	Often this is implemented using the Invisible function.
+*)
+parse[prop:"visibility", tokens:{{_String, _String}..}] := 
+	Module[{value, wrapper},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"visible",  True,
+						"hidden",   False,
+						"collapse", False,
+						"inherit",  Inherited,
+						"initial",  initialValues @ prop,
+						_,          unrecognizedKeyWordFailure @ prop
+					],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, ShowContents -> value]
+	]
+
+
+(* ::Subsection::Closed:: *)
+(*z-index*)
+
+
+(* 
+	The FE does its own depth ordering of boxes. 
+	Attached cells are ordered by their creation order.
+*)
+parse[prop:"z-index", tokens:{{_String, _String}..}] := 
+	Module[{value, wrapper},
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident",
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"auto",     Automatic,
+						"inherit",  Inherited,
+						"initial",  initialValues @ prop,
+						_,          unrecognizedKeyWordFailure @ prop
+					],
+				"number", Interpreter["Integer"][tokens[[1, 2]]],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, Missing["Not supported."]]
 	]
 
 
@@ -2188,8 +2572,9 @@ findClosingBracketPosition[positionIndex_Integer, openBracket_String, closeBrack
 
 
 Attributes[skipWhitespace] = {HoldFirst};
-skipWhitespace[positionIndex_, length_Integer, tokens_List] := 
-	While[positionIndex < length && tokens[[positionIndex, 1]] == "whitespace", positionIndex++]
+skipWhitespace[positionIndex_, length_Integer, tokens_List] := (
+	positionIndex++;
+	While[positionIndex < length && tokens[[positionIndex, 1]] == "whitespace", positionIndex++])
 
 
 (* ::Subsection::Closed:: *)
@@ -2249,6 +2634,7 @@ processDeclarationBlock[tokens:{{_String, _String}..}] :=
 		pos = 1;
 		l = Length[tokens];
 		i = 1;
+		If[tokens[[1, 1]] == "whitespace", skipWhitespace[pos, l, tokens]]; (* skip any initial whitespace *)
 		(*
 			Each declaration is of the form 'property:value;'. The last declaration may leave off the semicolon.
 			Like we did with parsing blocks, we count the number of colons as the upper limit of the number of declarations.
@@ -2256,11 +2642,10 @@ processDeclarationBlock[tokens:{{_String, _String}..}] :=
 		lDeclarations = Count[tokens, {":", _}];
 		declarations = ConstantArray[0, lDeclarations];
 		While[pos < l && i <= lDeclarations,
-			skipWhitespace[pos, l, tokens];
 			If[tokens[[pos, 1]] == "ident",
-				propertyPosition = pos; pos++; skipWhitespace[pos, l, tokens];
+				propertyPosition = pos; skipWhitespace[pos, l, tokens];
 				If[tokens[[pos, 1]] == ":",
-					pos++; skipWhitespace[pos, l, tokens];
+					skipWhitespace[pos, l, tokens];
 					valueStartPosition = pos;
 					(* check for 'important' token, which would be the last token before ';' *)
 					While[!MatchQ[tokens[[pos, 1]], ";" | "important"] && pos < l, pos++];
@@ -2268,17 +2653,19 @@ processDeclarationBlock[tokens:{{_String, _String}..}] :=
 						"important", 
 							important = True; 
 							valueStopPosition = pos-1;
-							pos++; skipWhitespace[pos, l, tokens];
-							If[tokens[[pos, 1]] == ";", 
-								pos++
-								, 
+							skipWhitespace[pos, l, tokens];
+							Which[
+								(* do nothing extra as 'important' must be on the last declaration that also is missing a semi-colon *)
+								pos > l, Null, 
+								(* skip over the semi-colon *)
+								tokens[[pos, 1]] == ";", pos++,  
 								(* syntax error; reset values and let a further parser flag the error *)
-								valueStopPosition = pos; important = False; While[tokens[[pos, 1]] != ";" && pos < l, pos++]
-							];,
+								True, valueStopPosition = pos; important = False; While[tokens[[pos, 1]] != ";" && pos < l, pos++]
+							],
 						";", 
 							important = False;
-							valueStopPosition = pos-1;,
-						_,
+							valueStopPosition = pos-1,
+						_, (* case of no 'important' ident and no semi-colon after last declaration in block *)
 							important = False;
 							valueStopPosition = pos;
 					];
@@ -2288,14 +2675,16 @@ processDeclarationBlock[tokens:{{_String, _String}..}] :=
 						"Property" -> ToLowerCase @ tokens[[propertyPosition, 2]], 
 						"Value" -> (*check for empty property*)If[valueStopPosition < valueStartPosition, {}, tokens[[valueStartPosition ;; valueStopPosition]]],
 						"Interpretation" -> None|>;
-					pos++;
+					skipWhitespace[pos, l, tokens];
 					,
+					(* ELSE failed to find colon in declaration, so skip to next declaration by looking for nearest declaration end *)
 					While[tokens[[pos, 1]] != ";" && pos < l, pos++];
 				];
 				,
+				(* ELSE failed to find initial identifier in declaration, so skip to next declaration by looking for nearest declaration end *)
 				While[tokens[[pos, 1]] != ";" && pos < l, pos++];
 			];
-			i++;
+			i++ (* increment number of successfully parsed declarations *)
 		];					
 		(* remove possible excess declarations *)
 		DeleteCases[declarations, 0, {1}]
@@ -2350,15 +2739,15 @@ processUnknowns[a:{__Association}] :=
 	]*)
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Properties*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*List of properties*)
 
 
-(* ::Subsubsection::Closed:: *)
+(* ::Subsubsection:: *)
 (*Strictly only CSS2.1 properties.*)
 
 
@@ -2387,27 +2776,31 @@ pTable = StringReplace[pTable[[2;;,1]], "'" -> ""] // StringSplit // Join // Fla
 
 visual = {
 	"background", "background-attachment", (*"background-color",*) "background-image", "background-position", "background-repeat", 
-	(*"border", *)
-	(*"border-collapse", "border-spacing", *)
-	(*"border-left", "border-right", "border-top", "border-bottom", *)
-	(*"border-color", "border-left-color", "border-right-color", "border-top-color", "border-bottom-color", *)
-	(*"border-style", "border-left-style", "border-right-style", "border-top-style", "border-bottom-style", *)
-	(*"border-width", "border-left-width", "border-right-width", "border-top-width", "border-bottom-width", *)
-	(*"bottom", *)"caption-side", (*"clear", *)(*"clip", *)
-	(*"color", *)
-	(*"direction", *)
-	(*"empty-cells", *)(*"float", *)
-	(*"font", "font-family", "font-size", "font-style", "font-variant", "font-weight",*) 
-	(*"height", *)(*"left", *)(*"letter-spacing", *)(*"line-height", *)
-	(*"list-style", "list-style-image", "list-style-position", "list-style-type",*) 
-	(*"margin", "margin-bottom", "margin-left", "margin-right", "margin-top", *)
-	(*"max-height", "max-width", "min-height", "min-width", *)
-	(*"overflow", *)
-	(*"padding", "padding-bottom", "padding-left", "padding-right", "padding-top", *)
-	(*"position", *)"quotes", (*"right", *)"table-layout", 
-	(*"text-align", "text-decoration", "text-indent", "text-transform", *)
-	(*"top", *)(*"unicode-bidi", *)(*"vertical-align",*) 
-	"visibility", (*"white-space", *)(*"width", *)(*"word-spacing", *)"z-index"};
+	"border", 
+	"border-collapse", "border-spacing", 
+	"border-left", "border-right", "border-top", "border-bottom", 
+	"border-color", "border-left-color", "border-right-color", "border-top-color", "border-bottom-color", 
+	"border-style", "border-left-style", "border-right-style", "border-top-style", "border-bottom-style", 
+	"border-width", "border-left-width", "border-right-width", "border-top-width", "border-bottom-width", 
+	"bottom", "caption-side", "clear", "clip", 
+	"color", 
+	"direction", 
+	"empty-cells", "float", 
+	"font", "font-family", "font-size", "font-style", "font-variant", "font-weight", 
+	"height", "left", "letter-spacing", "line-height", 
+	"list-style", "list-style-image", "list-style-position", "list-style-type", 
+	"margin", "margin-bottom", "margin-left", "margin-right", "margin-top", 
+	"max-height", "max-width", "min-height", "min-width", 
+	"overflow", 
+	"padding", "padding-bottom", "padding-left", "padding-right", "padding-top", 
+	"position", "quotes", "right", "table-layout", 
+	"text-align", "text-decoration", "text-indent", "text-transform", 
+	"top", "unicode-bidi", "vertical-align", 
+	"visibility", "white-space", "width", "word-spacing", "z-index"};
+
+
+(* ::Input:: *)
+(*Complement[Keys[initialValues],Join[visual,interactive,paged,all]]*)
 
 
 Length[visual]
@@ -2417,7 +2810,7 @@ Length[visual]
 (*Visual + Interactive*)
 
 
-{
+interactive = {
 	"cursor", 
 	"outline", "outline-color", "outline-style", "outline-width"};
 
@@ -2426,7 +2819,7 @@ Length[visual]
 (*Visual + Paged*)
 
 
-{
+paged = {
 	"orphans", 
 	"page-break-after", "page-break-before", "page-break-inside", 
 	"widows"};
@@ -2436,7 +2829,7 @@ Length[visual]
 (*All:*)
 
 
-{"content", (*"counter-increment", "counter-reset", *)"display"};
+all = {"content", (*"counter-increment", "counter-reset", *)"display"};
 
 
 (* ::Subsubsection::Closed:: *)
