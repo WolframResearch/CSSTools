@@ -347,8 +347,13 @@ illegalIdentifierFailure[ident_String] :=  Failure["UnexpectedParse", <|"Message
 
 
 initialValues = <|
-	"background-color" -> None, (* 'transparent' *)
-	"border-collapse"  -> Missing["Not supported."], (* 'separated' *)
+	"background-attachment" -> Missing["Not supported."], (* 'scroll' *)
+	"background-color"      -> None, (* 'transparent' *)
+	"background-image"      -> None, (* 'none' *)
+	"background-position"   -> Missing["Not supported."], (* '0% 0%' *)
+	"background-repeat"     -> "Repeat", (* 'repeat' *)
+	"background"            -> Automatic,
+	"border-collapse"     -> Missing["Not supported."], (* 'separated' *)
 	"border-top-color"    -> Dynamic @ CurrentValue[FontColor], 
 	"border-right-color"  -> Dynamic @ CurrentValue[FontColor],
 	"border-bottom-color" -> Dynamic @ CurrentValue[FontColor],
@@ -508,11 +513,30 @@ parsePercentage[s_String] := Interpreter["Number"] @ StringDrop[s, -1]
 
 
 (* ::Subsection::Closed:: *)
-(*background (TODO)*)
+(*background*)
 
 
-(* ::Subsubsection:: *)
-(*background-attachment (TODO)*)
+(* ::Subsubsection::Closed:: *)
+(*background-attachment*)
+
+
+parse[prop:"background-attachment", tokens:{{_String, _String}..}] := 
+	Module[{l = Length[tokens], value},
+		If[l > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident", 
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"scroll",  Missing["Not supported."],
+						"fixed",   Automatic, (* FE's only allowed value *)
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				_,     unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value] || MissingQ[value], value, Missing["Only fixed supported."]]
+	]
 
 
 (* ::Subsubsection::Closed:: *)
@@ -530,16 +554,103 @@ parse[prop:"background-color", tokens:{{_String, _String}..}] :=
 	]
 
 
-(* ::Subsubsection:: *)
-(*background-image (TODO)*)
+(* ::Subsubsection::Closed:: *)
+(*background-image*)
 
 
-(* ::Subsubsection:: *)
-(*background-position (TODO)*)
+parse[prop:"background-image", tokens:{{_String, _String}..}] := 
+	Module[{l = Length[tokens], value},
+		If[l > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident", 
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"none",    None,
+						"inherit", Inherited,
+						"initial", initialValues @ prop,
+						_,         unrecognizedKeyWordFailure @ prop
+					],
+				"uri", Import[tokens[[1, 2]]],
+				_,     unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, System`BackgroundAppearance -> value]
+	]
 
 
-(* ::Subsubsection:: *)
-(*background-repeat (TODO)*)
+(* ::Subsubsection::Closed:: *)
+(*background-position*)
+
+
+parseSingleBGPosition[prop_String, token:{_String, _String}] :=
+	Module[{},
+		Switch[token[[1]],
+			"ident", 
+				Switch[ToLowerCase @ token[[2]],
+					"left",    Left,
+					"center",  Center,
+					"right",   Right,
+					"top",     Top,
+					"bottom",  Bottom,
+					"inherit", Inherited,
+					"initial", initialValues @ prop,
+					_,         unrecognizedKeyWordFailure @ prop
+				],
+			"percentage", With[{v = parsePercentage @ token[[2]]}, negativeQ[v, prop, If[TrueQ[v==0], 0, Scaled[v/100]]]],
+			"length",     With[{v = parseLength @ token[[2]]},     negativeQ[v, prop, v]],
+			_,            unrecognizedValueFailure @ prop
+		]]
+
+
+(* only "Center" is supported by the FE *)
+parse[prop:"background-position", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		Switch[l,
+			1, 
+				value = parseSingleBGPosition[prop, tokens[[1]]];
+				value = 
+					Switch[value,
+						Center,    "Center",
+						Inherited, Inherited,
+						_,         Missing["Not supported."]],
+			2, 
+				value = parseSingleBGPosition[prop, #]& /@ tokens; 
+				value = 
+					Switch[value,
+						{Center, Center},                   "Center", 
+						{Top, Left} | {Left, Top} | {0, 0}, "NoRepeat",
+						{Inherited, _} | {_, Inherited},    illegalIdentifierFailure @ "inherit",
+						_,                                  Missing["Not supported."]
+					],
+			_, tooManyTokensFailure @ tokens
+		];
+		
+		If[FailureQ[value], value, System`BackgroundAppearanceOptions -> value]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*background-repeat*)
+
+
+parse[prop:"background-repeat", tokens:{{_String, _String}..}] := 
+	Module[{l = Length[tokens], value},
+		If[l > 1, Return @ tooManyTokensFailure @ tokens];
+		value = 
+			Switch[tokens[[1, 1]],
+				"ident", 
+					Switch[ToLowerCase @ tokens[[1, 2]],
+						"no-repeat", "NoRepeat",
+						"repeat-x",  "RepeatX",
+						"repeat-y",  "RepeatY",
+						"repeat",    "Repeat",
+						"inherit",   Inherited,
+						"initial",   initialValues @ prop,
+						_,           unrecognizedKeyWordFailure @ prop
+					],
+				_,     unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, System`BackgroundAppearanceOptions -> value]
+	]
 
 
 (* ::Subsection::Closed:: *)
@@ -885,30 +996,38 @@ parse[prop:"clip", tokens:{{_String, _String}..}] :=
 parse[prop:"color", tokens:{{_String, _String}..}] := parseSingleColor[prop, tokens]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*content, lists, and quotes (TODO)*)
 
 
-(* ::Subsubsection::Closed:: *)
-(*content (TODO)*)
+(* ::Subsubsection:: *)
+(*content (TODO somehow decide what to keep and what to throw away)*)
 
 
-(*TODO*)
+(* only used to add content before or after element, so let's restrict this to Cells *)
 parse[prop:"content", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], value},
-		value = 
-			Switch[tokens[[pos, 1]],
-				"ident", 
-					Switch[ToLowerCase @ tokens[[pos, 2]],
-						"normal",  Automatic,
-						"none",    Automatic,
-						"inherit", Inherited,
-						"initial", initialValues @ prop,
-						_,         unrecognizedKeyWordFailure @ prop
-					],
-				_, unrecognizedValueFailure @ prop
-			];
-		If[FailureQ[value] || MissingQ[value], value, Missing["Not supported."]]
+	Module[{pos = 1, l = Length[tokens], value, start, stop},
+		If[l == 1,
+			value = 
+				Switch[tokens[[pos, 1]],
+					"ident", 
+						Switch[ToLowerCase @ tokens[[pos, 2]],
+							"normal",  Automatic,
+							"none",    Automatic,
+							"inherit", Inherited,
+							"initial", initialValues @ prop,
+							_,         unrecognizedKeyWordFailure @ prop
+						],
+					"string", Cell[CellLabel -> tokens[[pos, 2]]], (* is this even doing this option justice? *)
+					"uri",    With[{i = Import[tokens[[pos, 2]]]}, If[FailureQ[i], notAnImageFailure @ tokens[[pos, 2]], Cell[CellDingbat -> i]]],
+					_,        unrecognizedValueFailure @ prop
+				]
+			,
+			If[tokens[[pos, 1]] == "function" , 
+				start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
+			value = Missing["Multiple values not supported."]
+		];
+		value
 	]
 
 
@@ -1173,8 +1292,42 @@ parse[prop:"quotes", tokens:{{_String, _String}..}] :=
 	]
 
 
-(* ::Subsection:: *)
-(*cursor (TODO)*)
+(* ::Subsection::Closed:: *)
+(*cursor*)
+
+
+(* WL uses a TagBox[..., MouseAppearanceTag[""]] instead of an option to indicate mouse appearance *)
+parse[prop:"cursor", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[l > 1, Return @ tooManyTokensFailure @ prop];
+		value = 
+			Switch[tokens[[pos, 1]],
+				"ident", 
+					Switch[ToLowerCase @ tokens[[pos, 2]],
+						"inherit",       Inherited,
+						"initial",       initialValues @ prop,
+						"auto",          Automatic,
+						"copy",          "DragAndDrop",
+						"crosshair",     "Crosshair",
+						"default",       "Arrow",
+						"help",          "Help",
+						"move",          "FrameMove",
+						"pointer",       "LinkHand",
+						"progress",      ProgressIndicator[Appearance -> "Necklace"],
+						"text",          "Edit",
+						"vertical-text", "MathEdit90",
+						"wait",          ProgressIndicator[Appearance -> "Necklace"],
+						"e-resize"|"w-resize",   "FrameLRResize",
+						"n-resize"|"s-resize",   "FrameTBResize",
+						"nw-resize"|"se-resize", "FrameFallingResize",
+						"ne-resize"|"sw-resize", "FrameRisingResize",
+						_,               unrecognizedKeyWordFailure @ prop
+					],
+				"uri", Import[tokens[[pos, 2]]],
+				_, unrecognizedValueFailure @ prop
+			];
+		If[FailureQ[value], value, With[{v = value}, MouseAppearance[#, v]&]]
+	]		
 
 
 (* ::Subsection::Closed:: *)
@@ -2739,15 +2892,15 @@ processUnknowns[a:{__Association}] :=
 	]*)
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Properties*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*List of properties*)
 
 
-(* ::Subsubsection:: *)
+(* ::Subsubsection::Closed:: *)
 (*Strictly only CSS2.1 properties.*)
 
 
@@ -2759,7 +2912,7 @@ pTable = StringReplace[pTable[[2;;,1]], "'" -> ""] // StringSplit // Join // Fla
 (*Aural:*)
 
 
-{
+aural = {
 	"azimuth", 
 	"cue", "cue-after", "cue-before", 
 	"elevation", 
@@ -2775,7 +2928,7 @@ pTable = StringReplace[pTable[[2;;,1]], "'" -> ""] // StringSplit // Join // Fla
 
 
 visual = {
-	"background", "background-attachment", (*"background-color",*) "background-image", "background-position", "background-repeat", 
+	"background", "background-attachment", "background-color", "background-image", "background-position", "background-repeat", 
 	"border", 
 	"border-collapse", "border-spacing", 
 	"border-left", "border-right", "border-top", "border-bottom", 
@@ -2829,7 +2982,7 @@ paged = {
 (*All:*)
 
 
-all = {"content", (*"counter-increment", "counter-reset", *)"display"};
+all = {"content", "counter-increment", "counter-reset", "display"};
 
 
 (* ::Subsubsection::Closed:: *)
