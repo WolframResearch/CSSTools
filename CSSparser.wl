@@ -302,7 +302,7 @@ label["term", x_String] :=
 	]
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Parse Properties*)
 
 
@@ -327,19 +327,19 @@ label["term", x_String] :=
 *)
 
 
+couldNotImportFailure[uri_String] :=       Failure["UnexpectedParse", <|"Message" -> "Failed to import from URI.", "URI" -> uri|>];
+illegalIdentifierFailure[ident_String] :=  Failure["UnexpectedParse", <|"Message" -> "Illegal identifier.", "Ident" -> ident|>];
+invalidFunctionFailure[function_string] := Failure["UnexpectedParse", <|"Message" -> "Invalid function.", "Function" -> function|>];
+negativeIntegerFailure[prop_String] :=     Failure["UnexpectedParse", <|"Message" -> prop <> "integer must be non-negative."|>];
+negativeLengthFailure[prop_String] :=      Failure["UnexpectedParse", <|"Message" -> prop <> "length must be non-negative."|>];
+notAnImageFailure[uri_String] :=           Failure["UnexpectedParse", <|"Message" -> "Asset is not an image.", "URI" -> uri|>];
 noValueFailure[prop_String] :=             Failure["UnexpectedParse", <|"Message" -> "No " <> prop <> " property value."|>];
-tooManyTokensFailure[tokens_List] :=       Failure["UnexpectedParse", <|"Message" -> "Too many tokens.", "Tokens" -> tokens[[All, 1]]|>];
-tooManyPropValuesFailure[props_List] :=    Failure["UnexpectedParse", <|"Message" -> "Too many property values provided.", "Props" -> props|>];
+positiveLengthFailure[prop_String] :=      Failure["UnexpectedParse", <|"Message" -> prop <> "length must be positive."|>];
 repeatedPropValueFailure[prop_] :=         Failure["UnexpectedParse", <|"Message" -> "Repeated property value type.", "Prop" -> prop|>];
+tooManyPropValuesFailure[props_List] :=    Failure["UnexpectedParse", <|"Message" -> "Too many property values provided.", "Props" -> props|>];
+tooManyTokensFailure[tokens_List] :=       Failure["UnexpectedParse", <|"Message" -> "Too many tokens.", "Tokens" -> tokens[[All, 1]]|>];
 unrecognizedKeyWordFailure[prop_String] := Failure["UnexpectedParse", <|"Message" -> "Unrecognized " <> prop <> " keyword."|>];
 unrecognizedValueFailure[prop_String] :=   Failure["UnexpectedParse", <|"Message" -> "Unrecognized " <> prop <> " value."|>];
-negativeLengthFailure[prop_String] :=      Failure["UnexpectedParse", <|"Message" -> prop <> "length must be non-negative."|>];
-positiveLengthFailure[prop_String] :=      Failure["UnexpectedParse", <|"Message" -> prop <> "length must be positive."|>];
-negativeIntegerFailure[prop_String] :=     Failure["UnexpectedParse", <|"Message" -> prop <> "integer must be non-negative."|>];
-invalidFunctionFailure[function_string] := Failure["UnexpectedParse", <|"Message" -> "Invalid function.", "Function" -> function|>];
-couldNotImportFailure[uri_String] :=       Failure["UnexpectedParse", <|"Message" -> "Failed to import from URI.", "URI" -> uri|>];
-notAnImageFailure[uri_String] :=           Failure["UnexpectedParse", <|"Message" -> "Asset is not an image.", "URI" -> uri|>];
-illegalIdentifierFailure[ident_String] :=  Failure["UnexpectedParse", <|"Message" -> "Illegal identifier.", "Ident" -> ident|>];
 
 
 (* ::Subsection::Closed:: *)
@@ -378,8 +378,8 @@ initialValues = <|
 	"bottom"         -> Automatic, (* 'auto' *)
 	"caption-side"   -> Missing["Not supported."], (* 'top' *)
 	"clip"           -> Missing["Not supported."],
-	"color"          -> Black,    (* no set CSS specification, so use reasonable setting *)
-	"content"        -> Automatic, (* 'normal' *)
+	"color"          -> Black,     (* no set CSS specification, so use reasonable setting *)
+	"content"        -> Normal,    (* 'normal' *)
 	"counter-increment" -> {},     (* 'none' *)
 	"counter-reset"  -> {},        (* 'none' *)
 	"cursor"         -> Automatic, (* 'auto' *)
@@ -454,6 +454,30 @@ parseSingleColor[prop_String, tokens:{{_String, _String}..}] :=
 			_,              Interpreter["Color"][StringJoin @ tokens[[1, 2]]] (* keyword e.g. blue *)
 		],
 		Interpreter["Color"][StringJoin @ tokens[[All, 2]]] (* could be hexcolor or function e.g. rgb(_,_,_) or hsl(_,_,_) *)
+	]
+
+
+(* ::Subsection::Closed:: *)
+(*<counter>*)
+
+
+parseCounter[prop_String, tokens:{{_String, _String}...}] :=
+	Module[{pos = 1, l = Length[tokens], style, stringAddOn = "", listtype = "decimal"},
+		Switch[ToLowerCase @ tokens[[pos, 2]],
+			"counter(",
+				skipWhitespace[pos, l, tokens];
+				If[pos <= l && tokens[[pos, 1]] == "ident", style = tokens[[pos, 2]], Return @ invalidFunctionFailure @ StringJoin @ tokens[[All, 2]]];
+				skipWhitespace[pos, l, tokens];
+				If[pos > l, Return @ invalidFunctionFailure @ StringJoin @ tokens[[All, 2]]];
+				Switch[tokens[[pos, 1]],
+					"ident", listtype = tokens[[pos, 2]],
+					")",     Null,
+					_,       tooManyTokensFailure @ tokens
+				];
+				Cell[CellDingbat -> Cell[parseSingleListStyleType["list-style-type", {"ident", listtype}, style]]],
+			"counters(", Return @ Missing["Not supported."],
+			_, unrecognizedValueFailure @ prop
+		]
 	]
 
 
@@ -996,38 +1020,51 @@ parse[prop:"clip", tokens:{{_String, _String}..}] :=
 parse[prop:"color", tokens:{{_String, _String}..}] := parseSingleColor[prop, tokens]
 
 
-(* ::Subsection:: *)
-(*content, lists, and quotes (TODO)*)
+(* ::Subsection::Closed:: *)
+(*content, lists, and quotes*)
 
 
-(* ::Subsubsection:: *)
-(*content (TODO somehow decide what to keep and what to throw away)*)
+(* ::Subsubsection::Closed:: *)
+(*content*)
 
 
 (* only used to add content before or after element, so let's restrict this to Cells *)
 parse[prop:"content", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], value, start, stop},
-		If[l == 1,
+	Module[{pos = 1, l = Length[tokens], value, start, stop, parsedValues = {}},
+		While[pos < l,
 			value = 
 				Switch[tokens[[pos, 1]],
 					"ident", 
 						Switch[ToLowerCase @ tokens[[pos, 2]],
-							"normal",  Automatic,
-							"none",    Automatic,
-							"inherit", Inherited,
-							"initial", initialValues @ prop,
-							_,         unrecognizedKeyWordFailure @ prop
+							"normal",         Normal,
+							"none",           None,
+							"inherit",        Inherited,
+							"initial",        initialValues @ prop,
+							"open-quote",     Missing["Not supported."],
+							"close-quote",    Missing["Not supported."],
+							"no-open-quote",  Missing["Not supported."],
+							"no-close-quote", Missing["Not supported."],
+							_,                unrecognizedKeyWordFailure @ prop
 						],
 					"string", Cell[CellLabel -> tokens[[pos, 2]]], (* is this even doing this option justice? *)
 					"uri",    With[{i = Import[tokens[[pos, 2]]]}, If[FailureQ[i], notAnImageFailure @ tokens[[pos, 2]], Cell[CellDingbat -> i]]],
-					_,        unrecognizedValueFailure @ prop
-				]
-			,
-			If[tokens[[pos, 1]] == "function" , 
-				start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
-			value = Missing["Multiple values not supported."]
+					"function", 
+						start = pos; While[pos < l && tokens[[pos, 1]] != ")", pos++]; stop = pos;
+						Switch[ToLowerCase @ tokens[[start, 2]],
+							"counter(" | "counters(", parseCounter[prop, tokens[[start;;stop]]],
+							"attr(",                  parseAttr[prop, tokens[[start;;stop]]],
+							_,                        unrecognizedValueFailure @ prop
+						],
+					_, unrecognizedValueFailure @ prop
+				];
+			AppendTo[parsedValues, value]
 		];
-		value
+		Which[
+			Count[parsedValues, Inherited] > 1, Return @ repeatedPropValueFailure @ "inherit",
+			Count[parsedValues, None] > 1,      Return @ repeatedPropValueFailure @ "none",
+			Count[parsedValues, Normal] > 1,    Return @ repeatedPropValueFailure @ "normal",
+			True, parsedValues
+		]
 	]
 
 
@@ -1173,7 +1210,7 @@ parse[prop:"list-style-position", tokens:{{_String, _String}..}] :=
 (*list-style-type*)
 
 
-parseSingleListStyleType[prop_String, token:{_String, _String}] := 
+parseSingleListStyleType[prop_String, token:{_String, _String}, style_String:"Item"] := 
 	Switch[token[[1]],
 		"ident",
 			Switch[ToLowerCase @ token[[2]],
@@ -1182,17 +1219,17 @@ parseSingleListStyleType[prop_String, token:{_String, _String}] :=
 				"disc",                 "\[FilledCircle]",
 				"circle",               "\[EmptyCircle]",
 				"square",               "\[FilledSquare]",
-				"decimal",              Cell[TextData[{CounterBox["Item"], "."}]],
-				"decimal-leading-zero", Cell[TextData[{CounterBox["Item", CounterFunction :> (FEPrivate`If[FEPrivate`Greater[#, 9], #, FEPrivate`StringJoin["0", FEPrivate`ToString[#]]]&)], "."}]],
-				"lower-roman",          Cell[TextData[{CounterBox["Item", CounterFunction :> FrontEnd`RomanNumeral], "."}]],
-				"upper-roman",          Cell[TextData[{CounterBox["Item", CounterFunction :> FrontEnd`CapitalRomanNumeral], "."}]],
-				"lower-greek",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["\[Alpha]", "\[Omega]"], #]&)], "."}]],
-				"lower-latin",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["a", "z"], #]&)], "."}]],
-				"upper-latin",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["A", "Z"], #]&)], "."}]],
-				"armenian",             Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["\:0531", "\:0556"], #]&)], "."}]],
-				"georgian",             Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["\:10d0", "\:10fa"], #]&)], "."}]],
-				"lower-alpha",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["a", "z"], #]&)], "."}]],
-				"upper-alpha",          Cell[TextData[{CounterBox["Item", CounterFunction :> (Part[CharacterRange["A", "Z"], #]&)], "."}]],
+				"decimal",              Cell[TextData[{CounterBox[style], "."}]],
+				"decimal-leading-zero", Cell[TextData[{CounterBox[style, CounterFunction :> (FEPrivate`If[FEPrivate`Greater[#, 9], #, FEPrivate`StringJoin["0", FEPrivate`ToString[#]]]&)], "."}]],
+				"lower-roman",          Cell[TextData[{CounterBox[style, CounterFunction :> FrontEnd`RomanNumeral], "."}]],
+				"upper-roman",          Cell[TextData[{CounterBox[style, CounterFunction :> FrontEnd`CapitalRomanNumeral], "."}]],
+				"lower-greek",          Cell[TextData[{CounterBox[style, CounterFunction :> (Part[CharacterRange["\[Alpha]", "\[Omega]"], #]&)], "."}]],
+				"lower-latin",          Cell[TextData[{CounterBox[style, CounterFunction :> (Part[CharacterRange["a", "z"], #]&)], "."}]],
+				"upper-latin",          Cell[TextData[{CounterBox[style, CounterFunction :> (Part[CharacterRange["A", "Z"], #]&)], "."}]],
+				"armenian",             Cell[TextData[{CounterBox[style, CounterFunction :> (Part[CharacterRange["\:0531", "\:0556"], #]&)], "."}]],
+				"georgian",             Cell[TextData[{CounterBox[style, CounterFunction :> (Part[CharacterRange["\:10d0", "\:10fa"], #]&)], "."}]],
+				"lower-alpha",          Cell[TextData[{CounterBox[style, CounterFunction :> (Part[CharacterRange["a", "z"], #]&)], "."}]],
+				"upper-alpha",          Cell[TextData[{CounterBox[style, CounterFunction :> (Part[CharacterRange["A", "Z"], #]&)], "."}]],
 				"none",                 None,
 				_,                      unrecognizedKeyWordFailure @ prop
 			],
@@ -1331,7 +1368,7 @@ parse[prop:"cursor", tokens:{{_String, _String}..}] :=
 
 
 (* ::Subsection::Closed:: *)
-(*display (TODO)*)
+(*display*)
 
 
 (*
