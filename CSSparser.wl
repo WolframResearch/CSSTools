@@ -45,6 +45,7 @@ MediaTypeGroup["static"] =      MediaTypes[[{1, 2, 3, 4, 6, 7, 8, 9}]];*)
 		\\\\ defines a literal backslash
 		\\.  defines a literal period
 	Though double quotes do not need to be escaped in the RE, WL strings still need to have the character escaped.
+	Tabs and newlines are escaped in both WL and RE so do not need additional escaping, e.g. \t\r\n\f.
 	CSS is case-insensitive, so A-Z ranges are included alongside a-z ranges, even though this is not in the specification.
 	For clarity, all macros are surround by parenthesis to keep them isolated from other RE patterns.
 *)
@@ -57,7 +58,7 @@ RE["badstring"]   = "(" ~~ RE["badstring1"] ~~ "|" ~~ RE["badstring2"] ~~ ")";
 RE["badstring1"]  = "(\\\"([^\n\r\f\\\"]|\\\\" ~~ RE["nl"] ~~ "|" ~~ RE["escape"] ~~ ")*\\\\?)"; 
 RE["badstring2"]  = "(\\'([^\n\r\f\\']|\\\\" ~~ RE["nl"] ~~ "|" ~~ RE["escape"] ~~ ")*\\\\?)"; 
 RE["baduri"]      = "(" ~~ RE["baduri1"] ~~ "|" ~~ RE["baduri2"] ~~ "|" ~~ RE["baduri3"] ~~ ")";
-RE["baduri1"]     = "(" ~~ RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["w"] ~~ "([!#$%&*-\\\[\\\]-~]|" ~~ RE["nonascii"] ~~ "|" ~~ RE["escape"] ~~ ")*" ~~ RE["w"] ~~ ")"; (* literal ( after url; CharacterRange["*", "~"]*)
+RE["baduri1"]     = "(" ~~ RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["w"] ~~ "([!#$%&*-\\[\\]-~]|" ~~ RE["nonascii"] ~~ "|" ~~ RE["escape"] ~~ ")*" ~~ RE["w"] ~~ ")"; (* literal ( after url; CharacterRange["*", "~"]*)
 RE["baduri2"]     = "(" ~~ RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["w"] ~~ RE["string"] ~~ RE["w"] ~~ ")";
 RE["baduri3"]     = "(" ~~ RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["w"] ~~ RE["badstring"] ~~ ")";
 RE["comment"]     = "(\\/\\*[^*]*\\*+([^/*][^*]*\\*+)*\\/)";
@@ -79,25 +80,25 @@ RE["url"]         = "(([!#$%&*-~]|" ~~ RE["nonascii"] ~~ "|" ~~ RE["escape"] ~~ 
 RE["w"]           = "((" ~~ RE["s"] ~~ ")?)";
 
 
-RE["A"] = "(a|\\\\0{0,4}(41|61)(\r\n|[ \t\r\n\f])?)";
-RE["C"] = "(c|\\\\0{0,4}(43|63)(\r\n|[ \t\r\n\f])?)";
-RE["D"] = "(d|\\\\0{0,4}(44|64)(\r\n|[ \t\r\n\f])?)";
-RE["E"] = "(e|\\\\0{0,4}(45|65)(\r\n|[ \t\r\n\f])?)";
-RE["G"] = "(g|\\\\0{0,4}(47|67)(\r\n|[ \t\r\n\f])?|\\\\g)";
-RE["H"] = "(h|\\\\0{0,4}(48|68)(\r\n|[ \t\r\n\f])?|\\\\h)";
-RE["I"] = "(i|\\\\0{0,4}(49|69)(\r\n|[ \t\r\n\f])?|\\\\i)";
-RE["K"] = "(k|\\\\0{0,4}(4b|6b)(\r\n|[ \t\r\n\f])?|\\\\k)";
-RE["L"] = "(l|\\\\0{0,4}(4c|6c)(\r\n|[ \t\r\n\f])?|\\\\l)";
-RE["M"] = "(m|\\\\0{0,4}(4d|6d)(\r\n|[ \t\r\n\f])?|\\\\m)";
-RE["N"] = "(n|\\\\0{0,4}(4e|6e)(\r\n|[ \t\r\n\f])?|\\\\n)";
-RE["O"] = "(o|\\\\0{0,4}(4f|6f)(\r\n|[ \t\r\n\f])?|\\\\o)";
-RE["P"] = "(p|\\\\0{0,4}(50|70)(\r\n|[ \t\r\n\f])?|\\\\p)";
-RE["R"] = "(r|\\\\0{0,4}(52|72)(\r\n|[ \t\r\n\f])?|\\\\r)";
-RE["S"] = "(s|\\\\0{0,4}(53|73)(\r\n|[ \t\r\n\f])?|\\\\s)";
-RE["T"] = "(t|\\\\0{0,4}(44|74)(\r\n|[ \t\r\n\f])?|\\\\t)";
-RE["U"] = "(u|\\\\0{0,4}(55|75)(\r\n|[ \t\r\n\f])?|\\\\u)";
-RE["X"] = "(x|\\\\0{0,4}(58|78)(\r\n|[ \t\r\n\f])?|\\\\x)";
-RE["Z"] = "(z|\\\\0{0,4}(5a|7a)(\r\n|[ \t\r\n\f])?|\\\\z)";
+RE["A"] = "(a|A|\\\\0{0,4}(41|61)(\r\n|[ \t\r\n\f])?)";
+RE["C"] = "(c|C|\\\\0{0,4}(43|63)(\r\n|[ \t\r\n\f])?)";
+RE["D"] = "(d|D|\\\\0{0,4}(44|64)(\r\n|[ \t\r\n\f])?)";
+RE["E"] = "(e|E|\\\\0{0,4}(45|65)(\r\n|[ \t\r\n\f])?)";
+RE["G"] = "(g|G|\\\\0{0,4}(47|67)(\r\n|[ \t\r\n\f])?|\\\\g|\\\\G)";
+RE["H"] = "(h|H|\\\\0{0,4}(48|68)(\r\n|[ \t\r\n\f])?|\\\\h|\\\\H)";
+RE["I"] = "(i|I|\\\\0{0,4}(49|69)(\r\n|[ \t\r\n\f])?|\\\\i|\\\\I)";
+RE["K"] = "(k|K|\\\\0{0,4}(4b|6b)(\r\n|[ \t\r\n\f])?|\\\\k|\\\\K)";
+RE["L"] = "(l|L|\\\\0{0,4}(4c|6c)(\r\n|[ \t\r\n\f])?|\\\\l|\\\\L)";
+RE["M"] = "(m|M|\\\\0{0,4}(4d|6d)(\r\n|[ \t\r\n\f])?|\\\\m|\\\\M)";
+RE["N"] = "(n|N|\\\\0{0,4}(4e|6e)(\r\n|[ \t\r\n\f])?|\\\\n|\\\\N)";
+RE["O"] = "(o|O|\\\\0{0,4}(4f|6f)(\r\n|[ \t\r\n\f])?|\\\\o|\\\\O)";
+RE["P"] = "(p|P|\\\\0{0,4}(50|70)(\r\n|[ \t\r\n\f])?|\\\\p|\\\\P)";
+RE["R"] = "(r|R|\\\\0{0,4}(52|72)(\r\n|[ \t\r\n\f])?|\\\\r|\\\\R)";
+RE["S"] = "(s|S|\\\\0{0,4}(53|73)(\r\n|[ \t\r\n\f])?|\\\\s|\\\\S)";
+RE["T"] = "(t|T|\\\\0{0,4}(44|74)(\r\n|[ \t\r\n\f])?|\\\\t|\\\\T)";
+RE["U"] = "(u|U|\\\\0{0,4}(55|75)(\r\n|[ \t\r\n\f])?|\\\\u|\\\\U)";
+RE["X"] = "(x|X|\\\\0{0,4}(58|78)(\r\n|[ \t\r\n\f])?|\\\\x|\\\\X)";
+RE["Z"] = "(z|Z|\\\\0{0,4}(5a|7a)(\r\n|[ \t\r\n\f])?|\\\\z|\\\\Z)";
 
 
 (* ::Subsection::Closed:: *)
@@ -165,11 +166,19 @@ T["URI"] =
 (*Productions (TODO, not all used)*)
 
 
+(* charset isn't a real production, but it's convenient to define here *)
+P["charset"]     := "(" ~~ T["CHARSET_SYM"] ~~ T["STRING"] ~~ ";" ~~ ")";
 P["declaration"] := "(" ~~ P["property"] ~~ ":" ~~ T["S*"] ~~ P["expr"] ~~ P["prio"] ~~ "?)";
 P["prio"]        := "(" ~~ T["IMPORTANT_SYM"] ~~ T["S*"] ~~ ")";
 P["expr"]        := "(" ~~ P["term"] ~~ "(" ~~ P["operator"] ~~ "?" ~~ P["term"] ~~ ")*)";
 P["property"]    := "(" ~~ T["IDENT"] ~~ T["S*"] ~~ ")";
 P["operator"]    := "((/" ~~ T["S*"] ~~ ")|(," ~~ T["S*"] ~~ "))";
+
+P["media"]      := "(" ~~ T["MEDIA_SYM"] ~~ T["S*"] ~~ P["media_list"] ~~ "{" ~~ T["S*"] ~~ __ ~~ "}" ~~ T["S*"] ~~ ")";
+P["media_list"] := "(" ~~ P["medium"] ~~ "(," ~~ T["S*"] ~~ P["medium"] ~~ ")*" ~~ ")";
+P["medium"]     := "(" ~~ T["IDENT"] ~~ T["S*"] ~~ ")";
+
+P["import"] := "(" ~~ T["IMPORT_SYM"] ~~ T["S*"] ~~ "(" ~~ T["STRING"] ~~ "|" ~~ T["URI"] ~~ ")" ~~ T["S*"] ~~ P["media_list"] ~~ "?" ~~ ";" ~~ T["S*"] ~~ ")";
 
 P["term"] := 
 	StringExpression[
@@ -218,17 +227,19 @@ T["FUNCTION"] ~~ T["S*"] ~~
 
 
 (* ::Subsection::Closed:: *)
-(*Identify rulesets (selector + block declarations)*)
+(*Identify @charset, @import, and rulesets (selector + block declarations)*)
 
 
 (* DeleteCases removes any comment-like token. Perhaps we should allow an option flag to keep comments...? *)
 parseBlock[x_String] := 
 	DeleteCases[
-		Map[{label["block", (*StringTrim @*) #], (*StringTrim @*) #}&, 
+		Map[{label["block", StringTrim @ #], StringTrim @ #}&, 
 			StringSplit[x, 
 				s:Alternatives[
 					RegularExpression @ RE["comment"],
 					RegularExpression @ RE["badcomment"],
+					RegularExpression @ P["charset"],
+					RegularExpression @ P["import"],
 					RegularExpression @ T["URI"],
 					RegularExpression @ T["BADURI"],
 					RegularExpression @ T["STRING"],
@@ -242,6 +253,8 @@ label["block", x_String] :=
 	Which[
 		StringMatchQ[x, RegularExpression @ RE["comment"]],    "comment",
 		StringMatchQ[x, RegularExpression @ RE["badcomment"]], "badcomment",
+		StringMatchQ[x, RegularExpression @ P["charset"]],     "charset",
+		StringMatchQ[x, RegularExpression @ P["import"]],      "import",
 		StringMatchQ[x, RegularExpression @ T["URI"]],         "uri",
 		StringMatchQ[x, RegularExpression @ T["BADURI"]],      "baduri",
 		StringMatchQ[x, RegularExpression @ T["STRING"]],      "string",
@@ -307,6 +320,11 @@ label["term", x_String] :=
 
 
 (*
+	Interpreter["Number"], "Color"
+*)
+
+
+(*
 	Color: All typesetting (including FrameBox) follows the FontColor option value. 
 	Within Style, graphics directives are first converted to options.
 	
@@ -346,34 +364,38 @@ unrecognizedValueFailure[prop_String] :=   Failure["UnexpectedParse", <|"Message
 (*initial values*)
 
 
+(* 
+	Some of these are shorthand properties that set one or more other properties. 
+	As such, the shorthand initial values would never be directly required.
+*)
 initialValues = <|
+	"background"            -> Automatic, (* shorthand property *)
 	"background-attachment" -> Missing["Not supported."], (* 'scroll' *)
 	"background-color"      -> None, (* 'transparent' *)
 	"background-image"      -> None, (* 'none' *)
-	"background-position"   -> Missing["Not supported."], (* '0% 0%' *)
+	"background-position"   -> {0, 0}, (* '0% 0%' *)
 	"background-repeat"     -> "Repeat", (* 'repeat' *)
-	"background"            -> Automatic,
 	"border-collapse"     -> Missing["Not supported."], (* 'separated' *)
+	"border-color"        -> Automatic, (* shorthand property, sets all 4 sides *)
 	"border-top-color"    -> Dynamic @ CurrentValue[FontColor], 
 	"border-right-color"  -> Dynamic @ CurrentValue[FontColor],
 	"border-bottom-color" -> Dynamic @ CurrentValue[FontColor],
 	"border-left-color"   -> Dynamic @ CurrentValue[FontColor],
-	"border-color"        -> Dynamic @ CurrentValue[FontColor],
+	"border-style"        -> Automatic, (* shorthand property, sets all 4 sides *)
 	"border-top-style"    -> None, 
 	"border-right-style"  -> None,
 	"border-bottom-style" -> None,
 	"border-left-style"   -> None,
-	"border-style"        -> None,
+	"border-width"        -> Automatic, (* shorthand property, sets all 4 sides *)
 	"border-top-width"    -> Thickness[Medium], 
 	"border-right-width"  -> Thickness[Medium],
 	"border-bottom-width" -> Thickness[Medium],
 	"border-left-width"   -> Thickness[Medium],
-	"border-width"        -> Thickness[Medium],
-	"border-top"     -> None, (* 'none' is the CSS default, but it is ignored if inside a Directive, e.g. FrameStyle \[Rule] Directive[None] *)
-	"border-right"   -> None, (* Thus, if the initial value of any 'border-*' property is requested, also ignore thickness and color *)
-	"border-bottom"  -> None, 
-	"border-left"    -> None,
-	"border"         -> None,
+	"border"         -> Automatic, (* shorthand property, sets all 4 sides *)
+	"border-top"     -> Automatic, (* shorthand border-top/right/bottom/left sets color/style/width *)
+	"border-right"   -> Automatic, 
+	"border-bottom"  -> Automatic, 
+	"border-left"    -> Automatic,
 	"border-spacing" -> 0,
 	"bottom"         -> Automatic, (* 'auto' *)
 	"caption-side"   -> Missing["Not supported."], (* 'top' *)
@@ -386,6 +408,7 @@ initialValues = <|
 	"direction"      -> Automatic, (* 'ltr' *)
 	"display"        -> Automatic, (* 'inline' *)
 	"float"          -> Automatic, (* 'none' *)
+	"font"           -> Automatic, (* shorthand property *)
 	"font-family"    :> CurrentValue[{StyleDefinitions, "Text", FontFamily}], (* no set CSS specification, so use reasonable setting *)
 	"font-size"      -> Medium,   (* 'medium' *)
 	"font-style"     -> Plain,    (* 'normal' *)
@@ -395,29 +418,30 @@ initialValues = <|
 	"left"           -> Automatic, (* 'auto' *)
 	"letter-spacing" -> "Plain", (* 'normal' *)
 	"line-height"    -> {1.2, 0}, (* 'normal' *)
+	"list-style"          -> None, (* shorthand property *)
 	"list-style-image"    -> None,
-	"list-style-type"     -> "\[FilledCircle]",
 	"list-style-position" -> Automatic,
-	"list-style"          -> None,
+	"list-style-type"     -> "\[FilledCircle]",
+	"margin"         -> Automatic, (* shorthand property, sets all 4 sides *)
 	"margin-top"     -> 0,
+	"margin-right"   -> 0,
 	"margin-bottom"  -> 0,
 	"margin-left"    -> 0,
-	"margin-right"   -> 0,
-	"margin"         -> 0, (* sets all 4 sides *)
 	"max-height"     -> Infinity,
 	"max-width"      -> Infinity,
 	"min-height"     -> 0,
 	"min-width"      -> 0,
 	"orphans"        -> Missing["Not supported."], (* 2 *)
+	"outline"        -> Automatic, (* shorthand property, sets color/style/width *)
 	"outline-color"  -> Missing["Not supported."], (* 'invert' *)
 	"outline-style"  -> Missing["Not supported."], (* 'none' *)
 	"outline-width"  -> Missing["Not supported."], (* 'medium' *)
 	"overflow"       -> Missing["Not supported."], (* 'visible' so content can overflow area *)
+	"padding"        -> 0, (* shorthand property, sets all 4 sides *)
 	"padding-top"    -> 0,
 	"padding-bottom" -> 0,
 	"padding-left"   -> 0,
 	"padding-right"  -> 0,
-	"padding"        -> 0, (* sets all 4 sides *)
 	"page-break-after"  -> Automatic, (* 'auto' *)
 	"page-break-before" -> Automatic, (* 'auto' *)
 	"page-break-inside" -> Automatic, (* 'auto' *)
@@ -445,15 +469,20 @@ initialValues = <|
 
 
 parseSingleColor[prop_String, tokens:{{_String, _String}..}] :=
-	If[Length[tokens] == 1 && MatchQ[tokens[[1, 1]], "ident"],
-		Switch[ToLowerCase @ tokens[[1, 2]],
-			"initial",      initialValues @ prop,
-			"inherit",      Inherited,
-			"currentcolor", Dynamic @ CurrentValue[FontColor], 
-			"transparent",  None, (* this 'ident' is interpreted as GrayLevel[0, 0] by Interpreter["Color"] *)
-			_,              Interpreter["Color"][StringJoin @ tokens[[1, 2]]] (* keyword e.g. blue *)
-		],
-		Interpreter["Color"][StringJoin @ tokens[[All, 2]]] (* could be hexcolor or function e.g. rgb(_,_,_) or hsl(_,_,_) *)
+	Which[
+		Length[tokens] == 1 && MatchQ[tokens[[1, 1]], "ident"],
+			Switch[ToLowerCase @ tokens[[1, 2]],
+				"initial",      initialValues @ prop,
+				"inherit",      Inherited,
+				"currentcolor", Dynamic @ CurrentValue[FontColor], 
+				"transparent",  None, (* this 'ident' is interpreted as GrayLevel[0, 0] by Interpreter["Color"] *)
+				_,              Interpreter["Color"][StringJoin @ tokens[[1, 2]]] (* keyword e.g. blue *)
+			],
+		Length[tokens] == 1 && MatchQ[tokens[[1, 1]], "hexcolor"],
+			Interpreter["Color"][tokens[[1, 2]]],
+		Length[tokens] > 1 && MatchQ[tokens[[1, 1]], "function"],
+			Interpreter["Color"][StringJoin @ tokens[[All, 2]]], (* rgb(_,_,_) or hsl(_,_,_) *)
+		True, unrecognizedValueFailure @ prop
 	]
 
 
@@ -537,28 +566,161 @@ parsePercentage[s_String] := Interpreter["Number"] @ StringDrop[s, -1]
 
 
 (* ::Subsection::Closed:: *)
+(*<uri>*)
+
+
+parseURI[uri_String] := 
+	Module[{p, mimetype = "text/plain", base64 = False, s = StringTake[uri, {5, -2}], start, rest},
+		If[StringStartsQ[s, "data:", IgnoreCase -> True],
+			(* string split on the first comma *)
+			p = StringPosition[s, ",", 1][[1, 1]];
+			start = StringTake[s, {1, p-1}];
+			rest = StringTake[s, {p+1, -1}];
+			
+			(* interpret data type and import *)
+			Which[
+				StringMatchQ[start, StartOfString ~~ "data:" ~~ EndOfString, IgnoreCase -> True], 
+					s = ImportString[URLDecode @ rest, "String"],
+				StringMatchQ[start, StartOfString ~~ "data:" ~~ ___ ~~ ";base64" ~~ EndOfString, IgnoreCase -> True],
+					s = ImportString[rest, "Base64"],
+				StringMatchQ[start, StartOfString ~~ "data:" ~~ ___ ~~ EndOfString, IgnoreCase -> True],
+					start = StringReplace[start, StartOfString ~~ "data:" ~~ x___ ~~ EndOfString :> x];
+					rest = URLDecode @ rest;
+					Switch[ToLowerCase @ start,
+						"" | "text/plain", s = ImportString[rest, "String"],
+						"text/css",        s = ImportString[rest, "String"],
+						"text/html",       s = ImportString[rest, "HTML"],
+						"text/javascript", s = ImportString[rest, "String"],
+						"image/gif",       s = ImportString[rest, "GIF"],
+						"image/jpeg",      s = ImportString[rest, "JPEG"],
+						"image/png",       s = ImportString[rest, "PNG"],
+						"image/svg+xml",   s = ImportString[rest, "XML"],
+						"image/x-icon"|"image/vnd.microsoft.icon", s = ImportString[rest, "ICO"],
+						"audio/wave"|"audio/wav"|"audio/x-wav"|"audio/x-pn-wav", Audio[rest],
+						_,                 s = Missing["Not supported."]
+					]
+			]
+			,
+			(* else attempt a generic import *)
+			True, s = Import[s]
+		];
+		s
+	]
+
+
+(* ::Subsection::Closed:: *)
 (*background*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*background*)
+
+
+(*TODO: parse multiple background specs but only take the first *)
+parse[prop:"background", tokens:{{_String, _String}..}] := parseSingleBG[prop, tokens]
+(*FIXME: parsing a hexcolor fails*)
+
+(* 
+	Shorthand for all background properties.
+	Any properties not set by this are reset to their initial values.
+	Commas separate background layers, so split on comma, but FE only supports one image so take last...?
+*)
+parseSingleBG[prop_String, tokens:{{_String, _String}..}] := 
+	Module[
+	{
+		pos = 1, l = Length[tokens], value, start, stop,
+		values = <|
+			"a" -> initialValues @ "background-attachment", 
+			"c" -> initialValues @ "background-color",
+			"i" -> initialValues @ "background-image",
+			"p" -> initialValues @ "background-position",
+			"r" -> initialValues @ "background-repeat"|>,
+		hasAttachment = False, hasColor = False, hasImage = False, hasPosition = False, hasRepeat = False
+	},
+		While[pos < l, 
+			(*FIXME: initial inherit are not illegal if are the only values*)
+			If[MatchQ[ToLowerCase @ tokens[[pos, 2]], "initial"|"inherit"], Return @ illegalIdentifierFailure @ tokens[[pos, 2]]];
+			Which[
+				tokens[[pos, 1]] == "function", (* only color can be a function; eventually should support gradients *)
+					start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
+					If[hasColor, Return @ repeatedPropValueFailure @ "background-color"]; 
+					hasColor = True; values["c"] = parseSingleColor[prop, tokens[[start ;; stop]]]; pos = stop;,
+					
+				!FailureQ[value = parseSingleBGAttachment[prop, tokens[[pos]]]],
+					If[hasAttachment, Return @ repeatedPropValueFailure @ "background-attachment"];
+					hasAttachment = True; values["a"] = value,
+					
+				!FailureQ[value = parseSingleColor[prop, {tokens[[pos]]}]], (* color can also be hex or keyword *)
+					If[hasColor, Return @ repeatedPropValueFailure @ "background-color"];
+					hasColor = True; values["c"] = value,
+					
+				!FailureQ[value = parseSingleBGImage[prop, tokens[[pos]]]], 
+					If[hasImage, Return @ repeatedPropValueFailure @ "background-image"];
+					hasImage = True; values["i"] = value,
+					
+				!FailureQ[value = parseSingleBGPosition[prop, tokens[[pos]]]], 
+					If[hasPosition, Return @ repeatedPropValueFailure @ "background-position"];
+					hasPosition = True; values["p"] = {value, Center};
+					(* check for a pair of position values; they must be sequential *)
+					start = pos; skipWhitespace[start, l, tokens];
+					If[!FailureQ[value = parseSingleBGPosition[prop, tokens[[pos]]]], 
+						values["p"] = {values["p"][[1]], value};
+						pos = start;
+					];
+					values["p"] = parseSingleBGPositionPair[values["p"], {"", #}& /@ values["p"]],
+					
+				!FailureQ[value = parseSingleBGRepeat[prop, tokens[[pos]]]], 
+					If[hasRepeat, Return @ repeatedPropValueFailure @ "background-repeat"];
+					hasRepeat = True; values["r"] = value,
+				
+				True, unrecognizedValueFailure @ prop						
+			];
+			skipWhitespace[pos, l, tokens]
+		];
+		(* 
+			attachment: not supported, 
+			color: Background, 
+			image: System`BackgroundAppearance, 
+			position: System`BackgroundAppearanceOptions, 
+			repeat: System`BackgroundAppearanceOptions *)
+		If[hasColor && Not[hasAttachment || hasImage || hasPosition || hasRepeat],
+			Background -> values["c"]
+			,
+			Notebook[
+				System`BackgroundAppearanceOptions ->
+					Which[
+						values["p"] === "NoRepeat" && values["r"] === "NoRepeat", "NoRepeat",
+						values["p"] === "Center" &&   values["r"] === "NoRepeat", "Center",
+						values["p"] === "NoRepeat",                                values["r"],
+						True,                                                      Missing["Not supported."]
+					],
+				System`BackgroundAppearance -> values["i"],
+				Background -> values["c"]]
+		]
+]
 
 
 (* ::Subsubsection::Closed:: *)
 (*background-attachment*)
 
 
+parseSingleBGAttachment[prop_String, token:{_String, _String}] :=
+	Switch[token[[1]],
+		"ident", 
+			Switch[ToLowerCase @ token[[2]],
+				"scroll",  Missing["Not supported."],
+				"fixed",   Automatic, (* FE's only allowed value *)
+				"inherit", Inherited,
+				"initial", initialValues @ prop,
+				_,         unrecognizedKeyWordFailure @ prop
+			],
+		_, unrecognizedValueFailure @ prop
+	]
+
 parse[prop:"background-attachment", tokens:{{_String, _String}..}] := 
 	Module[{l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
-		value = 
-			Switch[tokens[[1, 1]],
-				"ident", 
-					Switch[ToLowerCase @ tokens[[1, 2]],
-						"scroll",  Missing["Not supported."],
-						"fixed",   Automatic, (* FE's only allowed value *)
-						"inherit", Inherited,
-						"initial", initialValues @ prop,
-						_,         unrecognizedKeyWordFailure @ prop
-					],
-				_,     unrecognizedValueFailure @ prop
-			];
+		value = parseSingleBGAttachment[prop, tokens[[1]]];
 		If[FailureQ[value] || MissingQ[value], value, Missing["Only fixed supported."]]
 	]
 
@@ -582,21 +744,23 @@ parse[prop:"background-color", tokens:{{_String, _String}..}] :=
 (*background-image*)
 
 
+parseSingleBGImage[prop_String, token:{_String, _String}] :=
+	Switch[token[[1]],
+		"ident", 
+			Switch[ToLowerCase @ token[[2]],
+				"none",    None,
+				"inherit", Inherited,
+				"initial", initialValues @ prop,
+				_,         unrecognizedKeyWordFailure @ prop
+			],
+		"uri", With[{v = parseURI @ token[[2]]}, If[FailureQ[v], couldNotImportFailure @ v, v]],
+		_,     unrecognizedValueFailure @ prop
+	]
+
 parse[prop:"background-image", tokens:{{_String, _String}..}] := 
 	Module[{l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
-		value = 
-			Switch[tokens[[1, 1]],
-				"ident", 
-					Switch[ToLowerCase @ tokens[[1, 2]],
-						"none",    None,
-						"inherit", Inherited,
-						"initial", initialValues @ prop,
-						_,         unrecognizedKeyWordFailure @ prop
-					],
-				"uri", Import[tokens[[1, 2]]],
-				_,     unrecognizedValueFailure @ prop
-			];
+		value = parseSingleBGImage[prop, tokens[[1]]];
 		If[FailureQ[value], value, System`BackgroundAppearance -> value]
 	]
 
@@ -606,48 +770,50 @@ parse[prop:"background-image", tokens:{{_String, _String}..}] :=
 
 
 parseSingleBGPosition[prop_String, token:{_String, _String}] :=
-	Module[{},
-		Switch[token[[1]],
-			"ident", 
-				Switch[ToLowerCase @ token[[2]],
-					"left",    Left,
-					"center",  Center,
-					"right",   Right,
-					"top",     Top,
-					"bottom",  Bottom,
-					"inherit", Inherited,
-					"initial", initialValues @ prop,
-					_,         unrecognizedKeyWordFailure @ prop
-				],
-			"percentage", With[{v = parsePercentage @ token[[2]]}, negativeQ[v, prop, If[TrueQ[v==0], 0, Scaled[v/100]]]],
-			"length",     With[{v = parseLength @ token[[2]]},     negativeQ[v, prop, v]],
-			_,            unrecognizedValueFailure @ prop
-		]]
+	Switch[token[[1]],
+		"ident", 
+			Switch[ToLowerCase @ token[[2]],
+				"left",    Left,
+				"center",  Center,
+				"right",   Right,
+				"top",     Top,
+				"bottom",  Bottom,
+				"inherit", Inherited,
+				"initial", initialValues @ prop,
+				_,         unrecognizedKeyWordFailure @ prop
+			],
+		"percentage",      With[{v = parsePercentage @ token[[2]]}, Scaled[v/100]],
+		"length"|"number", parseLength @ token[[2]],
+		_,                 unrecognizedValueFailure @ prop
+	]
 
+parseSingleBGPositionPair[values:{__}, tokens:{{_String, _String}..}] :=
+	Switch[Length[values],
+		1, 
+			Switch[values[[1]],
+				Center,    "Center",
+				Inherited, Inherited,
+				_,         Missing["Not supported."]
+			],
+		2, 
+			Switch[values,
+				{Center, Center},                   "Center", 
+				{Top, Left} | {Left, Top} | {0, 0}, "NoRepeat",
+				{Inherited, _} | {_, Inherited},    illegalIdentifierFailure @ "inherit",
+				_,                                  Missing["Not supported."]
+			],
+		_, tooManyTokensFailure @ tokens
+	]
 
 (* only "Center" is supported by the FE *)
 parse[prop:"background-position", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], value},
-		Switch[l,
-			1, 
-				value = parseSingleBGPosition[prop, tokens[[1]]];
-				value = 
-					Switch[value,
-						Center,    "Center",
-						Inherited, Inherited,
-						_,         Missing["Not supported."]],
-			2, 
-				value = parseSingleBGPosition[prop, #]& /@ tokens; 
-				value = 
-					Switch[value,
-						{Center, Center},                   "Center", 
-						{Top, Left} | {Left, Top} | {0, 0}, "NoRepeat",
-						{Inherited, _} | {_, Inherited},    illegalIdentifierFailure @ "inherit",
-						_,                                  Missing["Not supported."]
-					],
-			_, tooManyTokensFailure @ tokens
+	Module[{pos = 1, l = Length[tokens], value, values = {}},
+		While[pos < 1,
+			value = parseSingleBGPosition[prop, tokens[[1]]];
+			If[FailureQ[value], Return @ value, AppendTo[values, value]];
+			skipWhitespace[pos, l, tokens]
 		];
-		
+		value = parseSingleBGPositionPair[values, tokens];		
 		If[FailureQ[value], value, System`BackgroundAppearanceOptions -> value]
 	]
 
@@ -656,23 +822,25 @@ parse[prop:"background-position", tokens:{{_String, _String}..}] :=
 (*background-repeat*)
 
 
+parseSingleBGRepeat[prop_String, token:{_String, _String}] :=
+	Switch[token[[1]],
+		"ident", 
+			Switch[ToLowerCase @ token[[2]],
+				"no-repeat", "NoRepeat",
+				"repeat-x",  "RepeatX",
+				"repeat-y",  "RepeatY",
+				"repeat",    "Repeat",
+				"inherit",   Inherited,
+				"initial",   initialValues @ prop,
+				_,           unrecognizedKeyWordFailure @ prop
+			],
+		_, unrecognizedValueFailure @ prop
+	]
+
 parse[prop:"background-repeat", tokens:{{_String, _String}..}] := 
 	Module[{l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
-		value = 
-			Switch[tokens[[1, 1]],
-				"ident", 
-					Switch[ToLowerCase @ tokens[[1, 2]],
-						"no-repeat", "NoRepeat",
-						"repeat-x",  "RepeatX",
-						"repeat-y",  "RepeatY",
-						"repeat",    "Repeat",
-						"inherit",   Inherited,
-						"initial",   initialValues @ prop,
-						_,           unrecognizedKeyWordFailure @ prop
-					],
-				_,     unrecognizedValueFailure @ prop
-			];
+		value = parseSingleBGRepeat[prop, tokens[[1]]];
 		If[FailureQ[value], value, System`BackgroundAppearanceOptions -> value]
 	]
 
@@ -682,9 +850,9 @@ parse[prop:"background-repeat", tokens:{{_String, _String}..}] :=
 
 
 (*
-	WL specified border style (dashing), width, and color all at once via Directive[].
+	WL specifies border style (dashing), width, and color all at once via Directive[].
 	Post-processing is required to combine individual properties correctly.
-	WL Grid only allows collapsed borders. However, each item can be wrapped in Frame.
+	WL Grid only allows collapsed borders. However, each item can cloud wrapped in Frame.
 		Grid[
 			Map[
 				Framed[#,ImageSize\[Rule]Full,Alignment\[Rule]Center]&, 
@@ -692,6 +860,7 @@ parse[prop:"background-repeat", tokens:{{_String, _String}..}] :=
 				{2}],
 			Frame\[Rule]None,
 			ItemSize\[Rule]{{7,3}}]
+	but this is beyond the scope of CSS importing.
 *)
 
 
@@ -774,7 +943,7 @@ parse[prop:"border-spacing", tokens:{{_String, _String}..}] :=
 		While[pos <= l,
 			value = 
 				Switch[tokens[[pos, 1]],
-					"ems"                With[{n = parseEmNonRelative @ tokens[[pos, 2]]}, negativeQ[n, prop, n/2]],
+					"ems",               With[{n = parseEmNonRelative @ tokens[[pos, 2]]}, negativeQ[n, prop, n/2]],
 					"exs",               With[{n = parseEmNonRelative @ tokens[[pos, 2]]}, negativeQ[n, prop, n/4]],
 					"number" | "length", With[{n = parseLength @ tokens[[pos, 2]]},        negativeQ[n, prop, Dynamic[n/CurrentValue[FontSize]]]],
 					_,                   unrecognizedValueFailure @ prop
@@ -794,20 +963,20 @@ parse[prop:"border-spacing", tokens:{{_String, _String}..}] :=
 
 
 parseSingleBorderStyle[prop_String, token:{_String, _String}] :=
-	If[MatchQ[token[[1]], "ident"],
-		Switch[ToLowerCase @ token[[2]],
-			"initial", initialValues @ prop,
-			"inherit", Inherited,
-			"none",    None, 
-			"hidden",  None, (* 'hidden' is technically different from 'none', but I don't think the difference matters in WL *)
-			"dotted",  Dotted,
-			"dashed",  Dashed,
-			"solid",   Dashing[{}],
-			"double" | "groove" | "ridge" | "inset" | "outset",  Missing["Not supported."],
-			_,         unrecognizedKeyWordFailure @ prop
-		]
-		,
-		unrecognizedValueFailure @ prop
+	Switch[token[[1]],
+		"ident",
+			Switch[ToLowerCase @ token[[2]],
+				"initial", initialValues @ prop,
+				"inherit", Inherited,
+				"none",    None, 
+				"hidden",  None, (* 'hidden' is technically different from 'none', but I don't think the difference matters in WL *)
+				"dotted",  Dotted,
+				"dashed",  Dashed,
+				"solid",   Dashing[{}],
+				"double" | "groove" | "ridge" | "inset" | "outset",  Missing["Not supported."],
+				_,         unrecognizedKeyWordFailure @ prop
+			],
+		_, unrecognizedValueFailure @ prop
 	]
 
 
@@ -862,7 +1031,7 @@ parseSingleBorderWidth[prop_String, token:{_String, _String}] :=
 			],
 		"length" | "number", With[{n = parseLength @ token[[2]]}, negativeQ[n, prop, AbsoluteThickness[n]]],
 		"ems" | "exs",       With[{n = parseLength @ token[[2]]}, negativeQ[First @ n, prop, AbsoluteThickness[n]]],
-		_, unrecognizedValueFailure @ prop
+		_,                   unrecognizedValueFailure @ prop
 	]
 
 
@@ -916,66 +1085,52 @@ parse[prop:"border-width", tokens:{{_String, _String}..}] :=
 	'border' by itself sets all 4 edges to be the same.
 *)
 parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], p, value, init, dirAll, dir, start, stop, acquiredColor = False, acquiredDashing = False, acquiredThickness = False},
-		init = <|"color" -> None, "dashing" -> None, "thickness" -> None|>; 
+	Module[
+	{
+		pos = 1, l = Length[tokens], p, value, dirAll, dir, start, stop, 
+		wrapper = Switch[prop, "border-left", Left, "border-right", Right, "border-top", Top, "border-bottom", Bottom, _, Identity],
+		values = <|
+			"c" -> initialValues[prop <> "-color"], 
+			"s" -> initialValues[prop <> "-style"], 
+			"w" -> initialValues[prop <> "-width"]|>,
+		hasColor = False, hasStyle = False, hasWidth = False
+	},
 		
-		If[l == 1, (* if only one token is present, then it should be a keyword *)
-			Return @  
-				Switch[ToLowerCase @ tokens[[1, 2]],
-					"inherit", Inherited,
-					"initial", None, (* because border-style is 'none', all properties are reset *)
-					"none",    None,
-					_,         unrecognizedKeyWordFailure @ prop
-				]
+		(* if only one token is present, then check that it is a universal keyword *)
+		If[l == 1,
+			Switch[ToLowerCase @ tokens[[1, 2]],
+				"inherit", Return @ {FrameStyle -> Inherited, Cell[CellFrameColor -> Inherited, CellFrame -> Inherited]},
+				"initial", Return @ {FrameStyle -> wrapper[Directive[Values @ values]], Cell[CellFrameColor -> values["c"], CellFrame -> wrapper[values["w"]]]}, 
+				_, Null
+			]
 		];
 		
-		(* Ignore 'inherit' and 'initial' keywords because they are ambiguous. Other keywords are unique. *)
+		(* Ignore 'inherit' and 'initial' universal keywords. Other keywords are unique. *)
 		While[pos <= l,
-			If[!MatchQ[ToLowerCase @ tokens[[pos, 2]], "initial" | "inherit" | "none"],
-				start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
-				value = {
-					parseSingleColor[prop, tokens[[start ;; stop]]],
-					parseSingleBorderStyle[prop, First @ tokens[[start ;; stop]]],
-					parseSingleBorderWidth[prop, First @ tokens[[start ;; stop]]]};
-				p = FirstPosition[value, Except[_?FailureQ], Return @ unrecognizedValueFailure @ prop, {1}, Heads -> False][[1]];
-				Switch[p, 
-					1, If[acquiredColor,     Return @ repeatedPropValueFailure @ "color", init["color"] = value[[p]];     acquiredColor = True], 
-					2, If[acquiredDashing,   Return @ repeatedPropValueFailure @ "style", init["dashing"] = value[[p]];   acquiredDashing = True], 
-					3, If[acquiredThickness, Return @ repeatedPropValueFailure @ "width", init["thickness"] = value[[p]]; acquiredThickness = True]
-				];
-				,
-				Return @ unrecognizedValueFailure @ prop
+			Which[
+				tokens[[pos, 1]] == "function", (* only color can be a function *)
+					start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
+					If[hasColor, Return @ repeatedPropValueFailure @ (prop <> "-color")]; 
+					hasColor = True; values["c"] = parseSingleColor[prop, tokens[[start ;; stop]]]; pos = stop;,
+					
+				!FailureQ[value = parseSingleColor[prop, {tokens[[pos]]}]],
+					If[hasColor, Return @ repeatedPropValueFailure @ (prop <> "-color")];
+					hasColor = True; values["c"] = value,
+				
+				!FailureQ[value = parseSingleBorderStyle[prop, tokens[[pos]]]],
+					If[hasStyle, Return @ repeatedPropValueFailure @ (prop <> "-style")];
+					hasStyle = True; values["s"] = value,
+					
+				!FailureQ[value = parseSingleBorderWidth[prop, tokens[[pos]]]],
+					If[hasWidth, Return @ repeatedPropValueFailure @ (prop <> "-width")];
+					hasWidth = True; values["w"] = value,
+				
+				True, unrecognizedValueFailure @ prop						
 			];
 			skipWhitespace[pos, l, tokens];
 		];
-		(* reset all sides to their initial values *)
-		{
-			FrameStyle -> (
-				dirAll = Map[initialValues, {{"border-left", "border-right"}, {"border-bottom", "border-top"}}, {2}];
-				dir = Directive @@ {If[acquiredColor, init["color"], Nothing], If[acquiredDashing, init["dashing"], Nothing], If[acquiredThickness, init["thickness"], Nothing]};
-				Switch[prop,
-					"border",        dirAll = {{dir, dir}, {dir, dir}},
-					"border-top",    dirAll[[2, 2]] = dir,
-					"border-right",  dirAll[[1, 2]] = dir,
-					"border-bottom", dirAll[[2, 1]] = dir,
-					"border-left",   dirAll[[1, 1]] = dir
-				];
-				dirAll),
-			
-			Cell[
-				CellFrameColor -> If[acquiredColor, init["color"], Black],
-				CellFrame -> (
-					dirAll = Map[initialValues, {{"border-left", "border-right"}, {"border-bottom", "border-top"}}, {2}];
-					dir = If[acquiredThickness, convertToCellThickness @ init["thickness"], None];
-					Switch[prop,
-						"border",        dirAll = {{dir, dir}, {dir, dir}},
-						"border-top",    dirAll[[2, 2]] = dir,
-						"border-right",  dirAll[[1, 2]] = dir,
-						"border-bottom", dirAll[[2, 1]] = dir,
-						"border-left",   dirAll[[1, 1]] = dir
-					];
-					dirAll)]
-		}
+		
+		{FrameStyle -> wrapper[Directive[Values @ values]], Cell[CellFrameColor -> values["c"], CellFrame -> wrapper[values["w"]]]}
 	]
 
 
@@ -1047,7 +1202,7 @@ parse[prop:"content", tokens:{{_String, _String}..}] :=
 							_,                unrecognizedKeyWordFailure @ prop
 						],
 					"string", Cell[CellLabel -> tokens[[pos, 2]]], (* is this even doing this option justice? *)
-					"uri",    With[{i = Import[tokens[[pos, 2]]]}, If[FailureQ[i], notAnImageFailure @ tokens[[pos, 2]], Cell[CellDingbat -> i]]],
+					"uri",    With[{i = parseURI @ tokens[[pos, 2]]}, If[FailureQ[i] || MissingQ[i], notAnImageFailure @ tokens[[pos, 2]], Cell[CellDingbat -> i]]],
 					"function", 
 						start = pos; While[pos < l && tokens[[pos, 1]] != ")", pos++]; stop = pos;
 						Switch[ToLowerCase @ tokens[[start, 2]],
@@ -1159,7 +1314,7 @@ parseSingleListStyleImage[prop_String, token:{_String, _String}] :=
 				_,         unrecognizedKeyWordFailure @ prop
 			],
 		"uri", 
-			With[{im = Import[token[[2]]]}, 
+			With[{im = parseURI @ token[[2]]}, 
 				Which[
 					FailureQ[im], couldNotImportFailure @ token[[2]], 
 					!ImageQ[im],  notAnImageFailure @ token[[2]],
@@ -1360,7 +1515,7 @@ parse[prop:"cursor", tokens:{{_String, _String}..}] :=
 						"ne-resize"|"sw-resize", "FrameRisingResize",
 						_,               unrecognizedKeyWordFailure @ prop
 					],
-				"uri", Import[tokens[[pos, 2]]],
+				"uri", parseURI @ tokens[[pos, 2]],
 				_, unrecognizedValueFailure @ prop
 			];
 		If[FailureQ[value], value, With[{v = value}, MouseAppearance[#, v]&]]
@@ -1841,8 +1996,7 @@ parseSingleMargin[prop_String, token:{_String, _String}] :=
 		"percentage", Scaled[(parsePercentage @ token[[2]])/100],
 		_, unrecognizedValueFailure @ prop
 	]
-
-
+	
 (* 
 	CSS margins --> WL ImageMargins and CellMargins
 	CSS padding --> WL FrameMargins and CellFrameMargins
@@ -1892,45 +2046,6 @@ parse[prop:"margin", tokens:{{_String, _String}..}] :=
 
 
 (* ::Subsubsection::Closed:: *)
-(*outline-width*)
-
-
-parse[prop:"outline-width", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], value},
-		If[l > 1, Return @ tooManyTokensFailure @ prop];
-		value = parseSingleBorderWidth[prop, tokens[[pos]]];
-		If[FailureQ[value], 
-			value
-			, 
-			(*With[{t = Round @ convertToCellThickness @ value},
-				Cell[
-					CellFrame -> Dynamic[If[CurrentValue["MouseOver"], t, Inherited]],
-					CellFrameMargins \[Rule] Dynamic[If[CurrentValue["MouseOver"], -t, Inherited]]
-			]*)
-			Missing["Not supported."]
-		]
-	]
-
-
-(* ::Subsubsection::Closed:: *)
-(*outline-style*)
-
-
-(* only a solid border is allowed for cells; 'hidden' is not allowed here *)
-parse[prop:"outline-style", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], value, results = {}},
-		If[l > 1, Return @ tooManyTokensFailure @ prop];
-		value =
-			If[tokens[[1, 1]] == "ident" && tokens[[1, 2]] == "hidden",
-				unrecognizedKeyWordFailure @ prop
-			,
-				parseSingleBorderStyle[prop, tokens[[pos]]]
-			];
-		If[FailureQ[value], value, Missing["Not supported."]]
-	]
-
-
-(* ::Subsubsection::Closed:: *)
 (*outline-color*)
 
 
@@ -1954,79 +2069,96 @@ parse[prop:"outline-color", tokens:{{_String, _String}..}] :=
 
 
 (* ::Subsubsection::Closed:: *)
+(*outline-style*)
+
+
+(* only a solid border is allowed for cells; 'hidden' is not allowed here *)
+parse[prop:"outline-style", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value, results = {}},
+		If[l > 1, Return @ tooManyTokensFailure @ prop];
+		value =
+			If[tokens[[1, 1]] == "ident" && tokens[[1, 2]] == "hidden",
+				unrecognizedKeyWordFailure @ prop
+			,
+				parseSingleBorderStyle[prop, tokens[[pos]]]
+			];
+		If[FailureQ[value], value, Missing["Not supported."]]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
+(*outline-width*)
+
+
+parse[prop:"outline-width", tokens:{{_String, _String}..}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		If[l > 1, Return @ tooManyTokensFailure @ prop];
+		value = parseSingleBorderWidth[prop, tokens[[pos]]];
+		If[FailureQ[value], 
+			value
+			, 
+			(*With[{t = Round @ convertToCellThickness @ value},
+				Cell[
+					CellFrame -> Dynamic[If[CurrentValue["MouseOver"], t, Inherited]],
+					CellFrameMargins \[Rule] Dynamic[If[CurrentValue["MouseOver"], -t, Inherited]]
+			]*)
+			Missing["Not supported."]
+		]
+	]
+
+
+(* ::Subsubsection::Closed:: *)
 (*outline*)
 
 
-(* Shorthand for outline-*-width/style/color. *)
+(* Shorthand for outline-width/style/color. 'outline' always sets all 4 edges to be the same. *)
 parse[prop:"outline", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], p, value, init, dirAll, dir, start, stop, acquiredColor = False, acquiredDashing = False, acquiredThickness = False},
-		init = <|"color" -> None, "dashing" -> None, "thickness" -> None|>; 
+	Module[
+	{
+		pos = 1, l = Length[tokens], p, value, dirAll, dir, start, stop, 
+		values = <|
+			"c" -> initialValues[prop <> "-color"], 
+			"s" -> initialValues[prop <> "-style"], 
+			"w" -> initialValues[prop <> "-width"]|>,
+		hasColor = False, hasStyle = False, hasWidth = False
+	},
 		
-		If[l == 1, (* if only one token is present, then it should be a keyword *)
-			Return @  
-				Switch[ToLowerCase @ tokens[[1, 2]],
-					"inherit", Missing["Not supported."](*Cell[Inherited]*),
-					"initial", 
-						(*Cell[
-							CellFrameMargins \[Rule] Dynamic[If[CurrentValue["MouseOver"], -3, Inherited]], 
-							CellFrame \[Rule] Dynamic[If[CurrentValue["MouseOver"], 3, Inherited]], 
-							CellFrameColor \[Rule] Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]]]*)
-						Missing["Not supported."], 
-					_, unrecognizedKeyWordFailure @ prop
-				]
+		(* if only one token is present, then check that it is a universal keyword *)
+		If[l == 1,
+			Switch[ToLowerCase @ tokens[[1, 2]],
+				"inherit", Return @ Missing["Not supported."](*{FrameStyle \[Rule] Inherited, Cell[CellFrameColor \[Rule] Inherited, CellFrame \[Rule] Inherited]}*),
+				"initial", Return @ Missing["Not supported."](*{FrameStyle \[Rule] Directive[Values @ values], Cell[CellFrameColor \[Rule] values["c"], CellFrame \[Rule] values["w"]]}*), 
+				_, Null
+			]
 		];
 		
-		(* Ignore 'inherit' and 'initial' keywords because they are ambiguous. Other keywords are unique. *)
+		(* Ignore 'inherit' and 'initial' universal keywords. Other keywords are unique. *)
 		While[pos <= l,
-			If[!MatchQ[ToLowerCase @ tokens[[pos, 2]], "initial" | "inherit"],
-				Which[
-					MatchQ[ToLowerCase @ tokens[[pos, 2]], "invert"], 
-						If[acquiredColor, 
-							Return @ repeatedPropValueFailure @ "color"
-							, 
-							init["color"] = Dynamic[ColorNegate @ CurrentValue[CellFrameColor]]; acquiredColor = True
-						],
-					MatchQ[ToLowerCase @ tokens[[pos, 2]], "hidden"], 
-						If[acquiredDashing, Return @ repeatedPropValueFailure @ "style",init["style"] = Cell[Inherited]],						
-					True,
-						start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
-						value = {
-							parseSingleColor[prop, tokens[[start ;; stop]]],
-							parseSingleBorderStyle[prop, First @ tokens[[start ;; stop]]],
-							parseSingleBorderWidth[prop, First @ tokens[[start ;; stop]]]};
-						p = FirstPosition[value, Except[_?FailureQ], Return @ unrecognizedValueFailure @ prop, {1}, Heads -> False][[1]];
-						Switch[p, 
-							1, If[acquiredColor,     Return @ repeatedPropValueFailure @ "color", init["color"] = value[[p]];     acquiredColor = True], 
-							2, If[acquiredDashing,   Return @ repeatedPropValueFailure @ "style", init["dashing"] = value[[p]];   acquiredDashing = True], 
-							3, If[acquiredThickness, Return @ repeatedPropValueFailure @ "width", init["thickness"] = value[[p]]; acquiredThickness = True]
-						]
-				]
-				,
-				Return @ unrecognizedValueFailure @ prop
+			Which[
+				tokens[[pos, 1]] == "function", (* only color can be a function *)
+					start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
+					If[hasColor, Return @ repeatedPropValueFailure @ (prop <> "-color")]; 
+					hasColor = True; values["c"] = parseSingleColor[prop, tokens[[start ;; stop]]]; pos = stop;,
+					
+				!FailureQ[value = parseSingleColor[prop, {tokens[[pos]]}]],
+					If[hasColor, Return @ repeatedPropValueFailure @ (prop <> "-color")];
+					hasColor = True; values["c"] = value,
+				
+				!FailureQ[value = parseSingleBorderStyle[prop, tokens[[pos]]]],
+					If[hasStyle, Return @ repeatedPropValueFailure @ (prop <> "-style")];
+					hasStyle = True; values["s"] = value,
+					
+				!FailureQ[value = parseSingleBorderWidth[prop, tokens[[pos]]]],
+					If[hasWidth, Return @ repeatedPropValueFailure @ (prop <> "-width")];
+					hasWidth = True; values["w"] = value,
+				
+				True, unrecognizedValueFailure @ prop						
 			];
 			skipWhitespace[pos, l, tokens];
 		];
 		
-		(*Cell[
-			CellFrameColor -> 
-				If[acquiredColor, 
-					With[{c = init["color"]}, Dynamic[If[CurrentValue["MouseOver"], c, Inherited]]]
-					, 
-					Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]]
-				],
-			CellFrame -> 
-				If[acquiredThickness, 
-					With[{t = convertToCellThickness @ init["thickness"]}, Dynamic[If[CurrentValue["MouseOver"], t, 0]]]
-					,
-					Dynamic[If[CurrentValue["MouseOver"], 3, Inherited]]
-				],
-			CellFrameMargins \[Rule] 
-				If[acquiredThickness, 
-					With[{t = -convertToCellThickness @ init["thickness"]}, Dynamic[If[CurrentValue["MouseOver"], t, 0]]]
-					,
-					Dynamic[If[CurrentValue["MouseOver"], -3, Inherited]]
-				]]*)
 		Missing["Not supported."]
+		(*{FrameStyle \[Rule] Directive[Values @ values], Cell[CellFrameColor \[Rule] values["c"], CellFrame \[Rule] values["w"]]}*)
 	]
 
 
@@ -2772,32 +2904,68 @@ skipWhitespace[positionIndex_, length_Integer, tokens_List] := (
 
 
 processRulesets[s_String] :=
-	Module[{i, pos, startPosBlock, stopPosBlock, l, lRulesets, relevantTokens, rulesets},
+	Module[{i = 1, pos = 1, startPosBlock, stopPosBlock, startAtBlock, stopAtBlock, l, lRulesets, relevantTokens, rulesets, condition},
 	
-		relevantTokens = parseBlock[s];
-		(* TODO: need to handle @import and other preprocessing before rulesets *)
-	
-		pos = 1;
+		relevantTokens = parseBlock[s]; (* identifies curly-braces, strings, URIs, @import, @charset. Removes comments. *)
 		l = Length[relevantTokens];
-		i = 1;
+		
+		(*TODO: import other stylesheets*)
+		If[MatchQ[relevantTokens[[pos, 1]], "charset"|"import"], pos++; skipWhitespace[pos, l, relevantTokens]];
+		
 		(* 
 			We're looking for blocks indicated by curly brackets. 
 			The last declaration block may not have a closing bracket, so count only open brackets as an upper limit to the number of possible blocks.
+			@keywords cannot be nested in CSS 2.1.
 		*)
 		lRulesets = Count[relevantTokens, {"{", _}];
 		rulesets = ConstantArray[0, lRulesets];
 		While[pos < l && i <= lRulesets,
 			startPosBlock = findOpeningBracketPosition[pos, "{", relevantTokens];
-			(*
-				'stopPosBlock' could reach the end of the token list, but not necessarily be a closed bracket '}'.
-			*)
-			stopPosBlock  = findClosingBracketPosition[startPosBlock, "{", "}", relevantTokens];
-			rulesets[[i]] = (*FIXME: using associations too soon. Keep using nested lists for now*)
-				<|
-					"Selector" -> StringJoin @ relevantTokens[[pos ;; startPosBlock-1, 2]], 
-					"Block" -> relevantTokens[[startPosBlock+1 ;; If[relevantTokens[[stopPosBlock, 1]] == "}", stopPosBlock-1, stopPosBlock]]]|>;
-			pos = stopPosBlock + 1;
-			i++
+			Which[
+				StringStartsQ[relevantTokens[[startPosBlock-1, 2]], RegularExpression @ T["PAGE_SYM"]],
+					stopPosBlock  = findClosingBracketPosition[startPosBlock, "{", "}", relevantTokens];
+					rulesets[[i]] = 
+						<|
+							"Selector" -> StringJoin @ relevantTokens[[pos ;; startPosBlock-1, 2]], 
+							"Condition" -> StyleData[All, "Printout"],
+							"Block" -> relevantTokens[[startPosBlock+1 ;; If[relevantTokens[[stopPosBlock, 1]] == "}", stopPosBlock-1, stopPosBlock]]]|>;
+					pos = stopPosBlock + 1;
+					i++,
+					
+				StringStartsQ[relevantTokens[[startPosBlock-1, 2]], RegularExpression @ T["MEDIA_SYM"]],
+					startAtBlock = startPosBlock;
+					stopAtBlock = findClosingBracketPosition[startAtBlock, "{", "}", relevantTokens];
+					pos = startAtBlock+1;
+					While[pos < stopAtBlock && i <= lRulesets,
+						startPosBlock = findOpeningBracketPosition[pos, "{", relevantTokens];
+						stopPosBlock  = findClosingBracketPosition[startPosBlock, "{", "}", relevantTokens];
+						rulesets[[i]] = 
+							<|
+								"Selector" -> StringJoin @ relevantTokens[[pos ;; startPosBlock-1, 2]], 
+								"Condition" -> First @ StringSplit[relevantTokens[[startAtBlock-1, 2]], RegularExpression["(" ~~ T["MEDIA_SYM"] ~~ ")"]],
+								"Block" -> relevantTokens[[startPosBlock+1 ;; If[relevantTokens[[stopPosBlock, 1]] == "}", stopPosBlock-1, stopPosBlock]]]|>;
+						pos = stopPosBlock + 1;
+						i++
+					];
+					pos = stopAtBlock + 1,
+					
+				(* skip unknown @ rules, including @import *)
+				StringStartsQ[relevantTokens[[startPosBlock-1, 2]], "@"],
+					startAtBlock = startPosBlock;
+					stopAtBlock = findClosingBracketPosition[startAtBlock, "{", "}", relevantTokens];
+					pos = stopAtBlock + 1,
+					
+				True,
+					(* 'stopPosBlock' could reach the end of the token list, but not necessarily be a closed bracket '}' *)
+					stopPosBlock  = findClosingBracketPosition[startPosBlock, "{", "}", relevantTokens];
+					rulesets[[i]] = 
+						<|
+							"Selector" -> StringJoin @ relevantTokens[[pos ;; startPosBlock-1, 2]], 
+							"Condition" -> None,
+							"Block" -> relevantTokens[[startPosBlock+1 ;; If[relevantTokens[[stopPosBlock, 1]] == "}", stopPosBlock-1, stopPosBlock]]]|>;
+					pos = stopPosBlock + 1;
+					i++
+			];
 		];
 		(* remove possible excess blocks *)
 		DeleteCases[rulesets, 0, {1}]
@@ -2909,7 +3077,7 @@ getPropertyPositions[property_String, a:{__Association}] :=
 	]
 
 
-(* ::Subsubsection:: *)
+(* ::Subsection::Closed:: *)
 (*other*)
 
 
@@ -3216,128 +3384,6 @@ steps(INTEGER, start|end) *)
 
 (* ::Section::Closed:: *)
 (*Notes*)
-
-
-(* ::Subsection::Closed:: *)
-(*Check matching ()[]{}*)
-
-
-(* ::Text:: *)
-(*I shouldn't have to do this. CSS is very flat in its syntax in that curly brackets and square brackets cannot be nested (as far as I can tell!). Parentheses can be nested, but only for functions e.g. rgba(0,0,0,calc(1+1)) but would still be rare.*)
-(*After tokenization, I should only have to consume tokens until the relevant super-structure is consumed, i.e. at-rules and rule sets. Then parse the super-structures.*)
-
-
-(*findBlocks[tokens_List] := 
-	Module[{labels1 = {}, result, start, stop, pos, uuids},
-		result = (* use stack algorithm to match bracket tokens *)
-			Switch[First[#], 
-				"{", With[{id = CreateUUID[]}, AppendTo[labels1, id]; {"{", id, "{"}], 
-				"}", With[{id = Last[labels1]}, labels1 = Most[labels1]; {"}", id, "}"}], 
-				_, #
-			]& /@ tokens;
-		
-		(* get UUID of each bracket pair *)
-		uuids = Select[result, StringMatchQ[#[[1]], "{"]&][[All, 2]];
-		
-		(* run over UUIDs and replace bracketed expressions with List to indicated scope *)	
-		Do[
-			{start, stop} = Position[result, {_, i, _}];
-			pos = Sequence @@ Most[start]; (* brackets could be nested; all but last position indices indicate depth *)
-			start = Last[start];
-			stop = Last[stop];
-			result = 
-				ReplacePart[result, 
-					Join[
-						{
-							{pos, start} -> {Switch[result[[pos, start, 1]], "{", "{}"], result[[pos, start + 1 ;; stop - 1]]}}, 
-						Table[{pos, i} -> Nothing, {i, start + 1, stop}]]]
-			,
-			{i, uuids}];
-			
-		result
-	]*)
-
-
-(*createBracketBlocks[tokens_List] := 
-	Module[{labels1 = {}, labels2 = {}, labels3 = {}, result, start, stop, pos, uuids},
-		result = (* use stack algorithm to match bracket tokens *)
-			Switch[First[#], 
-				"{", With[{id = CreateUUID[]}, AppendTo[labels1, id]; {"{", id, "{"}], 
-				"}", With[{id = Last[labels1]}, labels1 = Most[labels1]; {"}", id, "}"}], 
-				
-				(* the FUNCTION token includes an opening (, and its IDENT must be kept, too *)
-				"FUNCTION", With[{id = CreateUUID[]}, AppendTo[labels2, id]; {"FUNCTION", id, Last[#]}],
-				"(", With[{id = CreateUUID[]}, AppendTo[labels2, id]; {"(", id, "("}], 
-				")", With[{id = Last[labels2]}, labels2 = Most[labels2]; {")", id, ")"}], 
-				
-				"[", With[{id = CreateUUID[]}, AppendTo[labels3, id]; {"[", id, "["}], 
-				"]", With[{id = Last[labels3]}, labels3 = Most[labels3]; {"]", id, "]"}], 
-			
-				_, #
-			]& /@ tokens;
-		
-		(* get UUID of each bracket pair *)
-		uuids = Select[result, StringMatchQ[#[[1]], "{" | "(" | "[" | "FUNCTION"]&][[All, 2]];
-		
-		(* run over UUIDs and replace bracketed expressions with List to indicated scope *)	
-		Do[
-			{start, stop} = Position[result, {_, i, _}];
-			pos = Sequence@@ Most[start]; (* brackets could be nested; all but last position indices indicate depth *)
-			start = Last[start];
-			stop = Last[stop];
-			result = 
-				ReplacePart[result, 
-					Join[
-						{
-							{pos, start} -> {
-								Switch[result[[pos, start, 1]], 
-									"{", "{}", 
-									"[", "[]", 
-									"(", "()", 
-									"FUNCTION", {"FUNCTION", StringDrop[result[[pos, start, -1]], -1]}
-								], 
-								result[[pos, start + 1 ;; stop - 1]]}}, 
-						Table[{pos, i} -> Nothing, {i, start + 1, stop}]]]
-			,
-			{i, uuids}];
-			
-		result
-	]*)
-
-
-(* ::Subsection::Closed:: *)
-(*Inheritance (graph)*)
-
-
-(*(*
-	Usage:
-	{UUIDtaggedXML, $Elements, $DocumentGraph, $DocumentRoot, attributeTable} = createInheritenceGraphAndAttributeData[XML];
-	inheritencePath = FindShortestPath[graph, root, "XML-9247b8a1-4848-40e2-8e4e-162fc6d473f4"] // Reverse;
-	Does attributeTable[inheritencePath[[1]]] have an attribute you need?
-		Yes \[Rule] stop
-		No \[Rule] attributeTable[inheritencePath[[2]]]
-	Repeat until the attribute is inherited or you run out of parents and the default is used.
-*)
-createInheritenceGraphAndAttributeData[parentXML_] := 
-Module[{tagged, raw, eCount, rules, parentChild, edges, root, graph, attributeTable},
-	tagged = parentXML //. XMLElement[elem_, attr_, children_] :> xmlElement[elem, attr, children, CreateUUID["XML-"]];
-	raw = Cases[tagged, xmlElement[x___] :> xmlElement[x], Infinity];
-	eCount = Length[raw];
-	rules = ConstantArray[0, eCount];
-	parentChild = ConstantArray[0, eCount];
-	Do[
-		With[{replaced = raw[[i]] //. rules[[;;i-1]]},
-			parentChild[[i]] = Thread[Last[replaced] -> replaced[[-2]]];
-			rules[[i]] = replaced -> Last[replaced];
-		],
-		{i,eCount}];
-	edges = Flatten[rules /. {Rule[xmlElement[_, _, children:{__}, _], y_] :> Thread[y -> children], Rule[xmlElement[_, _, children:{}, _], y_] :> Nothing}];
-	edges = DeleteCases[edges, Rule[_String, x_String] /; !MemberQ[rules[[All, 2]], x]];
-	root = First[Last[edges]];
-	graph = Graph[edges, VertexLabels -> Placed["Name", Tooltip], GraphLayout -> {"LayeredEmbedding", "RootVertex" -> root}];
-	attributeTable = Association[Reverse /@ rules /. Rule[a_String, xmlElement[_, attr_, children_, _]] :> Rule[a, <|attr|>]];
-	{tagged, raw, graph, root, attributeTable}
-]*)
 
 
 (*
