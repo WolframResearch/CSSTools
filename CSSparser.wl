@@ -77,7 +77,7 @@ RE["string1"]     = "(\\\"([^\n\r\f\\\"]|\\\\" ~~ RE["nl"] ~~ "|" ~~ RE["escape"
 RE["string2"]     = "(\\'([^\n\r\f\\']|\\\\" ~~ RE["nl"] ~~ "|" ~~ RE["escape"] ~~ ")*\\')"; (* [] contains escaped single quote *)
 RE["unicode"]     = "(\\\\" ~~ RE["h"] ~~ "{1,6}(\r\n|[ \n\r\t\f])?)";
 RE["url"]         = "(([!#$%&*-~]|" ~~ RE["nonascii"] ~~ "|" ~~ RE["escape"] ~~ ")*)";
-RE["w"]           = "((" ~~ RE["s"] ~~ ")?)";
+RE["w"]           = "(" ~~ RE["s"] ~~ "?)";
 
 
 RE["A"] = "(a|A|\\\\0{0,4}(41|61)(\r\n|[ \t\r\n\f])?)";
@@ -345,14 +345,14 @@ label["term", x_String] :=
 *)
 
 
-couldNotImportFailure[uri_String] :=       Failure["UnexpectedParse", <|"Message" -> "Failed to import from URI.", "URI" -> uri|>];
+couldNotImportFailure[uri_String] :=       Failure["ImportFailure",   <|"URI" -> uri|>];
 illegalIdentifierFailure[ident_String] :=  Failure["UnexpectedParse", <|"Message" -> "Illegal identifier.", "Ident" -> ident|>];
-invalidFunctionFailure[function_string] := Failure["UnexpectedParse", <|"Message" -> "Invalid function.", "Function" -> function|>];
-negativeIntegerFailure[prop_String] :=     Failure["UnexpectedParse", <|"Message" -> prop <> "integer must be non-negative."|>];
-negativeLengthFailure[prop_String] :=      Failure["UnexpectedParse", <|"Message" -> prop <> "length must be non-negative."|>];
-notAnImageFailure[uri_String] :=           Failure["UnexpectedParse", <|"Message" -> "Asset is not an image.", "URI" -> uri|>];
+invalidFunctionFailure[function_string] := Failure["InvalidFunction", <|"Function" -> function|>];
+negativeIntegerFailure[prop_String] :=     Failure["BadLength",       <|"Message" -> prop <> "integer must be non-negative."|>];
+negativeLengthFailure[prop_String] :=      Failure["BadLength",       <|"Message" -> prop <> "length must be non-negative."|>];
+notAnImageFailure[uri_String] :=           Failure["NoImageFailure",  <|"URI" -> uri|>];
 noValueFailure[prop_String] :=             Failure["UnexpectedParse", <|"Message" -> "No " <> prop <> " property value."|>];
-positiveLengthFailure[prop_String] :=      Failure["UnexpectedParse", <|"Message" -> prop <> "length must be positive."|>];
+positiveLengthFailure[prop_String] :=      Failure["BadLength",       <|"Message" -> prop <> "length must be positive."|>];
 repeatedPropValueFailure[prop_] :=         Failure["UnexpectedParse", <|"Message" -> "Repeated property value type.", "Prop" -> prop|>];
 tooManyPropValuesFailure[props_List] :=    Failure["UnexpectedParse", <|"Message" -> "Too many property values provided.", "Props" -> props|>];
 tooManyTokensFailure[tokens_List] :=       Failure["UnexpectedParse", <|"Message" -> "Too many tokens.", "Tokens" -> tokens[[All, 1]]|>];
@@ -468,7 +468,7 @@ initialValues = <|
 (*<color>*)
 
 
-parseSingleColor[prop_String, tokens:{{_String, _String}..}] :=
+parseSingleColor[prop_String, tokens:{{_String, _String}..}] := parseSingleColor[prop, tokens] = 
 	Which[
 		Length[tokens] == 1 && MatchQ[tokens[[1, 1]], "ident"],
 			Switch[ToLowerCase @ tokens[[1, 2]],
@@ -490,7 +490,7 @@ parseSingleColor[prop_String, tokens:{{_String, _String}..}] :=
 (*<counter>*)
 
 
-parseCounter[prop_String, tokens:{{_String, _String}...}] :=
+parseCounter[prop_String, tokens:{{_String, _String}...}] := parseCounter[prop, tokens] =
 	Module[{pos = 1, l = Length[tokens], style, stringAddOn = "", listtype = "decimal"},
 		Switch[ToLowerCase @ tokens[[pos, 2]],
 			"counter(",
@@ -514,7 +514,7 @@ parseCounter[prop_String, tokens:{{_String, _String}...}] :=
 (*<length>*)
 
 
-parseLength[s_String, inFontSize_:False] := 
+parseLength[s_String, inFontSize_:False] := parseLength[s, inFontSize] =
 	Module[{val, unit, dpi = "Resolution" /. First[SystemInformation["Devices", "ScreenInformation"], "Resolution" -> 72]},
 		(* check for case where length is 0 and unitless *)
 		val = Interpreter["Number"] @ s;
@@ -547,14 +547,14 @@ parseLength[s_String, inFontSize_:False] :=
 	]
 
 
-parseEmNonRelative[s_String] := Interpreter["Number"] @ StringDrop[s, -2]
+parseEmNonRelative[s_String] := parseEmNonRelative[s] = Interpreter["Number"] @ StringDrop[s, -2]
 
 
 negativeQ[n_, prop_String, default_] :=
 	Which[
-		FailureQ[n], n, 
-		Negative[n], negativeLengthFailure @ prop, 
-		True,        default
+		FailureQ[n],         n, 
+		TrueQ @ Negative[n], negativeLengthFailure @ prop, 
+		True,                default
 	]
 
 
@@ -562,7 +562,7 @@ negativeQ[n_, prop_String, default_] :=
 (*<percentage>*)
 
 
-parsePercentage[s_String] := Interpreter["Number"] @ StringDrop[s, -1]
+parsePercentage[s_String] := parsePercentage[s] = Interpreter["Number"] @ StringDrop[s, -1]
 
 
 (* ::Subsection::Closed:: *)
@@ -580,31 +580,30 @@ parseURI[uri_String] :=
 			(* interpret data type and import *)
 			Which[
 				StringMatchQ[start, StartOfString ~~ "data:" ~~ EndOfString, IgnoreCase -> True], 
-					s = ImportString[URLDecode @ rest, "String"],
+					ImportString[URLDecode @ rest, "String"],
 				StringMatchQ[start, StartOfString ~~ "data:" ~~ ___ ~~ ";base64" ~~ EndOfString, IgnoreCase -> True],
-					s = ImportString[rest, "Base64"],
+					ImportString[rest, "Base64"],
 				StringMatchQ[start, StartOfString ~~ "data:" ~~ ___ ~~ EndOfString, IgnoreCase -> True],
 					start = StringReplace[start, StartOfString ~~ "data:" ~~ x___ ~~ EndOfString :> x];
 					rest = URLDecode @ rest;
 					Switch[ToLowerCase @ start,
-						"" | "text/plain", s = ImportString[rest, "String"],
-						"text/css",        s = ImportString[rest, "String"],
-						"text/html",       s = ImportString[rest, "HTML"],
-						"text/javascript", s = ImportString[rest, "String"],
-						"image/gif",       s = ImportString[rest, "GIF"],
-						"image/jpeg",      s = ImportString[rest, "JPEG"],
-						"image/png",       s = ImportString[rest, "PNG"],
-						"image/svg+xml",   s = ImportString[rest, "XML"],
-						"image/x-icon"|"image/vnd.microsoft.icon", s = ImportString[rest, "ICO"],
+						"" | "text/plain", ImportString[rest, "String"],
+						"text/css",        ImportString[rest, "String"],
+						"text/html",       ImportString[rest, "HTML"],
+						"text/javascript", ImportString[rest, "String"],
+						"image/gif",       ImportString[rest, "GIF"],
+						"image/jpeg",      ImportString[rest, "JPEG"],
+						"image/png",       ImportString[rest, "PNG"],
+						"image/svg+xml",   ImportString[rest, "XML"],
+						"image/x-icon"|"image/vnd.microsoft.icon", ImportString[rest, "ICO"],
 						"audio/wave"|"audio/wav"|"audio/x-wav"|"audio/x-pn-wav", Audio[rest],
-						_,                 s = Missing["Not supported."]
+						_,                 Missing["Not supported."]
 					]
 			]
 			,
 			(* else attempt a generic import *)
-			True, s = Import[s]
-		];
-		s
+			With[{i = Quiet @ Import[s]}, If[i === $Failed, couldNotImportFailure[s], i]]
+		]
 	]
 
 
@@ -617,8 +616,7 @@ parseURI[uri_String] :=
 
 
 (*TODO: parse multiple background specs but only take the first *)
-parse[prop:"background", tokens:{{_String, _String}..}] := parseSingleBG[prop, tokens]
-(*FIXME: parsing a hexcolor fails*)
+parse[prop:"background", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)parseSingleBG[prop, tokens]
 
 (* 
 	Shorthand for all background properties.
@@ -627,25 +625,32 @@ parse[prop:"background", tokens:{{_String, _String}..}] := parseSingleBG[prop, t
 *)
 parseSingleBG[prop_String, tokens:{{_String, _String}..}] := 
 	Module[
-	{
-		pos = 1, l = Length[tokens], value, start, stop,
-		values = <|
-			"a" -> initialValues @ "background-attachment", 
-			"c" -> initialValues @ "background-color",
-			"i" -> initialValues @ "background-image",
-			"p" -> initialValues @ "background-position",
-			"r" -> initialValues @ "background-repeat"|>,
-		hasAttachment = False, hasColor = False, hasImage = False, hasPosition = False, hasRepeat = False
-	},
-		While[pos < l, 
-			(*FIXME: initial inherit are not illegal if are the only values*)
-			If[MatchQ[ToLowerCase @ tokens[[pos, 2]], "initial"|"inherit"], Return @ illegalIdentifierFailure @ tokens[[pos, 2]]];
+		{
+			pos = 1, l = Length[tokens], value, start, func,
+			values = <|
+				"a" -> initialValues @ "background-attachment", 
+				"c" -> initialValues @ "background-color",
+				"i" -> initialValues @ "background-image",
+				"p" -> initialValues @ "background-position",
+				"r" -> initialValues @ "background-repeat"|>,
+			hasAttachment = False, hasColor = False, hasImage = False, hasPosition = False, hasRepeat = False,
+			i1 = 0, i2 = 0
+		},
+		While[pos <= l, 
 			Which[
 				tokens[[pos, 1]] == "function", (* only color can be a function; eventually should support gradients *)
-					start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
-					If[hasColor, Return @ repeatedPropValueFailure @ "background-color"]; 
-					hasColor = True; values["c"] = parseSingleColor[prop, tokens[[start ;; stop]]]; pos = stop;,
+					Switch[ToLowerCase @ tokens[[pos, 2]],
+						"rgb(" | "rgba(" | "hsl(" | "hsla(", 
+							If[hasColor, Return @ repeatedPropValueFailure @ "background-color"]; 
+							hasColor = True; values["c"] = parseSingleColor[prop, consumeFunction[pos, l, tokens]];,
+						_, (* linear- or radial-gradient *)
+							If[hasImage, Return @ repeatedPropValueFailure @ "background-image"];
+							hasImage = True; values["i"] = Missing["Not supported."]; consumeFunction[pos, l, tokens] (* advances pos but return value is not used *)
+					],
 					
+				StringMatchQ[tokens[[pos, 2]], "inherit", IgnoreCase -> True], i1++,
+				StringMatchQ[tokens[[pos, 2]], "initial", IgnoreCase -> True], i2++,
+								
 				!FailureQ[value = parseSingleBGAttachment[prop, tokens[[pos]]]],
 					If[hasAttachment, Return @ repeatedPropValueFailure @ "background-attachment"];
 					hasAttachment = True; values["a"] = value,
@@ -683,19 +688,26 @@ parseSingleBG[prop_String, tokens:{{_String, _String}..}] :=
 			image: System`BackgroundAppearance, 
 			position: System`BackgroundAppearanceOptions, 
 			repeat: System`BackgroundAppearanceOptions *)
-		If[hasColor && Not[hasAttachment || hasImage || hasPosition || hasRepeat],
-			Background -> values["c"]
-			,
-			Notebook[
-				System`BackgroundAppearanceOptions ->
-					Which[
-						values["p"] === "NoRepeat" && values["r"] === "NoRepeat", "NoRepeat",
-						values["p"] === "Center" &&   values["r"] === "NoRepeat", "Center",
-						values["p"] === "NoRepeat",                                values["r"],
-						True,                                                      Missing["Not supported."]
-					],
-				System`BackgroundAppearance -> values["i"],
-				Background -> values["c"]]
+		Which[
+			l==1 && i1==1, Background -> Inherited,
+			l==1 && i2==1, Background -> initialValues @ "background",
+			i1>1, tooManyPropValuesFailure @ "inherit",
+			i2>1, tooManyPropValuesFailure @ "initial",
+			
+			hasColor && Not[hasAttachment || hasImage || hasPosition || hasRepeat], 
+				Background -> values["c"],
+			
+			True,
+				Notebook[
+					System`BackgroundAppearanceOptions ->
+						Which[
+							values["p"] === "NoRepeat" && values["r"] === "NoRepeat", "NoRepeat",
+							values["p"] === "Center" &&   values["r"] === "NoRepeat", "Center",
+							values["p"] === "NoRepeat",                                values["r"],
+							True,                                                      Missing["Not supported."]
+						],
+					System`BackgroundAppearance -> values["i"],
+					Background -> values["c"]]
 		]
 ]
 
@@ -704,7 +716,7 @@ parseSingleBG[prop_String, tokens:{{_String, _String}..}] :=
 (*background-attachment*)
 
 
-parseSingleBGAttachment[prop_String, token:{_String, _String}] :=
+parseSingleBGAttachment[prop_String, token:{_String, _String}] := parseSingleBGAttachment[prop, token] =
 	Switch[token[[1]],
 		"ident", 
 			Switch[ToLowerCase @ token[[2]],
@@ -717,7 +729,7 @@ parseSingleBGAttachment[prop_String, token:{_String, _String}] :=
 		_, unrecognizedValueFailure @ prop
 	]
 
-parse[prop:"background-attachment", tokens:{{_String, _String}..}] := 
+parse[prop:"background-attachment", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBGAttachment[prop, tokens[[1]]];
@@ -733,7 +745,7 @@ parse[prop:"background-attachment", tokens:{{_String, _String}..}] :=
 	Effectively the same as color, except a successful parse returns as a rule Background \[Rule] value.
 	Also 'currentColor' value needs to know the current value of 'color', instead of inherited from the parent.	
 *) 
-parse[prop:"background-color", tokens:{{_String, _String}..}] := 
+parse[prop:"background-color", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		value = parseSingleColor[prop, tokens];
 		If[FailureQ[value], value, Background -> value]
@@ -744,7 +756,7 @@ parse[prop:"background-color", tokens:{{_String, _String}..}] :=
 (*background-image*)
 
 
-parseSingleBGImage[prop_String, token:{_String, _String}] :=
+parseSingleBGImage[prop_String, token:{_String, _String}] := 
 	Switch[token[[1]],
 		"ident", 
 			Switch[ToLowerCase @ token[[2]],
@@ -753,14 +765,18 @@ parseSingleBGImage[prop_String, token:{_String, _String}] :=
 				"initial", initialValues @ prop,
 				_,         unrecognizedKeyWordFailure @ prop
 			],
-		"uri", With[{v = parseURI @ token[[2]]}, If[FailureQ[v], couldNotImportFailure @ v, v]],
+		"uri", parseURI @ token[[2]],
 		_,     unrecognizedValueFailure @ prop
 	]
 
-parse[prop:"background-image", tokens:{{_String, _String}..}] := 
-	Module[{l = Length[tokens], value},
-		If[l > 1, Return @ tooManyTokensFailure @ tokens];
-		value = parseSingleBGImage[prop, tokens[[1]]];
+parse[prop:"background-image", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+	Module[{pos = 1, l = Length[tokens], value},
+		value = 
+			Switch[tokens[[pos, 1]], 
+				"function", (* possible linear- or radial-gradient *)
+					consumeFunction[pos, l, tokens]; Missing["Not supported."], (* advances pos but return value is not used *)
+				_, parseSingleBGImage[prop, tokens[[pos]]]
+			];
 		If[FailureQ[value], value, System`BackgroundAppearance -> value]
 	]
 
@@ -806,9 +822,9 @@ parseSingleBGPositionPair[values:{__}, tokens:{{_String, _String}..}] :=
 	]
 
 (* only "Center" is supported by the FE *)
-parse[prop:"background-position", tokens:{{_String, _String}..}] := 
+parse[prop:"background-position", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, values = {}},
-		While[pos < 1,
+		While[pos <= l,
 			value = parseSingleBGPosition[prop, tokens[[1]]];
 			If[FailureQ[value], Return @ value, AppendTo[values, value]];
 			skipWhitespace[pos, l, tokens]
@@ -837,7 +853,7 @@ parseSingleBGRepeat[prop_String, token:{_String, _String}] :=
 		_, unrecognizedValueFailure @ prop
 	]
 
-parse[prop:"background-repeat", tokens:{{_String, _String}..}] := 
+parse[prop:"background-repeat", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBGRepeat[prop, tokens[[1]]];
@@ -868,7 +884,7 @@ parse[prop:"background-repeat", tokens:{{_String, _String}..}] :=
 (*border-collapse*)
 
 
-parse[prop:"border-collapse", tokens:{{_String, _String}..}] := 
+parse[prop:"border-collapse", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		Switch[tokens[[pos, 1]],
@@ -890,7 +906,7 @@ parse[prop:"border-collapse", tokens:{{_String, _String}..}] :=
 
 
 (* Setting a single border/frame is only possible in WL if all 4 edges are specified at the same time. *)
-parse[prop:"border-top-color"|"border-right-color"|"border-bottom-color"|"border-left-color", tokens:{{_String, _String}..}] := 
+parse[prop:"border-top-color"|"border-right-color"|"border-bottom-color"|"border-left-color", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, wrapper},
 		value = parseSingleColor[prop, tokens];
 		If[FailureQ[value], 
@@ -902,11 +918,10 @@ parse[prop:"border-top-color"|"border-right-color"|"border-bottom-color"|"border
 	]	
 
 (* sets all 4 border/frame edges at once *)
-parse[prop:"border-color", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], value, results = {}, start, stop},
+parse[prop:"border-color", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
-			start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
-			value = parseSingleColor[prop, tokens[[start ;; stop]]];
+			value = parseSingleColor[prop, If[tokens[[pos, 1]] == "function", consumeFunction[pos, l, tokens], {tokens[[pos]]}]];
 			If[FailureQ[value], Return @ value, AppendTo[results, value]]; 
 			skipWhitespace[pos, l, tokens];
 		];
@@ -930,7 +945,7 @@ parse[prop:"border-color", tokens:{{_String, _String}..}] :=
 	Also Spacings applies to the outer margins as well, but 'border-spacing' is internal only.
 	Because each item is padded on either side, divide the result in half.
 *)
-parse[prop:"border-spacing", tokens:{{_String, _String}..}] := 
+parse[prop:"border-spacing", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		If[l == 1 && MatchQ[tokens[[1, 1]], "ident"], 
 			Return @ 
@@ -984,7 +999,7 @@ parseSingleBorderStyle[prop_String, token:{_String, _String}] :=
 	Setting a single border/frame is only possible in WL if all 4 edges are specified at the same time.
 	As a compromise set the other edges to Inherited.
 *)
-parse[prop:"border-top-style"|"border-right-style"|"border-bottom-style"|"border-left-style", tokens:{{_String, _String}..}] := 
+parse[prop:"border-top-style"|"border-right-style"|"border-bottom-style"|"border-left-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, wrapper},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBorderStyle[prop, tokens[[1]]];
@@ -996,7 +1011,7 @@ parse[prop:"border-top-style"|"border-right-style"|"border-bottom-style"|"border
 		]
 	]	
 	
-parse[prop:"border-style", tokens:{{_String, _String}..}] := 
+parse[prop:"border-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleBorderStyle[prop, tokens[[pos]]];
@@ -1042,20 +1057,20 @@ convertToCellThickness[x_] := Switch[x, AbsoluteThickness[_], First[x], Thicknes
 	Setting a single border/frame is only possible in WL if all 4 edges are specified at the same time.
 	As a compromise set the other edges to Inherited.
 *)
-parse[prop:"border-top-width"|"border-right-width"|"border-bottom-width"|"border-left-width", tokens:{{_String, _String}..}] := 
+parse[prop:"border-top-width"|"border-right-width"|"border-bottom-width"|"border-left-width", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, wrapper},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBorderWidth[prop, tokens[[1]]];
 		If[FailureQ[value], 
 			value
 			, 
-			Switch[prop, "border-top-width", Top, "border-right-width",  Right, "border-bottom-width", Bottom, "border-left-width", Left];
+			wrapper = Switch[prop, "border-top-width", Top, "border-right-width",  Right, "border-bottom-width", Bottom, "border-left-width", Left];
 			{FrameStyle -> wrapper[value], Cell[CellFrame -> wrapper[convertToCellThickness @ value]]}
 		]
 	]	
 	
 (* sets all frame edge thickness at once *)
-parse[prop:"border-width", tokens:{{_String, _String}..}] := 
+parse[prop:"border-width", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleBorderWidth[prop, tokens[[pos]]];
@@ -1084,10 +1099,10 @@ parse[prop:"border-width", tokens:{{_String, _String}..}] :=
 	This effectively resets all edges because any property not specified takes on its default value. 
 	'border' by itself sets all 4 edges to be the same.
 *)
-parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", tokens:{{_String, _String}..}] := 
+parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[
 	{
-		pos = 1, l = Length[tokens], p, value, dirAll, dir, start, stop, 
+		pos = 1, l = Length[tokens], p, value, dirAll, dir, 
 		wrapper = Switch[prop, "border-left", Left, "border-right", Right, "border-top", Top, "border-bottom", Bottom, _, Identity],
 		values = <|
 			"c" -> initialValues[prop <> "-color"], 
@@ -1109,9 +1124,8 @@ parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", t
 		While[pos <= l,
 			Which[
 				tokens[[pos, 1]] == "function", (* only color can be a function *)
-					start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
 					If[hasColor, Return @ repeatedPropValueFailure @ (prop <> "-color")]; 
-					hasColor = True; values["c"] = parseSingleColor[prop, tokens[[start ;; stop]]]; pos = stop;,
+					hasColor = True; values["c"] = parseSingleColor[prop, consumeFunction[pos, l, tokens]],
 					
 				!FailureQ[value = parseSingleColor[prop, {tokens[[pos]]}]],
 					If[hasColor, Return @ repeatedPropValueFailure @ (prop <> "-color")];
@@ -1138,8 +1152,8 @@ parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", t
 (*clip*)
 
 
-parse[prop:"clip", tokens:{{_String, _String}..}] := 
-	Module[{value, pos = 1, l = Length[tokens], start, stop},
+parse[prop:"clip", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+	Module[{value, pos = 1, l = Length[tokens]},
 		If[l == 1, (* if only one token is present, then it should be a keyword *)
 			Switch[tokens[[1, 1]],
 				"ident", 
@@ -1147,16 +1161,18 @@ parse[prop:"clip", tokens:{{_String, _String}..}] :=
 						"initial",  Missing["Not supported."],
 						"inherit",  Missing["Not supported."],
 						"auto",     Missing["Not supported."],
-						_, unrecognizedKeyWordFailure @ prop
+						_,          unrecognizedKeyWordFailure @ prop
 					],
 				_, unrecognizedValueFailure @ prop
 			]
 			,
 			If[tokens[[1, 1]] == "function", 
-				start = pos; While[pos < l && tokens[[pos, 1]] != ")", pos++]; stop = pos; 
-				If[pos < l, Return @ tooManyTokensFailure @ tokens]; (* only one rect(...) is allowed *)
-				value = parseRect @ tokens[[start ;; stop]]; (* FIXME: actually parse this? is it even worth it since it's not supported? *)
-				If[FailureQ[value], value, Missing["Not supported."]]
+				value = parseRect @ consumeFunction[pos, l, tokens]; (* FIXME: actually parse this? is it even worth it since it's not supported? *)
+				Which[
+					FailureQ[value], value, 
+					pos < l,         tooManyTokensFailure @ prop,
+					True,            Missing["Not supported."]
+				]
 				,
 				unrecognizedValueFailure @ prop
 			]
@@ -1184,9 +1200,9 @@ parse[prop:"color", tokens:{{_String, _String}..}] := parseSingleColor[prop, tok
 
 
 (* only used to add content before or after element, so let's restrict this to Cells *)
-parse[prop:"content", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], value, start, stop, parsedValues = {}},
-		While[pos < l,
+parse[prop:"content", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+	Module[{pos = 1, l = Length[tokens], value, parsedValues = {}},
+		While[pos <= l,
 			value = 
 				Switch[tokens[[pos, 1]],
 					"ident", 
@@ -1204,15 +1220,15 @@ parse[prop:"content", tokens:{{_String, _String}..}] :=
 					"string", Cell[CellLabel -> tokens[[pos, 2]]], (* is this even doing this option justice? *)
 					"uri",    With[{i = parseURI @ tokens[[pos, 2]]}, If[FailureQ[i] || MissingQ[i], notAnImageFailure @ tokens[[pos, 2]], Cell[CellDingbat -> i]]],
 					"function", 
-						start = pos; While[pos < l && tokens[[pos, 1]] != ")", pos++]; stop = pos;
-						Switch[ToLowerCase @ tokens[[start, 2]],
-							"counter(" | "counters(", parseCounter[prop, tokens[[start;;stop]]],
-							"attr(",                  parseAttr[prop, tokens[[start;;stop]]],
+						Switch[ToLowerCase @ tokens[[pos, 2]],
+							"counter(" | "counters(", parseCounter[prop, consumeFunction[pos, l, tokens]],
+							"attr(",                  parseAttr[prop, consumeFunction[pos, l, tokens]],
 							_,                        unrecognizedValueFailure @ prop
 						],
 					_, unrecognizedValueFailure @ prop
 				];
-			AppendTo[parsedValues, value]
+			AppendTo[parsedValues, value];
+			skipWhitespace[pos, l, tokens];
 		];
 		Which[
 			Count[parsedValues, Inherited] > 1, Return @ repeatedPropValueFailure @ "inherit",
@@ -1228,7 +1244,7 @@ parse[prop:"content", tokens:{{_String, _String}..}] :=
 
 
 (* In WL each style must be repeated n times to get an increment of n *)
-parse[prop:"counter-increment", tokens:{{_String, _String}..}] := 
+parse[prop:"counter-increment", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], v, values = {}},
 		While[pos <= l,
 			Switch[tokens[[pos, 1]],
@@ -1268,7 +1284,7 @@ parse[prop:"counter-increment", tokens:{{_String, _String}..}] :=
 (*counter-reset*)
 
 
-parse[prop:"counter-reset", tokens:{{_String, _String}..}] := 
+parse[prop:"counter-reset", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], v = {}, values = {}},
 		While[pos <= l,
 			Switch[tokens[[pos, 1]],
@@ -1316,7 +1332,8 @@ parseSingleListStyleImage[prop_String, token:{_String, _String}] :=
 		"uri", 
 			With[{im = parseURI @ token[[2]]}, 
 				Which[
-					FailureQ[im], couldNotImportFailure @ token[[2]], 
+					FailureQ[im], token[[2]], 
+					MissingQ[im], token[[2]],
 					!ImageQ[im],  notAnImageFailure @ token[[2]],
 					_,            ToBoxes @ Dynamic @ Image[im, ImageSize -> CurrentValue[FontSize]]
 				]
@@ -1324,7 +1341,7 @@ parseSingleListStyleImage[prop_String, token:{_String, _String}] :=
 		_, unrecognizedValueFailure @ prop
 	]
 	
-parse[prop:"list-style-image", tokens:{{_String, _String}..}] := 
+parse[prop:"list-style-image", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStyleImage[prop, First @ tokens];
@@ -1353,7 +1370,7 @@ parseSingleListStylePosition[prop_String, token:{_String, _String}] :=
 		_, unrecognizedValueFailure @ prop
 	]
 	
-parse[prop:"list-style-position", tokens:{{_String, _String}..}] := 
+parse[prop:"list-style-position", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStylePosition[prop, First @ tokens];
@@ -1391,7 +1408,7 @@ parseSingleListStyleType[prop_String, token:{_String, _String}, style_String:"It
 		_, unrecognizedValueFailure @ prop
 	]
 	
-parse[prop:"list-style-type", tokens:{{_String, _String}..}] := 
+parse[prop:"list-style-type", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStyleType[prop, First @ tokens];
@@ -1404,7 +1421,7 @@ parse[prop:"list-style-type", tokens:{{_String, _String}..}] :=
 
 
 (* short-hand for list-style-image/position/type properties given in any order *)
-parse[prop:"list-style", tokens:{{_String, _String}..}] :=
+parse[prop:"list-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, p, noneCount = 0, acquiredImage = False, acquiredPos = False, acquiredType = False},
 		(* parse and assign new font values *)
 		If[l == 1, 
@@ -1460,7 +1477,7 @@ parse[prop:"list-style", tokens:{{_String, _String}..}] :=
 	There's also ShowStringCharacters, but this only hides/shows the double quote.
 	We treat this then as not available, but we validate the form anyway.
 *)
-parse[prop:"quotes", tokens:{{_String, _String}..}] := 
+parse[prop:"quotes", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], v, values = {}},
 		While[pos <= l,
 			Switch[tokens[[pos, 1]],
@@ -1489,7 +1506,7 @@ parse[prop:"quotes", tokens:{{_String, _String}..}] :=
 
 
 (* WL uses a TagBox[..., MouseAppearanceTag[""]] instead of an option to indicate mouse appearance *)
-parse[prop:"cursor", tokens:{{_String, _String}..}] := 
+parse[prop:"cursor", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -1530,7 +1547,7 @@ parse[prop:"cursor", tokens:{{_String, _String}..}] :=
 	WL automatically lays out blocks either inline or as nested boxes. 
 	If a Cell appears within TextData or BoxData then it is considered inline.
 *)
-parse[prop:"display", tokens:{{_String, _String}..}] := 
+parse[prop:"display", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -1567,7 +1584,7 @@ parse[prop:"display", tokens:{{_String, _String}..}] :=
 
 
 (* WL does not support the flow of boxes around other boxes. *)
-parse[prop:"float", tokens:{{_String, _String}..}] := 
+parse[prop:"float", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -1587,7 +1604,7 @@ parse[prop:"float", tokens:{{_String, _String}..}] :=
 	]
 
 
-parse[prop:"clear", tokens:{{_String, _String}..}] := 
+parse[prop:"clear", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -1633,7 +1650,7 @@ parse[prop:"font", tokens:{{_String, _String}..}] :=
 			LineSpacing -> initialValues["line-height"]};
 		
 		(* parse and assign new font values *)
-		If[l == 1, (* if only one token is present, then it should be a keyword that represents a system font *)
+		If[l == 1, (* if only one token is present, then it should be a keyword that represents a system font (or font style?) *)
 			newValue = 
 				Switch[ToLowerCase @ tokens[[1, 2]],
 					"caption" | "icon" | "menu" | "small-caption", 
@@ -1648,7 +1665,9 @@ parse[prop:"font", tokens:{{_String, _String}..}] :=
 							FontVariations -> {"CapsType" -> Inherited},
 							FontWeight  -> Inherited,
 							LineSpacing -> Inherited},
-					"initial", {} (* keep reset values *),
+					"initial",          {} (* keep reset values *),
+					"italic"|"oblique", {parse["font-style", tokens]},
+					"small-caps",       {parse["font-variant", tokens]},
 					_, unrecognizedKeyWordFailure @ prop
 				];
 			Return @ If[FailureQ[newValue], newValue, DeleteDuplicates[Join[newValue, value], SameQ[First[#1], First[#2]]&]]
@@ -1691,7 +1710,7 @@ parse[prop:"font", tokens:{{_String, _String}..}] :=
 (*font-family*)
 
 
-parse[prop:"font-family", tokens:{{_String, _String}..}] := 
+parse[prop:"font-family", tokens:{{_String, _String}..}] :=
 	Module[{fontTokens, parsed, result},
 		fontTokens = DeleteCases[SplitBy[tokens, MatchQ[{"operator", ","}]], {{"operator", ","}}];
 		parsed = parseSingleFontFamily /@ fontTokens;
@@ -1700,7 +1719,7 @@ parse[prop:"font-family", tokens:{{_String, _String}..}] :=
 		FirstCase[parsed, _Rule, Failure["UnexpectedParse", <|"Message" -> "No font-family found."|>]]
 	]
 
-parseSingleFontFamily[tokens:{{_String, _String}..}] :=
+parseSingleFontFamily[tokens:{{_String, _String}..}] := parseSingleFontFamily[tokens] =
 	Module[
 	{
 		value, l, pos = 1, font, tokensNoWS,
@@ -1766,7 +1785,7 @@ parseFontFamilySingleIdent[s_String] :=
 (*font-size*)
 
 
-parse[prop:"font-size", tokens:{{_String, _String}..}] := 
+parse[prop:"font-size", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1788,7 +1807,7 @@ parse[prop:"font-size", tokens:{{_String, _String}..}] :=
 					],
 				"percentage",        With[{n = parsePercentage @ tokens[[1, 2]]}, negativeQ[n, prop, Scaled[n/100]]],
 				"length" | "number", With[{n = parseLength[#, True]& @ tokens[[1, 2]]}, negativeQ[n, prop, n]],
-				"ems" | "exs",       With[{n = parseLength[#, True]& @ tokens[[1, 2]]}, negativeQ[First @ n, prop, n]],
+				"ems" | "exs",       With[{n = parseLength[#, True]& @ tokens[[1, 2]]}, negativeQ[Quiet @ First @ n, prop, n]],
 				_, unrecognizedValueFailure @ prop
 			];
 		If[FailureQ[value], value, FontSize -> value]
@@ -1799,7 +1818,7 @@ parse[prop:"font-size", tokens:{{_String, _String}..}] :=
 (*font-style*)
 
 
-parse[prop:"font-style", tokens:{{_String, _String}..}] := 
+parse[prop:"font-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1823,7 +1842,7 @@ parse[prop:"font-style", tokens:{{_String, _String}..}] :=
 (*font-variant*)
 
 
-parse[prop:"font-variant", tokens:{{_String, _String}..}] := 
+parse[prop:"font-variant", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1850,7 +1869,7 @@ parse[prop:"font-variant", tokens:{{_String, _String}..}] :=
 	"lighter" and "bolder" are not supported.
 	Weight mappings come from https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight.
 *)
-parse[prop:"font-weight", tokens:{{_String, _String}..}] := 
+parse[prop:"font-weight", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1901,7 +1920,7 @@ parse[prop:"font-weight", tokens:{{_String, _String}..}] :=
 	CSS max/min-height --> WL ImageSize with UpTo (only max) or {{wmin, wmax}, {hmin, hmax}} (both max and min)
 	CSS overflow       --> WL ImageSizeAction
 *)
-parseSingleSize[prop_String, token:{_String, _String}] :=
+parseSingleSize[prop_String, token:{_String, _String}] := parseSingleSize[prop, token] =
 	Switch[token[[1]],
 		"ident", 
 			Switch[ToLowerCase @ token[[2]],
@@ -1918,7 +1937,7 @@ parseSingleSize[prop_String, token:{_String, _String}] :=
 	]
 	
 (* min-width and max-width override width property *)
-parse[prop:"width"|"max-width"|"min-width", tokens:{{_String, _String}..}] := 
+parse[prop:"width"|"max-width"|"min-width", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleSize[prop, tokens[[1]]];
@@ -1928,13 +1947,13 @@ parse[prop:"width"|"max-width"|"min-width", tokens:{{_String, _String}..}] :=
 			ImageSize -> 
 				Switch[prop,
 					"width",     value,
-					"max-width", {UpTo[value], Automatic},
+					"max-width", {UpTo[Round @ value], Automatic},
 					"min-width", {{value, Automatic}, Automatic}
 				]
 		]
 	]
 
-parse[prop:"height"|"max-height"|"min-height", tokens:{{_String, _String}..}] := 
+parse[prop:"height"|"max-height"|"min-height", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleSize[prop, tokens[[1]]];
@@ -1944,7 +1963,7 @@ parse[prop:"height"|"max-height"|"min-height", tokens:{{_String, _String}..}] :=
 			ImageSize -> 
 				Switch[prop,
 					"height",     {Automatic, value},
-					"max-height", {Automatic, UpTo[value]},
+					"max-height", {Automatic, UpTo[Round @ value]},
 					"min-height", {Automatic, {value, Automatic}}
 				]
 		]
@@ -1956,7 +1975,7 @@ parse[prop:"height"|"max-height"|"min-height", tokens:{{_String, _String}..}] :=
 
 
 (* Similar to WL LineSpacing, but LineSpacing already takes FontSize into account, so intercept number before 'ems' returns CurrentValue[FontSize] *)
-parse[prop:"line-height", tokens:{{_String, _String}..}] := 
+parse[prop:"line-height", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1983,7 +2002,7 @@ parse[prop:"line-height", tokens:{{_String, _String}..}] :=
 (*margin(-left, -right, -top, -bottom)*)
 
 
-parseSingleMargin[prop_String, token:{_String, _String}] :=
+parseSingleMargin[prop_String, token:{_String, _String}] := parseSingleMargin[prop, token] = 
 	Switch[token[[1]],
 		"ident", 
 			Switch[ToLowerCase @ token[[2]],
@@ -2001,7 +2020,7 @@ parseSingleMargin[prop_String, token:{_String, _String}] :=
 	CSS margins --> WL ImageMargins and CellMargins
 	CSS padding --> WL FrameMargins and CellFrameMargins
 *)
-parse[prop:"margin-top"|"margin-right"|"margin-bottom"|"margin-left", tokens:{{_String, _String}..}] := 
+parse[prop:"margin-top"|"margin-right"|"margin-bottom"|"margin-left", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], wrapper, value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleMargin[prop, tokens[[1]]];
@@ -2013,7 +2032,7 @@ parse[prop:"margin-top"|"margin-right"|"margin-bottom"|"margin-left", tokens:{{_
 		]
 	]
 		
-parse[prop:"margin", tokens:{{_String, _String}..}] := 
+parse[prop:"margin", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleMargin[prop, tokens[[pos]]];
@@ -2049,14 +2068,13 @@ parse[prop:"margin", tokens:{{_String, _String}..}] :=
 (*outline-color*)
 
 
-parse[prop:"outline-color", tokens:{{_String, _String}..}] := 
-	Module[{pos = 1, l = Length[tokens], value, colorNegate, results = {}, start, stop},
+parse[prop:"outline-color", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+	Module[{pos = 1, l = Length[tokens], value, colorNegate, results = {}},
 		If[l == 1 && tokens[[1, 1]] == "ident" && ToLowerCase @ tokens[[1, 2]] == "invert",
 			Cell[CellFrameColor -> Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]]]
 			,
 			While[pos <= l,
-				start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
-				value = parseSingleColor[prop, tokens[[start ;; stop]]];
+				value = parseSingleColor[prop, If[tokens[[pos, 1]] == "function", consumeFunction[pos, l, tokens], {tokens[[pos]]}]];
 				If[FailureQ[value], Return @ value, AppendTo[results, value]]; 
 				skipWhitespace[pos, l, tokens];
 			];
@@ -2073,7 +2091,7 @@ parse[prop:"outline-color", tokens:{{_String, _String}..}] :=
 
 
 (* only a solid border is allowed for cells; 'hidden' is not allowed here *)
-parse[prop:"outline-style", tokens:{{_String, _String}..}] := 
+parse[prop:"outline-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value =
@@ -2090,7 +2108,7 @@ parse[prop:"outline-style", tokens:{{_String, _String}..}] :=
 (*outline-width*)
 
 
-parse[prop:"outline-width", tokens:{{_String, _String}..}] := 
+parse[prop:"outline-width", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = parseSingleBorderWidth[prop, tokens[[pos]]];
@@ -2112,10 +2130,10 @@ parse[prop:"outline-width", tokens:{{_String, _String}..}] :=
 
 
 (* Shorthand for outline-width/style/color. 'outline' always sets all 4 edges to be the same. *)
-parse[prop:"outline", tokens:{{_String, _String}..}] := 
+parse[prop:"outline", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[
 	{
-		pos = 1, l = Length[tokens], p, value, dirAll, dir, start, stop, 
+		pos = 1, l = Length[tokens], p, value, dirAll, dir, 
 		values = <|
 			"c" -> initialValues[prop <> "-color"], 
 			"s" -> initialValues[prop <> "-style"], 
@@ -2136,9 +2154,8 @@ parse[prop:"outline", tokens:{{_String, _String}..}] :=
 		While[pos <= l,
 			Which[
 				tokens[[pos, 1]] == "function", (* only color can be a function *)
-					start = pos; If[tokens[[pos, 1]] == "function", While[pos < l && tokens[[pos, 1]] != ")", pos++]]; stop = pos;
 					If[hasColor, Return @ repeatedPropValueFailure @ (prop <> "-color")]; 
-					hasColor = True; values["c"] = parseSingleColor[prop, tokens[[start ;; stop]]]; pos = stop;,
+					hasColor = True; values["c"] = parseSingleColor[prop, consumeFunction[pos, l, tokens]],
 					
 				!FailureQ[value = parseSingleColor[prop, {tokens[[pos]]}]],
 					If[hasColor, Return @ repeatedPropValueFailure @ (prop <> "-color")];
@@ -2170,7 +2187,7 @@ parse[prop:"outline", tokens:{{_String, _String}..}] :=
 	This would mostly be found with WL Pane expression as PaneBox supports scrollbars. 
 	Other boxes may support ImageSizeAction.
 *)
-parse[prop:"overflow", tokens:{{_String, _String}..}] := 
+parse[prop:"overflow", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[1, 1]],
@@ -2193,7 +2210,7 @@ parse[prop:"overflow", tokens:{{_String, _String}..}] :=
 (*padding(-left, -right, -top, -bottom)*)
 
 
-parseSinglePadding[prop_String, token:{_String, _String}] :=
+parseSinglePadding[prop_String, token:{_String, _String}] := parseSinglePadding[prop, token] = 
 	Switch[token[[1]],
 		"ident", 
 			Switch[ToLowerCase @ token[[2]],
@@ -2212,7 +2229,7 @@ parseSinglePadding[prop_String, token:{_String, _String}] :=
 	CSS margins --> WL ImageMargins and CellMargins
 	CSS padding --> WL FrameMargins and CellFrameMargins
 *)
-parse[prop:"padding-top"|"padding-right"|"padding-bottom"|"padding-left", tokens:{{_String, _String}..}] := 
+parse[prop:"padding-top"|"padding-right"|"padding-bottom"|"padding-left", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], wrapper, value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSinglePadding[prop, tokens[[1]]];
@@ -2224,7 +2241,7 @@ parse[prop:"padding-top"|"padding-right"|"padding-bottom"|"padding-left", tokens
 		]
 	]
 		
-parse[prop:"padding", tokens:{{_String, _String}..}] := 
+parse[prop:"padding", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSinglePadding[prop, tokens[[pos]]];
@@ -2256,7 +2273,7 @@ parse[prop:"padding", tokens:{{_String, _String}..}] :=
 	FE uses LinebreakAdjustments with an blackbox algorithm. 
 	AFAIK there's no way to directly prevent orphans/widows.
 *)
-parse[prop:"orphans"|"widows", tokens:{{_String, _String}..}] := 
+parse[prop:"orphans"|"widows", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, wrapper},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2278,7 +2295,7 @@ parse[prop:"orphans"|"widows", tokens:{{_String, _String}..}] :=
 (*page-break-after/before*)
 
 
-parse[prop:("page-break-after"|"page-break-before"), tokens:{{_String, _String}..}] := 
+parse[prop:("page-break-after"|"page-break-before"), tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2308,7 +2325,7 @@ parse[prop:("page-break-after"|"page-break-before"), tokens:{{_String, _String}.
 (*page-break-inside*)
 
 
-parse[prop:"page-break-inside", tokens:{{_String, _String}..}] := 
+parse[prop:"page-break-inside", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2342,7 +2359,7 @@ parse[prop:"page-break-inside", tokens:{{_String, _String}..}] :=
 	Moreover, attached cells aren't an option, but rather a cell.
 	Perhaps can use NotebookDynamicExpression \[Rule] Dynamic[..., TrackedSymbols \[Rule] {}] where "..." includes a list of attached cells.
 *)
-parse[prop:"position", tokens:{{_String, _String}..}] := 
+parse[prop:"position", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value =
@@ -2363,7 +2380,7 @@ parse[prop:"position", tokens:{{_String, _String}..}] :=
 	]
 
 
-parse[prop:"left"|"right"|"top"|"bottom", tokens:{{_String, _String}..}] := 
+parse[prop:"left"|"right"|"top"|"bottom", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value =
@@ -2398,7 +2415,7 @@ parse[prop:"left"|"right"|"top"|"bottom", tokens:{{_String, _String}..}] :=
 
 
 (* WL Grid does not support an option to have a grid caption. *)
-parse[prop:"caption-side", tokens:{{_String, _String}..}] := 
+parse[prop:"caption-side", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, wrapper},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2422,7 +2439,7 @@ parse[prop:"caption-side", tokens:{{_String, _String}..}] :=
 
 
 (* There is no WL equivalent because FE uses only 'border-collapse' in Grid.*)
-parse[prop:"empty-cells", tokens:{{_String, _String}..}] := 
+parse[prop:"empty-cells", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, wrapper},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2446,7 +2463,7 @@ parse[prop:"empty-cells", tokens:{{_String, _String}..}] :=
 
 
 (* The FE does its own formatting passes depending on the column width settings and content. *)
-parse[prop:"table-layout", tokens:{{_String, _String}..}] := 
+parse[prop:"table-layout", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, wrapper},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2473,7 +2490,7 @@ parse[prop:"table-layout", tokens:{{_String, _String}..}] :=
 (*direction*)
 
 
-parse[prop:"direction", tokens:{{_String, _String}..}] := 
+parse[prop:"direction", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2497,7 +2514,7 @@ parse[prop:"direction", tokens:{{_String, _String}..}] :=
 
 
 (* WL distinguishes between alignment and justification, but CSS does not *)
-parse[prop:"text-align", tokens:{{_String, _String}..}] := 
+parse[prop:"text-align", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[1, 1]],
@@ -2520,7 +2537,7 @@ parse[prop:"text-align", tokens:{{_String, _String}..}] :=
 (*text-indent*)
 
 
-parse[prop:"text-indent", tokens:{{_String, _String}..}] := 
+parse[prop:"text-indent", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2546,7 +2563,7 @@ parse[prop:"text-indent", tokens:{{_String, _String}..}] :=
 
 
 (* WL distinguishes between alignment and justification, but CSS does not *)
-parse[prop:"text-decoration", tokens:{{_String, _String}..}] := 
+parse[prop:"text-decoration", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, values = {}},
 		While[pos <= l,
 			value =
@@ -2575,7 +2592,7 @@ parse[prop:"text-decoration", tokens:{{_String, _String}..}] :=
 (*text-transform*)
 
 
-parse[prop:"text-transform", tokens:{{_String, _String}..}] := 
+parse[prop:"text-transform", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[1, 1]],
@@ -2603,7 +2620,7 @@ parse[prop:"text-transform", tokens:{{_String, _String}..}] :=
 	The FontTracking options gives some additional control, but appears to be mis-appropriated to CSS font-stretch.
 	Not to be confused with CSS font-stretch.
 *)
-parse[prop:"letter-spacing", tokens:{{_String, _String}..}] := 
+parse[prop:"letter-spacing", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2658,7 +2675,7 @@ parse[prop:"font-stretch", tokens:{{_String, _String}..}] :=
 (*unicode-bidi*)
 
 
-parse[prop:"unicode-bidi", tokens:{{_String, _String}..}] := 
+parse[prop:"unicode-bidi", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2686,7 +2703,7 @@ parse[prop:"unicode-bidi", tokens:{{_String, _String}..}] :=
 	General letter and word spacing is controlled by the Mathematica Front End. 
 	The CSS is still validated.
 *)
-parse[prop:"word-spacing", tokens:{{_String, _String}..}] := 
+parse[prop:"word-spacing", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2710,7 +2727,7 @@ parse[prop:"word-spacing", tokens:{{_String, _String}..}] :=
 
 
 (* Whitespace is controlled by the Mathematica Front End. The CSS is still validated. *)
-parse[prop:"white-space", tokens:{{_String, _String}..}] := 
+parse[prop:"white-space", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[1, 1]],
@@ -2740,7 +2757,7 @@ parse[prop:"white-space", tokens:{{_String, _String}..}] :=
 	Percentages are relative to the font-size i.e. 100% is one line-height upward.
 	CellBaseline is limited and always aligns the top of the inline cell to the Bottom/Top/Etc of the parent
 *)
-parse[prop:"vertical-align", tokens:{{_String, _String}..}] :=
+parse[prop:"vertical-align", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value1, value2},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value1 = parseBaseline[prop, tokens];
@@ -2751,7 +2768,7 @@ parse[prop:"vertical-align", tokens:{{_String, _String}..}] :=
 	]
 
 (* this is effectively for RowBox alignment *)
-parseBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] := 
+parseBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] := parseBaseline[prop, tokens] = 
 	Module[{value (* for Baseline *), value2 (* for CellBaseline *)},
 		value = 
 			Switch[tokens[[1, 1]],
@@ -2778,7 +2795,7 @@ parseBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] :=
 	]
 
 (* it's unfortunate that CellBaseline is so limited *)
-parseCellBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] := 
+parseCellBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] := parseCellBaseline[prop, tokens] = 
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2810,7 +2827,7 @@ parseCellBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] :=
 	WL option ShowContents is only applicable within a StyleBox.
 	Often this is implemented using the Invisible function.
 *)
-parse[prop:"visibility", tokens:{{_String, _String}..}] := 
+parse[prop:"visibility", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, wrapper},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2838,7 +2855,7 @@ parse[prop:"visibility", tokens:{{_String, _String}..}] :=
 	The FE does its own depth ordering of boxes. 
 	Attached cells are ordered by their creation order.
 *)
-parse[prop:"z-index", tokens:{{_String, _String}..}] := 
+parse[prop:"z-index", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, wrapper},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2897,6 +2914,25 @@ Attributes[skipWhitespace] = {HoldFirst};
 skipWhitespace[positionIndex_, length_Integer, tokens_List] := (
 	positionIndex++;
 	While[positionIndex < length && tokens[[positionIndex, 1]] == "whitespace", positionIndex++])
+
+
+Attributes[consumeFunction] = {HoldFirst};
+consumeFunction[positionIndex_, l_, tokens:{{_String, _String}..}] :=
+	Module[{start = positionIndex, i=1},
+		If[tokens[[positionIndex, 1]] != "function", 
+			$Failed
+			,
+			positionIndex++;
+			While[positionIndex < l && i>0,
+				Switch[ToLowerCase @ tokens[[positionIndex, 1]],
+					"function", i++; positionIndex++,
+					")",        i--; If[i==0, Break[], positionIndex++],
+					_,          positionIndex++
+				]
+			]; 
+			tokens[[start;;positionIndex]]
+		]
+	]					
 
 
 (* ::Subsection::Closed:: *)
@@ -3051,6 +3087,9 @@ processDeclarationBlock[tokens:{{_String, _String}..}] :=
 
 (* ::Subsection::Closed:: *)
 (*Process Properties*)
+
+
+(*FIXME: does this still work??? *)
 
 
 process[property_String, a:{__Association}] :=
