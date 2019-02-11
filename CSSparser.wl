@@ -1,7 +1,201 @@
 (* ::Package:: *)
 
+(* ::Title:: *)
+(*CSS 2.1 Visual Style Importer*)
+
+
 (* ::Text:: *)
-(*Get-able CSS EBNF for use with FunctionalParser package*)
+(*Author: Kevin Daily*)
+(*Date: 20190210*)
+(*Version: 1*)
+
+
+(* ::Section::Closed:: *)
+(*Package Header*)
+
+
+BeginPackage["CSSImport`"];
+Begin["`Private`"];
+
+
+(* ::Section:: *)
+(*Notes*)
+
+
+(* ::Subsection:: *)
+(*Outline*)
+
+
+(* ::Text:: *)
+(*Purpose: Import CSS files, interpreting CSS styles as Wolfram Desktop options.*)
+(*Approach:*)
+(*	1. import CSS file as a string*)
+(*	2. tokenize following the CSS grammar specification*)
+(*	3. parse token sequences into available Wolfram Desktop options *)
+(*Notes: *)
+(*Step (1) is generally fast and assumes readable characters.*)
+(*In step (2), comments, URIs, and main blocks are identified and separated using StringSplit with specific patterns. Comments are removed. Anything between declaration blocks is assumed to be a selector. Remaining strings are further split via more specific patterns.*)
+(*The main bottleneck is step (3) due to the large amount of interpretation necessary of the token sequences. The basic "data types" i.e. length, color, percentage etc. are cached to improve import speed. We justify the caching because websites often stick with particular color schemes and layouts which results in a large amount of reusing colors, styles and lengths. *)
+
+
+(* ::Subsection::Closed:: *)
+(*Properties*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*Strictly only CSS2.1 properties.*)
+
+
+(*
+(* Properties can be found from W3.org *)
+pTable = Import["https://www.w3.org/TR/2011/REC-CSS2-20110607/propidx.html", "Data"];
+pTable = StringReplace[pTable[[2;;,1]], "'" -> ""] // StringSplit // Join // Flatten // Union;
+*)
+
+
+(* ::Text:: *)
+(*Aural (ignored):*)
+
+
+aural = {
+	"azimuth", 
+	"cue", "cue-after", "cue-before", 
+	"elevation", 
+	"pause", "pause-after", "pause-before", 
+	"pitch", "pitch-range", 
+	"play-during", "richness", 
+	"speak", "speak-header", "speak-numeral", "speak-punctuation", 
+	"speech-rate", "stress", "voice-family", "volume"};
+
+
+(* ::Text:: *)
+(*Visual:*)
+
+
+visual = {
+	"background", "background-attachment", "background-color", "background-image", "background-position", "background-repeat", 
+	"border", 
+	"border-collapse", "border-spacing", 
+	"border-left", "border-right", "border-top", "border-bottom", 
+	"border-color", "border-left-color", "border-right-color", "border-top-color", "border-bottom-color", 
+	"border-style", "border-left-style", "border-right-style", "border-top-style", "border-bottom-style", 
+	"border-width", "border-left-width", "border-right-width", "border-top-width", "border-bottom-width", 
+	"bottom", "caption-side", "clear", "clip", 
+	"color", 
+	"direction", 
+	"empty-cells", "float", 
+	"font", "font-family", "font-size", "font-style", "font-variant", "font-weight", 
+	"height", "left", "letter-spacing", "line-height", 
+	"list-style", "list-style-image", "list-style-position", "list-style-type", 
+	"margin", "margin-bottom", "margin-left", "margin-right", "margin-top", 
+	"max-height", "max-width", "min-height", "min-width", 
+	"overflow", 
+	"padding", "padding-bottom", "padding-left", "padding-right", "padding-top", 
+	"position", "quotes", "right", "table-layout", 
+	"text-align", "text-decoration", "text-indent", "text-transform", 
+	"top", "unicode-bidi", "vertical-align", 
+	"visibility", "white-space", "width", "word-spacing", "z-index"};
+
+
+(* ::Text:: *)
+(*Visual + Interactive*)
+
+
+interactive = {
+	"cursor", 
+	"outline", "outline-color", "outline-style", "outline-width"};
+
+
+(* ::Text:: *)
+(*Visual + Paged*)
+
+
+paged = {
+	"orphans", 
+	"page-break-after", "page-break-before", "page-break-inside", 
+	"widows"};
+
+
+(* ::Text:: *)
+(*All:*)
+
+
+all = {"content", "counter-increment", "counter-reset", "display"};
+
+
+(* ::Subsubsection::Closed:: *)
+(*Some already recommended CSS3 properties*)
+
+
+(*
+(* If we are to extend the importer beyond CSS2.1, then start with CSS3. *)
+pTableAll = Association /@ Import["https://www.w3.org/Style/CSS/all-properties.en.json", "JSON"];
+allProps = Select[pTableAll, #status == "REC"&][[All, "property"]] // Union;
+Complement[allProps, pTable]
+*)
+
+
+css3 = {
+	"box-sizing", "caret-color", 
+	"font-feature-settings", "font-kerning", "font-size-adjust", "font-stretch", 
+	"font-synthesis", "font-variant-caps", "font-variant-east-asian", 
+	"font-variant-ligatures", "font-variant-numeric", "font-variant-position", 
+	"opacity", "outline-offset", "resize", "text-overflow"};
+
+
+(* ::Subsection::Closed:: *)
+(*Functions*)
+
+
+(*
+(* Complete list of CSS functions *)
+table = Import["https://developer.mozilla.org/en-US/docs/Web/CSS/Reference", "Data"];
+Select[Flatten[table[[5, 1]]], StringEndsQ[#, "()"]&]
+*)
+
+
+(* CSS 2.1 function *)
+(*validFunction21 = {
+	"attr()", "rgb()", "counter()", "counters()"};*)
+
+(* more beyond CSS 2.1 *)
+(*validFunctions = {
+	"annotation()", "blur()", "brightness()", "calc()", 
+	"character-variant()", "circle()", "contrast()", "cross-fade()", "cubic-bezier()", 
+	"drop-shadow()", "element()", "ellipse()", "fit-content()", "format()", 
+	"frames()", "grayscale()", "hsl()", "hsla()", "hue-rotate()", 
+	"image()", "image-set()", "inset()", "invert()", "leader()", 
+	"linear-gradient()", "local()", "matrix()", "matrix3d()", "minmax()", 
+	"opacity()", "ornaments()", "perspective()", "polygon()", "radial-gradient()", 
+	"rect()", "repeat()", "repeating-linear-gradient()", "repeating-radial-gradient()",  
+	"rgba()", "rotate()", "rotate3d()", "rotateX()", "rotateY()", 
+	"rotateZ()", "saturate()", "scale()", "scale3d()", "scaleX()", 
+	"scaleY()", "scaleZ()", "sepia()", "skew()", "skewX()", 
+	"skewY()", "steps()", "styleset()", "stylistic()", "swash()", 
+	"symbols()", "target-counter()", "target-counters()", "target-text()", "translate()", 
+	"translate3d()", "translateX()", "translateY()", "translateZ()", "url()", 
+	"var()"};*)
+
+
+(* ::Subsection:: *)
+(*CSS vs Wolfram Desktop Stylesheets*)
+
+
+(* ::Text:: *)
+(*CSS								WD*)
+(*declaration (property:value)			option (name -> value)*)
+(*declaration block ({p1:v1; p2:v2; ...})	Cell[StyleData["StyleName"], n1->v1, n2->v2, ...]*)
+(*selector							"StyleName"*)
+(**)
+(*COMBINING STYLES*)
+(*CSS: styles are called declarations (property:value) and a group of them is a declaration block.*)
+(*WD: styles are given as options (name -> value) and can be grouped into StyleData cells in a WD stylesheet.*)
+(* *)
+(*TARGETING CONTENT WITH STYLES*)
+(*CSS: selectors specify which elements are targeted with the corresponding declarations. *)
+(*WD: named styles can be applied to any box/cell/notebook level.*)
+(**)
+(* *)
 
 
 (* ::Section::Closed:: *)
@@ -194,13 +388,6 @@ T["FUNCTION"] ~~ T["S*"] ~~
 
 (* ::Section::Closed:: *)
 (*Parse File*)
-
-
-(* ::Text:: *)
-(*May need to consider @charset at start of document, or always assume UTF-8? (Default is UTF-8)*)
-
-
-(*StringToByteArray["@charset \"\";"] //Normal // BaseForm[#, 16]&*)
 
 
 (* ::Subsection::Closed:: *)
@@ -3093,170 +3280,8 @@ getPropertyPositions[property_String, a:{__Association}] :=
 
 
 (* ::Section::Closed:: *)
-(*Notes*)
+(*Package Footer*)
 
 
-(* ::Subsection::Closed:: *)
-(*Properties*)
-
-
-(* ::Subsubsection::Closed:: *)
-(*Strictly only CSS2.1 properties.*)
-
-
-(*pTable = Import["https://www.w3.org/TR/2011/REC-CSS2-20110607/propidx.html", "Data"];
-pTable = StringReplace[pTable[[2;;,1]], "'" -> ""] // StringSplit // Join // Flatten // Union;*)
-
-
-(* ::Text:: *)
-(*Aural:*)
-
-
-aural = {
-	"azimuth", 
-	"cue", "cue-after", "cue-before", 
-	"elevation", 
-	"pause", "pause-after", "pause-before", 
-	"pitch", "pitch-range", 
-	"play-during", "richness", 
-	"speak", "speak-header", "speak-numeral", "speak-punctuation", 
-	"speech-rate", "stress", "voice-family", "volume"};
-
-
-(* ::Text:: *)
-(*Visual:*)
-
-
-visual = {
-	"background", "background-attachment", "background-color", "background-image", "background-position", "background-repeat", 
-	"border", 
-	"border-collapse", "border-spacing", 
-	"border-left", "border-right", "border-top", "border-bottom", 
-	"border-color", "border-left-color", "border-right-color", "border-top-color", "border-bottom-color", 
-	"border-style", "border-left-style", "border-right-style", "border-top-style", "border-bottom-style", 
-	"border-width", "border-left-width", "border-right-width", "border-top-width", "border-bottom-width", 
-	"bottom", "caption-side", "clear", "clip", 
-	"color", 
-	"direction", 
-	"empty-cells", "float", 
-	"font", "font-family", "font-size", "font-style", "font-variant", "font-weight", 
-	"height", "left", "letter-spacing", "line-height", 
-	"list-style", "list-style-image", "list-style-position", "list-style-type", 
-	"margin", "margin-bottom", "margin-left", "margin-right", "margin-top", 
-	"max-height", "max-width", "min-height", "min-width", 
-	"overflow", 
-	"padding", "padding-bottom", "padding-left", "padding-right", "padding-top", 
-	"position", "quotes", "right", "table-layout", 
-	"text-align", "text-decoration", "text-indent", "text-transform", 
-	"top", "unicode-bidi", "vertical-align", 
-	"visibility", "white-space", "width", "word-spacing", "z-index"};
-
-
-(* ::Input:: *)
-(*Complement[Keys[initialValues],Join[visual,interactive,paged,all]]*)
-
-
-Length[visual]
-
-
-(* ::Text:: *)
-(*Visual + Interactive*)
-
-
-interactive = {
-	"cursor", 
-	"outline", "outline-color", "outline-style", "outline-width"};
-
-
-(* ::Text:: *)
-(*Visual + Paged*)
-
-
-paged = {
-	"orphans", 
-	"page-break-after", "page-break-before", "page-break-inside", 
-	"widows"};
-
-
-(* ::Text:: *)
-(*All:*)
-
-
-all = {"content", "counter-increment", "counter-reset", "display"};
-
-
-(* ::Subsubsection::Closed:: *)
-(*Some already recommended CSS3 properties*)
-
-
-(*pTableAll = Association /@ Import["https://www.w3.org/Style/CSS/all-properties.en.json", "JSON"];
-allProps = Select[pTableAll, #status == "REC"&][[All, "property"]] // Union;
-Complement[allProps, pTable]*)
-
-
-{
-	"box-sizing", "caret-color", 
-	"font-feature-settings", "font-kerning", "font-size-adjust", "font-stretch", "font-synthesis", "font-variant-caps", 
-	"font-variant-east-asian", "font-variant-ligatures", "font-variant-numeric", "font-variant-position", 
-	"opacity", "outline-offset", "resize", "text-overflow"};
-
-
-(* ::Subsection::Closed:: *)
-(*Functions*)
-
-
-(*table = Import["https://developer.mozilla.org/en-US/docs/Web/CSS/Reference", "Data"];
-Select[Flatten[table[[5, 1]]], StringEndsQ[#, "()"]&]*)
-
-
-(* CSS 2.1 function *)
-(*validFunction21 = {
-	"attr()", "rgb()", "counter()", "counters()"};*)
-
-(* more beyond CSS 2.1 *)
-(*validFunctions = {
-	"annotation()", "blur()", "brightness()", "calc()", 
-	"character-variant()", "circle()", "contrast()", "cross-fade()", "cubic-bezier()", 
-	"drop-shadow()", "element()", "ellipse()", "fit-content()", "format()", 
-	"frames()", "grayscale()", "hsl()", "hsla()", "hue-rotate()", 
-	"image()", "image-set()", "inset()", "invert()", "leader()", 
-	"linear-gradient()", "local()", "matrix()", "matrix3d()", "minmax()", 
-	"opacity()", "ornaments()", "perspective()", "polygon()", "radial-gradient()", 
-	"rect()", "repeat()", "repeating-linear-gradient()", "repeating-radial-gradient()",  
-	"rgba()", "rotate()", "rotate3d()", "rotateX()", "rotateY()", 
-	"rotateZ()", "saturate()", "scale()", "scale3d()", "scaleX()", 
-	"scaleY()", "scaleZ()", "sepia()", "skew()", "skewX()", 
-	"skewY()", "steps()", "styleset()", "stylistic()", "swash()", 
-	"symbols()", "target-counter()", "target-counters()", "target-text()", "translate()", 
-	"translate3d()", "translateX()", "translateY()", "translateZ()", "url()", 
-	"var()"};*)
-
-
-(*{
-	"cross-fade()", 
-	"image-set()", "leader()", 
-	"local()", "minmax()", 
-	"perspective()", 
-	"repeat()", 
-	"symbols()", "target-counter()", "target-counters()", "target-text()", 
-	"url()", 
-	"var()"}*)
-
-
-(* ::Subsection::Closed:: *)
-(*Style Inheritance*)
-
-
-(*
-	Style Inheritence:
-	It is not required that the User Agent (Mathematica) support the 'style' attribute or CSS stylesheets.
-	If it does, then styles are overridden by the ones that come below them in this order:
-	 1. User Agent styles (Mathematica defaults) 
-	 2. presentation attributes (within SVG element)
-	 3. external stylesheets
-	 4. document styles (<style> elements in the doc)
-	 5. inline styles (style attribute)
-	 6. animation
-	 7. override styles (!important)
-	 8. computed styles
-*)
+End[];
+EndPackage[];
