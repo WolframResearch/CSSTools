@@ -10,24 +10,27 @@
 (*Version: 1*)
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Package Header*)
 
 
-BeginPackage["CSSImport`"];
+BeginPackage["CSSImport`", {"GeneralUtilities`"}];
+
+(*ImportExport`RegisterImport["format",defaultFunction]\*)
+
 Begin["`Private`"];
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Notes*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Outline*)
 
 
 (* ::Text:: *)
-(*Purpose: Import CSS files, interpreting CSS styles as Wolfram Desktop options.*)
+(*Purpose: Import Cascading Style Sheet (.css) files, interpreting CSS styles as Wolfram Desktop options.*)
 (*Approach:*)
 (*	1. import CSS file as a string*)
 (*	2. tokenize following the CSS grammar specification*)
@@ -177,8 +180,12 @@ Select[Flatten[table[[5, 1]]], StringEndsQ[#, "()"]&]
 	"var()"};*)
 
 
-(* ::Subsection:: *)
-(*CSS vs Wolfram Desktop Stylesheets*)
+(* ::Subsection::Closed:: *)
+(*CSS vs Wolfram Desktop (WD) Stylesheets*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*Definitions*)
 
 
 (* ::Text:: *)
@@ -186,20 +193,83 @@ Select[Flatten[table[[5, 1]]], StringEndsQ[#, "()"]&]
 (*declaration (property:value)			option (name -> value)*)
 (*declaration block ({p1:v1; p2:v2; ...})	Cell[StyleData["StyleName"], n1->v1, n2->v2, ...]*)
 (*selector							"StyleName"*)
-(**)
-(*COMBINING STYLES*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*Combining Styles*)
+
+
+(* ::Text:: *)
 (*CSS: styles are called declarations (property:value) and a group of them is a declaration block.*)
 (*WD: styles are given as options (name -> value) and can be grouped into StyleData cells in a WD stylesheet.*)
-(* *)
-(*TARGETING CONTENT WITH STYLES*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*Targeting content with styles*)
+
+
+(* ::Text:: *)
 (*CSS: selectors specify which elements are targeted with the corresponding declarations. *)
 (*WD: named styles can be applied to any box/cell/notebook level.*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*CSS Inheritance*)
+
+
+(* ::Text:: *)
+(* Multiple selectors can target the same element. In that case the declarations merge via the following cascading order: *)
+(*(https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#cascading-order)*)
+(* 	ORIGIN							EXAMPLE*)
+(* 	1. user agent declarations 			a web browser's default styles*)
+(* 	2. user normal declarations 			a web browser's user preferences*)
+(* 	3. author normal declarations		an HTML document's embedded styles*)
+(* 	4. author important declarations 		an HTML document's embedded important styles*)
+(* 	5. user important declarations		a web browser's user preference overrides*)
+(*Sort by origin (1-5) and specificity of selector (https://www.w3.org/TR/2011/REC-CSS2-20110607/cascade.html#specificity) with higher specificity overriding lower. If two declarations have the same weight (important/normal), origin and specificity, the latter specified wins.*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*WD Inheritance*)
+
+
+(* ::Text:: *)
+(*Named styles can appear in multiple stylesheets or used directly in a notebook, cell, or box (via the Style wrapper). In that case the options merge via the following cascading order:*)
+(*	ORIGIN						EXAMPLE*)
+(*	1. $FrontEnd					Options[$FrontEnd]*)
+(*	2. Core.nb					$InstallationDirectory\SystemFiles\FrontEnd\StyleSheets*)
+(*	3. Default.nb					$InstallationDirectory\SystemFiles\FrontEnd\StyleSheets*)
+(*	4. Private stylesheet (if present)	*)
+(*	5. stylesheet "Notebook" local style*)
+(*	6. stylesheet Style environment 	"Working" or "Printout"*)
+(*	7. Notebook-level option 		an embedded option like WindowSize *)
+(*	8. Cell-level options 			an embedded option like CellFrame*)
+(*	9. Box-level options			an embedded option like ImageSize*)
+(*Moreover, any named styles within stylesheets found at *)
+(*	$InstallationDirectory\SystemFiles\FrontEnd\StyleSheets *)
+(*can be overridden by named styles within stylesheet located at*)
+(*	$BaseDirector\SystemFiles\FrontEnd\StyleSheets*)
+(*or*)
+(*	$UserBaseDirectory\SystemFiles\FrontEnd\StyleSheets*)
+(*but only if the stylesheets have the same filename. These act like intermediary cascade steps between (1) and (2), and (3) and (4) where $BaseDirectory is checked before $UserBaseDirectory.*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*CSS vs WD inheritance origin *)
+
+
+(* ::Text:: *)
+(*This comparison is hand-wavy:*)
+(*WD							CSS*)
+(*(1-3)	$FrontEnd/Core/Default		(1) user agent declarations*)
+(*($Base and $UserBase)			(2) user declarations*)
+(*(4) Private Stylesheet			(3) author declarations*)
+(*(7-9) Notebook/Cell/Box		(4-5) important styles; perhaps just more author declarations*)
 (**)
-(* *)
 
 
 (* ::Section::Closed:: *)
-(*CSS Grammar*)
+(*CSS 2.1 Grammar*)
 
 
 (* ::Subsection::Closed:: *)
@@ -3047,7 +3117,7 @@ parse[prop_String, {}] := noValueFailure @ prop
 parse[prop_String, _] := unsupportedValueFailure @ prop
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Process *)
 
 
@@ -3279,7 +3349,11 @@ getPropertyPositions[property_String, a:{__Association}] :=
 	]
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
+(*Main Functions*)
+
+
+(* ::Section:: *)
 (*Package Footer*)
 
 
