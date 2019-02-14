@@ -591,107 +591,397 @@ unsupportedValueFailure[prop_String] :=    Failure["UnsupportedProp", <|"Propert
 
 
 (* ::Subsection::Closed:: *)
-(*initial values*)
+(*Property Data Table*)
 
 
 (* 
 	Some of these are shorthand properties that set one or more other properties. 
 	As such, the shorthand initial values would never be directly required.
 *)
-initialValues = <|
-	"background"            -> Automatic, (* shorthand property *)
-	"background-attachment" -> Missing["Not supported."], (* 'scroll' *)
-	"background-color"      -> None, (* 'transparent' *)
-	"background-image"      -> None, (* 'none' *)
-	"background-position"   -> {0, 0}, (* '0% 0%' *)
-	"background-repeat"     -> "Repeat", (* 'repeat' *)
-	"border-collapse"     -> Missing["Not supported."], (* 'separated' *)
-	"border-color"        -> Automatic, (* shorthand property, sets all 4 sides *)
-	"border-top-color"    -> Dynamic @ CurrentValue[FontColor], 
-	"border-right-color"  -> Dynamic @ CurrentValue[FontColor],
-	"border-bottom-color" -> Dynamic @ CurrentValue[FontColor],
-	"border-left-color"   -> Dynamic @ CurrentValue[FontColor],
-	"border-style"        -> Automatic, (* shorthand property, sets all 4 sides *)
-	"border-top-style"    -> None, 
-	"border-right-style"  -> None,
-	"border-bottom-style" -> None,
-	"border-left-style"   -> None,
-	"border-width"        -> Automatic, (* shorthand property, sets all 4 sides *)
-	"border-top-width"    -> Thickness[Medium], 
-	"border-right-width"  -> Thickness[Medium],
-	"border-bottom-width" -> Thickness[Medium],
-	"border-left-width"   -> Thickness[Medium],
-	"border"         -> Automatic, (* shorthand property, sets all 4 sides *)
-	"border-top"     -> Automatic, (* shorthand border-top/right/bottom/left sets color/style/width *)
-	"border-right"   -> Automatic, 
-	"border-bottom"  -> Automatic, 
-	"border-left"    -> Automatic,
-	"border-spacing" -> 0,
-	"bottom"         -> Automatic, (* 'auto' *)
-	"caption-side"   -> Missing["Not supported."], (* 'top' *)
-	"clip"           -> Missing["Not supported."],
-	"color"          -> Black,     (* no set CSS specification, so use reasonable setting *)
-	"content"        -> Normal,    (* 'normal' *)
-	"counter-increment" -> {},     (* 'none' *)
-	"counter-reset"  -> {},        (* 'none' *)
-	"cursor"         -> Automatic, (* 'auto' *)
-	"direction"      -> Automatic, (* 'ltr' *)
-	"display"        -> Automatic, (* 'inline' *)
-	"float"          -> Automatic, (* 'none' *)
-	"font"           -> Automatic, (* shorthand property *)
-	"font-family"    :> CurrentValue[{StyleDefinitions, "Text", FontFamily}], (* no set CSS specification, so use reasonable setting *)
-	"font-size"      -> Medium,   (* 'medium' *)
-	"font-style"     -> Plain,    (* 'normal' *)
-	"font-variant"   -> "Normal", (* 'normal' *)
-	"font-weight"    -> Plain,    (* 'normal' *)
-	"height"         -> Automatic, (* 'auto' *)
-	"left"           -> Automatic, (* 'auto' *)
-	"letter-spacing" -> "Plain", (* 'normal' *)
-	"line-height"    -> {1.2, 0}, (* 'normal' *)
-	"list-style"          -> None, (* shorthand property *)
-	"list-style-image"    -> None,
-	"list-style-position" -> Automatic,
-	"list-style-type"     -> "\[FilledCircle]",
-	"margin"         -> Automatic, (* shorthand property, sets all 4 sides *)
-	"margin-top"     -> 0,
-	"margin-right"   -> 0,
-	"margin-bottom"  -> 0,
-	"margin-left"    -> 0,
-	"max-height"     -> Infinity,
-	"max-width"      -> Infinity,
-	"min-height"     -> 0,
-	"min-width"      -> 0,
-	"orphans"        -> Missing["Not supported."], (* 2 *)
-	"outline"        -> Automatic, (* shorthand property, sets color/style/width *)
-	"outline-color"  -> Missing["Not supported."], (* 'invert' *)
-	"outline-style"  -> Missing["Not supported."], (* 'none' *)
-	"outline-width"  -> Missing["Not supported."], (* 'medium' *)
-	"overflow"       -> Missing["Not supported."], (* 'visible' so content can overflow area *)
-	"padding"        -> 0, (* shorthand property, sets all 4 sides *)
-	"padding-top"    -> 0,
-	"padding-bottom" -> 0,
-	"padding-left"   -> 0,
-	"padding-right"  -> 0,
-	"page-break-after"  -> Automatic, (* 'auto' *)
-	"page-break-before" -> Automatic, (* 'auto' *)
-	"page-break-inside" -> Automatic, (* 'auto' *)
-	"position"        -> Automatic, (* 'static' *)
-	"quotes"          -> Automatic,  (* no set value *)
-	"right"           -> Automatic, (* 'auto' *)
-	"text-align"      -> Automatic, (* a nameless value that acts as 'left' if LTR, 'right' if RTL *)
-	"text-decoration" -> {},       (* 'none' *)
-	"text-indent"     -> 0,
-	"text-transform"  -> None,      (* 'none' *)
-	"top"             -> Automatic, (* 'auto' *)
-	"unicode-bidi"    -> Automatic, (* 'normal' *)
-	"vertical-align"  -> Baseline,  (* 'baseline' *)
-	"visibility"      -> True, (* 'visible' *)
-	"white-space"     -> Missing["Not supported."], (* 'normal' *)
-	"widows"          -> Missing["Not supported."], (* 2 *)
-	"width"           -> Automatic, (* 'auto' *)
-	"word-spacing"    -> "Plain", (* 'normal' *)
-	"z-index"         -> Missing["Not supported."] (* 'auto' *)
+propertyData = <|
+	"background" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "N/A",  (* shorthand property *)
+		"WDInitialValue" -> Automatic|>,
+	"background-attachment" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "scroll",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"background-color" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "transparent",
+		"WDInitialValue" -> None|>, 
+	"background-image" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "none",
+		"WDInitialValue" -> None|>, 
+	"background-position" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "0% 0%",
+		"WDInitialValue" -> {0, 0}|>, 
+	"background-repeat" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "repeat",
+		"WDInitialValue" -> "Repeat"|>, 
+	"border-collapse" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "separate",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"border-color" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "N/A", (* shorthand property, sets all 4 border sides *)
+		"WDInitialValue" -> Automatic|>, 
+	"border-top-color" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
+		"WDInitialValue" -> Dynamic @ CurrentValue[FontColor]|>, 
+	"border-right-color" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
+		"WDInitialValue" -> Dynamic @ CurrentValue[FontColor]|>,
+	"border-bottom-color" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
+		"WDInitialValue" -> Dynamic @ CurrentValue[FontColor]|>,
+	"border-left-color" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
+		"WDInitialValue" -> Dynamic @ CurrentValue[FontColor]|>,
+	"border-style" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "N/A", (* shorthand property, sets all 4 sides *)
+		"WDInitialValue" -> Automatic|>, 
+	"border-top-style" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "none",
+		"WDInitialValue" -> None|>, 
+	"border-right-style" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "none",
+		"WDInitialValue" -> None|>,
+	"border-bottom-style" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "none",
+		"WDInitialValue" -> None|>,
+	"border-left-style" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "none",
+		"WDInitialValue" -> None|>,
+	"border-width" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "N/A", (* shorthand property, sets all 4 border sides *)
+		"WDInitialValue" -> Automatic|>, 
+	"border-top-width" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "medium",
+		"WDInitialValue" -> Thickness[Medium]|>, 
+	"border-right-width" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "medium",
+		"WDInitialValue" -> Thickness[Medium]|>,
+	"border-bottom-width" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "medium",
+		"WDInitialValue" -> Thickness[Medium]|>,
+	"border-left-width" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "medium",
+		"WDInitialValue" -> Thickness[Medium]|>,
+	"border" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "N/A", (* shorthand property, sets all 4 border sides *)
+		"WDInitialValue" -> Automatic|>, 
+	"border-top" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "N/A", (* shorthand border-top sets color/style/width *)
+		"WDInitialValue" -> Automatic|>, 
+	"border-right" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "N/A", (* shorthand border-top sets color/style/width *)
+		"WDInitialValue" -> Automatic|>, 
+	"border-bottom" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "N/A", (* shorthand border-top sets color/style/width *)
+		"WDInitialValue" -> Automatic|>, 
+	"border-left" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "N/A", (* shorthand border-top sets color/style/width *)
+		"WDInitialValue" -> Automatic|>,
+	"border-spacing" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "0",
+		"WDInitialValue" -> 0|>,
+	"bottom" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "auto",
+		"WDInitialValue" -> Automatic|>, 
+	"caption-side" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "top",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"clear" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "none",
+		"WDInitialValue" -> Missing["Not supported."]|>,		
+	"clip" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "auto",
+		"WDInitialValue" -> Missing["Not supported."]|>,
+	"color" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "N/A", (* depends on user agent aka WD *)
+		"WDInitialValue" -> Black|>,(* no set CSS specification, so use reasonable setting *)
+	"content" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "normal",
+		"WDInitialValue" -> Normal|>,    
+	"counter-increment" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "none",
+		"WDInitialValue" -> {}|>,
+	"counter-reset" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "none",
+		"WDInitialValue" -> {}|>,   
+	"cursor" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "auto",
+		"WDInitialValue" -> Automatic|>, 
+	"direction" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "ltr",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"display" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "inline",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"empty-cells" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "show",
+		"WDInitialValue" -> Missing["Not supported."]|>, 	
+	"float" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "none",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"font" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "N/A", (* shorthand property *)
+		"WDInitialValue" -> Automatic|>, 
+	"font-family" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "N/A", (* depends on user agent aka WD *)
+		"WDInitialValue" :> CurrentValue[{StyleDefinitions, "Text", FontFamily}]|>, 
+	"font-size" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "medium",
+		"WDInitialValue" -> Medium|>,   
+	"font-style" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "normal",
+		"WDInitialValue" -> Plain|>,    
+	"font-variant" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "normal",
+		"WDInitialValue" -> "Normal"|>, 
+	"font-weight" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "normal",
+		"WDInitialValue" -> Plain|>, 
+	"height" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "auto",
+		"WDInitialValue" -> Automatic|>, 
+	"left" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "auto",
+		"WDInitialValue" -> Automatic|>, 
+	"letter-spacing" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "normal",
+		"WDInitialValue" -> "Plain"|>, 
+	"line-height" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "normal",
+		"WDInitialValue" -> {1.2, 0}|>, 
+	"list-style" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "N/A", (* shorthand property *)
+		"WDInitialValue" -> None|>, 
+	"list-style-image" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "",
+		"WDInitialValue" -> None|>,
+	"list-style-position" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "outside",
+		"WDInitialValue" -> Automatic|>,
+	"list-style-type" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "disc",
+		"WDInitialValue" -> "\[FilledCircle]"|>,
+	"margin" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "N/A", (* shorthand property, sets all 4 margins *)
+		"WDInitialValue" -> Automatic|>, 
+	"margin-top" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "0",
+		"WDInitialValue" -> 0|>,
+	"margin-right" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "0",
+		"WDInitialValue" -> 0|>,
+	"margin-bottom" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "0",
+		"WDInitialValue" -> 0|>,
+	"margin-left" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "0",
+		"WDInitialValue" -> 0|>,
+	"max-height" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "none",
+		"WDInitialValue" -> Infinity|>,
+	"max-width" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "none",
+		"WDInitialValue" -> Infinity|>,
+	"min-height" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "0",
+		"WDInitialValue" -> 0|>,
+	"min-width" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "0",
+		"WDInitialValue" -> 0|>,
+	"orphans" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "2",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"outline" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "N/A", (* shorthand property, sets color/style/width *)
+		"WDInitialValue" -> Automatic|>, 
+	"outline-color" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "invert",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"outline-style" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "none",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"outline-width" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "medium",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"overflow" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "visible",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"padding" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "N/A", (* shorthand property, sets all 4 sides *)
+		"WDInitialValue" -> 0|>, 
+	"padding-top" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "0",
+		"WDInitialValue" -> 0|>,
+	"padding-bottom" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "0",
+		"WDInitialValue" -> 0|>,
+	"padding-left" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "0",
+		"WDInitialValue" -> 0|>,
+	"padding-right" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "0",
+		"WDInitialValue" -> 0|>,
+	"page-break-after" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "auto",
+		"WDInitialValue" -> Automatic|>, 
+	"page-break-before" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "auto",
+		"WDInitialValue" -> Automatic|>, 
+	"page-break-inside" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "auto",
+		"WDInitialValue" -> Automatic|>, 
+	"position" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "static",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"quotes" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "N/A", (* depends on user agent aka WD *)
+		"WDInitialValue" -> Missing["Not supported."]|>,  
+	"right" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "auto",
+		"WDInitialValue" -> Automatic|>, 
+	"table-layout" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "auto",
+		"WDInitialValue" -> Missing["Not supported."]|>, 		
+	"text-align" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "N/A", (* a nameless value that acts as 'left' if 'direction' is 'ltr', 'right' if 'direction' is 'rtl' *)
+		"WDInitialValue" -> Automatic|>, 
+	"text-decoration" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "none",
+		"WDInitialValue" -> {}|>,       
+	"text-indent" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "0",
+		"WDInitialValue" -> 0|>,
+	"text-transform" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "none",
+		"WDInitialValue" -> None|>,  
+	"top" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "auto",
+		"WDInitialValue" -> Automatic|>, 
+	"unicode-bidi" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "normal",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"vertical-align" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "baseline",
+		"WDInitialValue" -> Baseline|>,  
+	"visibility" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "visible",
+		"WDInitialValue" -> True|>, 
+	"white-space" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "normal",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"widows" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "2",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"width" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "auto",
+		"WDInitialValue" -> Automatic|>, 
+	"word-spacing" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "normal",
+		"WDInitialValue" -> Missing["Not supported."]|>, 
+	"z-index" -> <|
+		"Inherited" -> False,
+		"CSSInitialValue" -> "auto",
+		"WDInitialValue" -> Missing["Not supported."]|>
 	|>;
+	
+initialValues[prop_String] := propertyData[prop, "WDInitialValue"]
 
 
 (* ::Subsection::Closed:: *)
@@ -3117,7 +3407,7 @@ parse[prop_String, {}] := noValueFailure @ prop
 parse[prop_String, _] := unsupportedValueFailure @ prop
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Process *)
 
 
