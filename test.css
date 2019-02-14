@@ -1,0 +1,49 @@
+body {
+  content: counter(question);
+  background: url("html-background-png-7.png") repeat lightgray;
+  color: #dfe366;
+}
+
+/* This is a comment1 */
+p {
+  font-family: Times New Roman;  
+  font-size: 20px;
+  color: #eeeeee;
+}
+
+h3 {
+  counter-increment: question;
+  height: 50px;
+  background-color: rgba(0,0,1,0.1);
+  width: auto;
+  overFlow: hidden;
+  padding-top: 2;
+  padding-bottom: initial !important;
+  padding-right: 1em;
+  padding-left: 2px;
+  border: 1em solid;
+  margin: 5px 50% 10px 20px;
+  font-variant: small-caps;
+}
+
+h3:before {
+  content: counter(question) " ";
+}
+
+h2 {
+  font-size: 12px;
+  font-family: arial;
+  font-style: italic;
+  color: #aaaaaa;
+}
+
+li {
+  list-style: square;
+  color: white;
+}
+
+a {
+  width: 20px
+}
+
+/* This is a comment2 */

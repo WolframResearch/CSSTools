@@ -14,11 +14,11 @@
 (*Package Header*)
 
 
-BeginPackage["CSSImport`", {"GeneralUtilities`"}];
+(*BeginPackage["CSSImport`", {"GeneralUtilities`"}];
 
 (*ImportExport`RegisterImport["format",defaultFunction]\*)
 
-Begin["`Private`"];
+Begin["`Private`"];*)
 
 
 (* ::Section::Closed:: *)
@@ -464,10 +464,13 @@ T["FUNCTION"] ~~ T["S*"] ~~
 (*Identify @charset, @import, and rulesets (selector + block declarations)*)
 
 
+trimFront[s_String] := StringReplace[s, StartOfString ~~ Whitespace -> ""]
+
+
 (* DeleteCases removes any comment-like token. Perhaps we should allow an option flag to keep comments...? *)
 parseBlock[x_String] := 
 	DeleteCases[
-		Map[{label["block", StringTrim @ #], StringTrim @ #}&, 
+		Map[With[{l = label["block", #]}, {l, If[l!="other", trimFront @ #, #]}]&, 
 			StringSplit[x, 
 				s:Alternatives[
 					RegularExpression @ RE["comment"],
@@ -1122,6 +1125,8 @@ parseURI[uri_String] :=
 			]
 			,
 			(* else attempt a generic import *)
+			If[StringStartsQ[s, "\""|"\'"], s = StringTake[s, {2, -1}]];
+			If[StringEndsQ[s, "\""|"\'"], s = StringTake[s, {1, -2}]];
 			With[{i = Quiet @ Import[s]}, If[i === $Failed, couldNotImportFailure[s], i]]
 		]
 	]
@@ -1221,10 +1226,10 @@ parseSingleBG[prop_String, tokens:{{_String, _String}..}] :=
 				Notebook[
 					System`BackgroundAppearanceOptions ->
 						Which[
-							values["p"] === "NoRepeat" && values["r"] === "NoRepeat", "NoRepeat",
-							values["p"] === "Center" &&   values["r"] === "NoRepeat", "Center",
-							values["p"] === "NoRepeat",                                values["r"],
-							True,                                                      Missing["Not supported."]
+							values["p"] === {0,0}    && values["r"] === "NoRepeat", "NoRepeat",
+							values["p"] === "Center" && values["r"] === "NoRepeat", "Center",
+							values["p"] === {0,0},                                  values["r"],
+							True,                                                     Missing["Not supported."]
 						],
 					System`BackgroundAppearance -> values["i"],
 					Background -> values["c"]]
@@ -1942,48 +1947,32 @@ parse[prop:"list-style-type", tokens:{{_String, _String}..}] := (*parse[prop, to
 
 (* short-hand for list-style-image/position/type properties given in any order *)
 parse[prop:"list-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], value, p, noneCount = 0, acquiredImage = False, acquiredPos = False, acquiredType = False},
-		(* parse and assign new font values *)
-		If[l == 1, 
-			value = 
-				Switch[ToLowerCase @ tokens[[pos, 2]],
-					(* not sure why you would use this since list-style properties are inherited anyway...? *)
-					"inherit", Inherited,
-					"initial", None,
-					"none",    None,
-					_,         unrecognizedKeyWordFailure @ prop
-				];
-			Return @ If[FailureQ[value], value, Cell[CellDingbat -> value]]
-		];
-		
+	Module[{pos = 1, l = Length[tokens], value, values, p, noneCount = 0, hasImage = False, hasPos = False, hasType = False},
 		(* 
 			li-image, li-position, and li-type can appear in any order.
 			A value of 'none' sets whichever of li-type and li-image are not otherwise specified to 'none'. 
 			If both are specified, then an additional 'none' is an error.
 		*)
-		value = <|"image" -> None, "pos" -> Missing["Not supported."], "type" -> None|>;
+		values = <|"image" -> None, "pos" -> Missing["Not supported."], "type" -> None|>;
 		While[pos <= l,
 			If[TrueQ[ToLowerCase @ tokens[[pos, 2]] == "none"], 
 				noneCount++
 				,
-				value = {
-					parseSingleListStyleImage[prop, First @ tokens[[pos]]],
-					parseSingleListStylePosition[prop, First @ tokens[[pos]]],
-					parseSingleListStyleType[prop, First @ tokens[[pos]]]};
-					p = FirstPosition[value, Except[_?FailureQ], Return @ unrecognizedValueFailure @ prop, {1}, Heads -> False][[1]];
+				value = Through[{parseSingleListStyleImage, parseSingleListStylePosition, parseSingleListStyleType}[prop, tokens[[pos]]]];
+				p = FirstPosition[value, Except[_?FailureQ], Return @ unrecognizedValueFailure @ prop, {1}, Heads -> False][[1]];
 				Switch[p, 
-					1, If[acquiredImage, Return @ repeatedPropValueFailure @ "image",    value["image"] = value[[p]]; acquiredImage = True], 
-					2, If[acquiredPos,   Return @ repeatedPropValueFailure @ "position", value["pos"] = value[[p]];   acquiredPos = True], 
-					3, If[acquiredType,  Return @ repeatedPropValueFailure @ "type",     value["type"] = value[[p]];  acquiredType = True]
+					1, If[hasImage, Return @ repeatedPropValueFailure @ "image",    values["image"] = value[[p]]; hasImage = True], 
+					2, If[hasPos,   Return @ repeatedPropValueFailure @ "position", values["pos"] = value[[p]];   hasPos = True], 
+					3, If[hasType,  Return @ repeatedPropValueFailure @ "type",     values["type"] = value[[p]];  hasType = True]
 				];
 			];
 			skipWhitespace[pos, l, tokens];
 		];
 		Which[
-			acquiredImage && acquiredType && noneCount > 0, repeatedPropValueFailure @ "none",
-			acquiredImage, Cell[CellDingbat -> value["image"]], (* default to Image if it could be found *)
-			acquiredType,  Cell[CellDingbat -> value["type"]],
-			True,          Cell[CellDingbat -> None]]
+			hasImage && hasType && noneCount > 0, repeatedPropValueFailure @ "none",
+			hasImage, Cell[CellDingbat -> values["image"]], (* default to Image if it could be found *)
+			hasType,  Cell[CellDingbat -> values["type"]],
+			True,     Cell[CellDingbat -> None]]
 	]
 
 
@@ -2256,14 +2245,14 @@ parseSingleFontFamily[tokens:{{_String, _String}..}] := parseSingleFontFamily[to
 						l == 1 && MemberQ[generic, ToLowerCase @ tokensNoWS[[pos, 2]]], parseFontFamilySingleIdent @ tokensNoWS[[pos, 2]],
 						True, 
 							font = StringJoin @ Riffle[tokensNoWS[[All, 2]], " "];
-							If[MemberQ[$FontFamilies, font], font, Missing["FontAbsent", font]]
+							First[Pick[$FontFamilies, StringMatchQ[$FontFamilies, font, IgnoreCase -> True]], Missing["FontAbsent", font]]
 					],
 				"string", (* must only have a single string token up to the delimiting comma *)
 					Which[
 						l > 1, fail,
 						True,
 							font = StringTake[tokensNoWS[[All, 2]], {2, -2}];
-							If[MemberQ[$FontFamilies, font], font, Missing["FontAbsent", font]]
+							First[Pick[$FontFamilies, StringMatchQ[$FontFamilies, font, IgnoreCase -> True]], Missing["FontAbsent", font]]
 					],
 				_, fail
 			];
@@ -3488,7 +3477,7 @@ processRulesets[s_String] :=
 					stopPosBlock  = findClosingBracketPosition[startPosBlock, "{", "}", relevantTokens];
 					rulesets[[i]] = 
 						<|
-							"Selector" -> StringJoin @ relevantTokens[[pos ;; startPosBlock-1, 2]], 
+							"Selector" -> StringTrim @ StringJoin @ relevantTokens[[pos ;; startPosBlock-1, 2]], 
 							"Condition" -> StyleData[All, "Printout"],
 							"Block" -> relevantTokens[[startPosBlock+1 ;; If[relevantTokens[[stopPosBlock, 1]] == "}", stopPosBlock-1, stopPosBlock]]]|>;
 					pos = stopPosBlock + 1;
@@ -3503,7 +3492,7 @@ processRulesets[s_String] :=
 						stopPosBlock  = findClosingBracketPosition[startPosBlock, "{", "}", relevantTokens];
 						rulesets[[i]] = 
 							<|
-								"Selector" -> StringJoin @ relevantTokens[[pos ;; startPosBlock-1, 2]], 
+								"Selector" -> StringTrim @ StringJoin @ relevantTokens[[pos ;; startPosBlock-1, 2]], 
 								"Condition" -> First @ StringSplit[relevantTokens[[startAtBlock-1, 2]], RegularExpression["(" ~~ T["MEDIA_SYM"] ~~ ")"]],
 								"Block" -> relevantTokens[[startPosBlock+1 ;; If[relevantTokens[[stopPosBlock, 1]] == "}", stopPosBlock-1, stopPosBlock]]]|>;
 						pos = stopPosBlock + 1;
@@ -3522,7 +3511,7 @@ processRulesets[s_String] :=
 					stopPosBlock  = findClosingBracketPosition[startPosBlock, "{", "}", relevantTokens];
 					rulesets[[i]] = 
 						<|
-							"Selector" -> StringJoin @ relevantTokens[[pos ;; startPosBlock-1, 2]], 
+							"Selector" -> StringTrim @ StringJoin @ relevantTokens[[pos ;; startPosBlock-1, 2]], 
 							"Condition" -> None,
 							"Block" -> relevantTokens[[startPosBlock+1 ;; If[relevantTokens[[stopPosBlock, 1]] == "}", stopPosBlock-1, stopPosBlock]]]|>;
 					pos = stopPosBlock + 1;
@@ -3647,5 +3636,5 @@ getPropertyPositions[property_String, a:{__Association}] :=
 (*Package Footer*)
 
 
-End[];
-EndPackage[];
+(*End[];
+EndPackage[];*)

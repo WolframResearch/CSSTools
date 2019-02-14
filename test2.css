@@ -1,0 +1,46 @@
+@import "mystyle.css";
+@import url("mystyle.css");
+
+.modal-scrollbar-measure {
+	position: absolute;
+	top: -9999px;
+	width: 50px;
+	height: 50px;
+	overflow: scroll}
+@media (min-width: 768px) {
+	.modal-dialog {
+		width: 500px;
+		margin: 30px auto}
+	.modal-content {
+		box-shadow: 0 5px 15px rgba(0,0,0,.5)}
+	.modal-sm {
+		width: 348px}}
+@media (min-width: 992px) {
+	.modal-lg {
+		width: 900px}}
+@page {
+  margin-left: 3cm;
+}
+.tooltip {
+	position: absolute;
+	z-index: 1070;
+	display: block;
+	font-family: Roboto,Arial,Helvetica,sans-serif;
+	font-style: normal;
+	font-weight: 400;
+	letter-spacing: normal;
+	line-break: auto;
+	line-height: 1;
+	text-align: left;
+	text-align: start;
+	text-decoration: none;
+	text-shadow: none;
+	text-transform: none;
+	white-space: normal;
+	word-break: normal;
+	word-spacing: normal;
+	word-wrap: normal;
+	font-size: ceil((14px * .85));
+	opacity: 0}
+.tooltip.in {
+	opacity: 1}
