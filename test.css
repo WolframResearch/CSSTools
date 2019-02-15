@@ -1,6 +1,5 @@
 body {
-  content: counter(question);
-  background: url("html-background-png-7.png") repeat lightgray;
+  background: url("html-background-png-7.png") repeat darkblue;
   color: #dfe366;
 }
 
@@ -14,7 +13,7 @@ p {
 h3 {
   counter-increment: question;
   height: 50px;
-  background-color: rgba(0,0,1,0.1);
+  background-color: rgba(0,0,1,0.2);
   width: auto;
   overFlow: hidden;
   padding-top: 2;

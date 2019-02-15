@@ -1713,7 +1713,7 @@ parse[prop:"clip", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	The color interpreter appears to mostly follow the CSS-color-3 module.
 	It would be nice if it gave a more detailed failure message, but let's not reinvent the wheel.
 *)
-parse[prop:"color", tokens:{{_String, _String}..}] := parseSingleColor[prop, tokens]
+parse[prop:"color", tokens:{{_String, _String}..}] := {Cell[CellFrameColor -> #], FontColor -> #}& @ parseSingleColor[prop, tokens]
 
 
 (* ::Subsection::Closed:: *)
