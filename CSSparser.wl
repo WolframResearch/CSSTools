@@ -563,7 +563,7 @@ label["term", x_String] :=
 	]
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Parse Properties*)
 
 
@@ -643,8 +643,8 @@ propertyData = <|
 		"WDInitialValue" -> Missing["Not supported."]|>, 
 	"border-color" -> <|
 		"Inherited" -> False,
-		"CSSInitialValue" -> "N/A", (* shorthand property, sets all 4 border sides *)
-		"WDInitialValue" -> Automatic|>, 
+		"CSSInitialValue" -> "currentColor", (* shorthand property, sets all 4 border sides *)
+		"WDInitialValue" -> Dynamic @ CurrentValue[FontColor]|>, 
 	"border-top-color" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
@@ -663,8 +663,8 @@ propertyData = <|
 		"WDInitialValue" -> Dynamic @ CurrentValue[FontColor]|>,
 	"border-style" -> <|
 		"Inherited" -> False,
-		"CSSInitialValue" -> "N/A", (* shorthand property, sets all 4 sides *)
-		"WDInitialValue" -> Automatic|>, 
+		"CSSInitialValue" -> "none", (* shorthand property, sets all 4 sides *)
+		"WDInitialValue" -> None|>, 
 	"border-top-style" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
@@ -683,8 +683,8 @@ propertyData = <|
 		"WDInitialValue" -> None|>,
 	"border-width" -> <|
 		"Inherited" -> False,
-		"CSSInitialValue" -> "N/A", (* shorthand property, sets all 4 border sides *)
-		"WDInitialValue" -> Automatic|>, 
+		"CSSInitialValue" -> "medium", (* shorthand property, sets all 4 border sides *)
+		"WDInitialValue" -> Thickness[Medium]|>, 
 	"border-top-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
@@ -703,23 +703,23 @@ propertyData = <|
 		"WDInitialValue" -> Thickness[Medium]|>,
 	"border" -> <|
 		"Inherited" -> False,
-		"CSSInitialValue" -> "N/A", (* shorthand property, sets all 4 border sides *)
-		"WDInitialValue" -> Automatic|>, 
+		"CSSInitialValue" -> "currentColor none medium", (* shorthand property, sets all 4 border sides color/style/width*)
+		"WDInitialValue" -> Automatic|>, (* not actually used; parsing uses individual border-color/style/width property values *)
 	"border-top" -> <|
 		"Inherited" -> False,
-		"CSSInitialValue" -> "N/A", (* shorthand border-top sets color/style/width *)
+		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
 		"WDInitialValue" -> Automatic|>, 
 	"border-right" -> <|
 		"Inherited" -> False,
-		"CSSInitialValue" -> "N/A", (* shorthand border-top sets color/style/width *)
+		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
 		"WDInitialValue" -> Automatic|>, 
 	"border-bottom" -> <|
 		"Inherited" -> False,
-		"CSSInitialValue" -> "N/A", (* shorthand border-top sets color/style/width *)
+		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
 		"WDInitialValue" -> Automatic|>, 
 	"border-left" -> <|
 		"Inherited" -> False,
-		"CSSInitialValue" -> "N/A", (* shorthand border-top sets color/style/width *)
+		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
 		"WDInitialValue" -> Automatic|>,
 	"border-spacing" -> <|
 		"Inherited" -> True,
@@ -1716,7 +1716,7 @@ parse[prop:"clip", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*color*)
 
 
@@ -1724,7 +1724,7 @@ parse[prop:"clip", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	The color interpreter appears to mostly follow the CSS-color-3 module.
 	It would be nice if it gave a more detailed failure message, but let's not reinvent the wheel.
 *)
-parse[prop:"color", tokens:{{_String, _String}..}] := {Cell[CellFrameColor -> #], FontColor -> #}& @ parseSingleColor[prop, tokens]
+parse[prop:"color", tokens:{{_String, _String}..}] := FontColor -> parseSingleColor[prop, tokens]
 
 
 (* ::Subsection::Closed:: *)
@@ -3636,7 +3636,7 @@ getPropertyPositions[property_String, a:{__Association}] :=
 	]
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Merge Properties*)
 
 
@@ -3654,9 +3654,12 @@ processAs[type:(Cell|Notebook|Box),interpretationList_] :=
 			Flatten @ 
 				Replace[interpretationList, 
 					Switch[type, 
-						Cell, p:{_Cell|_Rule..} :> Cases[p, _Cell, {1}], 
-						Box, p:{_Cell|_Rule..} :> Cases[p, _Rule, {1}], 
-						Notebook, p:{_Cell|_Rule..} :> Nothing], 
+						Cell, 
+							{
+								p:{(Cell[CellFrameColor -> c_]|FontColor -> c_)..} :> {CellFrameColor -> c, FontColor -> c}, 
+								p:{(_Cell|_Rule)..} :> Cases[p, _Cell, {1}]}, 
+						Box, p:{(_Cell|_Rule)..} :> Cases[p, _Rule, {1}], 
+						Notebook, p:{(_Cell|_Rule)..} :> Nothing], 
 					{1}];
 		If[type=!=Notebook, valid = DeleteCases[valid, _Notebook, {1}]];
 		valid = DeleteCases[valid, _?FailureQ | _Missing, {1}];
