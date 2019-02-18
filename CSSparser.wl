@@ -16,12 +16,23 @@
 
 (*BeginPackage["CSSImport`", {"GeneralUtilities`"}];
 
+SetUsage[HeightMin, "\
+HeightMin[value$] indicates value$ is to be interpreted as a minimum height taken from a CSS property."];
+SetUsage[HeightMax, "\
+HeightMax[value$] indicates value$ is to be interpreted as a maximum height taken from a CSS property."];
+SetUsage[WidthMin, "\
+WidthMin[value$] indicates value$ is to be interpreted as a minimum width taken from a CSS property."];
+SetUsage[WidthMax, "\
+WidthMax[value$] indicates value$ is to be interpreted as a maximum width taken from a CSS property."];
+
+
+
 (*ImportExport`RegisterImport["format",defaultFunction]\*)
 
 Begin["`Private`"];*)
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Notes*)
 
 
@@ -1477,7 +1488,7 @@ parse[prop:"border-spacing", tokens:{{_String, _String}..}] := (*parse[prop, tok
 				Switch[ToLowerCase @ tokens[[1, 2]],
 					"inherit", Spacings -> Inherited,
 					"initial", Spacings -> initialValues @ prop,
-					_          unrecognizedKeyWordFailure @ prop
+					_,         unrecognizedKeyWordFailure @ prop
 				]
 		];
 		While[pos <= l,
@@ -1724,7 +1735,7 @@ parse[prop:"color", tokens:{{_String, _String}..}] := {Cell[CellFrameColor -> #]
 (*content*)
 
 
-(* only used to add content before or after element, so let's restrict this to Cells *)
+(* only used to add content before or after element, so let's restrict this to Cells' CellDingbat or CellLabel *)
 parse[prop:"content", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, parsedValues = {}},
 		While[pos <= l,
@@ -1732,9 +1743,9 @@ parse[prop:"content", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 				Switch[tokens[[pos, 1]],
 					"ident", 
 						Switch[ToLowerCase @ tokens[[pos, 2]],
-							"normal",         Normal,
-							"none",           None,
-							"inherit",        Inherited,
+							"normal",         Cell[CellDingbat->"\[FilledCircle]"],
+							"none",           Cell[CellDingbat->None],
+							"inherit",        Cell[CellDingbat->Inherited],
 							"initial",        initialValues @ prop,
 							"open-quote",     Missing["Not supported."],
 							"close-quote",    Missing["Not supported."],
@@ -1747,7 +1758,7 @@ parse[prop:"content", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 					"function", 
 						Switch[ToLowerCase @ tokens[[pos, 2]],
 							"counter(" | "counters(", Cell[CellDingbat -> parseCounter[prop, consumeFunction[pos, l, tokens]]],
-							"attr(",                  parseAttr[prop, consumeFunction[pos, l, tokens]],
+							"attr(",                  (*TODO*)parseAttr[prop, consumeFunction[pos, l, tokens]],
 							_,                        unrecognizedValueFailure @ prop
 						],
 					_, unrecognizedValueFailure @ prop
@@ -1770,7 +1781,7 @@ parse[prop:"content", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 
 (* In WL each style must be repeated n times to get an increment of n *)
 parse[prop:"counter-increment", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], v, values = {}},
+	Module[{pos = 1, l = Length[tokens], v, values = {}, next},
 		While[pos <= l,
 			Switch[tokens[[pos, 1]],
 				"ident", 
@@ -1781,25 +1792,22 @@ parse[prop:"counter-increment", tokens:{{_String, _String}..}] := (*parse[prop, 
 						_,         
 							If[pos == l, 
 								(* if the end is an ident then it simply adds itself once to the list of styles to increment *)
-								values = Join[values, {tokens[[pos, 2]]}]; pos++
+								values = Join[values, {tokens[[pos, 2]]}]
 								,
 								(* otherwise check for a non-negative integer and add that style name n times *)
-								v = tokens[[pos, 2]]; skipWhitespace[pos, l, tokens];
-								With[{i = Interpreter["Integer"][tokens[[pos, 2]]]}, 
-									If[IntegerQ[i],
-										If[i < 0, 
+								v = tokens[[pos, 2]]; next = pos; skipWhitespace[next, l, tokens];
+								With[{n = Interpreter["Integer"][tokens[[next, 2]]]}, 
+									If[IntegerQ[n],
+										If[n < 0, 
 											Return @ negativeIntegerFailure @ prop
 											,
-											values = Join[values, ConstantArray[v, i]]; skipWhitespace[pos, l, tokens]
-										]
+											values = Join[values, ConstantArray[v, n]]; pos = next]
 										,
-										values = Join[values, {v}];
-									]
-								];
-							];
+										values = Join[values, {v}]]]]
 					],
 				_, values = unrecognizedValueFailure @ prop; Break[]
 			];
+			skipWhitespace[pos, l, tokens];
 		];
 		If[FailureQ[values], values, CounterIncrements -> values]
 	]
@@ -1810,7 +1818,7 @@ parse[prop:"counter-increment", tokens:{{_String, _String}..}] := (*parse[prop, 
 
 
 parse[prop:"counter-reset", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], v = {}, values = {}},
+	Module[{pos = 1, l = Length[tokens], v = {}, values = {}, next},
 		While[pos <= l,
 			Switch[tokens[[pos, 1]],
 				"ident", 
@@ -1821,21 +1829,19 @@ parse[prop:"counter-reset", tokens:{{_String, _String}..}] := (*parse[prop, toke
 						_,         
 							If[pos == l, 
 								(* if the end is an ident then it has 0 as its counter assignment *)
-								AppendTo[values, {tokens[[pos, 2]], 0}]; pos++
+								AppendTo[values, {tokens[[pos, 2]], 0}]
 								,
 								(* otherwise check for an integer *)
-								v = tokens[[pos, 2]]; skipWhitespace[pos, l, tokens];
-								With[{i = Interpreter["Integer"][tokens[[pos, 2]]]}, 
-									If[IntegerQ[i], (* if integer exists, use it and skip ahead, otherwise use 0 and don't increment pos *)
-										AppendTo[values, {v, i}]; skipWhitespace[pos, l, tokens]
+								v = tokens[[pos, 2]]; next = pos; skipWhitespace[next, l, tokens];
+								With[{n = Interpreter["Integer"][tokens[[next, 2]]]}, 
+									If[IntegerQ[n], (* if integer exists, use it and skip ahead, otherwise use 0 and don't increment pos *)
+										AppendTo[values, {v, n}]; pos = next
 										,
-										AppendTo[values, {v, 0}];
-									]
-								];
-							];
+										AppendTo[values, {v, 0}]]]]
 					],
 				_, values = unrecognizedValueFailure @ prop; Break[]
 			];
+			skipWhitespace[pos, l, tokens];
 		];
 		If[FailureQ[values], values, CounterAssignments -> values]
 	]
@@ -1987,24 +1993,25 @@ parse[prop:"list-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens]
 	We treat this then as not available, but we validate the form anyway.
 *)
 parse[prop:"quotes", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], v, values = {}},
+	Module[{pos = 1, l = Length[tokens], v, values = {}, next},
 		While[pos <= l,
 			Switch[tokens[[pos, 1]],
 				"ident", 
 					Switch[ToLowerCase @ tokens[[pos, 2]],
 						"none",    If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = {}],
 						"inherit", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = Inherited],
-						"initial", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = initialValues @ prop],
+						"initial", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = initialValues @ prop]
 					],
 				"string",
-					v = tokens[[pos, 2]]; skipWhitespace[pos, l, tokens];
-					If[tokens[[pos, 1]] == "string", 
-						AppendTo[values, {v, tokens[[pos, 2]]}]; skipWhitespace[pos, l, tokens]
+					v = tokens[[pos, 2]]; next = pos; skipWhitespace[next, l, tokens];
+					If[next <= l && tokens[[next, 1]] == "string", 
+						AppendTo[values, {v, tokens[[next, 2]]}]; pos = next
 						,
 						Return @ Failure["UnexpectedParse", <|"Message" -> "Expected pairs of strings."|>]
 					],
 				_, values = unrecognizedValueFailure @ prop; Break[]
 			];
+			skipWhitespace[pos, l, tokens]
 		];
 		If[FailureQ[values], values, Missing["Not supported."]]
 	]
@@ -2232,7 +2239,8 @@ parseSingleFontFamily[tokens:{{_String, _String}..}] := parseSingleFontFamily[to
 	Module[
 	{
 		value, l, pos = 1, font, tokensNoWS,
-		generic = {"serif", "sans-serif", "monospace", "fantasy", "cursive"},
+		(* first two generic font names are actually non-font keywords *)
+		generic = {"inherit", "initial", "serif", "sans-serif", "monospace", "fantasy", "cursive"},
 		fail = Failure["UnexpectedParse", <|"Message" -> "Font family syntax error."|>]
 	},
 		tokensNoWS = DeleteCases[tokens, {"whitespace", _}];
@@ -2456,9 +2464,9 @@ parse[prop:"width"|"max-width"|"min-width", tokens:{{_String, _String}..}] := (*
 			If[NumericQ[value] && !IntegerQ[value], value = Round[value]];
 			ImageSize -> 
 				Switch[prop,
-					"width",     {Wmin[value], Wmax[value]},
-					"max-width", Wmax[value],
-					"min-width", Wmin[value]
+					"width",     {WidthMin[value], WidthMax[value]},
+					"max-width", WidthMax[value],
+					"min-width", WidthMin[value]
 				]
 		]
 	]
@@ -2473,9 +2481,9 @@ parse[prop:"height"|"max-height"|"min-height", tokens:{{_String, _String}..}] :=
 			If[NumericQ[value] && !IntegerQ[value], value = Round[value]];
 			ImageSize -> 
 				Switch[prop,
-					"height",     {Hmin[value], Hmax[value]},
-					"max-height", Hmax[value],
-					"min-height", Hmin[value]
+					"height",     {HeightMin[value], HeightMax[value]},
+					"max-height", HeightMax[value],
+					"min-height", HeightMin[value]
 				]
 		]
 	]
@@ -3274,7 +3282,7 @@ parse[prop:"vertical-align", tokens:{{_String, _String}..}] := (*parse[prop, tok
 		If[FailureQ[value1], Return @ value1];
 		value2 = parseCellBaseline[prop, tokens];
 		If[FailureQ[value2], Return @ value2];
-		AmbiguityList[{value1, value2}]
+		{value1, value2}
 	]
 
 (* this is effectively for RowBox alignment *)
@@ -3396,7 +3404,7 @@ parse[prop_String, {}] := noValueFailure @ prop
 parse[prop_String, _] := unsupportedValueFailure @ prop
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Process *)
 
 
@@ -3626,6 +3634,65 @@ getPropertyPositions[property_String, a:{__Association}] :=
 		
 		{valuePositions, interpretationPositions}
 	]
+
+
+(* ::Subsection::Closed:: *)
+(*Merge Properties*)
+
+
+mergeStylesAs[type_, names_List] := 
+	processAs[
+		type, 
+		Normal @ Join[
+			ds[Select[MatchQ[#Selector, Alternatives @@ names]&] /* Flatten, "Block", Select[#Important === True&]],
+			ds[Select[MatchQ[#Selector, Alternatives @@ names]&] /* Flatten, "Block", Select[#Important === False&]]][[All, "Interpretation"]]]
+
+
+processAs[type:(Cell|Notebook|Box),interpretationList_] := 
+	Module[{valid, options},
+		valid = 
+			Flatten @ 
+				Replace[interpretationList, 
+					Switch[type, 
+						Cell, p:{_Cell|_Rule..} :> Cases[p, _Cell, {1}], 
+						Box, p:{_Cell|_Rule..} :> Cases[p, _Rule, {1}], 
+						Notebook, p:{_Cell|_Rule..} :> Nothing], 
+					{1}];
+		If[type=!=Notebook, valid = DeleteCases[valid, _Notebook, {1}]];
+		valid = DeleteCases[valid, _?FailureQ | _Missing, {1}];
+		If[MatchQ[type, Cell|Notebook], valid = Replace[valid, type[x__] :> x, {1}]];
+		options = Union[First /@ valid];
+		assemble[#, valid]& /@ options		
+	]
+
+
+assembleLRBT[x_List] := 
+	Module[{r = {{Automatic, Automatic}, {Automatic, Automatic}}},
+		Map[
+			With[{v = First[#]}, 
+				Switch[Head[#], 
+					Bottom | HeightMin, r[[2, 1]] = v,
+					Top |    HeightMax, r[[2, 2]] = v,
+					Left |   WidthMin,  r[[1, 1]] = v,
+					Right |  WidthMax,  r[[1, 2]] = v]
+				]&,
+			Flatten[x]];
+		r]
+		
+moveDynamicToHead[{{l_, r_}, {b_, t_}}] := 
+	If[AnyTrue[{l, r, b, t}, MatchQ[#, _Dynamic]&], 
+		Replace[Dynamic[{{l, r}, {b, t}}], HoldPattern[Dynamic[x__]] :> x, {3}]
+		, 
+		{{l, r}, {b, t}}
+	]
+
+assemble[opt:FrameMargins|ImageMargins|FrameStyle, rules_List] := opt -> assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
+assemble[opt:ImageSize, rules_List] := opt -> Replace[assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], {x_, x_} :> x, {1}] 
+assemble[opt:CellFrame, rules_List] := opt -> Replace[assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], Automatic -> True, {2}]
+assemble[opt:CellMargins|CellFrameMargins, rules_List] := opt -> moveDynamicToHead @ assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
+assemble[opt:CellFrameColor, rules_List] := opt -> Last @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
+assemble[opt_, rules_List] := Last @ Cases[rules, HoldPattern[opt -> _], {1}]
+assemble[opt:FontVariations, rules_List] := opt -> DeleteDuplicates[Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], First[#1] === First[#2]&]
 
 
 (* ::Section:: *)
