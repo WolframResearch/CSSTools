@@ -25,11 +25,15 @@ WidthMin[value$] indicates value$ is to be interpreted as a minimum width taken 
 SetUsage[WidthMax, "\
 WidthMax[value$] indicates value$ is to be interpreted as a maximum width taken from a CSS property."];
 
+System`CellFrameStyle; (* needed in System` context *)
 
 
 (*ImportExport`RegisterImport["format",defaultFunction]\*)
 
 Begin["`Private`"];*)
+
+
+System`CellFrameStyle; (* needed in System` context *)
 
 
 (* ::Section:: *)
@@ -1234,7 +1238,7 @@ parseSingleBG[prop_String, tokens:{{_String, _String}..}] :=
 				Background -> values["c"],
 			
 			True,
-				Notebook[
+				{
 					System`BackgroundAppearanceOptions ->
 						Which[
 							values["p"] === {0,0}    && values["r"] === "NoRepeat", "NoRepeat",
@@ -1243,7 +1247,7 @@ parseSingleBG[prop_String, tokens:{{_String, _String}..}] :=
 							True,                                                     Missing["Not supported."]
 						],
 					System`BackgroundAppearance -> values["i"],
-					Background -> values["c"]]
+					Background -> values["c"]}
 		]
 ]
 
@@ -1449,7 +1453,7 @@ parse[prop:"border-top-color"|"border-right-color"|"border-bottom-color"|"border
 			value
 			, 
 			wrapper = Switch[prop, "border-top-color", Top, "border-right-color", Right, "border-bottom-color", Bottom, "border-left-color", Left];
-			{FrameStyle -> wrapper[value], Cell[CellFrameColor -> value]}
+			# -> wrapper[value]& /@ {FrameStyle, CellFrameStyle}
 		]
 	]	
 
@@ -1462,10 +1466,10 @@ parse[prop:"border-color", tokens:{{_String, _String}..}] := (*parse[prop, token
 			skipWhitespace[pos, l, tokens];
 		];
 		Switch[Length[results],
-			1, {FrameStyle -> {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]}, Cell[CellFrameColor -> First @ results]},
-			2, {FrameStyle -> {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[1]], Top @ results[[1]]}, Cell[CellFrameColor -> First @ results]},
-			3, {FrameStyle -> {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}, Cell[CellFrameColor -> First @ results]},
-			4, {FrameStyle -> {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}, Cell[CellFrameColor -> First @ results]},
+			1, # -> {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]}& {FrameStyle, CellFrameStyle},
+			2, # -> {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[1]], Top @ results[[1]]}& {FrameStyle, CellFrameStyle},
+			3, # -> {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}& {FrameStyle, CellFrameStyle},
+			4, # -> {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}& {FrameStyle, CellFrameStyle},
 			_, tooManyTokensFailure @ tokens
 		]
 	]
@@ -1543,7 +1547,7 @@ parse[prop:"border-top-style"|"border-right-style"|"border-bottom-style"|"border
 			value
 			, 
 			wrapper = Switch[prop, "border-top-style", Top, "border-right-style", Right, "border-bottom-style", Bottom, "border-left-style", Left];
-			FrameStyle -> wrapper[value]
+			# -> wrapper[value]& /@ {FrameStyle, CellFrameStyle}
 		]
 	]	
 	
@@ -1555,10 +1559,10 @@ parse[prop:"border-style", tokens:{{_String, _String}..}] := (*parse[prop, token
 			skipWhitespace[pos, l, tokens]
 		];
 		Switch[Length[results],
-			1, FrameStyle -> {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]},
-			2, FrameStyle -> {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[1]], Top @ results[[1]]},
-			3, FrameStyle -> {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
-			4, FrameStyle -> {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
+			1, # -> {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]}& /@ {FrameStyle, CellFrameStyle},
+			2, # -> {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[1]], Top @ results[[1]]}& /@ {FrameStyle, CellFrameStyle},
+			3, # -> {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}& /@ {FrameStyle, CellFrameStyle},
+			4, # -> {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}& /@ {FrameStyle, CellFrameStyle},
 			_, tooManyTokensFailure @ tokens
 		]
 	]
@@ -1601,7 +1605,7 @@ parse[prop:"border-top-width"|"border-right-width"|"border-bottom-width"|"border
 			value
 			, 
 			wrapper = Switch[prop, "border-top-width", Top, "border-right-width",  Right, "border-bottom-width", Bottom, "border-left-width", Left];
-			{FrameStyle -> wrapper[value], Cell[CellFrame -> wrapper[convertToCellThickness @ value]]}
+			{FrameStyle -> wrapper[value], CellFrame -> wrapper[convertToCellThickness @ value]}
 		]
 	]	
 	
@@ -1622,7 +1626,7 @@ parse[prop:"border-width", tokens:{{_String, _String}..}] := (*parse[prop, token
 				4, {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
 				_, Return @ tooManyTokensFailure @ tokens
 			];
-		{FrameStyle -> results, Cell[CellFrame -> Map[convertToCellThickness, results, {2}]]}
+		{FrameStyle -> results, CellFrame -> Map[convertToCellThickness, results, {2}]}
 	]
 
 
@@ -1650,8 +1654,11 @@ parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", t
 		(* if only one token is present, then check that it is a universal keyword *)
 		If[l == 1,
 			Switch[ToLowerCase @ tokens[[1, 2]],
-				"inherit", Return @ {FrameStyle -> wrapper[Inherited], Cell[CellFrameColor -> Inherited, CellFrame -> wrapper[Inherited]]},
-				"initial", Return @ {FrameStyle -> wrapper[Directive[Values @ values]], Cell[CellFrameColor -> values["c"], CellFrame -> wrapper[convertToCellThickness @ values["w"]]]}, 
+				"inherit", Return @ {FrameStyle -> wrapper[Inherited], CellFrame -> wrapper[Inherited], CellFrameStyle -> wrapper[Inherited]},
+				"initial", Return @ {
+					FrameStyle -> wrapper[Directive[Values @ values]], 
+					CellFrameStyle -> wrapper[Directive[values["c"], values["s"]]], 
+					CellFrame -> wrapper[convertToCellThickness @ values["w"]]}, 
 				_, Null
 			]
 		];
@@ -1680,7 +1687,10 @@ parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", t
 			skipWhitespace[pos, l, tokens];
 		];
 		
-		{FrameStyle -> wrapper[Directive[Values @ values]], Cell[CellFrameColor -> values["c"], CellFrame -> wrapper[convertToCellThickness @ values["w"]]]}
+		{
+			FrameStyle -> wrapper[Directive[Values @ values]], 
+			CellFrameStyle -> wrapper[Directive[values["c"], values["s"]]], 
+			CellFrame -> wrapper[convertToCellThickness @ values["w"]]}
 	]
 
 
@@ -1743,9 +1753,9 @@ parse[prop:"content", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 				Switch[tokens[[pos, 1]],
 					"ident", 
 						Switch[ToLowerCase @ tokens[[pos, 2]],
-							"normal",         Cell[CellDingbat->"\[FilledCircle]"],
-							"none",           Cell[CellDingbat->None],
-							"inherit",        Cell[CellDingbat->Inherited],
+							"normal",         CellDingbat->"\[FilledCircle]",
+							"none",           CellDingbat->None,
+							"inherit",        CellDingbat->Inherited,
 							"initial",        initialValues @ prop,
 							"open-quote",     Missing["Not supported."],
 							"close-quote",    Missing["Not supported."],
@@ -1753,11 +1763,11 @@ parse[prop:"content", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 							"no-close-quote", Missing["Not supported."],
 							_,                unrecognizedKeyWordFailure @ prop
 						],
-					"string", Cell[CellLabel -> tokens[[pos, 2]]], (* is this even doing this option justice? *)
-					"uri",    With[{i = parseURI @ tokens[[pos, 2]]}, If[FailureQ[i] || MissingQ[i], notAnImageFailure @ tokens[[pos, 2]], Cell[CellDingbat -> i]]],
+					"string", CellLabel -> tokens[[pos, 2]], (* is this even doing this option justice? *)
+					"uri",    With[{i = parseURI @ tokens[[pos, 2]]}, If[FailureQ[i] || MissingQ[i], notAnImageFailure @ tokens[[pos, 2]], CellDingbat -> i]],
 					"function", 
 						Switch[ToLowerCase @ tokens[[pos, 2]],
-							"counter(" | "counters(", Cell[CellDingbat -> parseCounter[prop, consumeFunction[pos, l, tokens]]],
+							"counter(" | "counters(", CellDingbat -> parseCounter[prop, consumeFunction[pos, l, tokens]],
 							"attr(",                  (*TODO*)parseAttr[prop, consumeFunction[pos, l, tokens]],
 							_,                        unrecognizedValueFailure @ prop
 						],
@@ -1876,7 +1886,7 @@ parse[prop:"list-style-image", tokens:{{_String, _String}..}] := (*parse[prop, t
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStyleImage[prop, First @ tokens];
-		If[FailureQ[value], value, Cell[CellDingbat -> value]]
+		If[FailureQ[value], value, CellDingbat -> value]
 	]
 
 
@@ -1905,7 +1915,7 @@ parse[prop:"list-style-position", tokens:{{_String, _String}..}] := (*parse[prop
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStylePosition[prop, First @ tokens];
-		If[FailureQ[value], value, Cell[Missing["Not supported."]]]
+		If[FailureQ[value], value, Missing["Not supported."]]
 	]
 
 
@@ -1943,7 +1953,7 @@ parse[prop:"list-style-type", tokens:{{_String, _String}..}] := (*parse[prop, to
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStyleType[prop, First @ tokens];
-		If[FailureQ[value], value, Cell[CellDingbat -> value]]
+		If[FailureQ[value], value, CellDingbat -> value]
 	]
 
 
@@ -1976,9 +1986,9 @@ parse[prop:"list-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens]
 		];
 		Which[
 			hasImage && hasType && noneCount > 0, repeatedPropValueFailure @ "none",
-			hasImage, Cell[CellDingbat -> values["image"]], (* default to Image if it could be found *)
-			hasType,  Cell[CellDingbat -> values["type"]],
-			True,     Cell[CellDingbat -> None]]
+			hasImage, CellDingbat -> values["image"], (* default to Image if it could be found *)
+			hasType,  CellDingbat -> values["type"],
+			True,     CellDingbat -> None]
 	]
 
 
@@ -2547,7 +2557,7 @@ parse[prop:"margin-top"|"margin-right"|"margin-bottom"|"margin-left", tokens:{{_
 			value
 			, 
 			wrapper = Switch[prop, "margin-left", Left, "margin-right", Right, "margin-bottom", Bottom, "margin-top", Top];
-			{ImageMargins -> wrapper[value], Cell[CellMargins -> wrapper[value]]}
+			{ImageMargins -> wrapper[value], CellMargins -> wrapper[value]}
 		]
 	]
 		
@@ -2567,7 +2577,7 @@ parse[prop:"margin", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *
 				4, {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
 				_, Return @ tooManyTokensFailure @ tokens
 			];
-		{ImageMargins -> results, Cell[CellMargins -> results]}
+		{ImageMargins -> results, CellMargins -> results}
 	]
 
 
@@ -2590,7 +2600,7 @@ parse[prop:"margin", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *
 parse[prop:"outline-color", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, colorNegate, results = {}},
 		If[l == 1 && tokens[[1, 1]] == "ident" && ToLowerCase @ tokens[[1, 2]] == "invert",
-			Cell[CellFrameColor -> Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]]]
+			CellFrameColor -> Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]]
 			,
 			While[pos <= l,
 				value = parseSingleColor[prop, If[tokens[[pos, 1]] == "function", consumeFunction[pos, l, tokens], {tokens[[pos]]}]];
@@ -2598,7 +2608,7 @@ parse[prop:"outline-color", tokens:{{_String, _String}..}] := (*parse[prop, toke
 				skipWhitespace[pos, l, tokens];
 			];
 			Switch[Length[results],
-				1, Missing["Not supported."](*With[{c = First @ results}, Cell[CellFrameColor -> Dynamic[If[CurrentValue["MouseOver"], c, Inherited]]]]*),
+				1, Missing["Not supported."](*With[{c = First @ results}, CellFrameColor -> Dynamic[If[CurrentValue["MouseOver"], c, Inherited]]]*),
 				_, tooManyTokensFailure @ tokens
 			]
 		]
@@ -2635,10 +2645,10 @@ parse[prop:"outline-width", tokens:{{_String, _String}..}] := (*parse[prop, toke
 			value
 			, 
 			(*With[{t = Round @ convertToCellThickness @ value},
-				Cell[
+				{
 					CellFrame -> Dynamic[If[CurrentValue["MouseOver"], t, Inherited]],
 					CellFrameMargins \[Rule] Dynamic[If[CurrentValue["MouseOver"], -t, Inherited]]
-			]*)
+			}*)
 			Missing["Not supported."]
 		]
 	]
@@ -2755,7 +2765,7 @@ parse[prop:"padding-top"|"padding-right"|"padding-bottom"|"padding-left", tokens
 			value
 			, 
 			wrapper = Switch[prop, "padding-left", Left, "padding-right", Right, "padding-bottom", Bottom, "padding-top", Top];
-			{FrameMargins -> wrapper[value], Cell[CellFrameMargins -> wrapper[value]]}
+			{FrameMargins -> wrapper[value], CellFrameMargins -> wrapper[value]}
 		]
 	]
 		
@@ -2775,7 +2785,7 @@ parse[prop:"padding", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 				4, {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
 				_, Return @ tooManyTokensFailure @ tokens
 			];
-		{FrameMargins -> results, Cell[CellFrameMargins -> results]}
+		{FrameMargins -> results, CellFrameMargins -> results}
 	]
 
 
@@ -2834,7 +2844,7 @@ parse[prop:("page-break-after"|"page-break-before"), tokens:{{_String, _String}.
 		If[FailureQ[value] || MissingQ[value], 
 			value
 			, 
-			Cell[Switch[prop, "page-break-after", PageBreakBelow, "page-break-before", PageBreakAbove] -> value]
+			Switch[prop, "page-break-after", PageBreakBelow, "page-break-before", PageBreakAbove] -> value
 		]
 	]
 
@@ -2861,7 +2871,7 @@ parse[prop:"page-break-inside", tokens:{{_String, _String}..}] := (*parse[prop, 
 		If[FailureQ[value] || MissingQ[value], 
 			value
 			, 
-			Cell[PageBreakWithin -> value, GroupPageBreakWithin -> value]
+			{PageBreakWithin -> value, GroupPageBreakWithin -> value}
 		]
 	]
 
@@ -3072,7 +3082,7 @@ parse[prop:"text-indent", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 				"percentage",  Missing["Not supported."],
 				_,             unrecognizedValueFailure @ prop
 			];
-		If[FailureQ[value], value, {LineIndent -> value, Cell[ParagraphIndent -> value]}]
+		If[FailureQ[value], value, {LineIndent -> value, ParagraphIndent -> value}]
 	]
 
 
@@ -3335,7 +3345,7 @@ parseCellBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] := parse
 				"ems" | "exs" | "percentage", Missing["Not supported."],
 				_, unrecognizedValueFailure @ prop
 			];
-		If[FailureQ[value], value, Cell[CellBaseline -> value]]
+		If[FailureQ[value], value, CellBaseline -> value]
 	]
 
 
@@ -3640,9 +3650,45 @@ getPropertyPositions[property_String, a:{__Association}] :=
 (*Merge Properties*)
 
 
+expectedKeys = {"Selector", "Condition", "Block"};
+
+(* these include all inheritable options that make sense to pass on in a Notebook environment *)
+notebookLevelOptions = 
+	{
+		Background, BackgroundAppearance, BackgroundAppearanceOptions, 
+		FontColor, FontFamily, FontSize, FontSlant, FontTracking, FontVariations, FontWeight, 
+		LineIndent, LineSpacing, ParagraphIndent, ShowContents, TextAlignment};
+		
+(* these include all options (some not inheritable in the CSS sense) that make sense to set at the Cell level *)
+cellLevelOptions = 
+	{
+		Background, 
+		CellBaseline, CellDingbat, CellMargins, 
+		CellFrame, CellFrameColor, CellFrameLabelMargins, CellFrameLabels, CellFrameMargins, CellFrameStyle, 
+		CellLabel, CellLabelMargins, CellLabelPositioning, CellLabelStyle, 
+		FontColor, FontFamily, FontSize, FontSlant, FontTracking, FontVariations, FontWeight, 
+		LineIndent, LineSpacing, ParagraphIndent, ShowContents, TextAlignment,
+		PageBreakBelow, PageBreakAbove, PageBreakWithin, GroupPageBreakWithin};
+		
+(* these are options that are expected to be Notebook or Cell specific *)
+optionsToAvoidAtBoxLevel = 
+	{
+		BackgroundAppearance, BackgroundAppearanceOptions, 
+		CellBaseline, CellDingbat, CellMargins, 
+		CellFrame, CellFrameColor, CellFrameLabelMargins, CellFrameLabels, CellFrameMargins, CellFrameStyle, 
+		CellLabel, CellLabelMargins, CellLabelPositioning, CellLabelStyle, 
+		ParagraphIndent};
+
+
+(*ProcessAs[All, data:{__Association} /; ContainsAll[Keys[data[[1]]], expectedKeys]]  := 
+	NotebookPut @ 
+		Notebook[
+			{*)
+
+
 Options[ProcessAs] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
-(*TODO: include specificity check*)
-ProcessAs[type:(Cell|Notebook|Box), CSSData_Dataset, selectorList_List, OptionsPattern[]] :=
+(* TODO: include specificity check*)
+ProcessAs[type:(Cell|Notebook|Box|All), CSSData_Dataset, selectorList:{__String}, OptionsPattern[]] :=
 	Module[{valid, options, interpretationList},
 		interpretationList = 
 			If[TrueQ @ OptionValue["IgnoreImportance"],
@@ -3651,46 +3697,85 @@ ProcessAs[type:(Cell|Notebook|Box), CSSData_Dataset, selectorList_List, OptionsP
 				Normal @ Join[
 					CSSData[Select[MatchQ[#Selector, Alternatives @@ selectorList]&] /* Flatten, "Block", Select[#Important === False&]],
 					CSSData[Select[MatchQ[#Selector, Alternatives @@ selectorList]&] /* Flatten, "Block", Select[#Important === True&]]][[All, "Interpretation"]]];
-		valid = 
-			Flatten @ 
-				Replace[interpretationList, 
-					Switch[type, 
-						Cell, p:{(_Cell|_Rule)..} :> Cases[p, _Cell, {1}], 
-						Box, p:{(_Cell|_Rule)..} :> Cases[p, _Rule, {1}], 
-						Notebook, p:{(_Cell|_Rule)..} :> Nothing], 
-					{1}];
-		If[type=!=Notebook, valid = DeleteCases[valid, _Notebook, {1}]];
-		valid = DeleteCases[valid, _?FailureQ | _Missing, {1}];
-		If[MatchQ[type, Cell|Notebook], valid = Replace[valid, type[x__] :> x, {1}]];
-		options = Union[First /@ valid];
-		assemble[#, valid]& /@ options		
+		mergeInterpretationList[type, interpretationList]
 	]
 
 
-mergeStylesAs[type_, names_List] := 
-	processAs[
-		type, 
-		Normal @ Join[
-			ds[Select[MatchQ[#Selector, Alternatives @@ names]&] /* Flatten, "Block", Select[#Important === True&]],
-			ds[Select[MatchQ[#Selector, Alternatives @@ names]&] /* Flatten, "Block", Select[#Important === False&]]][[All, "Interpretation"]]]
+(* TODO: need to redo mergeInterpretationLists now that there are no Notebook and Cell wrappers *)
 
 
-processAs[type:(Cell|Notebook|Box),interpretationList_] := 
+mergeInterpretationList[type:Cell, interpretationList_] := 
+	Module[{valid},
+		(* get Cell options from ambiguous cases *)
+		valid = Flatten @ Replace[interpretationList, p:{(_Cell|_Rule)..} :> Cases[p, _Cell, {1}]];
+		(* remove all Notebook options, failures, and missings *)
+		valid = DeleteCases[valid, _Notebook | _?FailureQ | _Missing, {1}];
+		(* remove outermost Cell wrappers *)
+		valid = Replace[valid, type[x__] :> x, {1}];
+		(* assemble options *)
+		assemble[#, valid]& /@ Union[First /@ valid]
+	]
+
+
+mergeInterpretationList[type:Notebook, interpretationList_] := 
+	Module[{valid},
+		(* remove all Cell or Box options; remove failures and missings *)
+		valid = Flatten @ Replace[interpretationList, {{(_Cell|_Rule)..} -> Nothing, Cell[___] -> Nothing}, {1}];
+		valid = DeleteCases[valid, _?FailureQ | _Missing, {1}];
+		(* remove outermost Notebook wrapper *)
+		valid = Replace[valid, type[x__] :> x, {1}];
+		(* assemble options *)
+		assemble[#, valid]& /@ Union[First /@ valid]
+	]
+
+
+mergeInterpretationList[type:Box, interpretationList_] := 
+	Module[{valid},
+		valid = Flatten @ Replace[interpretationList, p:{(_Cell|_Rule)..} :> Cases[p, _Rule, {1}], {1}];
+		(* remove all Notebook options, failures, and missings *)
+		valid = DeleteCases[valid, _Notebook | _?FailureQ | _Missing, {1}];
+		(* assemble options *)
+		assemble[#, valid]& /@ Union[First /@ valid]
+	]
+
+
+mergeInterpretationList[type:All, interpretationList_] := 
+	Module[{valid, options},
+		valid = Flatten @ interpretationList;
+		valid = DeleteCases[valid, _?FailureQ | _Missing, {1}];
+		valid = Replace[valid, (Notebook | Cell)[x__] :> x, {1}];
+		(* assemble options *)
+		assemble[#, valid]& /@ Union[First /@ valid]
+	]
+
+
+(*mergeInterpretationList[type:(Cell|Notebook|Box|All), interpretationList_] := 
 	Module[{valid, options},
 		valid = 
 			Flatten @ 
 				Replace[interpretationList, 
 					Switch[type, 
+						All, {},
 						Cell, p:{(_Cell|_Rule)..} :> Cases[p, _Cell, {1}], 
 						Box, p:{(_Cell|_Rule)..} :> Cases[p, _Rule, {1}], 
 						Notebook, p:{(_Cell|_Rule)..} :> Nothing], 
 					{1}];
-		If[type=!=Notebook, valid = DeleteCases[valid, _Notebook, {1}]];
+		If[MatchQ[type, Cell|Box], valid = DeleteCases[valid, _Notebook, {1}]];
 		valid = DeleteCases[valid, _?FailureQ | _Missing, {1}];
-		If[MatchQ[type, Cell|Notebook], valid = Replace[valid, type[x__] :> x, {1}]];
+		If[MatchQ[type, Cell|Notebook|All], valid = Replace[valid, type[x__] :> x, {1}]];
 		options = Union[First /@ valid];
 		assemble[#, valid]& /@ options		
-	]
+	]*)
+
+
+Clear[assemble]
+
+
+directiveQ[_Directive | _?ColorQ | _AbsoluteThickness | _Thickness | _AbsoluteDashing | _Dashing] := True
+directiveQ[_] := False
+
+
+(* TODO: need to resolve (Cell)FrameStyle directives that can clobber each other *)
 
 
 assembleLRBT[x_List] := 
@@ -3716,10 +3801,13 @@ moveDynamicToHead[{{l_, r_}, {b_, t_}}] :=
 assemble[opt:FrameMargins|ImageMargins|FrameStyle, rules_List] := opt -> assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
 assemble[opt:ImageSize, rules_List] := opt -> Replace[assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], {x_, x_} :> x, {1}] 
 assemble[opt:CellFrame, rules_List] := opt -> Replace[assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], Automatic -> True, {2}]
-assemble[opt:CellMargins|CellFrameMargins, rules_List] := opt -> moveDynamicToHead @ assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
+assemble[opt:CellMargins|CellFrameMargins|CellFrameStyle, rules_List] := opt -> moveDynamicToHead @ assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
 assemble[opt:CellFrameColor, rules_List] := opt -> Last @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
 assemble[opt_, rules_List] := Last @ Cases[rules, HoldPattern[opt -> _], {1}]
 assemble[opt:FontVariations, rules_List] := opt -> DeleteDuplicates[Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], First[#1] === First[#2]&]
+
+
+Which[ColorQ[v], 
 
 
 (* ::Section:: *)
