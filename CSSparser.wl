@@ -1716,7 +1716,7 @@ parse[prop:"clip", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*color*)
 
 
@@ -3640,6 +3640,33 @@ getPropertyPositions[property_String, a:{__Association}] :=
 (*Merge Properties*)
 
 
+Options[ProcessAs] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
+(*TODO: include specificity check*)
+ProcessAs[type:(Cell|Notebook|Box), CSSData_Dataset, selectorList_List, OptionsPattern[]] :=
+	Module[{valid, options, interpretationList},
+		interpretationList = 
+			If[TrueQ @ OptionValue["IgnoreImportance"],
+				Normal @ CSSData[Select[MatchQ[#Selector, Alternatives @@ selectorList]&] /* Flatten, "Block"][[All, "Interpretation"]]
+				,
+				Normal @ Join[
+					CSSData[Select[MatchQ[#Selector, Alternatives @@ selectorList]&] /* Flatten, "Block", Select[#Important === False&]],
+					CSSData[Select[MatchQ[#Selector, Alternatives @@ selectorList]&] /* Flatten, "Block", Select[#Important === True&]]][[All, "Interpretation"]]];
+		valid = 
+			Flatten @ 
+				Replace[interpretationList, 
+					Switch[type, 
+						Cell, p:{(_Cell|_Rule)..} :> Cases[p, _Cell, {1}], 
+						Box, p:{(_Cell|_Rule)..} :> Cases[p, _Rule, {1}], 
+						Notebook, p:{(_Cell|_Rule)..} :> Nothing], 
+					{1}];
+		If[type=!=Notebook, valid = DeleteCases[valid, _Notebook, {1}]];
+		valid = DeleteCases[valid, _?FailureQ | _Missing, {1}];
+		If[MatchQ[type, Cell|Notebook], valid = Replace[valid, type[x__] :> x, {1}]];
+		options = Union[First /@ valid];
+		assemble[#, valid]& /@ options		
+	]
+
+
 mergeStylesAs[type_, names_List] := 
 	processAs[
 		type, 
@@ -3654,10 +3681,7 @@ processAs[type:(Cell|Notebook|Box),interpretationList_] :=
 			Flatten @ 
 				Replace[interpretationList, 
 					Switch[type, 
-						Cell, 
-							{
-								p:{(Cell[CellFrameColor -> c_]|FontColor -> c_)..} :> {CellFrameColor -> c, FontColor -> c}, 
-								p:{(_Cell|_Rule)..} :> Cases[p, _Cell, {1}]}, 
+						Cell, p:{(_Cell|_Rule)..} :> Cases[p, _Cell, {1}], 
 						Box, p:{(_Cell|_Rule)..} :> Cases[p, _Rule, {1}], 
 						Notebook, p:{(_Cell|_Rule)..} :> Nothing], 
 					{1}];
