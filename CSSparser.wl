@@ -10,11 +10,11 @@
 (*Version: 1*)
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Package Header*)
 
 
-(*BeginPackage["CSSImport`", {"GeneralUtilities`"}];
+BeginPackage["CSSImport`", {"GeneralUtilities`", "Selectors3`"}];
 
 SetUsage[HeightMin, "\
 HeightMin[value$] indicates value$ is to be interpreted as a minimum height taken from a CSS property."];
@@ -27,16 +27,10 @@ WidthMax[value$] indicates value$ is to be interpreted as a maximum width taken 
 
 System`CellFrameStyle; (* needed in System` context *)
 
-
-(*ImportExport`RegisterImport["format",defaultFunction]\*)
-
-Begin["`Private`"];*)
+Begin["`Private`"];
 
 
-System`CellFrameStyle; (* needed in System` context *)
-
-
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Notes*)
 
 
@@ -567,7 +561,7 @@ label["term", x_String] :=
 	]
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Parse Properties*)
 
 
@@ -3414,7 +3408,7 @@ parse[prop_String, {}] := noValueFailure @ prop
 parse[prop_String, _] := unsupportedValueFailure @ prop
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Process *)
 
 
@@ -3616,6 +3610,8 @@ processDeclarationBlock[tokens:{{_String, _String}..}] :=
 		(* remove possible excess declarations *)
 		DeleteCases[declarations, 0, {1}]
 	]
+	
+processDeclarationBlock[{}] := {}
 
 
 (* ::Subsection::Closed:: *)
@@ -3646,11 +3642,16 @@ getPropertyPositions[property_String, a:{__Association}] :=
 	]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Merge Properties*)
 
 
-expectedKeys = {"Selector", "Condition", "Block"};
+expectedMainKeys = {"Selector", "Condition", "Block"};
+expectedBlockKeys = {"Important", "Property", "Value", "Interpretation"};
+validCSSDataQ[data:{__Association}] := 
+	And[
+		AllTrue[Keys /@ data, MatchQ[expectedMainKeys]],
+		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeys]]]
 
 (* these include all inheritable options that make sense to pass on in a Notebook environment *)
 notebookLevelOptions = 
@@ -3680,104 +3681,89 @@ optionsToAvoidAtBoxLevel =
 		ParagraphIndent};
 
 
-(*ProcessAs[All, data:{__Association} /; ContainsAll[Keys[data[[1]]], expectedKeys]]  := 
-	NotebookPut @ 
-		Notebook[
-			{*)
-
-
-Options[ProcessAs] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
-(* TODO: include specificity check*)
-ProcessAs[type:(Cell|Notebook|Box|All), CSSData_Dataset, selectorList:{__String}, OptionsPattern[]] :=
-	Module[{valid, options, interpretationList},
-		interpretationList = 
-			If[TrueQ @ OptionValue["IgnoreImportance"],
-				Normal @ CSSData[Select[MatchQ[#Selector, Alternatives @@ selectorList]&] /* Flatten, "Block"][[All, "Interpretation"]]
-				,
-				Normal @ Join[
-					CSSData[Select[MatchQ[#Selector, Alternatives @@ selectorList]&] /* Flatten, "Block", Select[#Important === False&]],
-					CSSData[Select[MatchQ[#Selector, Alternatives @@ selectorList]&] /* Flatten, "Block", Select[#Important === True&]]][[All, "Interpretation"]]];
-		mergeInterpretationList[type, interpretationList]
-	]
-
-
-(* TODO: need to redo mergeInterpretationLists now that there are no Notebook and Cell wrappers *)
-
-
-mergeInterpretationList[type:Cell, interpretationList_] := 
+mergeInterpretationList[type:(Cell|Notebook|Box|All), interpretationList_] := 
 	Module[{valid},
-		(* get Cell options from ambiguous cases *)
-		valid = Flatten @ Replace[interpretationList, p:{(_Cell|_Rule)..} :> Cases[p, _Cell, {1}]];
-		(* remove all Notebook options, failures, and missings *)
-		valid = DeleteCases[valid, _Notebook | _?FailureQ | _Missing, {1}];
-		(* remove outermost Cell wrappers *)
-		valid = Replace[valid, type[x__] :> x, {1}];
+		valid = DeleteCases[Flatten @ interpretationList, _?FailureQ | _Missing, {1}];
+		valid = Select[valid, 
+			Switch[type, 
+				Cell,     MemberQ[cellLevelOptions, #[[1]]]&, 
+				Notebook, MemberQ[notebookLevelOptions, #[[1]]]&,
+				Box,     !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&,
+				All,      True&]];
 		(* assemble options *)
 		assemble[#, valid]& /@ Union[First /@ valid]
 	]
 
 
-mergeInterpretationList[type:Notebook, interpretationList_] := 
-	Module[{valid},
-		(* remove all Cell or Box options; remove failures and missings *)
-		valid = Flatten @ Replace[interpretationList, {{(_Cell|_Rule)..} -> Nothing, Cell[___] -> Nothing}, {1}];
-		valid = DeleteCases[valid, _?FailureQ | _Missing, {1}];
-		(* remove outermost Notebook wrapper *)
-		valid = Replace[valid, type[x__] :> x, {1}];
-		(* assemble options *)
-		assemble[#, valid]& /@ Union[First /@ valid]
+thicknessQ[_Thickness | _AbsoluteThickness] := True
+thicknessQ[_] := False
+dashingQ[_Dashing | _AbsoluteDashing] := True
+dashingQ[_] := False
+dynamicColorQ[x_Dynamic] := If[Position[x, _?ColorQ | FontColor, Infinity] === {}, False, True]
+dynamicColorQ[_] := False
+dynamicThicknessQ[x_Dynamic] := If[Position[x, Thickness | AbsoluteThickness | FontSize, Infinity] === {}, False, True]
+dynamicThicknessQ[_] := False
+
+mergeDirectives[dNew_Directive, dOld_Directive] := 
+	Module[{c1, t1, d1, c2, t2, d2, dirNew, dirOld},
+		dirNew = If[MatchQ[dNew, Directive[_List]], Directive @@ dNew[[1]], dNew];
+		dirOld = If[MatchQ[dOld, Directive[_List]], Directive @@ dOld[[1]], dOld];
+		c1 = Last[Cases[dirOld, _?ColorQ | _?dynamicColorQ], {}];
+		t1 = Last[Cases[dirOld, _?thicknessQ | _?dynamicThicknessQ], {}];
+		d1 = Last[Cases[dirOld, _?dashingQ], {}];
+		c2 = Last[Cases[dirNew, _?ColorQ | _?dynamicColorQ], {}];
+		t2 = Last[Cases[dirNew, _?thicknessQ | _?dynamicThicknessQ], {}];
+		d2 = Last[Cases[dirNew, _?dashingQ], {}];
+		Directive[
+			Last[Flatten[{c1, c2}], Unevaluated[Sequence[]]],
+			Last[Flatten[{t1, t2}], Unevaluated[Sequence[]]],
+			Last[Flatten[{d1, d2}], Unevaluated[Sequence[]]]]
 	]
 
-
-mergeInterpretationList[type:Box, interpretationList_] := 
-	Module[{valid},
-		valid = Flatten @ Replace[interpretationList, p:{(_Cell|_Rule)..} :> Cases[p, _Rule, {1}], {1}];
-		(* remove all Notebook options, failures, and missings *)
-		valid = DeleteCases[valid, _Notebook | _?FailureQ | _Missing, {1}];
-		(* assemble options *)
-		assemble[#, valid]& /@ Union[First /@ valid]
+mergeDirectives[c2_?(ColorQ[#]||dynamicColorQ[#]&), dOld_Directive] := 
+	Module[{t1, d1,dirOld},
+		dirOld = If[MatchQ[dOld, Directive[_List]], Directive @@ dOld[[1]], dOld];
+		t1 = Last[Cases[dirOld, _?thicknessQ | _?dynamicThicknessQ], Unevaluated[Sequence[]]];
+		d1 = Last[Cases[dirOld, _?dashingQ], Unevaluated[Sequence[]]];
+		Directive[c2, t1, d1]
 	]
 
-
-mergeInterpretationList[type:All, interpretationList_] := 
-	Module[{valid, options},
-		valid = Flatten @ interpretationList;
-		valid = DeleteCases[valid, _?FailureQ | _Missing, {1}];
-		valid = Replace[valid, (Notebook | Cell)[x__] :> x, {1}];
-		(* assemble options *)
-		assemble[#, valid]& /@ Union[First /@ valid]
+mergeDirectives[t2_?(thicknessQ[#]||dynamicThicknessQ[#]&), dOld_Directive] := 
+	Module[{c1, d1, dirOld},
+		dirOld = If[MatchQ[dOld, Directive[_List]], Directive @@ dOld[[1]], dOld];
+		c1 = Last[Cases[dirOld, _?ColorQ | _?dynamicColorQ], Unevaluated[Sequence[]]];
+		d1 = Last[Cases[dirOld, _?dashingQ], Unevaluated[Sequence[]]];
+		Directive[c1, t2, d1]
+	]
+	
+mergeDirectives[d2_?dashingQ, dOld_Directive] := 
+	Module[{c1, t1, dirOld},
+		dirOld = If[MatchQ[dOld, Directive[_List]], Directive @@ dOld[[1]], dOld];
+		c1 = Last[Cases[dirOld, _?ColorQ | _?dynamicColorQ], Unevaluated[Sequence[]]];
+		t1 = Last[Cases[dirOld, _?thicknessQ | _?dynamicThicknessQ], Unevaluated[Sequence[]]];
+		Directive[c1, t1, d2]
 	]
 
-
-(*mergeInterpretationList[type:(Cell|Notebook|Box|All), interpretationList_] := 
-	Module[{valid, options},
-		valid = 
-			Flatten @ 
-				Replace[interpretationList, 
-					Switch[type, 
-						All, {},
-						Cell, p:{(_Cell|_Rule)..} :> Cases[p, _Cell, {1}], 
-						Box, p:{(_Cell|_Rule)..} :> Cases[p, _Rule, {1}], 
-						Notebook, p:{(_Cell|_Rule)..} :> Nothing], 
-					{1}];
-		If[MatchQ[type, Cell|Box], valid = DeleteCases[valid, _Notebook, {1}]];
-		valid = DeleteCases[valid, _?FailureQ | _Missing, {1}];
-		If[MatchQ[type, Cell|Notebook|All], valid = Replace[valid, type[x__] :> x, {1}]];
-		options = Union[First /@ valid];
-		assemble[#, valid]& /@ options		
-	]*)
+mergeDirectives[c_?(ColorQ[#]||dynamicColorQ[#]&), _?(ColorQ[#]||dynamicColorQ[#]&)] := c
+mergeDirectives[t_?(thicknessQ[#]||dynamicThicknessQ[#]&), _?(thicknessQ[#]||dynamicThicknessQ[#]&)] := t
+mergeDirectives[d_?dashingQ, _?dashingQ] := d
+mergeDirectives[newDir_, Automatic] := newDir
+mergeDirectives[newDir_, oldDir_] := Directive[oldDir, newDir]
 
 
-Clear[assemble]
-
-
-directiveQ[_Directive | _?ColorQ | _AbsoluteThickness | _Thickness | _AbsoluteDashing | _Dashing] := True
-directiveQ[_] := False
-
-
-(* TODO: need to resolve (Cell)FrameStyle directives that can clobber each other *)
-
-
+assembleLRBTDirectives[x_List] := 
+	Module[{r = {{Automatic, Automatic}, {Automatic, Automatic}}},
+		Map[
+			With[{v = First[#]}, 
+				Switch[Head[#], 
+					Bottom, r[[2, 1]] = mergeDirectives[v, r[[2, 1]]],
+					Top,    r[[2, 2]] = mergeDirectives[v, r[[2, 2]]],
+					Left,   r[[1, 1]] = mergeDirectives[v, r[[1, 1]]],
+					Right,  r[[1, 2]] = mergeDirectives[v, r[[1, 2]]]]
+			]&,
+			Flatten[x]];
+		r]
+		
 assembleLRBT[x_List] := 
 	Module[{r = {{Automatic, Automatic}, {Automatic, Automatic}}},
 		Map[
@@ -3787,7 +3773,7 @@ assembleLRBT[x_List] :=
 					Top |    HeightMax, r[[2, 2]] = v,
 					Left |   WidthMin,  r[[1, 1]] = v,
 					Right |  WidthMax,  r[[1, 2]] = v]
-				]&,
+			]&,
 			Flatten[x]];
 		r]
 		
@@ -3798,25 +3784,127 @@ moveDynamicToHead[{{l_, r_}, {b_, t_}}] :=
 		{{l, r}, {b, t}}
 	]
 
-assemble[opt:FrameMargins|ImageMargins|FrameStyle, rules_List] := opt -> assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
+Clear[assemble]
+assemble[opt:FrameStyle|CellFrameStyle, rules_List] := opt -> assembleLRBTDirectives @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
+assemble[opt:FrameMargins|ImageMargins, rules_List] := opt -> assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
 assemble[opt:ImageSize, rules_List] := opt -> Replace[assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], {x_, x_} :> x, {1}] 
 assemble[opt:CellFrame, rules_List] := opt -> Replace[assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], Automatic -> True, {2}]
-assemble[opt:CellMargins|CellFrameMargins|CellFrameStyle, rules_List] := opt -> moveDynamicToHead @ assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
+assemble[opt:CellMargins|CellFrameMargins, rules_List] := opt -> moveDynamicToHead @ assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
 assemble[opt:CellFrameColor, rules_List] := opt -> Last @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
 assemble[opt_, rules_List] := Last @ Cases[rules, HoldPattern[opt -> _], {1}]
 assemble[opt:FontVariations, rules_List] := opt -> DeleteDuplicates[Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], First[#1] === First[#2]&]
-
-
-Which[ColorQ[v], 
 
 
 (* ::Section:: *)
 (*Main Functions*)
 
 
-(* ::Section:: *)
+(* ::Subsection:: *)
+(*Import*)
+
+
+(* slightly faster than using ImportString *)
+importText[path_String, encoding_:"UTF8ISOLatin1"] := 
+	Module[{str, strm, bytes},
+		strm = OpenRead[path];
+		str = Read[strm, Record, RecordSeparators -> {}];
+		If[str === $Failed, Quiet @ Close[strm]; Return @ $Failed];
+		If[str === EndOfFile, Quiet @ Close[strm]; Return @ {{}}];
+		Close[strm];
+		bytes = ToCharacterCode @ str;
+		Quiet @ 
+			If[encoding === "UTF8ISOLatin1", 
+				Check[FromCharacterCode[bytes, "UTF8"], FromCharacterCode[bytes, "ISOLatin1"]]
+				, 
+				FromCharacterCode[bytes, encoding]
+			]
+	]
+			
+ExternalCSS[filepath_String] := processDeclarations @ processRulesets @ importText[filepath]
+InternalCSS[data_String] := processDeclarations @ processRulesets @ data
+
+InterpretExternalCSS[filepath_String] := 
+	Module[{raw, uniqueStyles},
+		raw = ExternalCSS[filepath];
+		If[!validCSSDataQ[raw], Return @ Failure["BadCSSFile", <||>]];
+		
+		uniqueStyles = Union @ Flatten @ raw[[All, "Block", All, "Property"]];
+		
+		Dataset @ Fold[process[#2, #1]&, raw, uniqueStyles]
+	]
+
+ProcessToExternalStyleSheet[filepath_String] :=
+	Module[{raw, uniqueSelectors, allProcessed, uniqueStyles},
+		raw = ExternalCSS[filepath];
+		If[!validCSSDataQ[raw], Return @ Failure["BadCSSFile", <||>]];
+		
+		uniqueSelectors = Reverse @ DeleteDuplicates[Reverse @ raw[[All, "Selector"]]];
+		uniqueStyles = Union @ Flatten @ raw[[All, "Block", All, "Property"]];
+		
+		allProcessed = Fold[process[#2, #1]&, raw, uniqueStyles];
+		allProcessed = ProcessAs[All, allProcessed, {#}]& /@ uniqueSelectors;
+		(*TODO: convert options like FrameMargins to actual styles ala FrameBoxOptions \[Rule] {FrameMargins \[Rule] _}*)
+		NotebookPut @ 
+			Notebook[
+				MapThread[Cell[StyleData[#1], Sequence @@ #2]&, {uniqueSelectors, allProcessed}], 
+				StyleDefinitions -> "PrivateStylesheetFormatting.nb"]
+	]
+
+ImportExport`RegisterImport[
+	"CSS",
+	{
+		"Data" :> CSSImport`Private`ExternalCSS,
+		"Interpreted" :> CSSImport`Private`InterpretExternalCSS,
+		CSSImport`Private`ProcessToExternalStyleSheet}]
+
+
+(* ::Subsection:: *)
+(*ProcessAs*)
+
+
+ClearAll[ProcessAs]
+
+
+Options[ProcessAs] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
+
+ProcessAs[type:(Cell|Notebook|Box|All), CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] :=
+	ProcessAs[type, Normal @ CSSData, selectorList, opts]
+
+ProcessAs[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; validCSSDataQ[CSSData], selectorList:{__String}, opts:OptionsPattern[]] :=
+	Module[{interpretationList, ordering, specificities},
+		(* start by filtering the data by the given list of selectors; ordering is maintained *)
+		interpretationList = Select[CSSData, MatchQ[#Selector, Alternatives @@ selectorList]&];
+		
+		If[TrueQ @ OptionValue["IgnoreSpecificity"],
+			(* if ignoring specificity, then leave the user-supplied selector list alone *)
+			interpretationList = Flatten @ interpretationList[[All, "Block"]]
+			,
+			(* otherwise sort based on specificity but maintain order of duplicates; this is what should happen based on the CSS specification *)
+			specificities = Selector["", #][["Specificity"]]& /@ interpretationList[[All, "Selector"]];
+			interpretationList = Flatten @ interpretationList[[Ordering[specificities]]][[All, "Block"]];
+		];
+		
+		(* Following CSS cascade spec:
+			Move !important CSS properties to the end since they should override all other properties, but maintain their ordering.
+		*)
+		interpretationList = 
+			Flatten @ 
+				If[TrueQ @ OptionValue["IgnoreImportance"],
+					interpretationList[[All, "Interpretation"]]
+					,
+					Join[Select[interpretationList, #Important == False&], Select[interpretationList, #Important == True&]][[All, "Interpretation"]]
+				];
+				
+		(* now that the styles are all sorted, merge them *)
+		mergeInterpretationList[type, interpretationList]
+	]
+
+ProcessAs[___] := Failure["BadCSSData", <||>]
+
+
+(* ::Section::Closed:: *)
 (*Package Footer*)
 
 
-(*End[];
-EndPackage[];*)
+End[];
+EndPackage[];

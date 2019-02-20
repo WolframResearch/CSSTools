@@ -2,9 +2,10 @@
 <html>
 <head>
 	<title>Example</title>
-	<!-- <style type="text/css">
-		body { background-image: url("marble.png?width=300&height=300") }     
-	</style> -->
+	<style type="text/css"> /* internal CSS */
+		li {color: green;}     
+	</style>
+	<!-- external CSS -->
 	<link rel="stylesheet" href="test.css"></link>
 </head>
 <body>
@@ -16,13 +17,16 @@
 	<p>Notebooks consist of a vertical arrangement of cells, wherein each cell can contain boxes or other inline cells. The Wolfram Desktop has its own implementation of cascading styles. They are similar to CSS, but details like inheritance and style-targeting differ. Moreover the style property names have slightly different meanings in a few cases.</p>
 	<h3>Why import CSS into WD?</h3>
 	<p>If you see a style in use on a website, wouldn't it be nice to implement that style within WD? Other reasons that come to mind:</p>
+	<style type="text/css"> /* oddly placed internal CSS */
+		li {
+  			list-style: square;
+  			color: white;
+  		}     
+	</style>
 	<ul>
 		<li>WD and HTML both arrange "boxes" on the screen so the language is similar.</li>
 		<li>Even though style names differ, there is greater than 50% overlap in style types.</li>
 		<li>A lot of effort goes into making effective style choices; an importer can speed up style transfer.</li>
 	</ul>
 </body>
-<!-- <style type="text/css">
-	body { background-image: url("marble.png?width=300&height=300") }     
-</style> -->
 </html>

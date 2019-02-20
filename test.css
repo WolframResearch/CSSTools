@@ -15,8 +15,8 @@ h3 {
   height: 50px;
   background-color: rgba(0,0,1,0.2);
   width: auto;
-  overFlow: hidden;
-  padding-top: 2;
+  overFlow: hidden; /* property name is OK but better to be all lowercase */
+  padding-top: 2;   /* this will be ignored because it's missing units */
   padding-bottom: initial !important;
   padding-right: 1em;
   padding-left: 2px;
@@ -37,13 +37,6 @@ h2 {
   color: #aaaaaa;
 }
 
-li {
-  list-style: square;
-  color: white;
-}
-
 a {
-  width: 20px
+  width: 20px /* This is a comment2 */
 }
-
-/* This is a comment2 */
