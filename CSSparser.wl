@@ -10,7 +10,7 @@
 (*Version: 1*)
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Package Header*)
 
 
@@ -24,6 +24,10 @@ SetUsage[WidthMin, "\
 WidthMin[value$] indicates value$ is to be interpreted as a minimum width taken from a CSS property."];
 SetUsage[WidthMax, "\
 WidthMax[value$] indicates value$ is to be interpreted as a maximum width taken from a CSS property."];
+
+SetUsage[ProcessCSSStylesAs, "\
+ProcessCSSStylesAs[type$, CSSData$, {selectors$, $$}] converts the interpreted CSS styles into Wolfram Language options. \
+CSS styles are merged following the CSS cascade and the resulting options are filtered by type$."];
 
 System`CellFrameStyle; (* needed in System` context *)
 
@@ -610,7 +614,7 @@ unsupportedValueFailure[prop_String] :=    Failure["UnsupportedProp", <|"Propert
 	Some of these are shorthand properties that set one or more other properties. 
 	As such, the shorthand initial values would never be directly required.
 *)
-propertyData = <|
+CSSPropertyData = <|
 	"background" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "N/A",  (* shorthand property *)
@@ -993,7 +997,7 @@ propertyData = <|
 		"WDInitialValue" -> Missing["Not supported."]|>
 	|>;
 	
-initialValues[prop_String] := propertyData[prop, "WDInitialValue"]
+initialValues[prop_String] := CSSPropertyData[prop, "WDInitialValue"]
 
 
 (* ::Subsection::Closed:: *)
@@ -3408,7 +3412,7 @@ parse[prop_String, {}] := noValueFailure @ prop
 parse[prop_String, _] := unsupportedValueFailure @ prop
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Process *)
 
 
@@ -3646,7 +3650,7 @@ getPropertyPositions[property_String, a:{__Association}] :=
 (*Merge Properties*)
 
 
-expectedMainKeys = {"Selector", "Condition", "Block"};
+expectedMainKeys = {"Selector", "Condition", "Block"} | {"Selector", "Specificity", "Targets", "Condition", "Block"};
 expectedBlockKeys = {"Important", "Property", "Value", "Interpretation"};
 validCSSDataQ[data:{__Association}] := 
 	And[
@@ -3800,77 +3804,15 @@ assemble[opt:FontVariations, rules_List] := opt -> DeleteDuplicates[Flatten @ Ca
 
 
 (* ::Subsection:: *)
-(*Import*)
-
-
-(* slightly faster than using ImportString *)
-importText[path_String, encoding_:"UTF8ISOLatin1"] := 
-	Module[{str, strm, bytes},
-		strm = OpenRead[path];
-		str = Read[strm, Record, RecordSeparators -> {}];
-		If[str === $Failed, Quiet @ Close[strm]; Return @ $Failed];
-		If[str === EndOfFile, Quiet @ Close[strm]; Return @ {{}}];
-		Close[strm];
-		bytes = ToCharacterCode @ str;
-		Quiet @ 
-			If[encoding === "UTF8ISOLatin1", 
-				Check[FromCharacterCode[bytes, "UTF8"], FromCharacterCode[bytes, "ISOLatin1"]]
-				, 
-				FromCharacterCode[bytes, encoding]
-			]
-	]
-			
-ExternalCSS[filepath_String] := processDeclarations @ processRulesets @ importText[filepath]
-InternalCSS[data_String] := processDeclarations @ processRulesets @ data
-
-InterpretExternalCSS[filepath_String] := 
-	Module[{raw, uniqueStyles},
-		raw = ExternalCSS[filepath];
-		If[!validCSSDataQ[raw], Return @ Failure["BadCSSFile", <||>]];
-		
-		uniqueStyles = Union @ Flatten @ raw[[All, "Block", All, "Property"]];
-		
-		Dataset @ Fold[process[#2, #1]&, raw, uniqueStyles]
-	]
-
-ProcessToExternalStyleSheet[filepath_String] :=
-	Module[{raw, uniqueSelectors, allProcessed, uniqueStyles},
-		raw = ExternalCSS[filepath];
-		If[!validCSSDataQ[raw], Return @ Failure["BadCSSFile", <||>]];
-		
-		uniqueSelectors = Reverse @ DeleteDuplicates[Reverse @ raw[[All, "Selector"]]];
-		uniqueStyles = Union @ Flatten @ raw[[All, "Block", All, "Property"]];
-		
-		allProcessed = Fold[process[#2, #1]&, raw, uniqueStyles];
-		allProcessed = ProcessAs[All, allProcessed, {#}]& /@ uniqueSelectors;
-		(*TODO: convert options like FrameMargins to actual styles ala FrameBoxOptions \[Rule] {FrameMargins \[Rule] _}*)
-		NotebookPut @ 
-			Notebook[
-				MapThread[Cell[StyleData[#1], Sequence @@ #2]&, {uniqueSelectors, allProcessed}], 
-				StyleDefinitions -> "PrivateStylesheetFormatting.nb"]
-	]
-
-ImportExport`RegisterImport[
-	"CSS",
-	{
-		"Data" :> CSSImport`Private`ExternalCSS,
-		"Interpreted" :> CSSImport`Private`InterpretExternalCSS,
-		CSSImport`Private`ProcessToExternalStyleSheet}]
-
-
-(* ::Subsection:: *)
 (*ProcessAs*)
 
 
-ClearAll[ProcessAs]
+Options[ProcessCSSStylesAs] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
 
+ProcessCSSStylesAs[type:(Cell|Notebook|Box|All), CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] :=
+	ProcessCSSStylesAs[type, Normal @ CSSData, selectorList, opts]
 
-Options[ProcessAs] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
-
-ProcessAs[type:(Cell|Notebook|Box|All), CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] :=
-	ProcessAs[type, Normal @ CSSData, selectorList, opts]
-
-ProcessAs[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; validCSSDataQ[CSSData], selectorList:{__String}, opts:OptionsPattern[]] :=
+ProcessCSSStylesAs[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; validCSSDataQ[CSSData], selectorList:{__String}, opts:OptionsPattern[]] :=
 	Module[{interpretationList, ordering, specificities},
 		(* start by filtering the data by the given list of selectors; ordering is maintained *)
 		interpretationList = Select[CSSData, MatchQ[#Selector, Alternatives @@ selectorList]&];
@@ -3899,7 +3841,82 @@ ProcessAs[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; validCSSDataQ
 		mergeInterpretationList[type, interpretationList]
 	]
 
-ProcessAs[___] := Failure["BadCSSData", <||>]
+ProcessCSSStylesAs[___] := Failure["BadCSSData", <||>]
+
+
+(* ::Subsection:: *)
+(*Import*)
+
+
+(* slightly faster than using ImportString *)
+importText[path_String, encoding_:"UTF8ISOLatin1"] := 
+	Module[{str, strm, bytes},
+		strm = OpenRead[path];
+		str = Read[strm, Record, RecordSeparators -> {}];
+		If[str === $Failed, Quiet @ Close[strm]; Return @ $Failed];
+		If[str === EndOfFile, Quiet @ Close[strm]; Return @ {{}}];
+		Close[strm];
+		bytes = ToCharacterCode @ str;
+		Quiet @ 
+			If[encoding === "UTF8ISOLatin1", 
+				Check[FromCharacterCode[bytes, "UTF8"], FromCharacterCode[bytes, "ISOLatin1"]]
+				, 
+				FromCharacterCode[bytes, encoding]
+			]
+	]
+	
+ExternalCSS[filepath_String] := processDeclarations @ processRulesets @ importText[filepath]
+InternalCSS[data_String] := processDeclarations @ processRulesets @ data
+
+RawCSS[filepath_String, opts___] := 
+	Module[{raw, mainItems, blocksSansValues, untokenizedValues, editedBlocks},
+		raw = ExternalCSS[filepath];
+		If[!validCSSDataQ[raw], Return @ Failure["BadCSSFile", <||>]];
+		mainItems = raw[[All, {"Selector", "Condition"}]];
+		blocksSansValues = raw[[All, "Block", All, {"Important", "Property"}]];
+		untokenizedValues = Map["Value" -> StringJoin[#]&, raw[[All, "Block", All, "Value", All, 2]], {2}];
+		editedBlocks = "Block" -> #& /@ (MapThread[<|#1, #2|>&, #]& /@ Transpose[{blocksSansValues, untokenizedValues}]);
+		"RawData" -> Dataset @ MapThread[<|#1, #2|>&, {mainItems, editedBlocks}]
+	]
+
+InterpretedCSS[filepath_String, opts___] := 
+	Module[{raw, uniqueStyles},
+		raw = ExternalCSS[filepath];
+		If[!validCSSDataQ[raw], Return @ Failure["BadCSSFile", <||>]];
+		
+		uniqueStyles = Union @ Flatten @ raw[[All, "Block", All, "Property"]];
+		
+		Dataset @ Fold[process[#2, #1]&, raw, uniqueStyles]
+	]
+
+ProcessToStyleSheet[filepath_String, opts___] :=
+	Module[{raw, uniqueSelectors, allProcessed, uniqueStyles},
+		raw = ExternalCSS[filepath];
+		If[!validCSSDataQ[raw], Return @ Failure["BadCSSFile", <||>]];
+		
+		(* get all selectors preserving order, but favor the last entry of any duplicates *)
+		uniqueSelectors = Reverse @ DeleteDuplicates[Reverse @ raw[[All, "Selector"]]];
+		uniqueStyles = Union @ Flatten @ raw[[All, "Block", All, "Property"]];
+		
+		allProcessed = Fold[process[#2, #1]&, raw, uniqueStyles];
+		allProcessed = ProcessAs[All, allProcessed, {#}]& /@ uniqueSelectors;
+		(*TODO: convert options like FrameMargins to actual styles ala FrameBoxOptions \[Rule] {FrameMargins \[Rule] _}*)
+		"StyleSheet" -> 
+			NotebookPut @ 
+				Notebook[
+					MapThread[Cell[StyleData[#1], Sequence @@ #2]&, {uniqueSelectors, allProcessed}], 
+					StyleDefinitions -> "PrivateStylesheetFormatting.nb"]
+	]
+
+ImportExport`RegisterImport[
+	"CSS",
+	{
+		"Elements" :> {"RawData", "Interpreted", "StyleSheet"}&,
+		"RawData" :> CSSImport`Private`RawCSS,
+		"StyleSheet" :> CSSImport`Private`ProcessToStyleSheet,
+		CSSImport`Private`InterpretedCSS},
+	{},
+	"AvailableElements" -> {"Elements", "RawData", "Interpreted", "StyleSheet"}]
 
 
 (* ::Section::Closed:: *)
