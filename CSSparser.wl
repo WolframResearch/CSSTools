@@ -3876,7 +3876,7 @@ RawCSS[filepath_String, opts___] :=
 		blocksSansValues = raw[[All, "Block", All, {"Important", "Property"}]];
 		untokenizedValues = Map["Value" -> StringJoin[#]&, raw[[All, "Block", All, "Value", All, 2]], {2}];
 		editedBlocks = "Block" -> #& /@ (MapThread[<|#1, #2|>&, #]& /@ Transpose[{blocksSansValues, untokenizedValues}]);
-		"RawData" -> Dataset @ MapThread[<|#1, #2|>&, {mainItems, editedBlocks}]
+		MapThread[<|#1, #2|>&, {mainItems, editedBlocks}]
 	]
 
 InterpretedCSS[filepath_String, opts___] := 
@@ -3886,7 +3886,7 @@ InterpretedCSS[filepath_String, opts___] :=
 		
 		uniqueStyles = Union @ Flatten @ raw[[All, "Block", All, "Property"]];
 		
-		Dataset @ Fold[process[#2, #1]&, raw, uniqueStyles]
+		Fold[process[#2, #1]&, raw, uniqueStyles]
 	]
 
 ProcessToStyleSheet[filepath_String, opts___] :=
@@ -3911,10 +3911,11 @@ ProcessToStyleSheet[filepath_String, opts___] :=
 ImportExport`RegisterImport[
 	"CSS",
 	{
-		"Elements" :> {"RawData", "Interpreted", "StyleSheet"}&,
-		"RawData" :> CSSImport`Private`RawCSS,
+		"Elements" :> (("Elements" -> {"RawData", "Interpreted", "StyleSheet"})&),
+		"Interpreted" :> (("Interpreted" -> Dataset @ CSSImport`Private`InterpretedCSS[#])&), (* same as default *)
+		"RawData" :> (("RawData" -> Dataset @ CSSImport`Private`RawCSS[#])&),
 		"StyleSheet" :> CSSImport`Private`ProcessToStyleSheet,
-		CSSImport`Private`InterpretedCSS},
+		((Dataset @ CSSImport`Private`InterpretedCSS[#])&)},
 	{},
 	"AvailableElements" -> {"Elements", "RawData", "Interpreted", "StyleSheet"}]
 
