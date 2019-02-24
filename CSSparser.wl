@@ -565,7 +565,7 @@ label["term", x_String] :=
 	]
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Parse Properties*)
 
 
@@ -3650,12 +3650,20 @@ getPropertyPositions[property_String, a:{__Association}] :=
 (*Merge Properties*)
 
 
-expectedMainKeys = {"Selector", "Condition", "Block"} | {"Selector", "Specificity", "Targets", "Condition", "Block"};
+expectedMainKeys = {"Selector", "Condition", "Block"};
+expectedMainKeysFull = {"Selector", "Specificity", "Targets", "Condition", "Block"};
 expectedBlockKeys = {"Important", "Property", "Value", "Interpretation"};
-validCSSDataQ[data:{__Association}] := 
+
+validCSSDataBareQ[data:{__Association}] := 
 	And[
 		AllTrue[Keys /@ data, MatchQ[expectedMainKeys]],
 		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeys]]]
+validCSSDataFullQ[data:{__Association}] := 
+	And[
+		AllTrue[Keys /@ data, MatchQ[expectedMainKeysFull]],
+		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeysFull]]]
+validCSSDataQ[data:{__Association}] := validCSSDataBareQ[data] || validCSSDataFullQ[data]
+validCSSDataQ[___] := False
 
 (* these include all inheritable options that make sense to pass on in a Notebook environment *)
 notebookLevelOptions = 
@@ -3803,7 +3811,7 @@ assemble[opt:FontVariations, rules_List] := opt -> DeleteDuplicates[Flatten @ Ca
 (*Main Functions*)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*ProcessAs*)
 
 
@@ -3845,6 +3853,104 @@ ProcessCSSStylesAs[___] := Failure["BadCSSData", <||>]
 
 
 (* ::Subsection:: *)
+(*Read styles from XMLObject*)
+
+
+linkElementPattern :=
+	XMLElement[
+		x_String | {_, x_String} /; StringMatchQ[x, "link", IgnoreCase -> True], 
+		Alternatives[
+			{
+				___, 
+				(attr1_String | {_, attr1_String} /; StringMatchQ[attr1, "rel", IgnoreCase -> True]) -> 
+					(attrVal_String /; StringMatchQ[attrVal, "stylesheet", IgnoreCase -> True]), 
+				___, 
+				(attr2_String | {_, attr2_String} /; StringMatchQ[attr2, "href", IgnoreCase -> True]) -> loc_, 
+				___},
+			{
+				___, 
+				(attr2_String | {_, attr2_String} /; StringMatchQ[attr2, "href", IgnoreCase -> True]) -> loc_, 
+				___, 
+				(attr1_String | {_, attr1_String} /; StringMatchQ[attr1, "rel", IgnoreCase -> True]) -> 
+					(attrVal_String /; StringMatchQ[attrVal, "stylesheet", IgnoreCase -> True]), 
+				___}],
+		___
+	] :> loc
+
+styleElementPattern :=
+	XMLElement[
+		x_String | {_, x_String} /; StringMatchQ[x, "style", IgnoreCase -> True], 
+		{
+			___, 
+			(attr_String | {_, attr_String} /; StringMatchQ[attr, "type", IgnoreCase -> True]) -> 
+				(attrVal_String /; StringMatchQ[attrVal, "text/css", IgnoreCase -> True]), 
+			___}, 
+		{css_String}
+	] :> css
+		
+styleAttributePattern :=
+	XMLElement[
+		_, 
+		{
+			___, 
+			(attr_String | {_, attr_String} /; StringMatchQ[attr, "style", IgnoreCase -> True]) -> css_, 
+			___}, 
+		___
+	] :> css
+
+
+addSpecifictyAndTarget[doc_, data_] :=
+	With[{t = Selector[doc, #Selector]}, 
+		<|"Selector" -> #Selector, "Specificity" -> Prepend[t[["Specificity"]], 0], "Targets" -> t[["Elements"]], "Condition" -> #Condition, "Block" -> #Block|>
+	]& /@ data
+
+
+ImportCSSFromXMLObject[doc_, rootDirectory_] :=
+	Module[
+		{
+			currentDir, externalSSPositions, externalSSContent, internalSSPositions, internalSSContent, 
+			directStylePositions, directStyleContent, all, uniqueStyles},
+			
+		currentDir = Directory[];
+		If[DirectoryQ[rootDirectory], SetDirectory[rootDirectory]];
+		
+		(* process externally linked style sheets via <link> elements *)
+		externalSSPositions = Position[doc, First @ linkElementPattern];
+		externalSSContent = ExternalCSS /@ Cases[doc, linkElementPattern, Infinity];
+		externalSSContent = addSpecifictyAndTarget[doc, #]& /@ externalSSContent;
+		SetDirectory[currentDir];
+		
+		(* process internal style sheets given by <style> elements *)
+		internalSSPositions = Position[doc, First @ styleElementPattern];
+		internalSSContent = InternalCSS /@ Cases[doc, styleElementPattern, Infinity];
+		internalSSContent = addSpecifictyAndTarget[doc, #]& /@ internalSSContent;
+		
+		(* process internal styles given by 'style' attributes *)
+		directStylePositions = Position[doc, First @ styleAttributePattern];
+		directStyleContent = Cases[doc, styleAttributePattern, Infinity];
+		directStyleContent = 
+			MapThread[
+				<|
+					"Selector" -> None, 
+					"Specificity" -> {1, 0, 0, 0}, 
+					"Targets" -> {#1}, 
+					"Condition" -> None, 
+					"Block" -> processDeclarationBlock @ parseDeclaration @ #2|>&, 
+				{directStylePositions, directStyleContent}];
+		
+		(* combine all CSS sources based on position in XMLObject *)
+		all =
+			Flatten @ 
+				Part[
+					Join[externalSSContent, internalSSContent, directStyleContent],
+					Ordering @ Join[externalSSPositions, internalSSPositions, directStylePositions]];
+		uniqueStyles = Union @ Flatten @ all[[All, "Block", All, "Property"]];
+		all = Fold[process[#2, #1]&, all, uniqueStyles];
+		Dataset @ all		
+	]
+
+
+(* ::Subsection::Closed:: *)
 (*Import*)
 
 
@@ -3852,6 +3958,7 @@ ProcessCSSStylesAs[___] := Failure["BadCSSData", <||>]
 importText[path_String, encoding_:"UTF8ISOLatin1"] := 
 	Module[{str, strm, bytes},
 		strm = OpenRead[path];
+		If[FailureQ[strm], Return[$Failed]];
 		str = Read[strm, Record, RecordSeparators -> {}];
 		If[str === $Failed, Quiet @ Close[strm]; Return @ $Failed];
 		If[str === EndOfFile, Quiet @ Close[strm]; Return @ {{}}];
@@ -3865,13 +3972,13 @@ importText[path_String, encoding_:"UTF8ISOLatin1"] :=
 			]
 	]
 	
-ExternalCSS[filepath_String] := processDeclarations @ processRulesets @ importText[filepath]
+ExternalCSS[filepath_String] := With[{i = importText[filepath]}, If[FailureQ[i], $Failed, processDeclarations @ processRulesets @ i]]
 InternalCSS[data_String] := processDeclarations @ processRulesets @ data
 
 RawCSS[filepath_String, opts___] := 
 	Module[{raw, mainItems, blocksSansValues, untokenizedValues, editedBlocks},
 		raw = ExternalCSS[filepath];
-		If[!validCSSDataQ[raw], Return @ Failure["BadCSSFile", <||>]];
+		If[!validCSSDataBareQ[raw], Return @ Failure["BadCSSFile", <||>]];
 		mainItems = raw[[All, {"Selector", "Condition"}]];
 		blocksSansValues = raw[[All, "Block", All, {"Important", "Property"}]];
 		untokenizedValues = Map["Value" -> StringJoin[#]&, raw[[All, "Block", All, "Value", All, 2]], {2}];
@@ -3882,7 +3989,7 @@ RawCSS[filepath_String, opts___] :=
 InterpretedCSS[filepath_String, opts___] := 
 	Module[{raw, uniqueStyles},
 		raw = ExternalCSS[filepath];
-		If[!validCSSDataQ[raw], Return @ Failure["BadCSSFile", <||>]];
+		If[!validCSSDataBareQ[raw], Return @ Failure["BadCSSFile", <||>]];
 		
 		uniqueStyles = Union @ Flatten @ raw[[All, "Block", All, "Property"]];
 		
@@ -3892,7 +3999,7 @@ InterpretedCSS[filepath_String, opts___] :=
 ProcessToStyleSheet[filepath_String, opts___] :=
 	Module[{raw, uniqueSelectors, allProcessed, uniqueStyles},
 		raw = ExternalCSS[filepath];
-		If[!validCSSDataQ[raw], Return @ Failure["BadCSSFile", <||>]];
+		If[!validCSSDataBareQ[raw], Return @ Failure["BadCSSFile", <||>]];
 		
 		(* get all selectors preserving order, but favor the last entry of any duplicates *)
 		uniqueSelectors = Reverse @ DeleteDuplicates[Reverse @ raw[[All, "Selector"]]];
