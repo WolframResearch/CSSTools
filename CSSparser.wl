@@ -565,7 +565,7 @@ label["term", x_String] :=
 	]
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Parse Properties*)
 
 
@@ -3412,7 +3412,7 @@ parse[prop_String, {}] := noValueFailure @ prop
 parse[prop_String, _] := unsupportedValueFailure @ prop
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Process *)
 
 
@@ -3661,7 +3661,7 @@ validCSSDataBareQ[data:{__Association}] :=
 validCSSDataFullQ[data:{__Association}] := 
 	And[
 		AllTrue[Keys /@ data, MatchQ[expectedMainKeysFull]],
-		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeysFull]]]
+		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeys]]]
 validCSSDataQ[data:{__Association}] := validCSSDataBareQ[data] || validCSSDataFullQ[data]
 validCSSDataQ[___] := False
 
@@ -3679,6 +3679,7 @@ cellLevelOptions =
 		CellBaseline, CellDingbat, CellMargins, 
 		CellFrame, CellFrameColor, CellFrameLabelMargins, CellFrameLabels, CellFrameMargins, CellFrameStyle, 
 		CellLabel, CellLabelMargins, CellLabelPositioning, CellLabelStyle, 
+		CounterIncrements, CounterAssignments,
 		FontColor, FontFamily, FontSize, FontSlant, FontTracking, FontVariations, FontWeight, 
 		LineIndent, LineSpacing, ParagraphIndent, ShowContents, TextAlignment,
 		PageBreakBelow, PageBreakAbove, PageBreakWithin, GroupPageBreakWithin};
@@ -3852,7 +3853,7 @@ ProcessCSSStylesAs[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; vali
 ProcessCSSStylesAs[___] := Failure["BadCSSData", <||>]
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Read styles from XMLObject*)
 
 
@@ -3912,7 +3913,7 @@ ImportCSSFromXMLObject[doc_, rootDirectory_] :=
 			directStylePositions, directStyleContent, all, uniqueStyles},
 			
 		currentDir = Directory[];
-		If[DirectoryQ[rootDirectory], SetDirectory[rootDirectory]];
+		SetDirectory[rootDirectory]; (* let this return an error message if rootDirectory can't be set *)
 		
 		(* process externally linked style sheets via <link> elements *)
 		externalSSPositions = Position[doc, First @ linkElementPattern];
@@ -3948,6 +3949,45 @@ ImportCSSFromXMLObject[doc_, rootDirectory_] :=
 		all = Fold[process[#2, #1]&, all, uniqueStyles];
 		Dataset @ all		
 	]
+
+
+parents[x:{__Integer}] := Most @ Reverse @ NestWhileList[Drop[#, -2]&, x, Length[#] > 2&]
+
+inheritedProperties = Pick[Keys@ #, Values @ #]& @ CSSPropertyData[[All, "Inherited"]];
+
+resolveInheritance[position:{___?IntegerQ}, CSSData_Dataset] := resolveInheritance[position, Normal @ CSSData]
+
+resolveInheritance[position:{___?IntegerQ}, CSSData_?validCSSDataFullQ] :=
+	Module[{lineage, data = CSSData, a, temp, temp2},
+		(* order data by specificity *)
+		data = data[[Ordering[data[[All, "Specificity"]]]]];
+		
+		(* *)
+		lineage = Append[parents[position], position];
+		a = <|Map[# -> <|"All" -> None, "Inherited" -> None|>&, lineage]|>;
+		Do[
+			(* get all CSS data entries that target the input position *)
+			temp = Pick[data, MemberQ[#, i]& /@ data[[All, "Targets"]]];
+			temp = Flatten @ temp[[All, "Block", All, {"Important", "Property", "Interpretation"}]];
+			
+			(* prepend all inherited properties from ancestors, removing possible duplicated inheritance *)
+			temp2 = Join @@ Values @ a[[Key /@ parents[i], "Inherited"]];
+			a[[Key[i], "All"]] = With[{values = Join[temp2, temp]}, Reverse @ DeleteDuplicates @ Reverse @ values];
+			
+			(* pass on any inheritable properties, but reset their importance so they don't overwrite later important props *)
+			a[[Key[i], "Inherited"]] = Select[a[[Key[i], "All"]], MemberQ[inheritedProperties, #Property]&];
+			With[{values = a[[Key[i], "Inherited", All, "Important"]]}, 
+				a[[Key[i], "Inherited", All, "Important"]] = ConstantArray[False, Length[values]]
+			];,
+			{i, lineage}];
+			
+		(* return computed properties, putting important properties last *)
+		Join[
+			Select[a[[Key @ position, "All"]], #Important == False&][[All, "Interpretation"]], 
+			Select[a[[Key @ position, "All"]], #Important == True& ][[All, "Interpretation"]]]
+	]
+	
+resolveInheritance[position:{___?IntegerQ}, _] := Failure["BadData", <|"Message" -> "Invalid CSS data."|>]
 
 
 (* ::Subsection::Closed:: *)
