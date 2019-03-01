@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[      4854,        129]
-NotebookOptionsPosition[      3660,        106]
-NotebookOutlinePosition[      4003,        121]
-CellTagsIndexPosition[      3960,        118]
+NotebookDataLength[      4970,        138]
+NotebookOptionsPosition[      3767,        115]
+NotebookOutlinePosition[      4110,        130]
+CellTagsIndexPosition[      4067,        127]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -28,9 +28,12 @@ Cell["Created by Kevin Daily.", "h2",
   3.759526213391903*^9}},ExpressionUUID->"f2db8889-8f1f-4370-9679-\
 e7bbc3531169"],
 
-Cell["What is CSS?", "question",
- CellChangeTimes->{{3.7595262223317623`*^9, 
-  3.7595262242031655`*^9}},ExpressionUUID->"be4a1da8-d0d1-492d-9c98-\
+Cell["\<\
+What is CSS?
+\
+\>", "question",
+ CellChangeTimes->{{3.7595262223317623`*^9, 3.7595262242031655`*^9}, 
+   3.760399106810958*^9},ExpressionUUID->"be4a1da8-d0d1-492d-9c98-\
 1f5c82e5db54"],
 
 Cell[TextData[{
@@ -52,9 +55,12 @@ documents (e.g., HTML documents and XML applications).\[CloseCurlyDoubleQuote]"
   3.7595264904154677`*^9}},ExpressionUUID->"d22cf7eb-c2d0-4fd8-b783-\
 4f3dd910016f"],
 
-Cell["How are WD notebooks styled?", "question",
- CellChangeTimes->{{3.7595262293659277`*^9, 
-  3.7595262353550963`*^9}},ExpressionUUID->"d924ffed-9405-4291-9aa7-\
+Cell["\<\
+How are WD notebooks styled?
+\
+\>", "question",
+ CellChangeTimes->{{3.7595262293659277`*^9, 3.7595262353550963`*^9}, 
+   3.7603991088097878`*^9},ExpressionUUID->"d924ffed-9405-4291-9aa7-\
 5d2f7fe215a2"],
 
 Cell["\<\
@@ -68,9 +74,12 @@ have slightly different meanings in a few cases.\
   3.7595265688761215`*^9}},ExpressionUUID->"3b6ff9df-fd91-49ae-ad87-\
 f948860461dd"],
 
-Cell["Why import CSS into WD?", "question",
- CellChangeTimes->{{3.7595262391823344`*^9, 
-  3.759526244501975*^9}},ExpressionUUID->"f202f61c-9683-403c-aebb-\
+Cell["\<\
+Why import CSS into WD?
+\
+\>", "questionSpecial",
+ CellChangeTimes->{{3.7595262391823344`*^9, 3.759526244501975*^9}, 
+   3.7603991110799427`*^9},ExpressionUUID->"f202f61c-9683-403c-aebb-\
 06e03ca421d0"],
 
 Cell["\<\
@@ -122,15 +131,15 @@ CellTagsIndex->{}
 Notebook[{
 Cell[558, 20, 162, 3, 23, "h1",ExpressionUUID->"b7915119-a440-4d38-a360-6545a65f0ab2"],
 Cell[723, 25, 165, 3, 23, "h2",ExpressionUUID->"f2db8889-8f1f-4370-9679-e7bbc3531169"],
-Cell[891, 30, 162, 3, 23, "question",ExpressionUUID->"be4a1da8-d0d1-492d-9c98-1f5c82e5db54"],
-Cell[1056, 35, 784, 17, 55, "p",ExpressionUUID->"d22cf7eb-c2d0-4fd8-b783-4f3dd910016f"],
-Cell[1843, 54, 178, 3, 23, "question",ExpressionUUID->"d924ffed-9405-4291-9aa7-5d2f7fe215a2"],
-Cell[2024, 59, 502, 9, 71, "p",ExpressionUUID->"3b6ff9df-fd91-49ae-ad87-f948860461dd"],
-Cell[2529, 70, 171, 3, 23, "question",ExpressionUUID->"f202f61c-9683-403c-aebb-06e03ca421d0"],
-Cell[2703, 75, 269, 6, 39, "p",ExpressionUUID->"318efc69-4e0d-4b6f-8791-29412e854774"],
-Cell[2975, 83, 245, 6, 23, "li",ExpressionUUID->"129b4909-363c-4228-acce-02b10d703878"],
-Cell[3223, 91, 209, 6, 23, "li",ExpressionUUID->"8dc2c6ac-332a-4426-96d5-c19123188d6c"],
-Cell[3435, 99, 221, 5, 39, "li",ExpressionUUID->"241c55f0-d427-48a6-a80f-a0c36eb31363"]
+Cell[891, 30, 194, 6, 39, "question",ExpressionUUID->"be4a1da8-d0d1-492d-9c98-1f5c82e5db54"],
+Cell[1088, 38, 784, 17, 55, "p",ExpressionUUID->"d22cf7eb-c2d0-4fd8-b783-4f3dd910016f"],
+Cell[1875, 57, 212, 6, 39, "question",ExpressionUUID->"d924ffed-9405-4291-9aa7-5d2f7fe215a2"],
+Cell[2090, 65, 502, 9, 71, "p",ExpressionUUID->"3b6ff9df-fd91-49ae-ad87-f948860461dd"],
+Cell[2595, 76, 212, 6, 39, "questionSpecial",ExpressionUUID->"f202f61c-9683-403c-aebb-06e03ca421d0"],
+Cell[2810, 84, 269, 6, 39, "p",ExpressionUUID->"318efc69-4e0d-4b6f-8791-29412e854774"],
+Cell[3082, 92, 245, 6, 23, "li",ExpressionUUID->"129b4909-363c-4228-acce-02b10d703878"],
+Cell[3330, 100, 209, 6, 23, "li",ExpressionUUID->"8dc2c6ac-332a-4426-96d5-c19123188d6c"],
+Cell[3542, 108, 221, 5, 39, "li",ExpressionUUID->"241c55f0-d427-48a6-a80f-a0c36eb31363"]
 }
 ]
 *)

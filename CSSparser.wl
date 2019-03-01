@@ -10,6 +10,13 @@
 (*Version: 1*)
 
 
+(*TODO:
+	1. resolve @import statements
+	2. consider basic media queries
+	3. parse URLs in CSS fragments 
+	4. expose more useful functions *)
+
+
 (* ::Section:: *)
 (*Package Header*)
 
@@ -1004,6 +1011,7 @@ initialValues[prop_String] := CSSPropertyData[prop, "WDInitialValue"]
 (*<color>*)
 
 
+(* Some WL named colors do not agree with those of the W3C. We parse those colors following the W3C. *)
 parseSingleColor[prop_String, tokens:{{_String, _String}..}] := parseSingleColor[prop, tokens] = 
 	Which[
 		Length[tokens] == 1 && MatchQ[tokens[[1, 1]], "ident"],
@@ -1012,6 +1020,21 @@ parseSingleColor[prop_String, tokens:{{_String, _String}..}] := parseSingleColor
 				"inherit",      Inherited,
 				"currentcolor", Dynamic @ CurrentValue[FontColor], 
 				"transparent",  None, (* this 'ident' is interpreted as GrayLevel[0, 0] by Interpreter["Color"] *)
+				"brown",        RGBColor[Rational[11, 17], Rational[14, 85], Rational[14, 85]],
+				"gray"|"grey",  RGBColor[Rational[128, 255], Rational[128, 255], Rational[128, 255]],
+				"green",        RGBColor[0, Rational[128, 255], 0], 
+				"orange",       RGBColor[1, Rational[11, 17], 0],
+				"pink",         RGBColor[1, Rational[64, 85], Rational[203, 255]],
+				"purple",       RGBColor[Rational[128, 255], 0, Rational[128, 255]],
+				"lightblue",    RGBColor[Rational[173, 255], Rational[72, 85], Rational[46, 51]],
+				"lightcyan",    RGBColor[Rational[224, 255], 1, 1],
+				"lightgray"|"lightgrey", RGBColor[Rational[211, 255], Rational[211, 255], Rational[211, 255]],
+				"lightgreen",   RGBColor[Rational[48, 85], Rational[14, 15], Rational[48, 85]],
+				"lightpink",    RGBColor[1, Rational[182, 255], Rational[193, 255]],
+				"lightyellow",  RGBColor[1, 1, Rational[224, 255]],
+				"darkgrey",     RGBColor[Rational[169, 255], Rational[169, 255], Rational[169, 255]],
+				"darkslategrey", RGBColor[Rational[47, 255], Rational[79, 255], Rational[79, 255]],
+				"lightslategrey", RGBColor[Rational[7, 15], Rational[8, 15], Rational[3, 5]], 
 				_,              Interpreter["Color"][StringJoin @ tokens[[1, 2]]] (* keyword e.g. blue *)
 			],
 		Length[tokens] == 1 && MatchQ[tokens[[1, 1]], "hexcolor"],
