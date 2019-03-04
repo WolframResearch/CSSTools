@@ -490,7 +490,7 @@ trimFront[s_String] := StringReplace[s, StartOfString ~~ Whitespace -> ""]
 (* DeleteCases removes any comment-like token. Perhaps we should allow an option flag to keep comments...? *)
 parseBlock[x_String] := 
 	DeleteCases[
-		Map[With[{l = label["block", #]}, {l, If[l!="other", trimFront @ #, #]}]&, 
+		Map[With[{l = label["block", #]}, {l, If[l != "other", trimFront @ #, #]}]&, 
 			StringSplit[x, 
 				s:Alternatives[
 					RegularExpression @ RE["comment"],
@@ -503,7 +503,7 @@ parseBlock[x_String] :=
 					RegularExpression @ T["BADSTRING"],
 					"{", "}"
 				] :> s]],
-		{"comment" | "badcomment", _} | {"other", ""}]		
+		{"comment" | "badcomment", _} | {"other", s_String /; StringMatchQ[s, Whitespace]}]		
 
 
 label["block", x_String] := 
@@ -518,6 +518,68 @@ label["block", x_String] :=
 		StringMatchQ[x, RegularExpression @ T["BADSTRING"]],   "badstring",
 		StringMatchQ[x, "{" | "}"], x,
 		True, "other"
+	]
+
+
+(* ::Subsection::Closed:: *)
+(*Identify @import components*)
+
+
+tokenizeAtImportKeyword[x_String] := 
+	DeleteCases[
+		Map[With[{l = label["import", #]}, {l, StringTrim @ #}]&, 
+			StringSplit[x, 
+				s:Alternatives[
+					RegularExpression @ T["IMPORT_SYM"],
+					RegularExpression @ T["URI"],
+					RegularExpression @ T["STRING"],
+					RegularExpression @ P["medium"],
+					",", ";"
+				] :> s]],
+		{"other", ""}]		
+
+
+label["import", x_String] := 
+	Which[
+		StringMatchQ[x, RegularExpression @ T["IMPORT_SYM"]],  "import",
+		StringMatchQ[x, RegularExpression @ T["URI"]],         "uri",
+		StringMatchQ[x, RegularExpression @ T["STRING"]],      "string",
+		StringMatchQ[x, RegularExpression @ P["medium"]],      "medium",
+		StringMatchQ[x, "," | ";"], x,
+		True, "other"
+	]
+
+
+parse["atImportKeyword", tokens:{{_String, _String}..}] :=
+	Module[{pos = 2 (* first token must be @import *), l = Length[tokens], path, mediums = {}, data},
+		(* second token must be URL or string path to file *)
+		path = 
+			Switch[tokens[[pos, 1]],
+				"uri", 
+					path = StringTake[tokens[[pos, 2]], {5, -2}]; (* strip off url() *)
+					If[StringMatchQ[path, RegularExpression @ T["STRING"]], StringTake[path, {2, -2}], path], (* strip off string quotes *)
+				"string", StringTake[path, {2, -2}],
+			_, (* shouldn't be able to reach this *) ""];
+		skipWhitespace[pos, l, tokens];
+		
+		(* anything else is a media condition *)
+		While[tokens[[pos, 1]] != ";",
+			If[tokens[[pos, 1]] == "medium", 
+				AppendTo[mediums, tokens[[pos, 2]]]; skipWhitespace[pos, l, tokens]
+				,
+				Return @ Failure["UnexpectedParse", <|"Message" -> "Expected @import media type."|>]];
+			If[tokens[[pos, 1]] == ";", Break[]];
+			If[tokens[[pos, 1]] == ",", 
+				skipWhitespace[pos, l, tokens]
+				,
+				Return @ Failure["UnexpectedParse", <|"Message" -> "Expected @import media delimiter."|>]]];
+		mediums = ToLowerCase @ mediums;
+		
+		(* import without interpretation *)
+		data = Import[path, "Text"];
+		If[FailureQ[data], Return @ {}, data = processRulesets[data]];
+		If[mediums =!= {}, data[[All, "Condition"]] = ConstantArray[mediums, Length[data]]];
+		data	
 	]
 
 
@@ -3435,7 +3497,7 @@ parse[prop_String, {}] := noValueFailure @ prop
 parse[prop_String, _] := unsupportedValueFailure @ prop
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Process *)
 
 
@@ -3494,13 +3556,18 @@ consumeFunction[positionIndex_, l_, tokens:{{_String, _String}..}] :=
 
 
 processRulesets[s_String] :=
-	Module[{i = 1, pos = 1, startPosBlock, stopPosBlock, startAtBlock, stopAtBlock, l, lRulesets, relevantTokens, rulesets, condition},
+	Module[{i = 1, pos = 1, startPosBlock, stopPosBlock, startAtBlock, stopAtBlock, l, lRulesets, relevantTokens, rulesets, condition, imports={}},
 	
 		relevantTokens = parseBlock[s]; (* identifies curly-braces, strings, URIs, @import, @charset. Removes comments. *)
 		l = Length[relevantTokens];
 		
-		(*TODO: import other stylesheets*)
-		If[MatchQ[relevantTokens[[pos, 1]], "charset"|"import"], pos++; skipWhitespace[pos, l, relevantTokens]];
+		(*TODO: handle charset statement *)
+		If[MatchQ[relevantTokens[[pos, 1]], "charset"], skipWhitespace[pos, l, relevantTokens]];
+		While[MatchQ[relevantTokens[[pos, 1]], "import"], 
+			AppendTo[imports, parse["atImportKeyword", tokenizeAtImportKeyword[relevantTokens[[pos, 2]]]]]; 
+			skipWhitespace[pos, l, relevantTokens]
+		];
+		imports = Join @@ imports;
 		
 		(* 
 			We're looking for blocks indicated by curly brackets. 
@@ -3558,7 +3625,7 @@ processRulesets[s_String] :=
 			];
 		];
 		(* remove possible excess blocks *)
-		DeleteCases[rulesets, 0, {1}]
+		Join[imports, DeleteCases[rulesets, 0, {1}]]
 	]
 
 
