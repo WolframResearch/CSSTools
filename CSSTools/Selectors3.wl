@@ -1150,7 +1150,7 @@ initializeGlobals[doc_, namespaces_List, id_String, {type_, name_, value_}] := (
 Options[Selector] = {
 	"Namespaces" -> {}, 
 	"ID" -> "id",
-	"CaseInsensitive" -> {"Type" -> True, "AttributeName" -> True, "AttributeValue" -> True}};
+	"CaseSensitive" -> {"Type" -> False, "AttributeName" -> False, "AttributeValue" -> False}};
 
 (*Selector[fullSelector_String] := Selector[fullSelector, ""]*)
 
@@ -1158,15 +1158,15 @@ Selector[document_, fullSelector_String, OptionsPattern[]] :=
 	Module[{namespaces, id, type, name, value, temp},
 		namespaces = OptionValue["Namespaces"];
 		id = OptionValue["ID"];
-		temp = OptionValue["CaseInsensitive"];
+		temp = OptionValue["CaseSensitive"];
 		{type, name, value} =
 			Which[
 				temp === True,  {True, True, True},
 				temp === False, {False, False, False},
-				True, {"Type", "AttributeName", "AttributeValue"} /. OptionValue["CaseInsensitive"] /. _String :> True
+				True, {"Type", "AttributeName", "AttributeValue"} /. OptionValue["CaseSensitive"] /. _String :> False
 			];
 				
-		initializeGlobals[document, namespaces, id, {type, name, value}];
+		initializeGlobals[document, namespaces, id, {!type, !name, !value}];
 		processFullSelector @ fullSelector
 	]
 	

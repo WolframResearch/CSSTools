@@ -6,22 +6,17 @@
 
 (* ::Text:: *)
 (*Author: Kevin Daily*)
-(*Date: 20190210*)
+(*Date: 20190305*)
 (*Version: 1*)
-
-
-(*TODO:
-	1. resolve @import statements
-	2. consider basic media queries
-	3. parse URLs in CSS fragments 
-	4. expose more useful functions *)
 
 
 (* ::Section:: *)
 (*Package Header*)
 
 
-BeginPackage["CSSImport`", {"GeneralUtilities`", "Selectors3`"}];
+BeginPackage["CSS21Parser`", {"GeneralUtilities`", "Selectors3`"}];
+
+(* Selectors3` needed for Selector function *)
 
 SetUsage[HeightMin, "\
 HeightMin[value$] indicates value$ is to be interpreted as a minimum height taken from a CSS property."];
@@ -36,7 +31,18 @@ SetUsage[ProcessCSSStylesAs, "\
 ProcessCSSStylesAs[type$, CSSData$, {selectors$, $$}] converts the interpreted CSS styles into Wolfram Language options. \
 CSS styles are merged following the CSS cascade and the resulting options are filtered by type$."];
 
+SetUsage[ExtractCSSFromXMLObject, "\
+ExtractCSSFromXMLObject[XMLObject$] imports the CSS declarations within XMLObject$."];
+
+SetUsage[ResolveCSSInterpretations, "\
+ResolveCSSInterpretations[type$, CSSInterpretations$] combines options that were interpreted from the CSS importer. \
+Any Left/Right/Bottom/Top and Min/Max values are merged."];
+
+SetUsage[ResolveCSSInheritance, "\
+ResolveCSSInheritance[target$, CSSData$] calculates the properties of the element at target$ including any inherited CSS properties."];
+
 System`CellFrameStyle; (* needed in System` context *)
+System`Box;
 
 Begin["`Private`"];
 
@@ -1112,7 +1118,7 @@ parseSingleColor[prop_String, tokens:{{_String, _String}..}] := parseSingleColor
 
 
 parseCounter[prop_String, tokens:{{_String, _String}...}] := parseCounter[prop, tokens] =
-	Module[{pos = 1, l = Length[tokens], style, stringAddOn = "", listtype = "decimal"},
+	Module[{pos = 1, l = Length[tokens], style, listtype = "decimal"},
 		Switch[ToLowerCase @ tokens[[pos, 2]],
 			"counter(",
 				skipWhitespace[pos, l, tokens];
@@ -1191,7 +1197,7 @@ parsePercentage[s_String] := parsePercentage[s] = Interpreter["Number"] @ String
 
 
 parseURI[uri_String] := 
-	Module[{p, mimetype = "text/plain", base64 = False, s = StringTake[uri, {5, -2}], start, rest},
+	Module[{p, s = StringTake[uri, {5, -2}], start, rest},
 		If[StringStartsQ[s, "data:", IgnoreCase -> True],
 			(* string split on the first comma *)
 			p = StringPosition[s, ",", 1][[1, 1]];
@@ -1238,7 +1244,7 @@ parseURI[uri_String] :=
 (*background*)
 
 
-(*TODO: parse multiple background specs but only take the first *)
+(*TODO: parse multiple background specs but only take the first valid one*)
 parse[prop:"background", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)parseSingleBG[prop, tokens]
 
 (* 
@@ -1249,7 +1255,7 @@ parse[prop:"background", tokens:{{_String, _String}..}] := (*parse[prop, tokens]
 parseSingleBG[prop_String, tokens:{{_String, _String}..}] := 
 	Module[
 		{
-			pos = 1, l = Length[tokens], value, start, func,
+			pos = 1, l = Length[tokens], value, start, 
 			values = <|
 				"a" -> initialValues @ "background-attachment", 
 				"c" -> initialValues @ "background-color",
@@ -1365,7 +1371,7 @@ parse[prop:"background-attachment", tokens:{{_String, _String}..}] := (*parse[pr
 
 
 (* 
-	Effectively the same as color, except a successful parse returns as a rule Background \[Rule] value.
+	Effectively the same as color, except a successful parse returns as a rule Background -> value.
 	Also 'currentColor' value needs to know the current value of 'color', instead of inherited from the parent.	
 *) 
 parse[prop:"background-color", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
@@ -1494,11 +1500,11 @@ parse[prop:"background-repeat", tokens:{{_String, _String}..}] := (*parse[prop, 
 	WL Grid only allows collapsed borders. However, each item can cloud wrapped in Frame.
 		Grid[
 			Map[
-				Framed[#,ImageSize\[Rule]Full,Alignment\[Rule]Center]&, 
+				Framed[#,ImageSize->Full,Alignment->Center]&, 
 				{{"Client Name","Age"},{"",25},{"Louise Q.",""},{"Owen",""},{"Stan",71}}, 
 				{2}],
-			Frame\[Rule]None,
-			ItemSize\[Rule]{{7,3}}]
+			Frame->None,
+			ItemSize->{{7,3}}]
 	but this is beyond the scope of CSS importing.
 *)
 
@@ -1508,7 +1514,7 @@ parse[prop:"background-repeat", tokens:{{_String, _String}..}] := (*parse[prop, 
 
 
 parse[prop:"border-collapse", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], value, results = {}},
+	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		Switch[tokens[[pos, 1]],
 			"ident", 
@@ -1725,7 +1731,7 @@ parse[prop:"border-width", tokens:{{_String, _String}..}] := (*parse[prop, token
 parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[
 	{
-		pos = 1, l = Length[tokens], p, value, dirAll, dir, 
+		pos = 1, l = Length[tokens], value, 
 		wrapper = Switch[prop, "border-left", Left, "border-right", Right, "border-top", Top, "border-bottom", Bottom, _, Through[{Left, Right, Top, Bottom}[#]]&],
 		values = <|
 			"c" -> initialValues[prop <> "-color"], 
@@ -2080,7 +2086,7 @@ parse[prop:"list-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens]
 
 
 (*
-	Quotes could be implemented using DisplayFunction \[Rule] (RowBox[{<open-quote>,#,<close-quote>}]&),
+	Quotes could be implemented using DisplayFunction -> (RowBox[{<open-quote>,#,<close-quote>}]&),
 	but only a handful of boxes accept this WL option e.g. DynamicBoxOptions, ValueBoxOptions, and a few others.
 	There's also ShowStringCharacters, but this only hides/shows the double quote.
 	We treat this then as not available, but we validate the form anyway.
@@ -2360,9 +2366,9 @@ parseSingleFontFamily[tokens:{{_String, _String}..}] := parseSingleFontFamily[to
 		If[FailureQ[value] || MissingQ[value], value, FontFamily -> value]
 	]
 	
-(*TODO:
+(*
 	Perhaps as an option we should allow the user to define default fonts, e.g.
-		GenericFontFamily \[Rule] {"fantasy" \[Rule] "tribal-dragon"}
+		GenericFontFamily -> {"fantasy" -> "tribal-dragon"}
 	but always default to Automatic if it can't be found on the system.
 *)
 parseFontFamilySingleIdent[s_String] := 
@@ -2505,13 +2511,13 @@ parse[prop:"font-weight", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 						Nearest[
 							{
 								100 -> "Thin", (* Hairline *)
-								(* 200 \[Rule] "Extra Light", *) (* Ultra Light *)
+								(* 200 -> "Extra Light", *) (* Ultra Light *)
 								300 -> "Light", 
 								400 -> Plain, 
 								500 -> "Medium", 
 								600 -> "SemiBold", (* Demi Bold *)
 								700 -> Bold,
-								(* 800 \[Rule] "Extra Bold", *) (* Ultra Bold *)
+								(* 800 -> "Extra Bold", *) (* Ultra Bold *)
 								900 -> "Black" (* Heavy *)}, 
 							Clip[Interpreter["Number"][tokens[[pos, 2]]], {1, 1000}]], 
 						Automatic],
@@ -2548,7 +2554,7 @@ parseSingleSize[prop_String, token:{_String, _String}] := parseSingleSize[prop, 
 	
 (* min-width and max-width override width property *)
 parse[prop:"width"|"max-width"|"min-width", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], value},
+	Module[{l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleSize[prop, tokens[[1]]];
 		If[FailureQ[value], 
@@ -2565,7 +2571,7 @@ parse[prop:"width"|"max-width"|"min-width", tokens:{{_String, _String}..}] := (*
 	]
 
 parse[prop:"height"|"max-height"|"min-height", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], value},
+	Module[{l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleSize[prop, tokens[[1]]];
 		If[FailureQ[value], 
@@ -2633,7 +2639,7 @@ parseSingleMargin[prop_String, token:{_String, _String}] := parseSingleMargin[pr
 	CSS padding --> WL FrameMargins and CellFrameMargins
 *)
 parse[prop:"margin-top"|"margin-right"|"margin-bottom"|"margin-left", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], wrapper, value},
+	Module[{l = Length[tokens], wrapper, value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleMargin[prop, tokens[[1]]];
 		If[FailureQ[value], 
@@ -2681,7 +2687,7 @@ parse[prop:"margin", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *
 
 
 parse[prop:"outline-color", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], value, colorNegate, results = {}},
+	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		If[l == 1 && tokens[[1, 1]] == "ident" && ToLowerCase @ tokens[[1, 2]] == "invert",
 			CellFrameColor -> Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]]
 			,
@@ -2704,7 +2710,7 @@ parse[prop:"outline-color", tokens:{{_String, _String}..}] := (*parse[prop, toke
 
 (* only a solid border is allowed for cells; 'hidden' is not allowed here *)
 parse[prop:"outline-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], value, results = {}},
+	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value =
 			If[tokens[[pos, 1]] == "ident" && tokens[[pos, 2]] == "hidden",
@@ -2730,7 +2736,7 @@ parse[prop:"outline-width", tokens:{{_String, _String}..}] := (*parse[prop, toke
 			(*With[{t = Round @ convertToCellThickness @ value},
 				{
 					CellFrame -> Dynamic[If[CurrentValue["MouseOver"], t, Inherited]],
-					CellFrameMargins \[Rule] Dynamic[If[CurrentValue["MouseOver"], -t, Inherited]]
+					CellFrameMargins -> Dynamic[If[CurrentValue["MouseOver"], -t, Inherited]]
 			}*)
 			Missing["Not supported."]
 		]
@@ -2745,7 +2751,7 @@ parse[prop:"outline-width", tokens:{{_String, _String}..}] := (*parse[prop, toke
 parse[prop:"outline", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[
 	{
-		pos = 1, l = Length[tokens], p, value, dirAll, dir, 
+		pos = 1, l = Length[tokens], value, 
 		values = <|
 			"c" -> initialValues[prop <> "-color"], 
 			"s" -> initialValues[prop <> "-style"], 
@@ -2841,7 +2847,7 @@ parseSinglePadding[prop_String, token:{_String, _String}] := parseSinglePadding[
 	CSS padding --> WL FrameMargins and CellFrameMargins
 *)
 parse[prop:"padding-top"|"padding-right"|"padding-bottom"|"padding-left", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], wrapper, value},
+	Module[{l = Length[tokens], wrapper, value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSinglePadding[prop, tokens[[1]]];
 		If[FailureQ[value], 
@@ -2968,7 +2974,7 @@ parse[prop:"page-break-inside", tokens:{{_String, _String}..}] := (*parse[prop, 
 	WL does not support absolute positioning of cells and boxes.
 	Attached cells can be floated or positioned absolutely, but are ephemeral and easily invalidated.
 	Moreover, attached cells aren't an option, but rather a cell.
-	Perhaps can use NotebookDynamicExpression \[Rule] Dynamic[..., TrackedSymbols \[Rule] {}] where "..." includes a list of attached cells.
+	Perhaps can use NotebookDynamicExpression -> Dynamic[..., TrackedSymbols -> {}] where "..." includes a list of attached cells.
 *)
 parse[prop:"position", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
@@ -3380,7 +3386,7 @@ parse[prop:"vertical-align", tokens:{{_String, _String}..}] := (*parse[prop, tok
 
 (* this is effectively for RowBox alignment *)
 parseBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] := parseBaseline[prop, tokens] = 
-	Module[{value (* for Baseline *), value2 (* for CellBaseline *)},
+	Module[{value (* for Baseline *)},
 		(* tooManyTokens failure check occurs in higher-level function parse["vertical-align",...]*)
 		value = 
 			Switch[tokens[[1, 1]],
@@ -3469,7 +3475,7 @@ parse[prop:"visibility", tokens:{{_String, _String}..}] := (*parse[prop, tokens]
 	Attached cells are ordered by their creation order.
 *)
 parse[prop:"z-index", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], value, wrapper},
+	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[tokens[[pos, 1]],
@@ -3497,7 +3503,7 @@ parse[prop_String, {}] := noValueFailure @ prop
 parse[prop_String, _] := unsupportedValueFailure @ prop
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Process *)
 
 
@@ -3506,7 +3512,7 @@ parse[prop_String, _] := unsupportedValueFailure @ prop
 
 
 findOpeningBracketPosition[positionIndex_Integer, openBracket_String, tokens:{{_String, _String}..}] :=
-	Module[{p = positionIndex, depth = 1, l = Length[tokens]},
+	Module[{p = positionIndex},
 		While[tokens[[p, 1]] != openBracket, p++];
 		p
 	]
@@ -3556,7 +3562,7 @@ consumeFunction[positionIndex_, l_, tokens:{{_String, _String}..}] :=
 
 
 processRulesets[s_String] :=
-	Module[{i = 1, pos = 1, startPosBlock, stopPosBlock, startAtBlock, stopAtBlock, l, lRulesets, relevantTokens, rulesets, condition, imports={}},
+	Module[{i = 1, pos = 1, startPosBlock, stopPosBlock, startAtBlock, stopAtBlock, l, lRulesets, relevantTokens, rulesets, imports={}},
 	
 		relevantTokens = parseBlock[s]; (* identifies curly-braces, strings, URIs, @import, @charset. Removes comments. *)
 		l = Length[relevantTokens];
@@ -3782,19 +3788,65 @@ optionsToAvoidAtBoxLevel =
 		CellFrame, CellFrameColor, CellFrameLabelMargins, CellFrameLabels, CellFrameMargins, CellFrameStyle, 
 		CellLabel, CellLabelMargins, CellLabelPositioning, CellLabelStyle, 
 		ParagraphIndent};
+		
+validBoxes =
+	{
+		ActionMenuBox, AnimatorBox, ButtonBox, CheckboxBox, ColorSetterBox, 
+		DynamicBox, DynamicWrapperBox, FrameBox, Graphics3DBox, GraphicsBox, 
+		GridBox, InputFieldBox, Inset3DBox, InsetBox, ItemBox, LocatorBox, 
+		LocatorPaneBox, OpenerBox, OverlayBox, PaneBox, PanelBox, 
+		PaneSelectorBox, PopupMenuBox, ProgressIndicatorBox, RadioButtonBox,
+		SetterBox, Slider2DBox, SliderBox, TabViewBox, Text3DBox, 
+		TogglerBox, TooltipBox};	
+validBoxOptions =
+	{
+		Alignment, Appearance, Background, Frame, FrameMargins, FrameStyle, 
+		FontTracking, ImageMargins, ImageSize, ImageSizeAction, Spacings, Scrollbars};
+validBoxesQ = MemberQ[validBoxes, #]&;
 
-
-mergeInterpretationList[type:(Cell|Notebook|Box|All), interpretationList_] := 
-	Module[{valid},
+(* ResolveCSSInterpretations:
+	1. Remove Missing and Failure interpretations.
+	2. Filter the options based on Notebook/Cell/Box levels.
+	3. Merge together Left/Right/Bottom/Top and Width/Height options.  *)
+ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_Dataset] :=
+	ResolveCSSInterpretations[type, Normal @ interpretationList]
+	
+ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_] := 
+	Module[{valid, initialSet},
 		valid = DeleteCases[Flatten @ interpretationList, _?FailureQ | _Missing, {1}];
 		valid = Select[valid, 
 			Switch[type, 
-				Cell,     MemberQ[cellLevelOptions, #[[1]]]&, 
-				Notebook, MemberQ[notebookLevelOptions, #[[1]]]&,
-				Box,     !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&,
-				All,      True&]];
+				Cell,      MemberQ[cellLevelOptions, #[[1]]]&, 
+				Notebook,  MemberQ[notebookLevelOptions, #[[1]]]&,
+				Box,      !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&,
+				All,       True&]];
 		(* assemble options *)
-		assemble[#, valid]& /@ Union[First /@ valid]
+		initialSet = assemble[#, valid]& /@ Union[First /@ valid];
+		If[type === Box || type === All,
+			removeBoxOptions[initialSet, validBoxes]
+			,
+			initialSet]
+	]
+
+removeBoxOptions[allOptions_, boxes:{__?validBoxesQ}] :=
+	Module[{currentOpts, optNames = allOptions[[All, 1]]},
+		Join[
+			Cases[allOptions, Rule[Background, _] | Rule[FontTracking, _], {1}],
+			DeleteCases[allOptions, Alternatives @@ (Rule[#, _]& /@ validBoxOptions)],
+			Table[
+				currentOpts = Intersection[Options[i][[All, 1]], optNames];
+				Symbol[SymbolName[i] <> "Options"] -> Cases[allOptions, Alternatives @@ (Rule[#, _]& /@ currentOpts), {1}],
+				{i, boxes}]]	
+	]
+
+ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_] := ResolveCSSInterpretations[{box}, interpretationList]	
+ResolveCSSInterpretations[boxes:{__?validBoxesQ}, interpretationList_] := 
+	Module[{valid, initialSet},
+		valid = DeleteCases[Flatten @ interpretationList, _?FailureQ | _Missing, {1}];
+		valid = Select[valid, !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&];
+		(* assemble options *)
+		initialSet = assemble[#, valid]& /@ Union[First /@ valid];
+		removeBoxOptions[initialSet, boxes]				
 	]
 
 
@@ -3898,21 +3950,30 @@ assemble[opt_, rules_List] := Last @ Cases[rules, HoldPattern[opt -> _], {1}]
 assemble[opt:FontVariations, rules_List] := opt -> DeleteDuplicates[Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], First[#1] === First[#2]&]
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Main Functions*)
 
 
 (* ::Subsection::Closed:: *)
-(*ProcessAs*)
+(*ProcessCSSStylesAs*)
 
-
+(* ProcessCSSStylesAs:
+	1. Select the entries in the CSS data based on the provided selectors
+	2. order the selectors based on specificity and importance (if those options are on)
+	3. merge resulting list of interpreted options *)
 Options[ProcessCSSStylesAs] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
 
+ProcessCSSStylesAs[box:_?validBoxesQ, CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] := 
+	ProcessCSSStylesAs[{box}, CSSData, selectorList, opts]	
+
+ProcessCSSStylesAs[boxes:{__?validBoxesQ}, CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] :=
+	ProcessCSSStylesAs[boxes, CSSData, selectorList, opts]
+	
 ProcessCSSStylesAs[type:(Cell|Notebook|Box|All), CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] :=
 	ProcessCSSStylesAs[type, Normal @ CSSData, selectorList, opts]
 
 ProcessCSSStylesAs[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; validCSSDataQ[CSSData], selectorList:{__String}, opts:OptionsPattern[]] :=
-	Module[{interpretationList, ordering, specificities},
+	Module[{interpretationList, specificities},
 		(* start by filtering the data by the given list of selectors; ordering is maintained *)
 		interpretationList = Select[CSSData, MatchQ[#Selector, Alternatives @@ selectorList]&];
 		
@@ -3937,7 +3998,7 @@ ProcessCSSStylesAs[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; vali
 				];
 				
 		(* now that the styles are all sorted, merge them *)
-		mergeInterpretationList[type, interpretationList]
+		ResolveCSSInterpretations[type, interpretationList]
 	]
 
 ProcessCSSStylesAs[___] := Failure["BadCSSData", <||>]
@@ -3996,14 +4057,16 @@ addSpecifictyAndTarget[doc_, data_] :=
 	]& /@ data
 
 
-ImportCSSFromXMLObject[doc_, rootDirectory_] :=
+Options[ExtractCSSFromXMLObject] = {"RootDirectory" -> Directory[]};
+
+ExtractCSSFromXMLObject[doc_, opts:OptionsPattern[]] :=
 	Module[
 		{
 			currentDir, externalSSPositions, externalSSContent, internalSSPositions, internalSSContent, 
 			directStylePositions, directStyleContent, all, uniqueStyles},
 			
 		currentDir = Directory[];
-		SetDirectory[rootDirectory]; (* let this return an error message if rootDirectory can't be set *)
+		SetDirectory[OptionValue["RootDirectory"]]; (* let this return an error message if RootDirectory can't be set *)
 		
 		(* process externally linked style sheets via <link> elements *)
 		externalSSPositions = Position[doc, First @ linkElementPattern];
@@ -4045,9 +4108,14 @@ parents[x:{__Integer}] := Most @ Reverse @ NestWhileList[Drop[#, -2]&, x, Length
 
 inheritedProperties = Pick[Keys@ #, Values @ #]& @ CSSPropertyData[[All, "Inherited"]];
 
-resolveInheritance[position:{___?IntegerQ}, CSSData_Dataset] := resolveInheritance[position, Normal @ CSSData]
+ResolveCSSInheritance[position:{___?IntegerQ}, CSSData_Dataset] := ResolveCSSInheritance[position, Normal @ CSSData]
 
-resolveInheritance[position:{___?IntegerQ}, CSSData_?validCSSDataFullQ] :=
+(* ResolveCSSInheritance
+	Based on the position in the XMLObject, 
+	1. look up all ancestors' positions
+	2. starting from the most ancient ancestor, calculate the styles of each ancestor, including inherited properties
+	3. with all inheritance resolved, recalculate the style at the XMLObject position *)
+ResolveCSSInheritance[position:{___?IntegerQ}, CSSData_?validCSSDataFullQ] :=
 	Module[{lineage, data = CSSData, a, temp, temp2},
 		(* order data by specificity *)
 		data = data[[Ordering[data[[All, "Specificity"]]]]];
@@ -4077,7 +4145,7 @@ resolveInheritance[position:{___?IntegerQ}, CSSData_?validCSSDataFullQ] :=
 			Select[a[[Key @ position, "All"]], #Important == True& ][[All, "Interpretation"]]]
 	]
 	
-resolveInheritance[position:{___?IntegerQ}, _] := Failure["BadData", <|"Message" -> "Invalid CSS data."|>]
+ResolveCSSInheritance[position:{___?IntegerQ}, _] := Failure["BadData", <|"Message" -> "Invalid CSS data."|>]
 
 
 (* ::Subsection::Closed:: *)
@@ -4137,7 +4205,7 @@ ProcessToStyleSheet[filepath_String, opts___] :=
 		
 		allProcessed = Fold[process[#2, #1]&, raw, uniqueStyles];
 		allProcessed = ProcessAs[All, allProcessed, {#}]& /@ uniqueSelectors;
-		(*TODO: convert options like FrameMargins to actual styles ala FrameBoxOptions \[Rule] {FrameMargins \[Rule] _}*)
+		(*TODO: convert options like FrameMargins to actual styles ala FrameBoxOptions -> {FrameMargins -> _}*)
 		"StyleSheet" -> 
 			NotebookPut @ 
 				Notebook[
@@ -4149,10 +4217,10 @@ ImportExport`RegisterImport[
 	"CSS",
 	{
 		"Elements" :> (("Elements" -> {"RawData", "Interpreted", "StyleSheet"})&),
-		"Interpreted" :> (("Interpreted" -> Dataset @ CSSImport`Private`InterpretedCSS[#])&), (* same as default *)
-		"RawData" :> (("RawData" -> Dataset @ CSSImport`Private`RawCSS[#])&),
-		"StyleSheet" :> CSSImport`Private`ProcessToStyleSheet,
-		((Dataset @ CSSImport`Private`InterpretedCSS[#])&)},
+		"Interpreted" :> (("Interpreted" -> Dataset @ CSS21Parser`Private`InterpretedCSS[#])&), (* same as default *)
+		"RawData" :> (("RawData" -> Dataset @ CSS21Parser`Private`RawCSS[#])&),
+		"StyleSheet" :> CSS21Parser`Private`ProcessToStyleSheet,
+		((Dataset @ CSS21Parser`Private`InterpretedCSS[#])&)},
 	{},
 	"AvailableElements" -> {"Elements", "RawData", "Interpreted", "StyleSheet"}]
 
