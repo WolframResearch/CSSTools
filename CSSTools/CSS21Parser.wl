@@ -503,13 +503,14 @@ parseBlock[x_String] :=
 					RegularExpression @ RE["badcomment"],
 					RegularExpression @ P["charset"],
 					RegularExpression @ P["import"],
+					(*RegularExpression @ T["MEDIA_SYM"], (* we don't parse media queries, but we recognize the symbol *)*)
 					RegularExpression @ T["URI"],
 					RegularExpression @ T["BADURI"],
 					RegularExpression @ T["STRING"],
 					RegularExpression @ T["BADSTRING"],
 					"{", "}"
 				] :> s]],
-		{"comment" | "badcomment", _} | {"other", s_String /; StringMatchQ[s, Whitespace]}]		
+		{"comment" | "badcomment", _} | {"other", s_String /; StringMatchQ[s, Whitespace | ""]}]		
 
 
 label["block", x_String] := 
@@ -518,6 +519,7 @@ label["block", x_String] :=
 		StringMatchQ[x, RegularExpression @ RE["badcomment"]], "badcomment",
 		StringMatchQ[x, RegularExpression @ P["charset"]],     "charset",
 		StringMatchQ[x, RegularExpression @ P["import"]],      "import",
+		(*StringMatchQ[x, RegularExpression @ T["MEDIA_SYM"]],   "@media",*)
 		StringMatchQ[x, RegularExpression @ T["URI"]],         "uri",
 		StringMatchQ[x, RegularExpression @ T["BADURI"]],      "baduri",
 		StringMatchQ[x, RegularExpression @ T["STRING"]],      "string",
@@ -564,9 +566,9 @@ parse["atImportKeyword", tokens:{{_String, _String}..}] :=
 				"uri", 
 					path = StringTake[tokens[[pos, 2]], {5, -2}]; (* strip off url() *)
 					If[StringMatchQ[path, RegularExpression @ T["STRING"]], StringTake[path, {2, -2}], path], (* strip off string quotes *)
-				"string", StringTake[path, {2, -2}],
+				"string", StringTake[tokens[[pos, 2]], {2, -2}],
 			_, (* shouldn't be able to reach this *) ""];
-		skipWhitespace[pos, l, tokens];
+		skipWhitespace[pos, l, tokens]; 	
 		
 		(* anything else is a media condition *)
 		While[tokens[[pos, 1]] != ";",
@@ -582,7 +584,7 @@ parse["atImportKeyword", tokens:{{_String, _String}..}] :=
 		mediums = ToLowerCase @ mediums;
 		
 		(* import without interpretation *)
-		data = Import[path, "Text"];
+		data = Import[Echo[path, "@import"], "Text"];
 		If[FailureQ[data], Return @ {}, data = processRulesets[data]];
 		If[mediums =!= {}, data[[All, "Condition"]] = ConstantArray[mediums, Length[data]]];
 		data	
@@ -3569,6 +3571,7 @@ processRulesets[s_String] :=
 		
 		(*TODO: handle charset statement *)
 		If[MatchQ[relevantTokens[[pos, 1]], "charset"], skipWhitespace[pos, l, relevantTokens]];
+		If[MatchQ[relevantTokens[[pos, 1]], "whitespace"], skipWhitespace[pos, l, relevantTokens]];
 		While[MatchQ[relevantTokens[[pos, 1]], "import"], 
 			AppendTo[imports, parse["atImportKeyword", tokenizeAtImportKeyword[relevantTokens[[pos, 2]]]]]; 
 			skipWhitespace[pos, l, relevantTokens]
@@ -3585,7 +3588,7 @@ processRulesets[s_String] :=
 		While[pos < l && i <= lRulesets,
 			startPosBlock = findOpeningBracketPosition[pos, "{", relevantTokens];
 			Which[
-				StringStartsQ[relevantTokens[[startPosBlock-1, 2]], RegularExpression @ T["PAGE_SYM"]],
+				StringStartsQ[relevantTokens[[startPosBlock-1, 2]], RegularExpression[RE["w"] ~~ T["PAGE_SYM"]]],
 					stopPosBlock  = findClosingBracketPosition[startPosBlock, "{", "}", relevantTokens];
 					rulesets[[i]] = 
 						<|
@@ -3595,7 +3598,7 @@ processRulesets[s_String] :=
 					pos = stopPosBlock + 1;
 					i++,
 					
-				StringStartsQ[relevantTokens[[startPosBlock-1, 2]], RegularExpression @ T["MEDIA_SYM"]],
+				StringStartsQ[relevantTokens[[startPosBlock-1, 2]], RegularExpression[RE["w"] ~~ T["MEDIA_SYM"]]],
 					startAtBlock = startPosBlock;
 					stopAtBlock = findClosingBracketPosition[startAtBlock, "{", "}", relevantTokens];
 					pos = startAtBlock+1;
@@ -3605,7 +3608,7 @@ processRulesets[s_String] :=
 						rulesets[[i]] = 
 							<|
 								"Selector" -> StringTrim @ StringJoin @ relevantTokens[[pos ;; startPosBlock-1, 2]], 
-								"Condition" -> First @ StringSplit[relevantTokens[[startAtBlock-1, 2]], RegularExpression["(" ~~ T["MEDIA_SYM"] ~~ ")"]],
+								"Condition" -> First @ StringSplit[relevantTokens[[startAtBlock-1, 2]], RegularExpression["(" ~~ RE["w"] ~~ T["MEDIA_SYM"] ~~ ")"]],
 								"Block" -> relevantTokens[[startPosBlock+1 ;; If[relevantTokens[[stopPosBlock, 1]] == "}", stopPosBlock-1, stopPosBlock]]]|>;
 						pos = stopPosBlock + 1;
 						i++
@@ -3804,6 +3807,19 @@ validBoxOptions =
 		FontTracking, ImageMargins, ImageSize, ImageSizeAction, Spacings, Scrollbars};
 validBoxesQ = MemberQ[validBoxes, #]&;
 
+removeBoxOptions[allOptions_, boxes:{__?validBoxesQ}] :=
+	Module[{currentOpts, optNames = allOptions[[All, 1]]},
+		Join[
+			Cases[allOptions, Rule[Background, _] | Rule[FontTracking, _], {1}],
+			DeleteCases[allOptions, Alternatives @@ (Rule[#, _]& /@ validBoxOptions)],
+			DeleteCases[
+				Table[
+					currentOpts = Intersection[Options[i][[All, 1]], optNames];
+					Symbol[SymbolName[i] <> "Options"] -> Cases[allOptions, Alternatives @@ (Rule[#, _]& /@ currentOpts), {1}],
+					{i, boxes}],
+				_ -> {}, 
+				{1}]]	
+	]
 (* ResolveCSSInterpretations:
 	1. Remove Missing and Failure interpretations.
 	2. Filter the options based on Notebook/Cell/Box levels.
@@ -3826,17 +3842,6 @@ ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_] :=
 			removeBoxOptions[initialSet, validBoxes]
 			,
 			initialSet]
-	]
-
-removeBoxOptions[allOptions_, boxes:{__?validBoxesQ}] :=
-	Module[{currentOpts, optNames = allOptions[[All, 1]]},
-		Join[
-			Cases[allOptions, Rule[Background, _] | Rule[FontTracking, _], {1}],
-			DeleteCases[allOptions, Alternatives @@ (Rule[#, _]& /@ validBoxOptions)],
-			Table[
-				currentOpts = Intersection[Options[i][[All, 1]], optNames];
-				Symbol[SymbolName[i] <> "Options"] -> Cases[allOptions, Alternatives @@ (Rule[#, _]& /@ currentOpts), {1}],
-				{i, boxes}]]	
 	]
 
 ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_] := ResolveCSSInterpretations[{box}, interpretationList]	
@@ -4194,7 +4199,7 @@ InterpretedCSS[filepath_String, opts___] :=
 		Fold[process[#2, #1]&, raw, uniqueStyles]
 	]
 
-ProcessToStyleSheet[filepath_String, opts___] :=
+ProcessToStylesheet[filepath_String, opts___] :=
 	Module[{raw, uniqueSelectors, allProcessed, uniqueStyles},
 		raw = ExternalCSS[filepath];
 		If[!validCSSDataBareQ[raw], Return @ Failure["BadCSSFile", <||>]];
@@ -4204,9 +4209,9 @@ ProcessToStyleSheet[filepath_String, opts___] :=
 		uniqueStyles = Union @ Flatten @ raw[[All, "Block", All, "Property"]];
 		
 		allProcessed = Fold[process[#2, #1]&, raw, uniqueStyles];
-		allProcessed = ProcessAs[All, allProcessed, {#}]& /@ uniqueSelectors;
+		allProcessed = ProcessCSSStylesAs[All, allProcessed, {#}]& /@ uniqueSelectors;
 		(*TODO: convert options like FrameMargins to actual styles ala FrameBoxOptions -> {FrameMargins -> _}*)
-		"StyleSheet" -> 
+		"Stylesheet" -> 
 			NotebookPut @ 
 				Notebook[
 					MapThread[Cell[StyleData[#1], Sequence @@ #2]&, {uniqueSelectors, allProcessed}], 
@@ -4216,13 +4221,13 @@ ProcessToStyleSheet[filepath_String, opts___] :=
 ImportExport`RegisterImport[
 	"CSS",
 	{
-		"Elements" :> (("Elements" -> {"RawData", "Interpreted", "StyleSheet"})&),
+		"Elements" :> (("Elements" -> {"RawData", "Interpreted", "Stylesheet"})&),
 		"Interpreted" :> (("Interpreted" -> Dataset @ CSS21Parser`Private`InterpretedCSS[#])&), (* same as default *)
 		"RawData" :> (("RawData" -> Dataset @ CSS21Parser`Private`RawCSS[#])&),
-		"StyleSheet" :> CSS21Parser`Private`ProcessToStyleSheet,
+		"Stylesheet" :> CSS21Parser`Private`ProcessToStylesheet,
 		((Dataset @ CSS21Parser`Private`InterpretedCSS[#])&)},
 	{},
-	"AvailableElements" -> {"Elements", "RawData", "Interpreted", "StyleSheet"}]
+	"AvailableElements" -> {"Elements", "RawData", "Interpreted", "Stylesheet"}]
 
 
 (* ::Section::Closed:: *)

@@ -1,5 +1,4 @@
-@import "mystyle.css";
-@import url("mystyle.css");
+@import "mystyle1.css";
 
 .modal-scrollbar-measure {
 	position: absolute;
@@ -22,25 +21,5 @@
   margin-left: 3cm;
 }
 .tooltip {
-	position: absolute;
-	z-index: 1070;
-	display: block;
-	font-family: Roboto,Arial,Helvetica,sans-serif;
-	font-style: normal;
-	font-weight: 400;
-	letter-spacing: normal;
-	line-break: auto;
-	line-height: 1;
-	text-align: left;
-	text-align: start;
-	text-decoration: none;
-	text-shadow: none;
-	text-transform: none;
-	white-space: normal;
-	word-break: normal;
-	word-spacing: normal;
-	word-wrap: normal;
-	font-size: ceil((14px * .85));
-	opacity: 0}
-.tooltip.in {
-	opacity: 1}
+	font-weight: bold
+}
