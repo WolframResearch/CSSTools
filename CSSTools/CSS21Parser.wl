@@ -1556,13 +1556,15 @@ parse[prop:"border-color", tokens:{{_String, _String}..}] := (*parse[prop, token
 			If[FailureQ[value], Return @ value, AppendTo[results, value]]; 
 			skipWhitespace[pos, l, tokens];
 		];
-		Switch[Length[results],
-			1, # -> {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]}& {FrameStyle, CellFrameStyle},
-			2, # -> {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[1]], Top @ results[[1]]}& {FrameStyle, CellFrameStyle},
-			3, # -> {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}& {FrameStyle, CellFrameStyle},
-			4, # -> {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}& {FrameStyle, CellFrameStyle},
-			_, tooManyTokensFailure @ tokens
-		]
+		results =
+			Switch[Length[results],
+				1, {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]},
+				2, {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[1]], Top @ results[[1]]},
+				3, {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
+				4, {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
+				_, tooManyTokensFailure @ tokens
+			];
+		{FrameStyle -> results, CellFrameStyle -> results}
 	]
 
 
@@ -3796,16 +3798,23 @@ validBoxes =
 	{
 		ActionMenuBox, AnimatorBox, ButtonBox, CheckboxBox, ColorSetterBox, 
 		DynamicBox, DynamicWrapperBox, FrameBox, Graphics3DBox, GraphicsBox, 
-		GridBox, InputFieldBox, Inset3DBox, InsetBox, ItemBox, LocatorBox, 
+		GridBox, InputFieldBox, InsetBox, ItemBox, LocatorBox, 
 		LocatorPaneBox, OpenerBox, OverlayBox, PaneBox, PanelBox, 
 		PaneSelectorBox, PopupMenuBox, ProgressIndicatorBox, RadioButtonBox,
-		SetterBox, Slider2DBox, SliderBox, TabViewBox, Text3DBox, 
-		TogglerBox, TooltipBox};	
+		SetterBox, Slider2DBox, SliderBox, TabViewBox, TogglerBox, TooltipBox};	
+validExpressions =
+	{
+		ActionMenu, Animator, Button, Checkbox, ColorSetter, 
+		Dynamic, DynamicWrapper, Frame, Graphics3D, Graphics, 
+		Grid, InputField, Inset, Item, Locator, 
+		LocatorPane, Opener, Overlay, Pane, Panel, 
+		PaneSelector, PopupMenu, ProgressIndicator, RadioButton,
+		Setter, Slider2D, Slider, TabView, Toggler, Tooltip};	
 validBoxOptions =
 	{
 		Alignment, Appearance, Background, Frame, FrameMargins, FrameStyle, 
 		FontTracking, ImageMargins, ImageSize, ImageSizeAction, Spacings, Scrollbars};
-validBoxesQ = MemberQ[validBoxes, #]&;
+validBoxesQ = MemberQ[Join[validBoxes, validExpressions], #]&;
 
 removeBoxOptions[allOptions_, boxes:{__?validBoxesQ}] :=
 	Module[{currentOpts, optNames = allOptions[[All, 1]]},
@@ -3844,6 +3853,7 @@ ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_] :=
 			initialSet]
 	]
 
+ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_Dataset] := ResolveCSSInterpretations[{box}, Normal @ interpretationList]
 ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_] := ResolveCSSInterpretations[{box}, interpretationList]	
 ResolveCSSInterpretations[boxes:{__?validBoxesQ}, interpretationList_] := 
 	Module[{valid, initialSet},
@@ -3851,7 +3861,7 @@ ResolveCSSInterpretations[boxes:{__?validBoxesQ}, interpretationList_] :=
 		valid = Select[valid, !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&];
 		(* assemble options *)
 		initialSet = assemble[#, valid]& /@ Union[First /@ valid];
-		removeBoxOptions[initialSet, boxes]				
+		removeBoxOptions[initialSet, boxes /. Thread[validExpressions -> validBoxes]]				
 	]
 
 

@@ -1,0 +1,393 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 11.3' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     13544,        384]
+NotebookOptionsPosition[      9447,        300]
+NotebookOutlinePosition[     11243,        342]
+CellTagsIndexPosition[     11200,        339]
+WindowTitle->CSSTools
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[GridBox[{
+   {Cell["C S S TOOLS GUIDE", "PacletNameCell"], Cell[TextData[{
+     Cell[BoxData[
+      ActionMenuBox[
+       FrameBox[
+        InterpretationBox[Cell[TextData[{
+          "Functions",
+          StyleBox[" \[FilledDownTriangle]", "AnchorBarArrow",
+           StripOnInput->False]
+         }]],
+         TextCell[
+          Row[{"Functions", 
+            Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
+        StripOnInput->False], {"\<\"ExtractCSSFromXMLObject\"\>":>
+       Documentation`HelpLookup[
+       "paclet:CSSTools/ref/ExtractCSSFromXMLObject"], "\<\"HeightMax\"\>":>
+       Documentation`HelpLookup[
+       "paclet:CSSTools/ref/HeightMax"], "\<\"HeightMin\"\>":>
+       Documentation`HelpLookup[
+       "paclet:CSSTools/ref/HeightMin"], "\<\"Import\"\>":>
+       Documentation`HelpLookup[
+       "paclet:ref/Import"], "\<\"ProcessCSSStylesAs\"\>":>
+       Documentation`HelpLookup[
+       "paclet:CSSTools/ref/ProcessCSSStylesAs"], \
+"\<\"ResolveCSSInheritance\"\>":>Documentation`HelpLookup[
+       "paclet:CSSTools/ref/ResolveCSSInheritance"], \
+"\<\"ResolveCSSInterpretations\"\>":>Documentation`HelpLookup[
+       "paclet:CSSTools/ref/ResolveCSSInterpretations"], "\<\"Selector\"\>":>
+       Documentation`HelpLookup[
+       "paclet:CSSTools/ref/Selector"], "\<\"WidthMax\"\>":>
+       Documentation`HelpLookup[
+       "paclet:CSSTools/ref/WidthMax"], "\<\"WidthMin\"\>":>
+       Documentation`HelpLookup["paclet:CSSTools/ref/WidthMin"]},
+       Appearance->None,
+       MenuAppearance->Automatic,
+       MenuStyle->"GuideFunction"]],
+      LineSpacing->{1.4, 0}],
+     "\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\
+\[ThickSpace]",
+     Cell[BoxData[
+      ActionMenuBox[
+       FrameBox[
+        InterpretationBox[Cell[TextData[{
+          "Tutorials",
+          StyleBox[" \[FilledDownTriangle]", "AnchorBarArrow",
+           StripOnInput->False]
+         }]],
+         TextCell[
+          Row[{"Tutorials", 
+            Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
+        StripOnInput->False], {"\<\"CSSTools\"\>":>Documentation`HelpLookup[
+       "paclet:CSSTools/tutorial/CSSTools"]},
+       Appearance->None,
+       MenuAppearance->Automatic,
+       MenuStyle->"GuideTutorial"]],
+      LineSpacing->{1.4, 0}],
+     "\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\
+\[ThickSpace]",
+     Cell[BoxData[
+      ActionMenuBox[
+       FrameBox[
+        InterpretationBox[Cell[TextData[{
+          "URL",
+          StyleBox[" \[FilledDownTriangle]", "AnchorBarArrow",
+           StripOnInput->False]
+         }]],
+         TextCell[
+          Row[{"URL", 
+            Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
+        StripOnInput->False], {"\<\"CSSTools/guide/CSSTools\"\>":>
+       None, "\<\"Copy Wolfram Documentation Center URL\"\>":>
+       Module[{DocumentationSearch`Private`nb$}, 
+        DocumentationSearch`Private`nb$ = NotebookPut[
+           Notebook[{
+             Cell["CSSTools/guide/CSSTools"]}, Visible -> False]]; 
+        SelectionMove[DocumentationSearch`Private`nb$, All, Notebook]; 
+        FrontEndTokenExecute[DocumentationSearch`Private`nb$, "Copy"]; 
+        NotebookClose[DocumentationSearch`Private`nb$]; Null], 
+       Delimiter, "\<\"Copy web URL\"\>":>
+       Module[{DocumentationSearch`Private`nb$}, 
+        DocumentationSearch`Private`nb$ = NotebookPut[
+           Notebook[{
+             Cell[
+              BoxData[
+               MakeBoxes[
+                Hyperlink[
+                "http://reference.wolfram.com/language/CSSTools/guide/\
+CSSTools.html"], StandardForm]], "Input", TextClipboardType -> "PlainText"]}, 
+            Visible -> False]]; 
+        SelectionMove[DocumentationSearch`Private`nb$, All, Notebook]; 
+        FrontEndTokenExecute[DocumentationSearch`Private`nb$, "Copy"]; 
+        NotebookClose[DocumentationSearch`Private`nb$]; 
+        Null], "\<\"Go to web URL\"\>":>FrontEndExecute[{
+         NotebookLocate[{
+           URL[
+            StringJoin[
+             If[
+              TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$7042], 
+              "http://reference.wolfram.com/system-modeler/", 
+              "http://reference.wolfram.com/language/"], 
+             "CSSTools/guide/CSSTools", ".html"]], None}]}]},
+       Appearance->None,
+       MenuAppearance->Automatic,
+       MenuStyle->"URLMenu"]],
+      LineSpacing->{1.4, 0}]
+    }], "AnchorBar"]}
+  }]], "AnchorBarGrid",
+ CellID->1],
+
+Cell[CellGroupData[{
+
+Cell["CSSTools", "GuideTitle",
+ CellID->942062912],
+
+Cell["\<\
+Cascading Style Sheets (CSS) is a stylesheet language used for describing the \
+presentation of a document written in markup language like HTML and XML. \
+Mathematica also uses stylesheets, though the specifications differ. This \
+package provides tools for importing and processing CSS to be used within \
+Mathematica's stylesheet system.\
+\>", "GuideAbstract",
+ CellID->2001916300]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{6},
+   "Spacer1"]]],
+ "Reference"
+}], "GuideReferenceSection",
+ WholeCellGroupOpener->True],
+
+Cell["", "SectionHeaderSpacer"],
+
+Cell[CellGroupData[{
+
+Cell["Importing CSS", "GuideFunctionsSubsection",
+ CellID->811494718],
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{Cell[
+     TextData["Import"]],"paclet:ref/Import"},
+   "RefLink",
+   BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
+ " ",
+ StyleBox["\[LongDash]", "GuideEmDash"],
+ " Supports \"CSS\" file types: Import[",
+ Cell[BoxData[
+  StyleBox["path", "TI"]], "InlineFormula"],
+ ", \"CSS\"]"
+}], "GuideText",
+ CellID->100541697],
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{Cell[
+     TextData["ExtractCSSFromXMLObject"]],
+    "paclet:CSSTools/ref/ExtractCSSFromXMLObject"},
+   "RefLink",
+   BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
+ " ",
+ StyleBox["\[LongDash]", "GuideEmDash"],
+ " imports the CSS declarations within an XMLObject"
+}], "GuideText",
+ CellID->203374175]
+}, Open  ]],
+
+Cell["\t", "GuideDelimiterSubsection",
+ CellID->622275174],
+
+Cell[CellGroupData[{
+
+Cell["Processing Interpreted CSS", "GuideFunctionsSubsection",
+ CellID->91319310],
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{Cell[
+     TextData["ResolveCSSInterpretations"]],
+    "paclet:CSSTools/ref/ResolveCSSInterpretations"},
+   "RefLink",
+   BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
+ " ",
+ StyleBox["\[LongDash]", "GuideEmDash"],
+ " combines options from a set of CSS interpretations"
+}], "GuideText",
+ CellID->1463276848],
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{Cell[
+     TextData["ResolveCSSInheritance"]],
+    "paclet:CSSTools/ref/ResolveCSSInheritance"},
+   "RefLink",
+   BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
+ " ",
+ StyleBox["\[LongDash]", "GuideEmDash"],
+ " for CSS generated from an XMLObject"
+}], "GuideText",
+ CellID->348206879],
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{Cell[
+     TextData["ProcessCSSStylesAs"]],"paclet:CSSTools/ref/ProcessCSSStylesAs"},
+   "RefLink",
+   BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
+ " ",
+ StyleBox["\[LongDash]", "GuideEmDash"],
+ " converts interpreted CSS styles to Notebook/Cell/Box options"
+}], "GuideText",
+ CellID->47789317],
+
+Cell[TextData[{
+ ButtonBox["HeightMax",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/HeightMax"],
+ "\[NonBreakingSpace]",
+ StyleBox["\[FilledVerySmallSquare]", "InlineSeparator"],
+ " ",
+ ButtonBox["HeightMin",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/HeightMin"],
+ "\[NonBreakingSpace]",
+ StyleBox["\[FilledVerySmallSquare]", "InlineSeparator"],
+ " ",
+ ButtonBox["WidthMax",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/WidthMax"],
+ "\[NonBreakingSpace]",
+ StyleBox["\[FilledVerySmallSquare]", "InlineSeparator"],
+ " ",
+ ButtonBox["WidthMin",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/WidthMin"]
+}], "InlineGuideFunctionListing",
+ CellID->58033752]
+}, Open  ]],
+
+Cell["\t", "GuideDelimiterSubsection",
+ CellID->71783130],
+
+Cell[CellGroupData[{
+
+Cell["Searching SymbolicXML", "GuideFunctionsSubsection",
+ CellID->159396722],
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{Cell[
+     TextData["ExtractCSSFromXMLObject"]],
+    "paclet:CSSTools/ref/ExtractCSSFromXMLObject"},
+   "RefLink",
+   BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
+ " ",
+ StyleBox["\[LongDash]", "GuideEmDash"],
+ " imports the CSS declarations within an XMLObject"
+}], "GuideText",
+ CellID->321169176],
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{Cell[
+     TextData["Selector"]],"paclet:CSSTools/ref/Selector"},
+   "RefLink",
+   BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
+ " ",
+ StyleBox["\[LongDash]", "GuideEmDash"],
+ " find positions of XMLElement in an XMLObject with CSS selector syntax"
+}], "GuideText",
+ CellID->41288703]
+}, Open  ]]
+}, Open  ]],
+
+Cell[" ", "FooterCell"]
+},
+Saveable->False,
+ScreenStyleEnvironment->"Working",
+WindowSize->{725, 750},
+WindowMargins->{{0, Automatic}, {Automatic, 0}},
+WindowTitle->"CSSTools",
+TaggingRules->{
+ "ModificationHighlight" -> False, "ColorType" -> "GuideColor", "LinkTrails" -> 
+  GridBox[{{
+      RowBox[{
+        ButtonBox[
+        "Wolfram Language", ButtonData -> "paclet:guide/WolframRoot", 
+         BaseStyle -> {"Link", "DockedLinkTrail"}]}]}}, ColumnAlignments -> 
+    Left], "ExampleCounter" -> 1, "NeedPlatMsgIn" -> None, "RootCaptions" -> 
+  "", "Metadata" -> {
+   "built" -> "{2019, 3, 17, 16, 3, 8.2790915}", 
+    "history" -> {"0.0", "", "", ""}, "context" -> "CSSTools`", 
+    "keywords" -> {}, "specialkeywords" -> {}, 
+    "tutorialcollectionlinks" -> {}, "index" -> True, "label" -> 
+    "C S S Tools Guide", "language" -> "en", "paclet" -> "CSSTools", "status" -> 
+    "None", "summary" -> 
+    "Cascading Style Sheets (CSS) is a stylesheet language used for \
+describing the presentation of a document written in markup language like \
+HTML and XML. Mathematica also uses stylesheets, though the specifications \
+differ. This package provides tools for importing and processing CSS to be \
+used within Mathematica's stylesheet system.", "synonyms" -> {}, "tabletags" -> 
+    DocumentationBuild`Make`Private`tabletaggingrules$6956, "title" -> 
+    "CSSTools", "titlemodifier" -> "", "windowtitle" -> "CSSTools", "type" -> 
+    "Guide", "uri" -> "CSSTools/guide/CSSTools"}},
+FrontEndVersion->"11.3 for Microsoft Windows (64-bit) (March 6, 2018)",
+StyleDefinitions->FrontEnd`FileName[{"Wolfram"}, "Reference.nb", 
+  CharacterEncoding -> "UTF-8"]
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[580, 21, 4472, 107, 70, "AnchorBarGrid",ExpressionUUID->"b67227ee-6590-446f-a2fe-b2649526e988",
+ CellID->1],
+Cell[CellGroupData[{
+Cell[5077, 132, 50, 1, 70, "GuideTitle",ExpressionUUID->"a2dfbf4b-a400-497d-b964-cad8f8e0772e",
+ CellID->942062912],
+Cell[5130, 135, 393, 7, 70, "GuideAbstract",ExpressionUUID->"b9255c52-39e9-48e0-bedb-b4fa7ec2beba",
+ CellID->2001916300]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[5560, 147, 137, 6, 70, "GuideReferenceSection",ExpressionUUID->"a6eeef74-b282-41fa-b80e-53c5f05dd25e"],
+Cell[5700, 155, 31, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"0d422b6c-bda9-4cf8-bef5-93c51d29183a"],
+Cell[CellGroupData[{
+Cell[5756, 159, 69, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"8d817216-d113-4b36-bc3d-a0f25f4d05de",
+ CellID->811494718],
+Cell[5828, 162, 373, 13, 70, "GuideText",ExpressionUUID->"dee08810-36bd-4ef8-b550-71bf497466fd",
+ CellID->100541697],
+Cell[6204, 177, 358, 11, 70, "GuideText",ExpressionUUID->"fa3304e9-15e7-4c88-80b5-5c41585afd56",
+ CellID->203374175]
+}, Open  ]],
+Cell[6577, 191, 58, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"92df8e96-2df7-4fb0-b6b7-28dfc06ca57c",
+ CellID->622275174],
+Cell[CellGroupData[{
+Cell[6660, 196, 81, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"5f8eaa5a-bc2f-4fac-88db-96866e681ff0",
+ CellID->91319310],
+Cell[6744, 199, 365, 11, 70, "GuideText",ExpressionUUID->"8408ac38-d2a3-4364-b67d-6de38d05ba41",
+ CellID->1463276848],
+Cell[7112, 212, 341, 11, 70, "GuideText",ExpressionUUID->"9fff43cf-59ce-41dc-a1cd-c525790c844f",
+ CellID->348206879],
+Cell[7456, 225, 354, 10, 70, "GuideText",ExpressionUUID->"22c8ab8e-8da0-47ea-8af6-3ed63aad5b8a",
+ CellID->47789317],
+Cell[7813, 237, 699, 23, 70, "InlineGuideFunctionListing",ExpressionUUID->"b73d0705-f48b-45f0-914a-4fc8a03afb09",
+ CellID->58033752]
+}, Open  ]],
+Cell[8527, 263, 57, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"97bc2ebf-8ed5-4a50-830d-bcb39efb1d4e",
+ CellID->71783130],
+Cell[CellGroupData[{
+Cell[8609, 268, 77, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"3f2d20fc-7cdc-4adb-8fc5-a03b4a0fdbf4",
+ CellID->159396722],
+Cell[8689, 271, 358, 11, 70, "GuideText",ExpressionUUID->"98ed5967-fc25-4d07-95b5-f70816b90d9d",
+ CellID->321169176],
+Cell[9050, 284, 343, 10, 70, "GuideText",ExpressionUUID->"76b7ff53-5475-4aac-af5f-dfa262a0aec6",
+ CellID->41288703]
+}, Open  ]]
+}, Open  ]],
+Cell[9420, 298, 23, 0, 70, "FooterCell",ExpressionUUID->"9f215504-0b93-47a2-bd3b-ef78f385fe67"]
+}
+]
+*)
+
+(* End of internal cache information *)
