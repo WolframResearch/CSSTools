@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[      3028,         81]
-NotebookOptionsPosition[      2117,         58]
-NotebookOutlinePosition[      2460,         73]
-CellTagsIndexPosition[      2417,         70]
+NotebookDataLength[      6330,        158]
+NotebookOptionsPosition[      4202,        108]
+NotebookOutlinePosition[      5177,        137]
+CellTagsIndexPosition[      5007,        130]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -34,30 +34,80 @@ Cell[CellGroupData[{
 Cell[BoxData[
  RowBox[{"Directory", "[", "]"}]], "Input",
  CellChangeTimes->{{3.761128200563644*^9, 3.761128201943942*^9}},
- CellLabel->"In[1]:=",ExpressionUUID->"7b37a114-e566-423e-ba5d-9fe25ced38a0"],
+ CellLabel->"In[43]:=",ExpressionUUID->"7b37a114-e566-423e-ba5d-9fe25ced38a0"],
 
-Cell[BoxData["\<\"C:\\\\Users\\\\Kevin\\\\Documents\"\>"], "Output",
- CellChangeTimes->{3.761128202224191*^9, 3.7611297486721153`*^9},
- CellLabel->"Out[1]=",ExpressionUUID->"20c870e4-ff2b-4646-8f40-46a9671509da"]
+Cell[BoxData["\<\"\\\\\\\\wrisync02.wri.wolfram.com\\\\backup$\\\\kevind\\\\\
+My Documents\"\>"], "Output",
+ CellChangeTimes->{3.761128202224191*^9, 3.7611297486721153`*^9, 
+  3.7619985646688643`*^9},
+ CellLabel->"Out[43]=",ExpressionUUID->"07bb0d80-e83c-45b5-a355-32875977f440"]
 }, Open  ]],
 
 Cell[BoxData[
  RowBox[{"Needs", "[", "\"\<CSSTools`\>\"", "]"}]], "Input",
  CellChangeTimes->{{3.7611297610061255`*^9, 3.7611297670758905`*^9}},
- CellLabel->"In[3]:=",ExpressionUUID->"fe23daaf-1381-4f0a-91db-51c1e15c3ec3"],
+ CellLabel->"In[50]:=",ExpressionUUID->"fe23daaf-1381-4f0a-91db-51c1e15c3ec3"],
+
+Cell[CellGroupData[{
 
 Cell[BoxData[
- RowBox[{"Names", "[", "\"\<Selectors3`Private`*\>\"", "]"}]], "Input",
- CellChangeTimes->{{3.7611281346623697`*^9, 3.7611281716170588`*^9}},
- CellLabel->"In[4]:=",ExpressionUUID->"3e308052-e6ad-473d-be77-20468e6f9b9e"],
+ RowBox[{"?", "ProcessCSSStylesAs"}]], "Input",
+ CellChangeTimes->{{3.7619985713717585`*^9, 3.7619985855872216`*^9}},
+ CellLabel->"In[51]:=",ExpressionUUID->"26342b8f-318a-47c4-97b7-8ba22dda4a57"],
+
+Cell[BoxData["\<\"\\!\\(\\*RowBox[{\\\"ProcessCSSStylesAs\\\", \\\"[\\\", \
+RowBox[{StyleBox[\\\"type\\\", \\\"TI\\\"], \\\",\\\",  \
+StyleBox[\\\"CSSData\\\", \\\"TI\\\"], \\\",\\\",  RowBox[{\\\"{\\\", \
+RowBox[{StyleBox[\\\"selectors\\\", \\\"TI\\\"], \\\",\\\",  StyleBox[\\\"\
+\[Ellipsis]\\\", \\\"TR\\\"]}], \\\"}\\\"}]}], \\\"]\\\"}]\\) converts the \
+interpreted CSS styles into Wolfram Language options. CSS styles are merged \
+following the CSS cascade and the resulting options are filtered by \
+\\!\\(\\*StyleBox[\\\"type\\\", \\\"TI\\\"]\\).\"\>"], "Print", "PrintUsage",
+ CellChangeTimes->{3.7619992593105016`*^9},
+ CellTags->
+  "Info513761981259-9590400",ExpressionUUID->"cc46a716-1ecf-4ed3-8d50-\
+1bd4dbd6b671"]
+}, Open  ]],
+
+Cell[CellGroupData[{
 
 Cell[BoxData[
- RowBox[{"Names", "[", "\"\<CSS21Parser`Private`*\>\"", "]"}]], "Input",
- CellChangeTimes->{{3.7611280559878397`*^9, 3.7611280775981245`*^9}},
- CellLabel->"In[23]:=",ExpressionUUID->"12cf8ac9-4828-4690-91cf-2b0519a26207"]
+ RowBox[{"?", "ResolveCSSInterpretations"}]], "Input",
+ CellChangeTimes->{{3.761998596107916*^9, 3.7619986011153083`*^9}},
+ CellLabel->"In[52]:=",ExpressionUUID->"f4fe7c7a-5f51-4d66-9733-3b3156f93626"],
+
+Cell[BoxData["\<\"\\!\\(\\*RowBox[{\\\"ResolveCSSInterpretations\\\", \\\"[\\\
+\", RowBox[{StyleBox[\\\"type\\\", \\\"TI\\\"], \\\",\\\",  \
+StyleBox[\\\"CSSInterpretations\\\", \\\"TI\\\"]}], \\\"]\\\"}]\\) combines \
+options that were interpreted from the CSS importer. Any \
+Left/Right/Bottom/Top and Min/Max values are merged.\"\>"], "Print", \
+"PrintUsage",
+ CellChangeTimes->{3.761999260011285*^9},
+ CellTags->
+  "Info523761981259-9590400",ExpressionUUID->"451fd9c8-47c6-41b1-b76e-\
+a9b1d5d1d816"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"?", "ResolveCSSInheritance"}]], "Input",
+ CellChangeTimes->{{3.7619989833490696`*^9, 3.7619989884344325`*^9}},
+ CellLabel->"In[53]:=",ExpressionUUID->"b95f61db-0aa6-4253-81f0-0f3c482e48a3"],
+
+Cell[BoxData["\<\"\\!\\(\\*RowBox[{\\\"ResolveCSSInheritance\\\", \\\"[\\\", \
+RowBox[{StyleBox[\\\"target\\\", \\\"TI\\\"], \\\",\\\",  \
+StyleBox[\\\"CSSData\\\", \\\"TI\\\"]}], \\\"]\\\"}]\\) calculates the \
+properties of the element at \\!\\(\\*StyleBox[\\\"target\\\", \\\"TI\\\"]\\) \
+including any inherited CSS properties.\"\>"], "Print", "PrintUsage",
+ CellChangeTimes->{3.761999260364167*^9},
+ CellTags->
+  "Info533761981260-9590400",ExpressionUUID->"62f472ee-415a-41b8-9e93-\
+eb0ff90d89bf"]
+}, Open  ]]
 },
 WindowSize->{775, 793},
-WindowMargins->{{347, Automatic}, {49, Automatic}},
+WindowMargins->{{Automatic, -1658}, {Automatic, 64}},
 FrontEndVersion->"11.3 for Microsoft Windows (64-bit) (March 6, 2018)",
 StyleDefinitions->"Default.nb"
 ]
@@ -65,10 +115,24 @@ StyleDefinitions->"Default.nb"
 
 (* Internal cache information *)
 (*CellTagsOutline
-CellTagsIndex->{}
+CellTagsIndex->{
+ "Info513761981259-9590400"->{
+  Cell[1946, 57, 727, 11, 69, "Print",ExpressionUUID->"cc46a716-1ecf-4ed3-8d50-1bd4dbd6b671",
+   CellTags->"Info513761981259-9590400"]},
+ "Info523761981259-9590400"->{
+  Cell[2928, 78, 503, 9, 69, "Print",ExpressionUUID->"451fd9c8-47c6-41b1-b76e-a9b1d5d1d816",
+   CellTags->"Info523761981259-9590400"]},
+ "Info533761981260-9590400"->{
+  Cell[3684, 97, 502, 8, 69, "Print",ExpressionUUID->"62f472ee-415a-41b8-9e93-eb0ff90d89bf",
+   CellTags->"Info533761981260-9590400"]}
+ }
 *)
 (*CellTagsIndex
-CellTagsIndex->{}
+CellTagsIndex->{
+ {"Info513761981259-9590400", 4513, 118},
+ {"Info523761981259-9590400", 4681, 121},
+ {"Info533761981260-9590400", 4848, 124}
+ }
 *)
 (*NotebookFileOutline
 Notebook[{
@@ -77,12 +141,25 @@ Cell[580, 22, 180, 2, 28, "Input",ExpressionUUID->"59d0394e-ddae-4fb3-94cb-1e72b
 Cell[763, 26, 186, 2, 32, "Output",ExpressionUUID->"413eee2f-ea2b-4dac-a246-e8c192f81daf"]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[986, 33, 201, 3, 28, "Input",ExpressionUUID->"7b37a114-e566-423e-ba5d-9fe25ced38a0"],
-Cell[1190, 38, 212, 2, 32, "Output",ExpressionUUID->"20c870e4-ff2b-4646-8f40-46a9671509da"]
+Cell[986, 33, 202, 3, 28, "Input",ExpressionUUID->"7b37a114-e566-423e-ba5d-9fe25ced38a0"],
+Cell[1191, 38, 279, 4, 32, "Output",ExpressionUUID->"07bb0d80-e83c-45b5-a355-32875977f440"]
 }, Open  ]],
-Cell[1417, 43, 222, 3, 28, "Input",ExpressionUUID->"fe23daaf-1381-4f0a-91db-51c1e15c3ec3"],
-Cell[1642, 48, 233, 3, 28, "Input",ExpressionUUID->"3e308052-e6ad-473d-be77-20468e6f9b9e"],
-Cell[1878, 53, 235, 3, 28, "Input",ExpressionUUID->"12cf8ac9-4828-4690-91cf-2b0519a26207"]
+Cell[1485, 45, 223, 3, 28, "Input",ExpressionUUID->"fe23daaf-1381-4f0a-91db-51c1e15c3ec3"],
+Cell[CellGroupData[{
+Cell[1733, 52, 210, 3, 28, "Input",ExpressionUUID->"26342b8f-318a-47c4-97b7-8ba22dda4a57"],
+Cell[1946, 57, 727, 11, 69, "Print",ExpressionUUID->"cc46a716-1ecf-4ed3-8d50-1bd4dbd6b671",
+ CellTags->"Info513761981259-9590400"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[2710, 73, 215, 3, 28, "Input",ExpressionUUID->"f4fe7c7a-5f51-4d66-9733-3b3156f93626"],
+Cell[2928, 78, 503, 9, 69, "Print",ExpressionUUID->"451fd9c8-47c6-41b1-b76e-a9b1d5d1d816",
+ CellTags->"Info523761981259-9590400"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[3468, 92, 213, 3, 28, "Input",ExpressionUUID->"b95f61db-0aa6-4253-81f0-0f3c482e48a3"],
+Cell[3684, 97, 502, 8, 69, "Print",ExpressionUUID->"62f472ee-415a-41b8-9e93-eb0ff90d89bf",
+ CellTags->"Info533761981260-9590400"]
+}, Open  ]]
 }
 ]
 *)

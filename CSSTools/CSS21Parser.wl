@@ -27,12 +27,12 @@ WidthMin[value$] indicates value$ is to be interpreted as a minimum width taken 
 SetUsage[WidthMax, "\
 WidthMax[value$] indicates value$ is to be interpreted as a maximum width taken from a CSS property."];
 
-SetUsage[ProcessCSSStylesAs, "\
-ProcessCSSStylesAs[type$, CSSData$, {selectors$, $$}] converts the interpreted CSS styles into Wolfram Language options. \
+SetUsage[ResolveCSSCascade, "\
+ResolveCSSCascade[type$, CSSData$, {selectors$, $$}] combines options that were interpreted from the CSS importer. \
 CSS styles are merged following the CSS cascade and the resulting options are filtered by type$."];
 
-SetUsage[ExtractCSSFromXMLObject, "\
-ExtractCSSFromXMLObject[XMLObject$] imports the CSS declarations within XMLObject$."];
+SetUsage[ExtractCSSFromXML, "\
+ExtractCSSFromXML[XMLObject$] imports the CSS declarations within XMLObject$."];
 
 SetUsage[ResolveCSSInterpretations, "\
 ResolveCSSInterpretations[type$, CSSInterpretations$] combines options that were interpreted from the CSS importer. \
@@ -3970,24 +3970,24 @@ assemble[opt:FontVariations, rules_List] := opt -> DeleteDuplicates[Flatten @ Ca
 
 
 (* ::Subsection::Closed:: *)
-(*ProcessCSSStylesAs*)
+(*ResolveCSSCascade*)
 
-(* ProcessCSSStylesAs:
+(* ResolveCSSCascade:
 	1. Select the entries in the CSS data based on the provided selectors
 	2. order the selectors based on specificity and importance (if those options are on)
 	3. merge resulting list of interpreted options *)
-Options[ProcessCSSStylesAs] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
+Options[ResolveCSSCascade] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
 
-ProcessCSSStylesAs[box:_?validBoxesQ, CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] := 
-	ProcessCSSStylesAs[{box}, CSSData, selectorList, opts]	
+ResolveCSSCascade[box:_?validBoxesQ, CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] := 
+	ResolveCSSCascade[{box}, CSSData, selectorList, opts]	
 
-ProcessCSSStylesAs[boxes:{__?validBoxesQ}, CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] :=
-	ProcessCSSStylesAs[boxes, CSSData, selectorList, opts]
+ResolveCSSCascade[boxes:{__?validBoxesQ}, CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] :=
+	ResolveCSSCascade[boxes, CSSData, selectorList, opts]
 	
-ProcessCSSStylesAs[type:(Cell|Notebook|Box|All), CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] :=
-	ProcessCSSStylesAs[type, Normal @ CSSData, selectorList, opts]
+ResolveCSSCascade[type:(Cell|Notebook|Box|All), CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] :=
+	ResolveCSSCascade[type, Normal @ CSSData, selectorList, opts]
 
-ProcessCSSStylesAs[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; validCSSDataQ[CSSData], selectorList:{__String}, opts:OptionsPattern[]] :=
+ResolveCSSCascade[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; validCSSDataQ[CSSData], selectorList:{__String}, opts:OptionsPattern[]] :=
 	Module[{interpretationList, specificities},
 		(* start by filtering the data by the given list of selectors; ordering is maintained *)
 		interpretationList = Select[CSSData, MatchQ[#Selector, Alternatives @@ selectorList]&];
@@ -4016,7 +4016,7 @@ ProcessCSSStylesAs[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; vali
 		ResolveCSSInterpretations[type, interpretationList]
 	]
 
-ProcessCSSStylesAs[___] := Failure["BadCSSData", <||>]
+ResolveCSSCascade[___] := Failure["BadCSSData", <||>]
 
 
 (* ::Subsection::Closed:: *)
@@ -4068,13 +4068,13 @@ styleAttributePattern :=
 
 addSpecifictyAndTarget[doc_, data_] :=
 	With[{t = Selector[doc, #Selector]}, 
-		<|"Selector" -> #Selector, "Specificity" -> Prepend[t[["Specificity"]], 0], "Targets" -> t[["Elements"]], "Condition" -> #Condition, "Block" -> #Block|>
+		<|"Selector" -> #Selector, "Specificity" -> t[["Specificity"]], "Targets" -> t[["Elements"]], "Condition" -> #Condition, "Block" -> #Block|>
 	]& /@ data
 
 
-Options[ExtractCSSFromXMLObject] = {"RootDirectory" -> Directory[]};
+Options[ExtractCSSFromXML] = {"RootDirectory" -> Directory[]};
 
-ExtractCSSFromXMLObject[doc_, opts:OptionsPattern[]] :=
+ExtractCSSFromXML[doc_, opts:OptionsPattern[]] :=
 	Module[
 		{
 			currentDir, externalSSPositions, externalSSContent, internalSSPositions, internalSSContent, 
@@ -4086,9 +4086,12 @@ ExtractCSSFromXMLObject[doc_, opts:OptionsPattern[]] :=
 		(* process externally linked style sheets via <link> elements *)
 		externalSSPositions = Position[doc, First @ linkElementPattern];
 		externalSSContent = ExternalCSS /@ Cases[doc, linkElementPattern, Infinity];
+		(* filter out files that weren't found *)
+		With[{bools =  # =!= $Failed& /@ externalSSContent},
+			externalSSPositions = Pick[externalSSPositions, bools];
+			externalSSContent = Pick[externalSSContent, bools];];
 		externalSSContent = addSpecifictyAndTarget[doc, #]& /@ externalSSContent;
-		SetDirectory[currentDir];
-		
+				
 		(* process internal style sheets given by <style> elements *)
 		internalSSPositions = Position[doc, First @ styleElementPattern];
 		internalSSContent = InternalCSS /@ Cases[doc, styleElementPattern, Infinity];
@@ -4115,6 +4118,7 @@ ExtractCSSFromXMLObject[doc_, opts:OptionsPattern[]] :=
 					Ordering @ Join[externalSSPositions, internalSSPositions, directStylePositions]];
 		uniqueStyles = Union @ Flatten @ all[[All, "Block", All, "Property"]];
 		all = Fold[process[#2, #1]&, all, uniqueStyles];
+		SetDirectory[currentDir];
 		Dataset @ all		
 	]
 
@@ -4123,7 +4127,8 @@ parents[x:{__Integer}] := Most @ Reverse @ NestWhileList[Drop[#, -2]&, x, Length
 
 inheritedProperties = Pick[Keys@ #, Values @ #]& @ CSSPropertyData[[All, "Inherited"]];
 
-ResolveCSSInheritance[position:{___?IntegerQ}, CSSData_Dataset] := ResolveCSSInheritance[position, Normal @ CSSData]
+ResolveCSSInheritance[position_Dataset, CSSData_] := ResolveCSSInheritance[Normal @ position, CSSData]
+ResolveCSSInheritance[position_, CSSData_Dataset] := ResolveCSSInheritance[position, Normal @ CSSData]
 
 (* ResolveCSSInheritance
 	Based on the position in the XMLObject, 
@@ -4160,7 +4165,7 @@ ResolveCSSInheritance[position:{___?IntegerQ}, CSSData_?validCSSDataFullQ] :=
 			Select[a[[Key @ position, "All"]], #Important == True& ][[All, "Interpretation"]]]
 	]
 	
-ResolveCSSInheritance[position:{___?IntegerQ}, _] := Failure["BadData", <|"Message" -> "Invalid CSS data."|>]
+ResolveCSSInheritance[position:{___?IntegerQ}, _] := Failure["BadData", <|"Message" -> "Invalid CSS data. CSS data must include specificity and target."|>]
 
 
 (* ::Subsection::Closed:: *)
@@ -4185,7 +4190,12 @@ importText[path_String, encoding_:"UTF8ISOLatin1"] :=
 			]
 	]
 	
-ExternalCSS[filepath_String] := With[{i = importText[filepath]}, If[FailureQ[i], $Failed, processDeclarations @ processRulesets @ i]]
+ExternalCSS[filepath_String] := 
+	If[FailureQ[FindFile[filepath]],
+		Message[Import::nffil, "CSS extraction"]; $Failed
+		,
+		With[{i = importText[filepath]}, If[FailureQ[i], $Failed, processDeclarations @ processRulesets @ i]]]
+		
 InternalCSS[data_String] := processDeclarations @ processRulesets @ data
 
 RawCSS[filepath_String, opts___] := 
@@ -4219,7 +4229,7 @@ ProcessToStylesheet[filepath_String, opts___] :=
 		uniqueStyles = Union @ Flatten @ raw[[All, "Block", All, "Property"]];
 		
 		allProcessed = Fold[process[#2, #1]&, raw, uniqueStyles];
-		allProcessed = ProcessCSSStylesAs[All, allProcessed, {#}]& /@ uniqueSelectors;
+		allProcessed = ResolveCSSCascade[All, allProcessed, {#}]& /@ uniqueSelectors;
 		(*TODO: convert options like FrameMargins to actual styles ala FrameBoxOptions -> {FrameMargins -> _}*)
 		"Stylesheet" -> 
 			NotebookPut @ 

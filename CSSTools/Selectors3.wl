@@ -949,7 +949,7 @@ selectPseudoElement[content:{{_Integer..}...}, arg1_] := content
 
 
 processSimpleSelectorSequence[tokenizedSSS:{{_String, _String}...}] :=
-	Module[{pos = 1, l = Length[tokenizedSSS], selection, specificity = {0, 0, 0}, token, value, pseudo},
+	Module[{pos = 1, l = Length[tokenizedSSS], selection, specificity = {0, 0, 0, 0}, token, value, pseudo},
 		(* $Elements is a list of positions of all XMLElement expressions *)
 		selection = $Elements; 
 		
@@ -958,15 +958,15 @@ processSimpleSelectorSequence[tokenizedSSS:{{_String, _String}...}] :=
 			If[$Debug, Echo, Identity][{token, value} = tokenizedSSS[[pos]]];
 			Switch[token,
 				"universal", selection = selectUniversal[selection, value],				
-				"type",   specificity[[3]]++; selection = selectType[selection, value],
-				"attrib", specificity[[2]]++; selection = selectAttribute[selection, parseAttrib @ value],
-				"class",  specificity[[2]]++; selection = selectClass[selection, parseClass @ value],
-				"hash",   specificity[[1]]++; selection = selectID[selection, parseID @ value],
+				"type",   specificity[[4]]++; selection = selectType[selection, value],
+				"attrib", specificity[[3]]++; selection = selectAttribute[selection, parseAttrib @ value],
+				"class",  specificity[[3]]++; selection = selectClass[selection, parseClass @ value],
+				"hash",   specificity[[2]]++; selection = selectID[selection, parseID @ value],
 				"negation", selection = selectNegation[specificity, selection, parseNegation @ value],
 				"pseudo", 
 					Switch[pseudo = parsePseudo @ value,
-						{"pseudoclass", _},   specificity[[2]]++; selection = selectPseudoClass[selection, Last @ pseudo],
-						{"pseudoelement", _}, specificity[[3]]++; selection = selectPseudoElement[selection, Last @ pseudo]
+						{"pseudoclass", _},   specificity[[3]]++; selection = selectPseudoClass[selection, Last @ pseudo],
+						{"pseudoelement", _}, specificity[[4]]++; selection = selectPseudoElement[selection, Last @ pseudo]
 					],
 				"error", Throw @ Failure["UnexpectedParse", <|"MessageTemplate" -> "Unrecognized token in simple selector sequence.", "Token" -> value, "AllTokens" -> StringJoin @ tokenizedSSS[[All, 2]]|>],
 				(* this fall through should never occur *)
