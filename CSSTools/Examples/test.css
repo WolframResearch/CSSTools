@@ -27,14 +27,14 @@ h3 {
   padding-bottom: initial !important;
   padding-right: 1em;
   padding-left: 2px;
-  border: 1em solid;
+  border: 1ex solid;
   border-left-color: red;
   margin: 5px 50% 10px 20px;
   font-variant: small-caps;
 }
 
 h3:before {
-  content: counter(question) " ";
+  content: counter(question);
 }
 
 h2 {

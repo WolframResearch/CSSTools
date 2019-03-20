@@ -4072,16 +4072,16 @@ addSpecifictyAndTarget[doc_, data_] :=
 	]& /@ data
 
 
-Options[ExtractCSSFromXML] = {"RootDirectory" -> Directory[]};
+Options[ExtractCSSFromXML] = {"RootDirectory" -> Automatic};
 
-ExtractCSSFromXML[doc_, opts:OptionsPattern[]] :=
+ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 	Module[
 		{
 			currentDir, externalSSPositions, externalSSContent, internalSSPositions, internalSSContent, 
 			directStylePositions, directStyleContent, all, uniqueStyles},
 			
 		currentDir = Directory[];
-		SetDirectory[OptionValue["RootDirectory"]]; (* let this return an error message if RootDirectory can't be set *)
+		SetDirectory[If[OptionValue["RootDirectory"] === Automatic, Directory[], OptionValue["RootDirectory"]]]; 
 		
 		(* process externally linked style sheets via <link> elements *)
 		externalSSPositions = Position[doc, First @ linkElementPattern];
