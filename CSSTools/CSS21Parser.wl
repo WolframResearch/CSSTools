@@ -1164,7 +1164,7 @@ parseLength[s_String, inFontSize_:False] := parseLength[s, inFontSize] =
 		*)
 		Switch[ToLowerCase @ unit, 
 			"em", If[inFontSize, val*Inherited,     With[{v = val}, Dynamic[v*CurrentValue[FontSize]]]],
-			"ex", If[inFontSize, val*0.5*Inherited, With[{v = val}, Dynamic[v*0.5*CurrentValue[FontSize]]]],
+			"ex", If[inFontSize, val*0.5*Inherited, With[{v = val}, Dynamic[v*CurrentValue["FontXHeight"]]]],
 			"in", val*dpi,
 			"cm", val/2.54*dpi,
 			"mm", val/10/2.54*dpi,
