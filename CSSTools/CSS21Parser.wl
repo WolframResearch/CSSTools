@@ -6,7 +6,7 @@
 
 (* ::Text:: *)
 (*Author: Kevin Daily*)
-(*Date: 20190305*)
+(*Date: 20190321*)
 (*Version: 1*)
 
 
@@ -3566,7 +3566,7 @@ consumeFunction[positionIndex_, l_, tokens:{{_String, _String}..}] :=
 
 
 processRulesets[s_String] :=
-	Module[{i = 1, pos = 1, startPosBlock, stopPosBlock, startAtBlock, stopAtBlock, l, lRulesets, relevantTokens, rulesets, imports={}},
+	Module[{i = 1, pos = 1, blockStartPos, blockStopPos, atBlockStartPos, atBlockStopPos, l, lRulesets, relevantTokens, rulesets, imports={}},
 	
 		relevantTokens = parseBlock[s]; (* identifies curly-braces, strings, URIs, @import, @charset. Removes comments. *)
 		l = Length[relevantTokens];
@@ -3588,50 +3588,74 @@ processRulesets[s_String] :=
 		lRulesets = Count[relevantTokens, {"{", _}];
 		rulesets = ConstantArray[0, lRulesets];
 		While[pos < l && i <= lRulesets,
-			startPosBlock = findOpeningBracketPosition[pos, "{", relevantTokens];
+			(* pos indicates first non-whitespace token *)
+			blockStartPos = findOpeningBracketPosition[pos, "{", relevantTokens];
 			Which[
-				StringStartsQ[relevantTokens[[startPosBlock-1, 2]], RegularExpression[RE["w"] ~~ T["PAGE_SYM"]]],
-					stopPosBlock  = findClosingBracketPosition[startPosBlock, "{", "}", relevantTokens];
+				(* no selector *)
+				pos == blockStartPos,
+					blockStopPos  = findClosingBracketPosition[blockStartPos, "{", "}", relevantTokens];
+					skipWhitespace[blockStopPos, l, relevantTokens]; pos = blockStopPos,
+			
+				(* @page *)
+				StringStartsQ[relevantTokens[[pos, 2]], RegularExpression[RE["w"] ~~ T["PAGE_SYM"]]],
+					blockStopPos  = findClosingBracketPosition[blockStartPos, "{", "}", relevantTokens];
 					rulesets[[i]] = 
 						<|
-							"Selector" -> StringTrim @ StringJoin @ relevantTokens[[pos ;; startPosBlock-1, 2]], 
+							"Selector" -> StringTrim @ StringJoin @ relevantTokens[[pos ;; blockStartPos-1, 2]], 
 							"Condition" -> StyleData[All, "Printout"],
-							"Block" -> relevantTokens[[startPosBlock+1 ;; If[relevantTokens[[stopPosBlock, 1]] == "}", stopPosBlock-1, stopPosBlock]]]|>;
-					pos = stopPosBlock + 1;
+							"Block" -> relevantTokens[[blockStartPos+1 ;; If[relevantTokens[[blockStopPos, 1]] == "}", blockStopPos-1, blockStopPos]]]|>;
+					skipWhitespace[blockStopPos, l, relevantTokens]; pos = blockStopPos;
 					i++,
 					
-				StringStartsQ[relevantTokens[[startPosBlock-1, 2]], RegularExpression[RE["w"] ~~ T["MEDIA_SYM"]]],
-					startAtBlock = startPosBlock;
-					stopAtBlock = findClosingBracketPosition[startAtBlock, "{", "}", relevantTokens];
-					pos = startAtBlock+1;
-					While[pos < stopAtBlock && i <= lRulesets,
-						startPosBlock = findOpeningBracketPosition[pos, "{", relevantTokens];
-						stopPosBlock  = findClosingBracketPosition[startPosBlock, "{", "}", relevantTokens];
-						rulesets[[i]] = 
-							<|
-								"Selector" -> StringTrim @ StringJoin @ relevantTokens[[pos ;; startPosBlock-1, 2]], 
-								"Condition" -> First @ StringSplit[relevantTokens[[startAtBlock-1, 2]], RegularExpression["(" ~~ RE["w"] ~~ T["MEDIA_SYM"] ~~ ")"]],
-								"Block" -> relevantTokens[[startPosBlock+1 ;; If[relevantTokens[[stopPosBlock, 1]] == "}", stopPosBlock-1, stopPosBlock]]]|>;
-						pos = stopPosBlock + 1;
+				(* @media *)
+				StringStartsQ[relevantTokens[[pos, 2]], RegularExpression[RE["w"] ~~ T["MEDIA_SYM"]]],
+					atBlockStartPos = blockStartPos;
+					atBlockStopPos = findClosingBracketPosition[atBlockStartPos, "{", "}", relevantTokens];
+					pos = atBlockStartPos; skipWhitespace[pos, l, relevantTokens];
+					While[pos < atBlockStopPos && i <= lRulesets,
+						blockStartPos = findOpeningBracketPosition[pos, "{", relevantTokens];
+						Which[
+							(* no selector *)
+							pos == blockStartPos,
+							blockStopPos  = findClosingBracketPosition[blockStartPos, "{", "}", relevantTokens];
+							skipWhitespace[blockStopPos, l, relevantTokens]; pos = blockStopPos,
+							
+							(* skip unknown "at rules" including @import *)
+							StringStartsQ[relevantTokens[[pos, 2]], RegularExpression[RE["w"] ~~ "@"]],
+							blockStopPos = findClosingBracketPosition[blockStartPos, "{", "}", relevantTokens];
+							skipWhitespace[blockStopPos, l, relevantTokens]; pos = blockStopPos,
+					
+							(* normal case *)
+							True,
+							(* 'blockStopPos' could reach the end of the token list, but not necessarily be a closed bracket '}' *)
+							blockStopPos  = findClosingBracketPosition[blockStartPos, "{", "}", relevantTokens];
+							rulesets[[i]] = 
+								<|
+									"Selector" -> StringTrim @ StringJoin @ relevantTokens[[pos ;; blockStartPos-1, 2]], 
+									"Condition" -> None,
+									"Block" -> relevantTokens[[blockStartPos+1 ;; If[relevantTokens[[blockStopPos, 1]] == "}", blockStopPos-1, blockStopPos]]]|>;
+							skipWhitespace[blockStopPos, l, relevantTokens]; pos = blockStopPos;
+						];
 						i++
 					];
-					pos = stopAtBlock + 1,
+					skipWhitespace[atBlockStopPos, l, relevantTokens]; pos = atBlockStopPos,
 					
-				(* skip unknown @ rules, including @import *)
-				StringStartsQ[relevantTokens[[startPosBlock-1, 2]], "@"],
-					startAtBlock = startPosBlock;
-					stopAtBlock = findClosingBracketPosition[startAtBlock, "{", "}", relevantTokens];
-					pos = stopAtBlock + 1,
-					
+				(* skip unknown "at rules" including @import *)
+				StringStartsQ[relevantTokens[[blockStartPos-1, 2]], RegularExpression[RE["w"] ~~ "@"]],
+					atBlockStartPos = blockStartPos;
+					atBlockStopPos = findClosingBracketPosition[atBlockStartPos, "{", "}", relevantTokens];
+					skipWhitespace[atBlockStopPos, l, relevantTokens]; pos = atBlockStopPos,
+				
+				(* general case of correct rule syntax *)
 				True,
-					(* 'stopPosBlock' could reach the end of the token list, but not necessarily be a closed bracket '}' *)
-					stopPosBlock  = findClosingBracketPosition[startPosBlock, "{", "}", relevantTokens];
+					(* 'blockStopPos' could reach the end of the token list, but not necessarily be a closed bracket '}' *)
+					blockStopPos  = findClosingBracketPosition[blockStartPos, "{", "}", relevantTokens];
 					rulesets[[i]] = 
 						<|
-							"Selector" -> StringTrim @ StringJoin @ relevantTokens[[pos ;; startPosBlock-1, 2]], 
+							"Selector" -> StringTrim @ StringJoin @ relevantTokens[[pos ;; blockStartPos-1, 2]], 
 							"Condition" -> None,
-							"Block" -> relevantTokens[[startPosBlock+1 ;; If[relevantTokens[[stopPosBlock, 1]] == "}", stopPosBlock-1, stopPosBlock]]]|>;
-					pos = stopPosBlock + 1;
+							"Block" -> relevantTokens[[blockStartPos+1 ;; If[relevantTokens[[blockStopPos, 1]] == "}", blockStopPos-1, blockStopPos]]]|>;
+					skipWhitespace[blockStopPos, l, relevantTokens]; pos = blockStopPos;
 					i++
 			];
 		];
@@ -3653,6 +3677,8 @@ processDeclarations[rulesets:{_Association..}] :=
 		aCopy[[All, "Block"]] = temp;
 		aCopy
 	]		
+(* fallthrough case where no rules are found from processRulesetes *)
+processDeclarations[{}] := {} 
 
 
 processDeclarationBlock[tokens:{{_String, _String}..}] :=
@@ -3971,6 +3997,7 @@ assemble[opt:FontVariations, rules_List] := opt -> DeleteDuplicates[Flatten @ Ca
 
 (* ::Subsection::Closed:: *)
 (*ResolveCSSCascade*)
+
 
 (* ResolveCSSCascade:
 	1. Select the entries in the CSS data based on the provided selectors
