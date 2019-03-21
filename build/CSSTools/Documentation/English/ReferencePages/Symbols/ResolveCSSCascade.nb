@@ -10,72 +10,130 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[      5550,        149]
-NotebookOptionsPosition[      3472,         99]
-NotebookOutlinePosition[      5268,        146]
-CellTagsIndexPosition[      5225,        143]
-WindowTitle->ProcessCSSStylesAs
+NotebookDataLength[     10268,        300]
+NotebookOptionsPosition[      7045,        229]
+NotebookOutlinePosition[      8853,        276]
+CellTagsIndexPosition[      8810,        273]
+WindowTitle->ResolveCSSCascade
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
 Notebook[{
 Cell[BoxData[GridBox[{
-   {Cell["C S S TOOLS SYMBOL", "PacletNameCell"], Cell[TextData[Cell[BoxData[
-     ActionMenuBox[
-      FrameBox[
-       InterpretationBox[Cell[TextData[{
-         "URL",
-         StyleBox[" \[FilledDownTriangle]", "AnchorBarArrow",
-          StripOnInput->False]
-        }]],
-        TextCell[
-         Row[{"URL", 
-           Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
-       StripOnInput->False], {"\<\"CSSTools/ref/ProcessCSSStylesAs\"\>":>
-      None, "\<\"Copy Wolfram Documentation Center URL\"\>":>
-      Module[{DocumentationSearch`Private`nb$}, 
-       DocumentationSearch`Private`nb$ = NotebookPut[
-          Notebook[{
-            Cell["CSSTools/ref/ProcessCSSStylesAs"]}, Visible -> False]]; 
-       SelectionMove[DocumentationSearch`Private`nb$, All, Notebook]; 
-       FrontEndTokenExecute[DocumentationSearch`Private`nb$, "Copy"]; 
-       NotebookClose[DocumentationSearch`Private`nb$]; Null], 
-      Delimiter, "\<\"Copy web URL\"\>":>
-      Module[{DocumentationSearch`Private`nb$}, 
-       DocumentationSearch`Private`nb$ = NotebookPut[
-          Notebook[{
-            Cell[
-             BoxData[
-              MakeBoxes[
-               Hyperlink[
-               "http://reference.wolfram.com/language/CSSTools/ref/\
-ProcessCSSStylesAs.html"], StandardForm]], "Input", TextClipboardType -> 
-             "PlainText"]}, Visible -> False]]; 
-       SelectionMove[DocumentationSearch`Private`nb$, All, Notebook]; 
-       FrontEndTokenExecute[DocumentationSearch`Private`nb$, "Copy"]; 
-       NotebookClose[DocumentationSearch`Private`nb$]; 
-       Null], "\<\"Go to web URL\"\>":>FrontEndExecute[{
-        NotebookLocate[{
-          URL[
-           StringJoin[
-            If[
-             TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$9696], 
-             "http://reference.wolfram.com/system-modeler/", 
-             "http://reference.wolfram.com/language/"], 
-            "CSSTools/ref/ProcessCSSStylesAs", ".html"]], None}]}]},
-      Appearance->None,
-      MenuAppearance->Automatic,
-      MenuStyle->"URLMenu"]],
-     LineSpacing->{1.4, 0}]], "AnchorBar"]}
+   {Cell["C S S TOOLS SYMBOL", "PacletNameCell"], Cell[TextData[{
+     Cell[BoxData[
+      ActionMenuBox[
+       FrameBox[
+        InterpretationBox[Cell[TextData[{
+          "Tutorials",
+          StyleBox[" \[FilledDownTriangle]", "AnchorBarArrow",
+           StripOnInput->False]
+         }]],
+         TextCell[
+          Row[{"Tutorials", 
+            Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
+        StripOnInput->False], {"\<\"CSSTools\"\>":>Documentation`HelpLookup[
+       "paclet:CSSTools/tutorial/CSSTools"]},
+       Appearance->None,
+       MenuAppearance->Automatic,
+       MenuStyle->"Tutorials"]],
+      LineSpacing->{1.4, 0}],
+     "\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\
+\[ThickSpace]",
+     Cell[BoxData[
+      ActionMenuBox[
+       FrameBox[
+        InterpretationBox[Cell[TextData[{
+          "See Also",
+          StyleBox[" \[FilledDownTriangle]", "AnchorBarArrow",
+           StripOnInput->False]
+         }]],
+         TextCell[
+          Row[{"See Also", 
+            Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
+        StripOnInput->False], {"\<\"ResolveCSSInterpretations\"\>":>
+       Documentation`HelpLookup[
+       "paclet:CSSTools/ref/ResolveCSSInterpretations"], \
+"\<\"ResolveCSSInheritance\"\>":>Documentation`HelpLookup[
+       "paclet:CSSTools/ref/ResolveCSSInheritance"]},
+       Appearance->None,
+       MenuAppearance->Automatic,
+       MenuStyle->"SeeAlso"]],
+      LineSpacing->{1.4, 0}],
+     "\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\
+\[ThickSpace]",
+     Cell[BoxData[
+      ActionMenuBox[
+       FrameBox[
+        InterpretationBox[Cell[TextData[{
+          "Related Guides",
+          StyleBox[" \[FilledDownTriangle]", "AnchorBarArrow",
+           StripOnInput->False]
+         }]],
+         TextCell[
+          Row[{"Related Guides", 
+            Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
+        StripOnInput->False], {"\<\"CSSTools\"\>":>Documentation`HelpLookup[
+       "paclet:CSSTools/guide/CSSTools"]},
+       Appearance->None,
+       MenuAppearance->Automatic,
+       MenuStyle->"MoreAbout"]],
+      LineSpacing->{1.4, 0}],
+     "\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\
+\[ThickSpace]",
+     Cell[BoxData[
+      ActionMenuBox[
+       FrameBox[
+        InterpretationBox[Cell[TextData[{
+          "URL",
+          StyleBox[" \[FilledDownTriangle]", "AnchorBarArrow",
+           StripOnInput->False]
+         }]],
+         TextCell[
+          Row[{"URL", 
+            Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
+        StripOnInput->False], {"\<\"CSSTools/ref/ResolveCSSCascade\"\>":>
+       None, "\<\"Copy Wolfram Documentation Center URL\"\>":>
+       Module[{DocumentationSearch`Private`nb$}, 
+        DocumentationSearch`Private`nb$ = NotebookPut[
+           Notebook[{
+             Cell["CSSTools/ref/ResolveCSSCascade"]}, Visible -> False]]; 
+        SelectionMove[DocumentationSearch`Private`nb$, All, Notebook]; 
+        FrontEndTokenExecute[DocumentationSearch`Private`nb$, "Copy"]; 
+        NotebookClose[DocumentationSearch`Private`nb$]; Null], 
+       Delimiter, "\<\"Copy web URL\"\>":>
+       Module[{DocumentationSearch`Private`nb$}, 
+        DocumentationSearch`Private`nb$ = NotebookPut[
+           Notebook[{
+             Cell[
+              BoxData[
+               MakeBoxes[
+                Hyperlink[
+                "http://reference.wolfram.com/language/CSSTools/ref/\
+ResolveCSSCascade.html"], StandardForm]], "Input", TextClipboardType -> 
+              "PlainText"]}, Visible -> False]]; 
+        SelectionMove[DocumentationSearch`Private`nb$, All, Notebook]; 
+        FrontEndTokenExecute[DocumentationSearch`Private`nb$, "Copy"]; 
+        NotebookClose[DocumentationSearch`Private`nb$]; 
+        Null], "\<\"Go to web URL\"\>":>FrontEndExecute[{
+         NotebookLocate[{
+           URL[
+            StringJoin[
+             If[
+              TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$10074], 
+              "http://reference.wolfram.com/system-modeler/", 
+              "http://reference.wolfram.com/language/"], 
+             "CSSTools/ref/ResolveCSSCascade", ".html"]], None}]}]},
+       Appearance->None,
+       MenuAppearance->Automatic,
+       MenuStyle->"URLMenu"]],
+      LineSpacing->{1.4, 0}]
+    }], "AnchorBar"]}
   }]], "AnchorBarGrid",
- GridBoxOptions->{GridBoxItemSize->{"Columns" -> {
-     Scaled[0.65], {
-      Scaled[0.34]}}, "ColumnsIndexed" -> {}, "Rows" -> {{1.}}, 
-   "RowsIndexed" -> {}}},
  CellID->1],
 
 Cell[TextData[{
- Cell["ProcessCSSStylesAs", "ObjectName"],
+ Cell["ResolveCSSCascade", "ObjectName"],
  Cell[BoxData[
   TemplateBox[{8},
    "Spacer1"]]],
@@ -85,8 +143,8 @@ Cell[TextData[{
 Cell[BoxData[GridBox[{
    {"", Cell[TextData[{
      Cell[BoxData[
-      RowBox[{"ProcessCSSStylesAs", "[", "]"}]], "InlineFormula"],
-     " \[LineSeparator]ProcessCSSStylesAs"
+      RowBox[{"ResolveCSSCascade", "[", "]"}]], "InlineFormula"],
+     " \[LineSeparator]ResolveCSSCascade"
     }]]}
   }]], "Usage",
  GridBoxOptions->{
@@ -95,32 +153,104 @@ Cell[BoxData[GridBox[{
    "RowsIndexed" -> {}}},
  CellID->982511436],
 
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{6},
+   "Spacer1"]]],
+ "See Also"
+}], "SeeAlsoSection",
+ WholeCellGroupOpener->True,
+ CellID->1255426704],
+
+Cell[TextData[{
+ StyleBox[ButtonBox["ResolveCSSInterpretations",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/ResolveCSSInterpretations"],
+  FontFamily->"Verdana"],
+ "\[NonBreakingSpace]",
+ StyleBox["\[MediumSpace]\[FilledVerySmallSquare]\[MediumSpace]", 
+  "InlineSeparator"],
+ " ",
+ StyleBox[ButtonBox["ResolveCSSInheritance",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/ResolveCSSInheritance"],
+  FontFamily->"Verdana"]
+}], "SeeAlso",
+ CellID->929782353]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{6},
+   "Spacer1"]]],
+ "Tutorials"
+}], "TutorialsSection",
+ WholeCellGroupOpener->True,
+ CellID->250839057],
+
+Cell["", "SectionHeaderSpacer"],
+
+Cell[BoxData[
+ TemplateBox[{Cell[
+    TextData["CSSTools"]],"paclet:CSSTools/tutorial/CSSTools"},
+  "RefLink",
+  BaseStyle->"Tutorials"]], "Tutorials",
+ CellID->341631938],
+
+Cell["", "SectionFooterSpacer"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{6},
+   "Spacer1"]]],
+ "Related Guides"
+}], "MoreAboutSection",
+ WholeCellGroupOpener->True,
+ CellID->38303248],
+
+Cell["", "SectionHeaderSpacer"],
+
+Cell[BoxData[
+ TemplateBox[{Cell[
+    TextData["CSSTools"]],"paclet:CSSTools/guide/CSSTools"},
+  "RefLink",
+  BaseStyle->"MoreAbout"]], "MoreAbout",
+ CellID->1]
+}, Open  ]],
+
 Cell[" ", "FooterCell"]
 },
 Saveable->False,
 ScreenStyleEnvironment->"Working",
 WindowSize->{725, 750},
 WindowMargins->{{0, Automatic}, {Automatic, 0}},
-WindowTitle->"ProcessCSSStylesAs",
+WindowTitle->"ResolveCSSCascade",
 TaggingRules->{
  "ModificationHighlight" -> False, "ColorType" -> "SymbolColor", "LinkTrails" -> 
   GridBox[{{
       RowBox[{
         ButtonBox[
-        "Wolfram Language", ButtonData -> "paclet:guide/WolframRoot", 
+        "CSSTools", ButtonData -> "paclet:CSSTools/guide/CSSTools", 
          BaseStyle -> {"Link", "DockedLinkTrail"}]}]}}, ColumnAlignments -> 
-    Left], "ExampleCounter" -> 1, "NeedPlatMsgIn" -> None, "RootCaptions" -> 
-  "", "Metadata" -> {
-   "built" -> "{2019, 3, 19, 12, 30, 24.0148726}", 
+    Left], "HasOptions" -> False, "ExampleCounter" -> 1, "NeedPlatMsgIn" -> 
+  None, "RootCaptions" -> "", 
+  "Metadata" -> {
+   "built" -> "{2019, 3, 21, 10, 2, 11.2452887}", 
     "history" -> {"0.0", "", "", ""}, "context" -> "CSSTools`", 
     "keywords" -> {}, "specialkeywords" -> {}, 
     "tutorialcollectionlinks" -> {}, "index" -> True, "label" -> 
     "C S S Tools Symbol", "language" -> "en", "paclet" -> "CSSTools", 
-    "status" -> "None", "summary" -> 
-    "ProcessCSSStylesAs[] ProcessCSSStylesAs", "synonyms" -> {}, 
-    "tabletags" -> {}, "title" -> "ProcessCSSStylesAs", "titlemodifier" -> "",
-     "windowtitle" -> "ProcessCSSStylesAs", "type" -> "Symbol", "uri" -> 
-    "CSSTools/ref/ProcessCSSStylesAs"}},
+    "status" -> "None", "summary" -> "ResolveCSSCascade[] ResolveCSSCascade", 
+    "synonyms" -> {}, "tabletags" -> {}, "title" -> "ResolveCSSCascade", 
+    "titlemodifier" -> "", "windowtitle" -> "ResolveCSSCascade", "type" -> 
+    "Symbol", "uri" -> "CSSTools/ref/ResolveCSSCascade"}},
 CellContext->"Global`",
 FrontEndVersion->"11.3 for Microsoft Windows (64-bit) (March 6, 2018)",
 StyleDefinitions->Notebook[{
@@ -145,12 +275,33 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[590, 21, 2314, 53, 70, "AnchorBarGrid",ExpressionUUID->"ac2ce086-d423-4f3d-ad8a-9a9dc5939a31",
+Cell[589, 21, 4400, 111, 70, "AnchorBarGrid",ExpressionUUID->"5091c488-82f9-40ce-8b0e-fb6ffaa10dab",
  CellID->1],
-Cell[2907, 76, 175, 6, 70, "ObjectNameGrid",ExpressionUUID->"992ce8c1-4db8-4658-9f10-2fac9df00ae8"],
-Cell[3085, 84, 357, 11, 70, "Usage",ExpressionUUID->"1ee474a0-b324-41f5-b719-bcf1dbfe044a",
+Cell[4992, 134, 174, 6, 70, "ObjectNameGrid",ExpressionUUID->"438df198-fcf0-401d-bab5-02e5069ab0e8"],
+Cell[5169, 142, 355, 11, 70, "Usage",ExpressionUUID->"a2795b5e-0066-434b-b2bc-8fb6dc722074",
  CellID->982511436],
-Cell[3445, 97, 23, 0, 70, "FooterCell",ExpressionUUID->"9987374f-8e20-4388-9ee5-5eee9d15269e"]
+Cell[CellGroupData[{
+Cell[5549, 157, 150, 7, 70, "SeeAlsoSection",ExpressionUUID->"9eb84af0-e84b-44ee-86c1-03a56da32b68",
+ CellID->1255426704],
+Cell[5702, 166, 480, 14, 70, "SeeAlso",ExpressionUUID->"3078abfd-6145-4fde-ace1-fdac7d6bfeec",
+ CellID->929782353]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[6219, 185, 152, 7, 70, "TutorialsSection",ExpressionUUID->"a7c142f6-db8a-4644-9c50-f1d15ab2161b",
+ CellID->250839057],
+Cell[6374, 194, 31, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"b1261df6-ad59-4e30-9c55-1160e6738582"],
+Cell[6408, 196, 171, 5, 70, "Tutorials",ExpressionUUID->"3231d808-6356-4011-a098-9647dc34971f",
+ CellID->341631938],
+Cell[6582, 203, 31, 0, 70, "SectionFooterSpacer",ExpressionUUID->"c1aa90de-f766-4fe3-b11f-fe0c352856c8"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[6650, 208, 156, 7, 70, "MoreAboutSection",ExpressionUUID->"3a2d5e1a-f16b-4171-b6d8-4a45aa782030",
+ CellID->38303248],
+Cell[6809, 217, 31, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"54d7f0af-ad89-4aad-a073-49e2bce8ae60"],
+Cell[6843, 219, 160, 5, 70, "MoreAbout",ExpressionUUID->"37bebd22-cd78-481d-824f-131b2121d010",
+ CellID->1]
+}, Open  ]],
+Cell[7018, 227, 23, 0, 70, "FooterCell",ExpressionUUID->"2181defb-8b36-4b80-acc3-6aa6a9c74c9a"]
 }
 ]
 *)
