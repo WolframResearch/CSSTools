@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     16595,        442]
-NotebookOptionsPosition[      9875,        301]
-NotebookOutlinePosition[     10548,        325]
-CellTagsIndexPosition[     10469,        320]
+NotebookDataLength[    158560,       3384]
+NotebookOptionsPosition[    145690,       3113]
+NotebookOutlinePosition[    146364,       3137]
+CellTagsIndexPosition[    146283,       3132]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -136,14 +136,65 @@ Cell["ResolveCSSCascade", "ObjectName",
 Cell[TextData[{
  Cell["   ", "ModInfo",ExpressionUUID->"171a6cbf-c927-40ac-8729-8bc1570b0503"],
  Cell[BoxData[
-  RowBox[{"ResolveCSSCascade", "[", "]"}]], "InlineFormula",ExpressionUUID->
-  "7489e210-fc04-4e40-b884-0d0112c69fea"],
- " \[LineSeparator]ResolveCSSCascade"
+  RowBox[{"ResolveCSSCascade", "[", 
+   RowBox[{
+    StyleBox["type", "TI"], ",", 
+    StyleBox["CSSData", "TI"], ",", 
+    RowBox[{"{", 
+     RowBox[{
+      StyleBox["selector", "TI"], ",", " ", 
+      StyleBox["\[Ellipsis]", "TR"]}], "}"}]}], "]"}]], "InlineFormula",
+  ExpressionUUID->"7489e210-fc04-4e40-b884-0d0112c69fea"],
+ " \[LineSeparator]ResolveCSSCascade combines options that were interpreted \
+from the CSS importer. CSS styles are merged following the CSS cascade and \
+the resulting options are filtered by ",
+ Cell[BoxData[
+  StyleBox["type", "TI"]], "InlineFormula",ExpressionUUID->
+  "a4646b53-ca7a-4a0a-9814-82c4b7d566e8"],
+ "."
 }], "Usage",
+ CellChangeTimes->{{3.7624656378909564`*^9, 3.762465647454446*^9}, {
+  3.7627299774847827`*^9, 3.762730115961416*^9}},
  CellID->982511436,ExpressionUUID->"a2795b5e-0066-434b-b2bc-8fb6dc722074"],
 
-Cell["XXXX", "Notes",
- CellID->1067943069,ExpressionUUID->"3b725dab-ca02-4bab-83b2-5c84ff4563f8"]
+Cell["\<\
+Following the CSS cascade rules, selector specificity and rule importance are \
+taken into account. If two declarations have the same selector specificity \
+and importance, then the latter declaration is used.\
+\>", "Notes",
+ CellChangeTimes->{{3.762465707603456*^9, 3.7624658003028803`*^9}},
+ CellID->1067943069,ExpressionUUID->"3b725dab-ca02-4bab-83b2-5c84ff4563f8"],
+
+Cell[BoxData[GridBox[{
+   {Cell["      ", "ModInfo",ExpressionUUID->
+     "af38d8d8-3093-4b02-8c70-467810933c43"], "\"\<IgnoreSpecificity\>\"", 
+    ButtonBox["False",
+     BaseStyle->"Link"], Cell[
+    "process rules in the order they were provided", "TableText",
+     ExpressionUUID->"454c9809-5a10-4078-af62-3f4bf3cb7684"]},
+   {Cell["      ", "ModInfo",ExpressionUUID->
+     "fed176af-4f44-4def-baa4-7f8fc4792592"], "\"\<IgnoreImportance\>\"", 
+    ButtonBox["False",
+     BaseStyle->"Link"], Cell[
+    "treat all rules as normal", "TableText",ExpressionUUID->
+     "7cb983cf-3b60-421c-aed6-755b110c0bf7"]}
+  }]], "3ColumnTableMod",
+ CellID->56488170,ExpressionUUID->"e0159d89-ac50-4714-9b39-ea1f2dcfcbf8"],
+
+Cell[TextData[{
+ ButtonBox["ResolveCSSCascade",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/ResolveCSSCascade"],
+ " is often used with CSS data that includes specificity and target \
+information. This information is often acquired with ",
+ ButtonBox["ExtractCSSFromXML",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/ExtractCSSFromXML"],
+ "."
+}], "Notes",
+ CellChangeTimes->{{3.762730561495417*^9, 3.762730638527372*^9}, {
+  3.7627326234759607`*^9, 3.7627326242860575`*^9}},
+ CellID->38300189,ExpressionUUID->"22a66f17-12af-4f4b-bd36-05eeae470922"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -188,9 +239,15 @@ Cell[TextData[{
  " \[EmptyVerySmallSquare] ",
  ButtonBox["ResolveCSSInheritance",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/ResolveCSSInheritance"]
+  ButtonData->"paclet:CSSTools/ref/ResolveCSSInheritance"],
+ " \[EmptyVerySmallSquare] ",
+ ButtonBox["ExtractCSSFromXML",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/ExtractCSSFromXML"],
+ " "
 }], "SeeAlso",
- CellChangeTimes->{{3.7621009697586937`*^9, 3.762100995656477*^9}},
+ CellChangeTimes->{{3.7621009697586937`*^9, 3.762100995656477*^9}, {
+  3.7627306493615446`*^9, 3.762730735475277*^9}},
  CellID->929782353,ExpressionUUID->"3078abfd-6145-4fde-ace1-fdac7d6bfeec"]
 }, Open  ]],
 
@@ -206,6 +263,8 @@ Cell[TextData[ButtonBox["CSSTools",
  CellID->1665078683,ExpressionUUID->"b475c6bc-3850-40a6-a0f2-df2f1eafc454"]
 }, Open  ]],
 
+Cell[CellGroupData[{
+
 Cell[BoxData[
  InterpretationBox[GridBox[{
     {
@@ -218,6 +277,715 @@ Cell[BoxData[
    }],
   $Line = 0; Null]], "PrimaryExamplesSection",
  CellID->880084151,ExpressionUUID->"fc207952-6bbf-4490-a7ee-41f8f7e2a7c6"],
+
+Cell[BoxData[
+ RowBox[{"Needs", "[", "\"\<CSSTools`\>\"", "]"}]], "Input",
+ CellID->14098569,ExpressionUUID->"c16aa1dd-7a4f-4973-8591-71c202dcb6b3"],
+
+Cell["\<\
+An example of CSS matching properties from different selectors.\
+\>", "ExampleText",
+ CellChangeTimes->{{3.761843429152788*^9, 3.7618434336213913`*^9}, {
+   3.762001600144096*^9, 3.762001650162198*^9}, 3.7620018418902535`*^9},
+ CellID->104691956,ExpressionUUID->"24b430f6-702d-42f1-bd03-c3d2ed884c0a"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"cssData", "=", 
+  RowBox[{"ImportString", "[", 
+   RowBox[{
+   "\"\<.h {font-size:30px !important} .header {font-size:20px} h1 \
+{font-size:10px}\>\"", ",", "\"\<CSS\>\""}], "]"}]}]], "Input",
+ CellChangeTimes->{{3.761839961000414*^9, 3.761839988523159*^9}, {
+  3.7618425813132687`*^9, 3.761842582076127*^9}, {3.761843385170765*^9, 
+  3.761843400655448*^9}, {3.762001563728671*^9, 3.7620015920206723`*^9}, {
+  3.7620018030455728`*^9, 3.7620018285764904`*^9}, {3.7627328329882874`*^9, 
+  3.762732834311369*^9}},
+ CellLabel->"In[48]:=",
+ CellID->9491473,ExpressionUUID->"2965936b-276e-44c5-99eb-32effdccceaa"],
+
+Cell[BoxData[
+ TemplateBox[{TagBox[
+    DynamicModuleBox[{
+     TypeSystem`NestedGrid`PackagePrivate`$state$$ = 
+      Data`UnorderedAssociation[
+       "RowCount" -> 3, "Length" -> 3, "InitialType" -> TypeSystem`Vector[
+          TypeSystem`Struct[{"Selector", "Condition", "Block"}, {
+            TypeSystem`Atom[String], TypeSystem`AnyType, 
+            TypeSystem`Vector[
+             
+             TypeSystem`Struct[{
+              "Important", "Property", "Value", "Interpretation"}, {
+               TypeSystem`Atom[TypeSystem`Boolean], 
+               TypeSystem`Atom[
+                TypeSystem`Enumeration["font-size"]], 
+               TypeSystem`Atom[String], TypeSystem`AnyType}], 1]}], 3], 
+        "Shape" -> TypeSystem`PackageScope`HeaderShape[
+          
+          Association[{All, "Selector"} -> 1, {All, "Condition"} -> 
+           1, {All, "Block"} -> 
+           Association[{All, "Block", All, "Important"} -> 
+             1, {All, "Block", All, "Property"} -> 
+             1, {All, "Block", All, "Value"} -> 
+             1, {All, "Block", All, "Interpretation"} -> 1]], 
+          TypeSystem`PackageScope`Limited[
+           TypeSystem`PackageScope`ColumnShape[
+            TypeSystem`PackageScope`RowShape[
+             Association[
+             "Selector" -> 
+              TypeSystem`PackageScope`AtomShape[67.20000000000002], 
+              "Condition" -> TypeSystem`PackageScope`UnknownShape, "Block" -> 
+              TypeSystem`PackageScope`Limited[
+                TypeSystem`PackageScope`ColumnShape[
+                 TypeSystem`PackageScope`RowShape[
+                  Association[
+                  "Important" -> TypeSystem`PackageScope`AtomShape[36], 
+                   "Property" -> TypeSystem`PackageScope`AtomShape[81.], 
+                   "Value" -> 
+                   TypeSystem`PackageScope`AtomShape[38.400000000000006`], 
+                   "Interpretation" -> 
+                   TypeSystem`PackageScope`UnknownShape]]], 1, {
+                All, "Block"}]]]], 3, {}]], "InitialData" -> 
+        TypeSystem`PackageScope`CacheHandle[933880627], "Type" -> 
+        TypeSystem`Vector[
+          TypeSystem`Struct[{"Selector", "Condition", "Block"}, {
+            TypeSystem`Atom[String], TypeSystem`AnyType, 
+            TypeSystem`Vector[
+             
+             TypeSystem`Struct[{
+              "Important", "Property", "Value", "Interpretation"}, {
+               TypeSystem`Atom[TypeSystem`Boolean], 
+               TypeSystem`Atom[
+                TypeSystem`Enumeration["font-size"]], 
+               TypeSystem`Atom[String], TypeSystem`AnyType}], 1]}], 3], 
+        "HandleQ" -> True, "RowTarget" -> 20, "Data" -> 
+        TypeSystem`PackageScope`CacheHandle[933880627]], 
+      TypeSystem`NestedGrid`PackagePrivate`$path$$ = {}, 
+      TypeSystem`NestedGrid`PackagePrivate`$pos$$ = 1, 
+      TypeSystem`NestedGrid`PackagePrivate`$grid$$ = 
+      DynamicModule[{
+        TypeSystem`NestedGrid`PackagePrivate`renderedGrid = Deploy[
+           Style[
+            Grid[{{
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Selector\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Selector\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+                    2044317196][{All, "Selector"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[All, "Selector"]], "Mouse"], 
+                Background -> GrayLevel[0.95], Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Condition\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Condition\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+                    2044317196][{All, "Condition"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[All, "Condition"]], "Mouse"], 
+                Background -> GrayLevel[0.95], Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Block\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Block\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+                    2044317196][{All, "Block"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[All, "Block"]], "Mouse"], Background -> 
+                GrayLevel[0.95], Alignment -> {Center, Baseline}], 
+               SpanFromLeft, SpanFromLeft, SpanFromLeft}, {
+              SpanFromAbove, SpanFromAbove, 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Important\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Important\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+                    2044317196][{All, "Block", All, "Important"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[All, "Block", All, "Important"]], 
+                 "Mouse"], Background -> GrayLevel[0.95], 
+                Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Property\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Property\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+                    2044317196][{All, "Block", All, "Property"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[All, "Block", All, "Property"]], 
+                 "Mouse"], Background -> GrayLevel[0.95], 
+                Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Value\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Value\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+                    2044317196][{All, "Block", All, "Value"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[All, "Block", All, "Value"]], 
+                 "Mouse"], Background -> GrayLevel[0.95], 
+                Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Interpretation\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Interpretation\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+                    2044317196][{All, "Block", All, "Interpretation"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[
+                  All, "Block", All, "Interpretation"]], "Mouse"], Background -> 
+                GrayLevel[0.95], Alignment -> {Left, Baseline}]}, {
+               Pane[
+                Annotation[".h", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[1, 
+                   Key["Selector"]]], "Mouse"], 
+                ImageSize -> {{67.20000000000002, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                  "None", FontFamily -> "Source Code Pro", FontSize -> 13, 
+                   ShowStringCharacters -> True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[1, 
+                   Key["Condition"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes["True"], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Important"]]], "Mouse"], 
+                ImageSize -> {{36, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["font-size", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Property"]]], "Mouse"], 
+                ImageSize -> {{81., Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["30px", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Value"]]], "Mouse"], 
+                ImageSize -> {{38.400000000000006`, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                   RowBox[{"FontSize", "\[Rule]", "22.5`"}], FontFamily -> 
+                   "Source Code Pro", FontSize -> 13, ShowStringCharacters -> 
+                   True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Interpretation"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}]}, {
+               Pane[
+                Annotation[".header", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[2, 
+                   Key["Selector"]]], "Mouse"], 
+                ImageSize -> {{67.20000000000002, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                  "None", FontFamily -> "Source Code Pro", FontSize -> 13, 
+                   ShowStringCharacters -> True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[2, 
+                   Key["Condition"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes["False"], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Important"]]], "Mouse"], 
+                ImageSize -> {{36, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["font-size", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Property"]]], "Mouse"], 
+                ImageSize -> {{81., Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["20px", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Value"]]], "Mouse"], 
+                ImageSize -> {{38.400000000000006`, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                   RowBox[{"FontSize", "\[Rule]", "15.`"}], FontFamily -> 
+                   "Source Code Pro", FontSize -> 13, ShowStringCharacters -> 
+                   True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Interpretation"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}]}, {
+               Pane[
+                Annotation["h1", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[3, 
+                   Key["Selector"]]], "Mouse"], 
+                ImageSize -> {{67.20000000000002, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                  "None", FontFamily -> "Source Code Pro", FontSize -> 13, 
+                   ShowStringCharacters -> True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[3, 
+                   Key["Condition"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes["False"], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Important"]]], "Mouse"], 
+                ImageSize -> {{36, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["font-size", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Property"]]], "Mouse"], 
+                ImageSize -> {{81., Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["10px", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Value"]]], "Mouse"], 
+                ImageSize -> {{38.400000000000006`, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                   RowBox[{"FontSize", "\[Rule]", "7.5`"}], FontFamily -> 
+                   "Source Code Pro", FontSize -> 13, ShowStringCharacters -> 
+                   True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Interpretation"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}]}}, BaseStyle -> {ContextMenu -> {
+                 MenuItem["Copy position to clipboard", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentPosition[
+                   TypeSystem`NestedGrid`PackagePrivate`copyClip]], 
+                  MenuEvaluator -> Automatic], 
+                 MenuItem["Copy data to clipboard", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentData[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`copyClip]], 
+                  MenuEvaluator -> Automatic], Delimiter, 
+                 MenuItem["Paste position in new cell", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentPosition[
+                   TypeSystem`NestedGrid`PackagePrivate`cellPaste]], 
+                  MenuEvaluator -> Automatic], 
+                 MenuItem["Paste data in new cell", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentData[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`cellPaste]], 
+                  MenuEvaluator -> Automatic]}, FontFamily -> "Verdana", 
+               FontSize -> 12}, Alignment -> Left, RowMinHeight -> 1.5, 
+             Dividers -> All, FrameStyle -> GrayLevel[0.85], 
+             BaseStyle -> {FontFamily -> "Verdana", FontSize -> 12}], 
+            LineBreakWithin -> False, ContextMenu -> {}, NumberMarks -> False,
+             ShowAutoStyles -> False]], 
+         TypeSystem`NestedGrid`PackagePrivate`initialQ = True, 
+         TypeSystem`NestedGrid`PackagePrivate`self = $Failed}, 
+        Dynamic[
+         TypeSystem`NestedGrid`PackagePrivate`setupViewPath[
+         TypeSystem`NestedGrid`PackagePrivate`$path$$, If[
+            Not[TypeSystem`NestedGrid`PackagePrivate`initialQ], 
+            
+            Module[{TypeSystem`NestedGrid`PackagePrivate`tmpGrid$ = $Failed, 
+              TypeSystem`NestedGrid`PackagePrivate`tmpData$ = 
+              TypeSystem`NestedGrid`PackagePrivate`LookupCacheValue[
+                TypeSystem`NestedGrid`PackagePrivate`$state$$["Data"]]}, 
+             TypeSystem`NestedGrid`PackagePrivate`tmpGrid$ = 
+              If[TypeSystem`NestedGrid`PackagePrivate`tmpData$ === 
+                TypeSystem`NestedGrid`PackagePrivate`$NotCached, 
+                TypeSystem`NestedGrid`PackagePrivate`renderedGrid, 
+                TypeSystem`NestedGrid`PackagePrivate`renderGrid[
+                TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$grid$$, 2044317196][
+                TypeSystem`NestedGrid`PackagePrivate`tmpData$]]; If[
+               Not[
+                FailureQ[TypeSystem`NestedGrid`PackagePrivate`tmpGrid$]], 
+               TypeSystem`NestedGrid`PackagePrivate`renderedGrid = 
+               TypeSystem`NestedGrid`PackagePrivate`tmpGrid$]; Null]]; 
+          TypeSystem`NestedGrid`PackagePrivate`initialQ = False; 
+          TypeSystem`NestedGrid`PackagePrivate`$pos$$; If[
+            FailureQ[TypeSystem`NestedGrid`PackagePrivate`renderedGrid], 
+            TypeSystem`SparseGrid[
+             TypeSystem`H["(data no longer present)"]], 
+            If[GeneralUtilities`$DebugMode, 
+             Row[{TypeSystem`NestedGrid`PackagePrivate`renderedGrid, "  ", 
+               TypeSystem`NestedGrid`PackagePrivate`formatState[
+               TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                TypeSystem`NestedGrid`PackagePrivate`$pos$$]}], 
+             TypeSystem`NestedGrid`PackagePrivate`renderedGrid]]], 
+         TrackedSymbols :> {TypeSystem`NestedGrid`PackagePrivate`$pos$$}], 
+        DynamicModuleValues :> {}], 
+      TypeSystem`NestedGrid`PackagePrivate`$posCell$$, 
+      TypeSystem`NestedGrid`PackagePrivate`$topBar$$ = Dynamic[
+        TypeSystem`NestedGrid`PackagePrivate`alignBar[
+        TypeSystem`NestedGrid`PackagePrivate`$state$$][
+         TypeSystem`NestedGrid`PackagePrivate`makeFramedBar[
+          TypeSystem`PackageScope`Pathbar[
+          TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+           TypeSystem`NestedGrid`PackagePrivate`updateState[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$grid$$, 2044317196]]]], 
+        TrackedSymbols :> {TypeSystem`NestedGrid`PackagePrivate`$path$$}], 
+      TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$ = Framed[
+        Dynamic[
+         Replace[
+          MouseAnnotation[Null], {
+          TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][Null] -> 
+           "", TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[2044317196][
+             Pattern[TypeSystem`NestedGrid`PackagePrivate`path, 
+              Blank[]]] :> (
+            TypeSystem`NestedGrid`PackagePrivate`$lastPath = 
+             TypeSystem`NestedGrid`PackagePrivate`path; 
+            TypeSystem`NestedGrid`PackagePrivate`makePathTrail[
+             TypeSystem`NestedGrid`PackagePrivate`path, 
+              TypeSystem`NestedGrid`PackagePrivate`makePathElements]), Null :> 
+           Spacer[10], Blank[] :> Spacer[10]}], TrackedSymbols :> {}], 
+        FrameStyle -> None, ImageMargins -> 0, FrameMargins -> 0, Alignment -> 
+        Top, ImageSize -> {Automatic, 14}]}, 
+     DynamicBox[
+      ToBoxes[
+       Column[
+        If[TypeSystem`NestedGrid`PackagePrivate`$path$$ == {}, {
+          TypeSystem`NestedGrid`PackagePrivate`displayScrollBar[
+          TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$pos$$], 
+          TypeSystem`NestedGrid`PackagePrivate`onDesktopShow[
+           TypeSystem`NestedGrid`PackagePrivate`alignBar[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$][
+           TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$]]}, {
+         TypeSystem`NestedGrid`PackagePrivate`$topBar$$, 
+          TypeSystem`NestedGrid`PackagePrivate`displayScrollBar[
+          TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$pos$$], 
+          TypeSystem`NestedGrid`PackagePrivate`onDesktopShow[
+           TypeSystem`NestedGrid`PackagePrivate`alignBar[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$][
+           TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$]]}], Spacings -> 
+        If[TypeSystem`NestedGrid`PackagePrivate`$path$$ == {}, 
+          0, {{}, {0, 0.05, 0}}]], StandardForm], 
+      ImageSizeCache -> {480., {69., 75.}}, 
+      TrackedSymbols :> {
+       TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+        TypeSystem`NestedGrid`PackagePrivate`$grid$$}], 
+     BaseStyle -> {LineBreakWithin -> False}, Deinitialization :> 
+     TypeSystem`NestedGrid`PackagePrivate`deleteState[
+      TypeSystem`NestedGrid`PackagePrivate`$state$$], 
+     DynamicModuleValues :> {}, Initialization :> 
+     Block[{$ContextPath = $ContextPath}, 
+       Needs["TypeSystem`"]]], Deploy, DefaultBaseStyle -> "Deploy"]},
+  "CopyTag",
+  DisplayFunction->(#& ),
+  InterpretationFunction->("Dataset[<>]"& )]], "Output",
+ CellChangeTimes->{3.7620016048215895`*^9, 3.7620018296021442`*^9, 
+  3.7627328468588357`*^9},
+ CellLabel->"Out[48]=",
+ CellID->244525884,ExpressionUUID->"4d04e430-2522-483b-bc6a-7b7907d855c8"]
+}, Open  ]],
+
+Cell[TextData[{
+ ButtonBox["ResolveCSSCascade",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/ResolveCSSCascade"],
+ " takes into account the specificity of each selector. The class selector \
+\".header\" has a higher specificity than the element selector \"h1\". Thus, \
+the FontSize for \".header\" is used."
+}], "ExampleText",
+ CellChangeTimes->{{3.7620017684885597`*^9, 3.762001784532466*^9}, {
+  3.76200187749292*^9, 3.7620018967718124`*^9}, {3.7620019530738726`*^9, 
+  3.762001954240514*^9}, {3.7627328785770187`*^9, 3.7627329110580072`*^9}, {
+  3.762733197785269*^9, 3.762733216067321*^9}},
+ CellID->339362087,ExpressionUUID->"011b798c-7310-4a09-819c-ef6f62104483"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{
+    RowBox[{"Selector", "[", 
+     RowBox[{"\"\<\>\"", ",", "#"}], "]"}], "[", 
+    RowBox[{"[", "\"\<Specificity\>\"", "]"}], "]"}], "&"}], "/@", 
+  RowBox[{"{", 
+   RowBox[{"\"\<.header\>\"", ",", "\"\<h1\>\""}], "}"}]}]], "Input",
+ CellChangeTimes->{{3.762732916444953*^9, 3.7627329240680695`*^9}, {
+  3.7627329834082546`*^9, 3.762732990876919*^9}, {3.7627330536071835`*^9, 
+  3.762733055262733*^9}, {3.7627331034665303`*^9, 3.76273310928399*^9}},
+ CellLabel->"In[57]:=",
+ CellID->571563147,ExpressionUUID->"f845f691-3203-457b-9388-ac3745c82975"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"0", ",", "0", ",", "1", ",", "0"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"0", ",", "0", ",", "0", ",", "1"}], "}"}]}], "}"}]], "Output",
+ CellChangeTimes->{3.762732991297478*^9, 3.7627331098902173`*^9},
+ CellLabel->"Out[57]=",
+ CellID->308123595,ExpressionUUID->"a994dcb7-ac65-4eb8-83e1-702368d7bfd1"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ResolveCSSCascade", "[", 
+  RowBox[{"Cell", ",", "cssData", ",", 
+   RowBox[{"{", 
+    RowBox[{"\"\<.header\>\"", ",", "\"\<h1\>\""}], "}"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.762001901594259*^9, 3.762001971232093*^9}, 
+   3.7627328412080374`*^9},
+ CellLabel->"In[59]:=",
+ CellID->202779533,ExpressionUUID->"b61770d7-42ad-44ed-9bd6-2bd7832c6871"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"FontSize", "\[Rule]", "15.`"}], "}"}]], "Output",
+ CellChangeTimes->{3.7620019400520115`*^9, 3.762001972191798*^9, 
+  3.7627328520788746`*^9, 3.7627331874175787`*^9},
+ CellLabel->"Out[59]=",
+ CellID->19396224,ExpressionUUID->"98d4ded9-b1aa-46af-8858-7bf5f475b029"]
+}, Open  ]],
+
+Cell[TextData[{
+ ButtonBox["ResolveCSSCascade",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/ResolveCSSCascade"],
+ " also takes into account the importance of each declaration. The class \
+selectors \".h\" and \".header\" have the same specificity and the \
+\".header\" rule appears last. However, the \".h\" rule is important so it is \
+used even though it is declared earlier."
+}], "ExampleText",
+ CellChangeTimes->{{3.7620017684885597`*^9, 3.762001784532466*^9}, {
+  3.76200187749292*^9, 3.7620018967718124`*^9}, {3.7620019578363633`*^9, 
+  3.7620019624489*^9}, {3.7627332264989567`*^9, 3.762733242387506*^9}, {
+  3.7627332741135373`*^9, 3.7627332748971596`*^9}, {3.762733433487192*^9, 
+  3.762733495482691*^9}},
+ CellID->509811264,ExpressionUUID->"8db0525a-3655-4eb8-bdd8-b9d1581d7988"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ResolveCSSCascade", "[", 
+  RowBox[{"Cell", ",", "cssData", ",", 
+   RowBox[{"{", 
+    RowBox[{"\"\<.h\>\"", ",", "\"\<.header\>\""}], "}"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.762001901594259*^9, 3.7620019388874135`*^9}, 
+   3.7627328438393164`*^9, {3.7627334983205085`*^9, 3.7627335015867414`*^9}},
+ CellLabel->"In[64]:=",
+ CellID->481809636,ExpressionUUID->"55144a5e-1ccb-44f8-ac73-18dfcb82e337"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"FontSize", "\[Rule]", "22.5`"}], "}"}]], "Output",
+ CellChangeTimes->{{3.7620019400520115`*^9, 3.762001965651867*^9}, 
+   3.7627328536899953`*^9, {3.7627334994347935`*^9, 3.7627335021689663`*^9}},
+ CellLabel->"Out[64]=",
+ CellID->120766142,ExpressionUUID->"f6e5821f-db87-460e-91cc-ea06e2c86809"]
+}, Open  ]]
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -232,12 +1000,659 @@ Cell[BoxData[
   $Line = 0; Null]], "ExampleSection",
  CellID->1293636265,ExpressionUUID->"8b7b44ed-ad96-4fb3-840e-1c9b95acb98e"],
 
+Cell[CellGroupData[{
+
 Cell[BoxData[
  InterpretationBox[Cell[
   "Generalizations & Extensions", "ExampleSection",ExpressionUUID->
    "0761205e-6eda-4403-b6dc-ccbb437b778d"],
   $Line = 0; Null]], "ExampleSection",
  CellID->1020263627,ExpressionUUID->"be726698-82e3-4a94-b05b-91094515b7b1"],
+
+Cell[BoxData[
+ RowBox[{"Needs", "[", "\"\<CSSTools`\>\"", "]"}]], "Input",
+ CellLabel->"In[60]:=",
+ CellID->137523284,ExpressionUUID->"7871e991-615b-4169-9694-7be6737f5f2f"],
+
+Cell["\<\
+An example of CSS matching properties from different selectors.\
+\>", "ExampleText",
+ CellChangeTimes->{{3.761843429152788*^9, 3.7618434336213913`*^9}, {
+   3.762001600144096*^9, 3.762001650162198*^9}, 3.7620018418902535`*^9},
+ CellID->275361121,ExpressionUUID->"36ce1664-0d48-4d60-96fc-f026d7100f03"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"cssData", "=", 
+  RowBox[{"ImportString", "[", 
+   RowBox[{
+   "\"\<.h {font-size:30px !important} .header {font-size:20px} h1 \
+{font-size:10px}\>\"", ",", "\"\<CSS\>\""}], "]"}]}]], "Input",
+ CellChangeTimes->{{3.761839961000414*^9, 3.761839988523159*^9}, {
+  3.7618425813132687`*^9, 3.761842582076127*^9}, {3.761843385170765*^9, 
+  3.761843400655448*^9}, {3.762001563728671*^9, 3.7620015920206723`*^9}, {
+  3.7620018030455728`*^9, 3.7620018285764904`*^9}, {3.7627328329882874`*^9, 
+  3.762732834311369*^9}},
+ CellLabel->"In[61]:=",
+ CellID->48919150,ExpressionUUID->"37502537-fd2f-42d4-bd58-86a0d9a8ac47"],
+
+Cell[BoxData[
+ TemplateBox[{TagBox[
+    DynamicModuleBox[{
+     TypeSystem`NestedGrid`PackagePrivate`$state$$ = 
+      Data`UnorderedAssociation[
+       "RowCount" -> 3, "Length" -> 3, "InitialType" -> TypeSystem`Vector[
+          TypeSystem`Struct[{"Selector", "Condition", "Block"}, {
+            TypeSystem`Atom[String], TypeSystem`AnyType, 
+            TypeSystem`Vector[
+             
+             TypeSystem`Struct[{
+              "Important", "Property", "Value", "Interpretation"}, {
+               TypeSystem`Atom[TypeSystem`Boolean], 
+               TypeSystem`Atom[
+                TypeSystem`Enumeration["font-size"]], 
+               TypeSystem`Atom[String], TypeSystem`AnyType}], 1]}], 3], 
+        "Shape" -> TypeSystem`PackageScope`HeaderShape[
+          
+          Association[{All, "Selector"} -> 1, {All, "Condition"} -> 
+           1, {All, "Block"} -> 
+           Association[{All, "Block", All, "Important"} -> 
+             1, {All, "Block", All, "Property"} -> 
+             1, {All, "Block", All, "Value"} -> 
+             1, {All, "Block", All, "Interpretation"} -> 1]], 
+          TypeSystem`PackageScope`Limited[
+           TypeSystem`PackageScope`ColumnShape[
+            TypeSystem`PackageScope`RowShape[
+             Association[
+             "Selector" -> 
+              TypeSystem`PackageScope`AtomShape[67.20000000000002], 
+              "Condition" -> TypeSystem`PackageScope`UnknownShape, "Block" -> 
+              TypeSystem`PackageScope`Limited[
+                TypeSystem`PackageScope`ColumnShape[
+                 TypeSystem`PackageScope`RowShape[
+                  Association[
+                  "Important" -> TypeSystem`PackageScope`AtomShape[36], 
+                   "Property" -> TypeSystem`PackageScope`AtomShape[81.], 
+                   "Value" -> 
+                   TypeSystem`PackageScope`AtomShape[38.400000000000006`], 
+                   "Interpretation" -> 
+                   TypeSystem`PackageScope`UnknownShape]]], 1, {
+                All, "Block"}]]]], 3, {}]], "InitialData" -> 
+        TypeSystem`PackageScope`CacheHandle[677059525], "Type" -> 
+        TypeSystem`Vector[
+          TypeSystem`Struct[{"Selector", "Condition", "Block"}, {
+            TypeSystem`Atom[String], TypeSystem`AnyType, 
+            TypeSystem`Vector[
+             
+             TypeSystem`Struct[{
+              "Important", "Property", "Value", "Interpretation"}, {
+               TypeSystem`Atom[TypeSystem`Boolean], 
+               TypeSystem`Atom[
+                TypeSystem`Enumeration["font-size"]], 
+               TypeSystem`Atom[String], TypeSystem`AnyType}], 1]}], 3], 
+        "HandleQ" -> True, "RowTarget" -> 20, "Data" -> 
+        TypeSystem`PackageScope`CacheHandle[677059525]], 
+      TypeSystem`NestedGrid`PackagePrivate`$path$$ = {}, 
+      TypeSystem`NestedGrid`PackagePrivate`$pos$$ = 1, 
+      TypeSystem`NestedGrid`PackagePrivate`$grid$$ = 
+      DynamicModule[{
+        TypeSystem`NestedGrid`PackagePrivate`renderedGrid = Deploy[
+           Style[
+            Grid[{{
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Selector\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Selector\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Selector"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Selector"]], "Mouse"], 
+                Background -> GrayLevel[0.95], Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Condition\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Condition\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Condition"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Condition"]], "Mouse"], 
+                Background -> GrayLevel[0.95], Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Block\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Block\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Block"]], "Mouse"], Background -> 
+                GrayLevel[0.95], Alignment -> {Center, Baseline}], 
+               SpanFromLeft, SpanFromLeft, SpanFromLeft}, {
+              SpanFromAbove, SpanFromAbove, 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Important\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Important\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block", All, "Important"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Block", All, "Important"]], 
+                 "Mouse"], Background -> GrayLevel[0.95], 
+                Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Property\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Property\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block", All, "Property"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Block", All, "Property"]], 
+                 "Mouse"], Background -> GrayLevel[0.95], 
+                Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Value\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Value\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block", All, "Value"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Block", All, "Value"]], 
+                 "Mouse"], Background -> GrayLevel[0.95], 
+                Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Interpretation\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Interpretation\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block", All, "Interpretation"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[
+                  All, "Block", All, "Interpretation"]], "Mouse"], Background -> 
+                GrayLevel[0.95], Alignment -> {Left, Baseline}]}, {
+               Pane[
+                Annotation[".h", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Selector"]]], "Mouse"], 
+                ImageSize -> {{67.20000000000002, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                  "None", FontFamily -> "Source Code Pro", FontSize -> 13, 
+                   ShowStringCharacters -> True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Condition"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes["True"], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Important"]]], "Mouse"], 
+                ImageSize -> {{36, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["font-size", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Property"]]], "Mouse"], 
+                ImageSize -> {{81., Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["30px", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Value"]]], "Mouse"], 
+                ImageSize -> {{38.400000000000006`, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                   RowBox[{"FontSize", "\[Rule]", "22.5`"}], FontFamily -> 
+                   "Source Code Pro", FontSize -> 13, ShowStringCharacters -> 
+                   True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Interpretation"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}]}, {
+               Pane[
+                Annotation[".header", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Selector"]]], "Mouse"], 
+                ImageSize -> {{67.20000000000002, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                  "None", FontFamily -> "Source Code Pro", FontSize -> 13, 
+                   ShowStringCharacters -> True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Condition"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes["False"], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Important"]]], "Mouse"], 
+                ImageSize -> {{36, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["font-size", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Property"]]], "Mouse"], 
+                ImageSize -> {{81., Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["20px", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Value"]]], "Mouse"], 
+                ImageSize -> {{38.400000000000006`, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                   RowBox[{"FontSize", "\[Rule]", "15.`"}], FontFamily -> 
+                   "Source Code Pro", FontSize -> 13, ShowStringCharacters -> 
+                   True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Interpretation"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}]}, {
+               Pane[
+                Annotation["h1", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Selector"]]], "Mouse"], 
+                ImageSize -> {{67.20000000000002, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                  "None", FontFamily -> "Source Code Pro", FontSize -> 13, 
+                   ShowStringCharacters -> True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Condition"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes["False"], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Important"]]], "Mouse"], 
+                ImageSize -> {{36, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["font-size", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Property"]]], "Mouse"], 
+                ImageSize -> {{81., Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["10px", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Value"]]], "Mouse"], 
+                ImageSize -> {{38.400000000000006`, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                   RowBox[{"FontSize", "\[Rule]", "7.5`"}], FontFamily -> 
+                   "Source Code Pro", FontSize -> 13, ShowStringCharacters -> 
+                   True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Interpretation"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}]}}, BaseStyle -> {ContextMenu -> {
+                 MenuItem["Copy position to clipboard", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentPosition[
+                   TypeSystem`NestedGrid`PackagePrivate`copyClip]], 
+                  MenuEvaluator -> Automatic], 
+                 MenuItem["Copy data to clipboard", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentData[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`copyClip]], 
+                  MenuEvaluator -> Automatic], Delimiter, 
+                 MenuItem["Paste position in new cell", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentPosition[
+                   TypeSystem`NestedGrid`PackagePrivate`cellPaste]], 
+                  MenuEvaluator -> Automatic], 
+                 MenuItem["Paste data in new cell", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentData[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`cellPaste]], 
+                  MenuEvaluator -> Automatic]}, FontFamily -> "Verdana", 
+               FontSize -> 12}, Alignment -> Left, RowMinHeight -> 1.5, 
+             Dividers -> All, FrameStyle -> GrayLevel[0.85], 
+             BaseStyle -> {FontFamily -> "Verdana", FontSize -> 12}], 
+            LineBreakWithin -> False, ContextMenu -> {}, NumberMarks -> False,
+             ShowAutoStyles -> False]], 
+         TypeSystem`NestedGrid`PackagePrivate`initialQ = True, 
+         TypeSystem`NestedGrid`PackagePrivate`self = $Failed}, 
+        Dynamic[
+         TypeSystem`NestedGrid`PackagePrivate`setupViewPath[
+         TypeSystem`NestedGrid`PackagePrivate`$path$$, If[
+            Not[TypeSystem`NestedGrid`PackagePrivate`initialQ], 
+            
+            Module[{TypeSystem`NestedGrid`PackagePrivate`tmpGrid$ = $Failed, 
+              TypeSystem`NestedGrid`PackagePrivate`tmpData$ = 
+              TypeSystem`NestedGrid`PackagePrivate`LookupCacheValue[
+                TypeSystem`NestedGrid`PackagePrivate`$state$$["Data"]]}, 
+             TypeSystem`NestedGrid`PackagePrivate`tmpGrid$ = 
+              If[TypeSystem`NestedGrid`PackagePrivate`tmpData$ === 
+                TypeSystem`NestedGrid`PackagePrivate`$NotCached, 
+                TypeSystem`NestedGrid`PackagePrivate`renderedGrid, 
+                TypeSystem`NestedGrid`PackagePrivate`renderGrid[
+                TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][
+                TypeSystem`NestedGrid`PackagePrivate`tmpData$]]; If[
+               Not[
+                FailureQ[TypeSystem`NestedGrid`PackagePrivate`tmpGrid$]], 
+               TypeSystem`NestedGrid`PackagePrivate`renderedGrid = 
+               TypeSystem`NestedGrid`PackagePrivate`tmpGrid$]; Null]]; 
+          TypeSystem`NestedGrid`PackagePrivate`initialQ = False; 
+          TypeSystem`NestedGrid`PackagePrivate`$pos$$; If[
+            FailureQ[TypeSystem`NestedGrid`PackagePrivate`renderedGrid], 
+            TypeSystem`SparseGrid[
+             TypeSystem`H["(data no longer present)"]], 
+            If[GeneralUtilities`$DebugMode, 
+             Row[{TypeSystem`NestedGrid`PackagePrivate`renderedGrid, "  ", 
+               TypeSystem`NestedGrid`PackagePrivate`formatState[
+               TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                TypeSystem`NestedGrid`PackagePrivate`$pos$$]}], 
+             TypeSystem`NestedGrid`PackagePrivate`renderedGrid]]], 
+         TrackedSymbols :> {TypeSystem`NestedGrid`PackagePrivate`$pos$$}], 
+        DynamicModuleValues :> {}], 
+      TypeSystem`NestedGrid`PackagePrivate`$posCell$$, 
+      TypeSystem`NestedGrid`PackagePrivate`$topBar$$ = Dynamic[
+        TypeSystem`NestedGrid`PackagePrivate`alignBar[
+        TypeSystem`NestedGrid`PackagePrivate`$state$$][
+         TypeSystem`NestedGrid`PackagePrivate`makeFramedBar[
+          TypeSystem`PackageScope`Pathbar[
+          TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+           TypeSystem`NestedGrid`PackagePrivate`updateState[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238]]]], 
+        TrackedSymbols :> {TypeSystem`NestedGrid`PackagePrivate`$path$$}], 
+      TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$ = Framed[
+        Dynamic[
+         Replace[
+          MouseAnnotation[Null], {
+          TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][Null] -> 
+           "", TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+             Pattern[TypeSystem`NestedGrid`PackagePrivate`path, 
+              Blank[]]] :> (
+            TypeSystem`NestedGrid`PackagePrivate`$lastPath = 
+             TypeSystem`NestedGrid`PackagePrivate`path; 
+            TypeSystem`NestedGrid`PackagePrivate`makePathTrail[
+             TypeSystem`NestedGrid`PackagePrivate`path, 
+              TypeSystem`NestedGrid`PackagePrivate`makePathElements]), Null :> 
+           Spacer[10], Blank[] :> Spacer[10]}], TrackedSymbols :> {}], 
+        FrameStyle -> None, ImageMargins -> 0, FrameMargins -> 0, Alignment -> 
+        Top, ImageSize -> {Automatic, 14}]}, 
+     DynamicBox[
+      ToBoxes[
+       Column[
+        If[TypeSystem`NestedGrid`PackagePrivate`$path$$ == {}, {
+          TypeSystem`NestedGrid`PackagePrivate`displayScrollBar[
+          TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$pos$$], 
+          TypeSystem`NestedGrid`PackagePrivate`onDesktopShow[
+           TypeSystem`NestedGrid`PackagePrivate`alignBar[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$][
+           TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$]]}, {
+         TypeSystem`NestedGrid`PackagePrivate`$topBar$$, 
+          TypeSystem`NestedGrid`PackagePrivate`displayScrollBar[
+          TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$pos$$], 
+          TypeSystem`NestedGrid`PackagePrivate`onDesktopShow[
+           TypeSystem`NestedGrid`PackagePrivate`alignBar[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$][
+           TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$]]}], Spacings -> 
+        If[TypeSystem`NestedGrid`PackagePrivate`$path$$ == {}, 
+          0, {{}, {0, 0.05, 0}}]], StandardForm], 
+      ImageSizeCache -> {480., {69., 75.}}, 
+      TrackedSymbols :> {
+       TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+        TypeSystem`NestedGrid`PackagePrivate`$grid$$}], 
+     BaseStyle -> {LineBreakWithin -> False}, Deinitialization :> 
+     TypeSystem`NestedGrid`PackagePrivate`deleteState[
+      TypeSystem`NestedGrid`PackagePrivate`$state$$], 
+     DynamicModuleValues :> {}, Initialization :> 
+     Block[{$ContextPath = $ContextPath}, 
+       Needs["TypeSystem`"]]], Deploy, DefaultBaseStyle -> "Deploy"]},
+  "CopyTag",
+  DisplayFunction->(#& ),
+  InterpretationFunction->("Dataset[<>]"& )]], "Output",
+ CellChangeTimes->{3.7627333843415813`*^9},
+ CellLabel->"Out[61]=",
+ CellID->65982193,ExpressionUUID->"af53a948-3b2d-4fd1-a50e-308e393c8f3f"]
+}, Open  ]],
+
+Cell[TextData[{
+ "Using the similar function ",
+ ButtonBox["ResolveCSSInterpretations",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/ResolveCSSInterpretations"],
+ " with all interpretations would favor the last entry even though it has \
+less specificity and is not important."
+}], "ExampleText",
+ CellChangeTimes->{{3.7620016871234503`*^9, 3.762001741307228*^9}, {
+  3.762001852939741*^9, 3.7620018596596055`*^9}, {3.7627333747383633`*^9, 
+  3.762733376974071*^9}},
+ CellID->551044751,ExpressionUUID->"b4a9fba0-02c7-4c36-a34e-d9a7e7a273c9"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ResolveCSSInterpretations", "[", 
+  RowBox[{"Cell", ",", 
+   RowBox[{"cssData", "[", 
+    RowBox[{"[", 
+     RowBox[{
+     "All", ",", "\"\<Block\>\"", ",", "All", ",", "\"\<Interpretation\>\""}],
+      "]"}], "]"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.7620017521737423`*^9, 3.7620017556886377`*^9}, 
+   3.762732839049445*^9},
+ CellLabel->"In[62]:=",
+ CellID->304063679,ExpressionUUID->"2ffe2ed3-e3d5-420c-8976-1ccdbc80c7c5"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"FontSize", "\[Rule]", "7.5`"}], "}"}]], "Output",
+ CellChangeTimes->{3.762001756244467*^9, 3.762001870036293*^9, 
+  3.762732849242836*^9, 3.7627333862905245`*^9},
+ CellLabel->"Out[62]=",
+ CellID->672902617,ExpressionUUID->"7c47d228-031f-4074-9e77-c650c05e6e7e"]
+}, Open  ]]
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -248,20 +1663,1417 @@ Cell[BoxData[
   $Line = 0; Null]], "ExampleSection",
  CellID->2061341341,ExpressionUUID->"c4358828-14b1-4658-99c7-b5867929dee6"],
 
-Cell[BoxData[
- InterpretationBox[Cell[
-  "XXXX", "ExampleSubsection",ExpressionUUID->
-   "3ed11e5e-da2e-4589-9dd5-651f0be0e38c"],
-  $Line = 0; Null]], "ExampleSubsection",
- CellID->1757724783,ExpressionUUID->"053b05a6-b845-434f-811e-77ba01820411"],
+Cell[CellGroupData[{
 
 Cell[BoxData[
  InterpretationBox[Cell[
-  "XXXX", "ExampleSubsection",ExpressionUUID->
+  "\"IgnoreSpecificity\"", "ExampleSubsection",ExpressionUUID->
+   "3ed11e5e-da2e-4589-9dd5-651f0be0e38c"],
+  $Line = 0; Null]], "ExampleSubsection",
+ CellChangeTimes->{{3.7627301929564896`*^9, 3.762730196755273*^9}},
+ CellID->1757724783,ExpressionUUID->"053b05a6-b845-434f-811e-77ba01820411"],
+
+Cell[BoxData[
+ RowBox[{"Needs", "[", "\"\<CSSTools`\>\"", "]"}]], "Input",
+ CellID->405814373,ExpressionUUID->"e21b123b-af95-4d31-9dab-32fec6b6677b"],
+
+Cell["\<\
+An example of CSS matching properties from different selectors.\
+\>", "ExampleText",
+ CellChangeTimes->{{3.761843429152788*^9, 3.7618434336213913`*^9}, {
+   3.762001600144096*^9, 3.762001650162198*^9}, 3.7620018418902535`*^9},
+ CellID->108671522,ExpressionUUID->"60398388-f0c6-4bbe-b2c2-4d9ad9652408"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"cssData", "=", 
+  RowBox[{"ImportString", "[", 
+   RowBox[{
+   "\"\<.h {font-size:30px !important} .header {font-size:20px} h1 \
+{font-size:10px}\>\"", ",", "\"\<CSS\>\""}], "]"}]}]], "Input",
+ CellChangeTimes->{{3.761839961000414*^9, 3.761839988523159*^9}, {
+  3.7618425813132687`*^9, 3.761842582076127*^9}, {3.761843385170765*^9, 
+  3.761843400655448*^9}, {3.762001563728671*^9, 3.7620015920206723`*^9}, {
+  3.7620018030455728`*^9, 3.7620018285764904`*^9}, {3.7627328329882874`*^9, 
+  3.762732834311369*^9}},
+ CellLabel->"In[61]:=",
+ CellID->289398237,ExpressionUUID->"3d17f409-79d6-4a5a-a68c-836e1460518f"],
+
+Cell[BoxData[
+ TemplateBox[{TagBox[
+    DynamicModuleBox[{
+     TypeSystem`NestedGrid`PackagePrivate`$state$$ = 
+      Data`UnorderedAssociation[
+       "RowCount" -> 3, "Length" -> 3, "InitialType" -> TypeSystem`Vector[
+          TypeSystem`Struct[{"Selector", "Condition", "Block"}, {
+            TypeSystem`Atom[String], TypeSystem`AnyType, 
+            TypeSystem`Vector[
+             
+             TypeSystem`Struct[{
+              "Important", "Property", "Value", "Interpretation"}, {
+               TypeSystem`Atom[TypeSystem`Boolean], 
+               TypeSystem`Atom[
+                TypeSystem`Enumeration["font-size"]], 
+               TypeSystem`Atom[String], TypeSystem`AnyType}], 1]}], 3], 
+        "Shape" -> TypeSystem`PackageScope`HeaderShape[
+          
+          Association[{All, "Selector"} -> 1, {All, "Condition"} -> 
+           1, {All, "Block"} -> 
+           Association[{All, "Block", All, "Important"} -> 
+             1, {All, "Block", All, "Property"} -> 
+             1, {All, "Block", All, "Value"} -> 
+             1, {All, "Block", All, "Interpretation"} -> 1]], 
+          TypeSystem`PackageScope`Limited[
+           TypeSystem`PackageScope`ColumnShape[
+            TypeSystem`PackageScope`RowShape[
+             Association[
+             "Selector" -> 
+              TypeSystem`PackageScope`AtomShape[67.20000000000002], 
+              "Condition" -> TypeSystem`PackageScope`UnknownShape, "Block" -> 
+              TypeSystem`PackageScope`Limited[
+                TypeSystem`PackageScope`ColumnShape[
+                 TypeSystem`PackageScope`RowShape[
+                  Association[
+                  "Important" -> TypeSystem`PackageScope`AtomShape[36], 
+                   "Property" -> TypeSystem`PackageScope`AtomShape[81.], 
+                   "Value" -> 
+                   TypeSystem`PackageScope`AtomShape[38.400000000000006`], 
+                   "Interpretation" -> 
+                   TypeSystem`PackageScope`UnknownShape]]], 1, {
+                All, "Block"}]]]], 3, {}]], "InitialData" -> 
+        TypeSystem`PackageScope`CacheHandle[677059525], "Type" -> 
+        TypeSystem`Vector[
+          TypeSystem`Struct[{"Selector", "Condition", "Block"}, {
+            TypeSystem`Atom[String], TypeSystem`AnyType, 
+            TypeSystem`Vector[
+             
+             TypeSystem`Struct[{
+              "Important", "Property", "Value", "Interpretation"}, {
+               TypeSystem`Atom[TypeSystem`Boolean], 
+               TypeSystem`Atom[
+                TypeSystem`Enumeration["font-size"]], 
+               TypeSystem`Atom[String], TypeSystem`AnyType}], 1]}], 3], 
+        "HandleQ" -> True, "RowTarget" -> 20, "Data" -> 
+        TypeSystem`PackageScope`CacheHandle[677059525]], 
+      TypeSystem`NestedGrid`PackagePrivate`$path$$ = {}, 
+      TypeSystem`NestedGrid`PackagePrivate`$pos$$ = 1, 
+      TypeSystem`NestedGrid`PackagePrivate`$grid$$ = 
+      DynamicModule[{
+        TypeSystem`NestedGrid`PackagePrivate`renderedGrid = Deploy[
+           Style[
+            Grid[{{
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Selector\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Selector\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Selector"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Selector"]], "Mouse"], 
+                Background -> GrayLevel[0.95], Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Condition\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Condition\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Condition"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Condition"]], "Mouse"], 
+                Background -> GrayLevel[0.95], Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Block\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Block\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Block"]], "Mouse"], Background -> 
+                GrayLevel[0.95], Alignment -> {Center, Baseline}], 
+               SpanFromLeft, SpanFromLeft, SpanFromLeft}, {
+              SpanFromAbove, SpanFromAbove, 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Important\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Important\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block", All, "Important"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Block", All, "Important"]], 
+                 "Mouse"], Background -> GrayLevel[0.95], 
+                Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Property\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Property\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block", All, "Property"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Block", All, "Property"]], 
+                 "Mouse"], Background -> GrayLevel[0.95], 
+                Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Value\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Value\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block", All, "Value"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Block", All, "Value"]], 
+                 "Mouse"], Background -> GrayLevel[0.95], 
+                Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Interpretation\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Interpretation\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block", All, "Interpretation"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[
+                  All, "Block", All, "Interpretation"]], "Mouse"], Background -> 
+                GrayLevel[0.95], Alignment -> {Left, Baseline}]}, {
+               Pane[
+                Annotation[".h", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Selector"]]], "Mouse"], 
+                ImageSize -> {{67.20000000000002, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                  "None", FontFamily -> "Source Code Pro", FontSize -> 13, 
+                   ShowStringCharacters -> True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Condition"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes["True"], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Important"]]], "Mouse"], 
+                ImageSize -> {{36, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["font-size", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Property"]]], "Mouse"], 
+                ImageSize -> {{81., Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["30px", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Value"]]], "Mouse"], 
+                ImageSize -> {{38.400000000000006`, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                   RowBox[{"FontSize", "\[Rule]", "22.5`"}], FontFamily -> 
+                   "Source Code Pro", FontSize -> 13, ShowStringCharacters -> 
+                   True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Interpretation"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}]}, {
+               Pane[
+                Annotation[".header", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Selector"]]], "Mouse"], 
+                ImageSize -> {{67.20000000000002, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                  "None", FontFamily -> "Source Code Pro", FontSize -> 13, 
+                   ShowStringCharacters -> True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Condition"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes["False"], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Important"]]], "Mouse"], 
+                ImageSize -> {{36, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["font-size", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Property"]]], "Mouse"], 
+                ImageSize -> {{81., Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["20px", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Value"]]], "Mouse"], 
+                ImageSize -> {{38.400000000000006`, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                   RowBox[{"FontSize", "\[Rule]", "15.`"}], FontFamily -> 
+                   "Source Code Pro", FontSize -> 13, ShowStringCharacters -> 
+                   True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Interpretation"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}]}, {
+               Pane[
+                Annotation["h1", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Selector"]]], "Mouse"], 
+                ImageSize -> {{67.20000000000002, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                  "None", FontFamily -> "Source Code Pro", FontSize -> 13, 
+                   ShowStringCharacters -> True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Condition"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes["False"], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Important"]]], "Mouse"], 
+                ImageSize -> {{36, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["font-size", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Property"]]], "Mouse"], 
+                ImageSize -> {{81., Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["10px", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Value"]]], "Mouse"], 
+                ImageSize -> {{38.400000000000006`, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                   RowBox[{"FontSize", "\[Rule]", "7.5`"}], FontFamily -> 
+                   "Source Code Pro", FontSize -> 13, ShowStringCharacters -> 
+                   True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Interpretation"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}]}}, BaseStyle -> {ContextMenu -> {
+                 MenuItem["Copy position to clipboard", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentPosition[
+                   TypeSystem`NestedGrid`PackagePrivate`copyClip]], 
+                  MenuEvaluator -> Automatic], 
+                 MenuItem["Copy data to clipboard", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentData[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`copyClip]], 
+                  MenuEvaluator -> Automatic], Delimiter, 
+                 MenuItem["Paste position in new cell", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentPosition[
+                   TypeSystem`NestedGrid`PackagePrivate`cellPaste]], 
+                  MenuEvaluator -> Automatic], 
+                 MenuItem["Paste data in new cell", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentData[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`cellPaste]], 
+                  MenuEvaluator -> Automatic]}, FontFamily -> "Verdana", 
+               FontSize -> 12}, Alignment -> Left, RowMinHeight -> 1.5, 
+             Dividers -> All, FrameStyle -> GrayLevel[0.85], 
+             BaseStyle -> {FontFamily -> "Verdana", FontSize -> 12}], 
+            LineBreakWithin -> False, ContextMenu -> {}, NumberMarks -> False,
+             ShowAutoStyles -> False]], 
+         TypeSystem`NestedGrid`PackagePrivate`initialQ = True, 
+         TypeSystem`NestedGrid`PackagePrivate`self = $Failed}, 
+        Dynamic[
+         TypeSystem`NestedGrid`PackagePrivate`setupViewPath[
+         TypeSystem`NestedGrid`PackagePrivate`$path$$, If[
+            Not[TypeSystem`NestedGrid`PackagePrivate`initialQ], 
+            
+            Module[{TypeSystem`NestedGrid`PackagePrivate`tmpGrid$ = $Failed, 
+              TypeSystem`NestedGrid`PackagePrivate`tmpData$ = 
+              TypeSystem`NestedGrid`PackagePrivate`LookupCacheValue[
+                TypeSystem`NestedGrid`PackagePrivate`$state$$["Data"]]}, 
+             TypeSystem`NestedGrid`PackagePrivate`tmpGrid$ = 
+              If[TypeSystem`NestedGrid`PackagePrivate`tmpData$ === 
+                TypeSystem`NestedGrid`PackagePrivate`$NotCached, 
+                TypeSystem`NestedGrid`PackagePrivate`renderedGrid, 
+                TypeSystem`NestedGrid`PackagePrivate`renderGrid[
+                TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][
+                TypeSystem`NestedGrid`PackagePrivate`tmpData$]]; If[
+               Not[
+                FailureQ[TypeSystem`NestedGrid`PackagePrivate`tmpGrid$]], 
+               TypeSystem`NestedGrid`PackagePrivate`renderedGrid = 
+               TypeSystem`NestedGrid`PackagePrivate`tmpGrid$]; Null]]; 
+          TypeSystem`NestedGrid`PackagePrivate`initialQ = False; 
+          TypeSystem`NestedGrid`PackagePrivate`$pos$$; If[
+            FailureQ[TypeSystem`NestedGrid`PackagePrivate`renderedGrid], 
+            TypeSystem`SparseGrid[
+             TypeSystem`H["(data no longer present)"]], 
+            If[GeneralUtilities`$DebugMode, 
+             Row[{TypeSystem`NestedGrid`PackagePrivate`renderedGrid, "  ", 
+               TypeSystem`NestedGrid`PackagePrivate`formatState[
+               TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                TypeSystem`NestedGrid`PackagePrivate`$pos$$]}], 
+             TypeSystem`NestedGrid`PackagePrivate`renderedGrid]]], 
+         TrackedSymbols :> {TypeSystem`NestedGrid`PackagePrivate`$pos$$}], 
+        DynamicModuleValues :> {}], 
+      TypeSystem`NestedGrid`PackagePrivate`$posCell$$, 
+      TypeSystem`NestedGrid`PackagePrivate`$topBar$$ = Dynamic[
+        TypeSystem`NestedGrid`PackagePrivate`alignBar[
+        TypeSystem`NestedGrid`PackagePrivate`$state$$][
+         TypeSystem`NestedGrid`PackagePrivate`makeFramedBar[
+          TypeSystem`PackageScope`Pathbar[
+          TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+           TypeSystem`NestedGrid`PackagePrivate`updateState[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238]]]], 
+        TrackedSymbols :> {TypeSystem`NestedGrid`PackagePrivate`$path$$}], 
+      TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$ = Framed[
+        Dynamic[
+         Replace[
+          MouseAnnotation[Null], {
+          TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][Null] -> 
+           "", TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+             Pattern[TypeSystem`NestedGrid`PackagePrivate`path, 
+              Blank[]]] :> (
+            TypeSystem`NestedGrid`PackagePrivate`$lastPath = 
+             TypeSystem`NestedGrid`PackagePrivate`path; 
+            TypeSystem`NestedGrid`PackagePrivate`makePathTrail[
+             TypeSystem`NestedGrid`PackagePrivate`path, 
+              TypeSystem`NestedGrid`PackagePrivate`makePathElements]), Null :> 
+           Spacer[10], Blank[] :> Spacer[10]}], TrackedSymbols :> {}], 
+        FrameStyle -> None, ImageMargins -> 0, FrameMargins -> 0, Alignment -> 
+        Top, ImageSize -> {Automatic, 14}]}, 
+     DynamicBox[
+      ToBoxes[
+       Column[
+        If[TypeSystem`NestedGrid`PackagePrivate`$path$$ == {}, {
+          TypeSystem`NestedGrid`PackagePrivate`displayScrollBar[
+          TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$pos$$], 
+          TypeSystem`NestedGrid`PackagePrivate`onDesktopShow[
+           TypeSystem`NestedGrid`PackagePrivate`alignBar[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$][
+           TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$]]}, {
+         TypeSystem`NestedGrid`PackagePrivate`$topBar$$, 
+          TypeSystem`NestedGrid`PackagePrivate`displayScrollBar[
+          TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$pos$$], 
+          TypeSystem`NestedGrid`PackagePrivate`onDesktopShow[
+           TypeSystem`NestedGrid`PackagePrivate`alignBar[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$][
+           TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$]]}], Spacings -> 
+        If[TypeSystem`NestedGrid`PackagePrivate`$path$$ == {}, 
+          0, {{}, {0, 0.05, 0}}]], StandardForm], 
+      ImageSizeCache -> {480., {69., 75.}}, 
+      TrackedSymbols :> {
+       TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+        TypeSystem`NestedGrid`PackagePrivate`$grid$$}], 
+     BaseStyle -> {LineBreakWithin -> False}, Deinitialization :> 
+     TypeSystem`NestedGrid`PackagePrivate`deleteState[
+      TypeSystem`NestedGrid`PackagePrivate`$state$$], 
+     DynamicModuleValues :> {}, Initialization :> 
+     Block[{$ContextPath = $ContextPath}, 
+       Needs["TypeSystem`"]]], Deploy, DefaultBaseStyle -> "Deploy"]},
+  "CopyTag",
+  DisplayFunction->(#& ),
+  InterpretationFunction->("Dataset[<>]"& )]], "Output",
+ CellChangeTimes->{3.7627333843415813`*^9},
+ CellLabel->"Out[61]=",
+ CellID->636414141,ExpressionUUID->"65fbf359-cf03-4639-9fb0-342a181f8c0d"]
+}, Open  ]],
+
+Cell["\<\
+Normally selector specificity is used in determining the style cascade. The \
+class selector \".header\" has a higher specificity than the element selector \
+\"h1\". Thus, the FontSize for \".header\" is used.\
+\>", "ExampleText",
+ CellChangeTimes->{{3.7627339913057404`*^9, 3.7627340322342663`*^9}},
+ CellID->347175432,ExpressionUUID->"ffe17a78-c2c2-4679-b804-75d209b7c0ef"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ResolveCSSCascade", "[", 
+  RowBox[{"Cell", ",", "cssData", ",", 
+   RowBox[{"{", 
+    RowBox[{"\"\<.header\>\"", ",", "\"\<h1\>\""}], "}"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.762001901594259*^9, 3.762001971232093*^9}, 
+   3.7627328412080374`*^9},
+ CellLabel->"In[59]:=",
+ CellID->329914097,ExpressionUUID->"3ffeb617-141c-46f2-bcf3-43996f3c19b8"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"FontSize", "\[Rule]", "15.`"}], "}"}]], "Output",
+ CellChangeTimes->{3.7620019400520115`*^9, 3.762001972191798*^9, 
+  3.7627328520788746`*^9, 3.7627331874175787`*^9},
+ CellLabel->"Out[59]=",
+ CellID->696316718,ExpressionUUID->"ef6ba795-f8e9-47c3-83a4-2777b63324ac"]
+}, Open  ]],
+
+Cell["\<\
+Ignoring specificity, the last selector in the list of selectors is used to \
+determine the style.\
+\>", "ExampleText",
+ CellChangeTimes->{{3.762734046570868*^9, 3.762734128111518*^9}},
+ CellID->30634469,ExpressionUUID->"5e127486-6631-4b5c-b63d-69f0142c340a"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ResolveCSSCascade", "[", 
+  RowBox[{"Cell", ",", "cssData", ",", 
+   RowBox[{"{", 
+    RowBox[{"\"\<.header\>\"", ",", "\"\<h1\>\""}], "}"}], ",", 
+   RowBox[{"\"\<IgnoreSpecificity\>\"", "\[Rule]", "True"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.7627341409810877`*^9, 3.7627341483164225`*^9}},
+ CellLabel->"In[65]:=",
+ CellID->162791683,ExpressionUUID->"71809268-d840-4d64-8fc5-ffcd07e8d3a1"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"FontSize", "\[Rule]", "7.5`"}], "}"}]], "Output",
+ CellChangeTimes->{3.762734148820431*^9},
+ CellLabel->"Out[65]=",
+ CellID->558658582,ExpressionUUID->"7f6109b1-4700-42b0-8c02-bba8f3a7b2ce"]
+}, Open  ]],
+
+Cell["However, importance is still used to determine the style.", \
+"ExampleText",
+ CellChangeTimes->{{3.7627341592909317`*^9, 3.7627341740045595`*^9}},
+ CellID->17930543,ExpressionUUID->"f84410e7-cf88-4400-967a-5e2a8f999b4c"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ResolveCSSCascade", "[", 
+  RowBox[{"Cell", ",", "cssData", ",", 
+   RowBox[{"{", 
+    RowBox[{"\"\<.h\>\"", ",", "\"\<.header\>\"", ",", "\"\<h1\>\""}], "}"}], 
+   ",", 
+   RowBox[{"\"\<IgnoreSpecificity\>\"", "\[Rule]", "True"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.762734182177323*^9, 3.762734183540351*^9}, {
+  3.76273432428996*^9, 3.7627343244729385`*^9}},
+ CellLabel->"In[71]:=",
+ CellID->154024933,ExpressionUUID->"bd8a64d4-c066-4a77-a3c0-007cc2c61144"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"FontSize", "\[Rule]", "22.5`"}], "}"}]], "Output",
+ CellChangeTimes->{3.762734184666148*^9, 3.76273432634756*^9},
+ CellLabel->"Out[71]=",
+ CellID->235900111,ExpressionUUID->"a66c70cc-5f36-4f47-8e05-0e59de01a6b6"]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ InterpretationBox[Cell[
+  "\"IgnoreImportance\"", "ExampleSubsection",ExpressionUUID->
    "3ac3fa52-8472-4992-8318-1d02060d1a31"],
   $Line = 0; Null]], "ExampleSubsection",
- CellID->1295379749,ExpressionUUID->"4b062e07-adc8-442c-8cc7-e0a23d7e03da"]
-}, Closed]],
+ CellChangeTimes->{{3.762730199982797*^9, 3.7627302051948457`*^9}},
+ CellID->1295379749,ExpressionUUID->"4b062e07-adc8-442c-8cc7-e0a23d7e03da"],
+
+Cell[BoxData[
+ RowBox[{"Needs", "[", "\"\<CSSTools`\>\"", "]"}]], "Input",
+ CellID->201519839,ExpressionUUID->"66430e8f-51d6-4e87-a340-1ac5f25a82a6"],
+
+Cell["\<\
+An example of CSS matching properties from different selectors.\
+\>", "ExampleText",
+ CellChangeTimes->{{3.761843429152788*^9, 3.7618434336213913`*^9}, {
+   3.762001600144096*^9, 3.762001650162198*^9}, 3.7620018418902535`*^9},
+ CellID->453615333,ExpressionUUID->"0f7f62ba-2591-40e9-b58b-b3b3a72f5a09"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"cssData", "=", 
+  RowBox[{"ImportString", "[", 
+   RowBox[{
+   "\"\<.h {font-size:30px !important} .header {font-size:20px} h1 \
+{font-size:10px}\>\"", ",", "\"\<CSS\>\""}], "]"}]}]], "Input",
+ CellChangeTimes->{{3.761839961000414*^9, 3.761839988523159*^9}, {
+  3.7618425813132687`*^9, 3.761842582076127*^9}, {3.761843385170765*^9, 
+  3.761843400655448*^9}, {3.762001563728671*^9, 3.7620015920206723`*^9}, {
+  3.7620018030455728`*^9, 3.7620018285764904`*^9}, {3.7627328329882874`*^9, 
+  3.762732834311369*^9}},
+ CellLabel->"In[61]:=",
+ CellID->73940315,ExpressionUUID->"470f27ea-480e-4321-bce6-d23b0181725e"],
+
+Cell[BoxData[
+ TemplateBox[{TagBox[
+    DynamicModuleBox[{
+     TypeSystem`NestedGrid`PackagePrivate`$state$$ = 
+      Data`UnorderedAssociation[
+       "RowCount" -> 3, "Length" -> 3, "InitialType" -> TypeSystem`Vector[
+          TypeSystem`Struct[{"Selector", "Condition", "Block"}, {
+            TypeSystem`Atom[String], TypeSystem`AnyType, 
+            TypeSystem`Vector[
+             
+             TypeSystem`Struct[{
+              "Important", "Property", "Value", "Interpretation"}, {
+               TypeSystem`Atom[TypeSystem`Boolean], 
+               TypeSystem`Atom[
+                TypeSystem`Enumeration["font-size"]], 
+               TypeSystem`Atom[String], TypeSystem`AnyType}], 1]}], 3], 
+        "Shape" -> TypeSystem`PackageScope`HeaderShape[
+          
+          Association[{All, "Selector"} -> 1, {All, "Condition"} -> 
+           1, {All, "Block"} -> 
+           Association[{All, "Block", All, "Important"} -> 
+             1, {All, "Block", All, "Property"} -> 
+             1, {All, "Block", All, "Value"} -> 
+             1, {All, "Block", All, "Interpretation"} -> 1]], 
+          TypeSystem`PackageScope`Limited[
+           TypeSystem`PackageScope`ColumnShape[
+            TypeSystem`PackageScope`RowShape[
+             Association[
+             "Selector" -> 
+              TypeSystem`PackageScope`AtomShape[67.20000000000002], 
+              "Condition" -> TypeSystem`PackageScope`UnknownShape, "Block" -> 
+              TypeSystem`PackageScope`Limited[
+                TypeSystem`PackageScope`ColumnShape[
+                 TypeSystem`PackageScope`RowShape[
+                  Association[
+                  "Important" -> TypeSystem`PackageScope`AtomShape[36], 
+                   "Property" -> TypeSystem`PackageScope`AtomShape[81.], 
+                   "Value" -> 
+                   TypeSystem`PackageScope`AtomShape[38.400000000000006`], 
+                   "Interpretation" -> 
+                   TypeSystem`PackageScope`UnknownShape]]], 1, {
+                All, "Block"}]]]], 3, {}]], "InitialData" -> 
+        TypeSystem`PackageScope`CacheHandle[677059525], "Type" -> 
+        TypeSystem`Vector[
+          TypeSystem`Struct[{"Selector", "Condition", "Block"}, {
+            TypeSystem`Atom[String], TypeSystem`AnyType, 
+            TypeSystem`Vector[
+             
+             TypeSystem`Struct[{
+              "Important", "Property", "Value", "Interpretation"}, {
+               TypeSystem`Atom[TypeSystem`Boolean], 
+               TypeSystem`Atom[
+                TypeSystem`Enumeration["font-size"]], 
+               TypeSystem`Atom[String], TypeSystem`AnyType}], 1]}], 3], 
+        "HandleQ" -> True, "RowTarget" -> 20, "Data" -> 
+        TypeSystem`PackageScope`CacheHandle[677059525]], 
+      TypeSystem`NestedGrid`PackagePrivate`$path$$ = {}, 
+      TypeSystem`NestedGrid`PackagePrivate`$pos$$ = 1, 
+      TypeSystem`NestedGrid`PackagePrivate`$grid$$ = 
+      DynamicModule[{
+        TypeSystem`NestedGrid`PackagePrivate`renderedGrid = Deploy[
+           Style[
+            Grid[{{
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Selector\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Selector\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Selector"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Selector"]], "Mouse"], 
+                Background -> GrayLevel[0.95], Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Condition\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Condition\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Condition"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Condition"]], "Mouse"], 
+                Background -> GrayLevel[0.95], Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Block\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Block\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Block"]], "Mouse"], Background -> 
+                GrayLevel[0.95], Alignment -> {Center, Baseline}], 
+               SpanFromLeft, SpanFromLeft, SpanFromLeft}, {
+              SpanFromAbove, SpanFromAbove, 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Important\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Important\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block", All, "Important"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Block", All, "Important"]], 
+                 "Mouse"], Background -> GrayLevel[0.95], 
+                Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Property\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Property\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block", All, "Property"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Block", All, "Property"]], 
+                 "Mouse"], Background -> GrayLevel[0.95], 
+                Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Value\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Value\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block", All, "Value"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[All, "Block", All, "Value"]], 
+                 "Mouse"], Background -> GrayLevel[0.95], 
+                Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Interpretation\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Interpretation\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][{
+                    All, "Block", All, "Interpretation"}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[
+                  All, "Block", All, "Interpretation"]], "Mouse"], Background -> 
+                GrayLevel[0.95], Alignment -> {Left, Baseline}]}, {
+               Pane[
+                Annotation[".h", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Selector"]]], "Mouse"], 
+                ImageSize -> {{67.20000000000002, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                  "None", FontFamily -> "Source Code Pro", FontSize -> 13, 
+                   ShowStringCharacters -> True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Condition"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes["True"], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Important"]]], "Mouse"], 
+                ImageSize -> {{36, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["font-size", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Property"]]], "Mouse"], 
+                ImageSize -> {{81., Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["30px", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Value"]]], "Mouse"], 
+                ImageSize -> {{38.400000000000006`, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                   RowBox[{"FontSize", "\[Rule]", "22.5`"}], FontFamily -> 
+                   "Source Code Pro", FontSize -> 13, ShowStringCharacters -> 
+                   True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[1, 
+                   Key["Block"], 1, 
+                   Key["Interpretation"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}]}, {
+               Pane[
+                Annotation[".header", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Selector"]]], "Mouse"], 
+                ImageSize -> {{67.20000000000002, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                  "None", FontFamily -> "Source Code Pro", FontSize -> 13, 
+                   ShowStringCharacters -> True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Condition"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes["False"], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Important"]]], "Mouse"], 
+                ImageSize -> {{36, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["font-size", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Property"]]], "Mouse"], 
+                ImageSize -> {{81., Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["20px", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Value"]]], "Mouse"], 
+                ImageSize -> {{38.400000000000006`, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                   RowBox[{"FontSize", "\[Rule]", "15.`"}], FontFamily -> 
+                   "Source Code Pro", FontSize -> 13, ShowStringCharacters -> 
+                   True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[2, 
+                   Key["Block"], 1, 
+                   Key["Interpretation"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}]}, {
+               Pane[
+                Annotation["h1", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Selector"]]], "Mouse"], 
+                ImageSize -> {{67.20000000000002, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                  "None", FontFamily -> "Source Code Pro", FontSize -> 13, 
+                   ShowStringCharacters -> True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Condition"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes["False"], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Important"]]], "Mouse"], 
+                ImageSize -> {{36, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["font-size", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Property"]]], "Mouse"], 
+                ImageSize -> {{81., Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation["10px", 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Value"]]], "Mouse"], 
+                ImageSize -> {{38.400000000000006`, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                   RowBox[{"FontSize", "\[Rule]", "7.5`"}], FontFamily -> 
+                   "Source Code Pro", FontSize -> 13, ShowStringCharacters -> 
+                   True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+                  GeneralUtilities`Slice[3, 
+                   Key["Block"], 1, 
+                   Key["Interpretation"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}]}}, BaseStyle -> {ContextMenu -> {
+                 MenuItem["Copy position to clipboard", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentPosition[
+                   TypeSystem`NestedGrid`PackagePrivate`copyClip]], 
+                  MenuEvaluator -> Automatic], 
+                 MenuItem["Copy data to clipboard", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentData[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`copyClip]], 
+                  MenuEvaluator -> Automatic], Delimiter, 
+                 MenuItem["Paste position in new cell", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentPosition[
+                   TypeSystem`NestedGrid`PackagePrivate`cellPaste]], 
+                  MenuEvaluator -> Automatic], 
+                 MenuItem["Paste data in new cell", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentData[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`cellPaste]], 
+                  MenuEvaluator -> Automatic]}, FontFamily -> "Verdana", 
+               FontSize -> 12}, Alignment -> Left, RowMinHeight -> 1.5, 
+             Dividers -> All, FrameStyle -> GrayLevel[0.85], 
+             BaseStyle -> {FontFamily -> "Verdana", FontSize -> 12}], 
+            LineBreakWithin -> False, ContextMenu -> {}, NumberMarks -> False,
+             ShowAutoStyles -> False]], 
+         TypeSystem`NestedGrid`PackagePrivate`initialQ = True, 
+         TypeSystem`NestedGrid`PackagePrivate`self = $Failed}, 
+        Dynamic[
+         TypeSystem`NestedGrid`PackagePrivate`setupViewPath[
+         TypeSystem`NestedGrid`PackagePrivate`$path$$, If[
+            Not[TypeSystem`NestedGrid`PackagePrivate`initialQ], 
+            
+            Module[{TypeSystem`NestedGrid`PackagePrivate`tmpGrid$ = $Failed, 
+              TypeSystem`NestedGrid`PackagePrivate`tmpData$ = 
+              TypeSystem`NestedGrid`PackagePrivate`LookupCacheValue[
+                TypeSystem`NestedGrid`PackagePrivate`$state$$["Data"]]}, 
+             TypeSystem`NestedGrid`PackagePrivate`tmpGrid$ = 
+              If[TypeSystem`NestedGrid`PackagePrivate`tmpData$ === 
+                TypeSystem`NestedGrid`PackagePrivate`$NotCached, 
+                TypeSystem`NestedGrid`PackagePrivate`renderedGrid, 
+                TypeSystem`NestedGrid`PackagePrivate`renderGrid[
+                TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238][
+                TypeSystem`NestedGrid`PackagePrivate`tmpData$]]; If[
+               Not[
+                FailureQ[TypeSystem`NestedGrid`PackagePrivate`tmpGrid$]], 
+               TypeSystem`NestedGrid`PackagePrivate`renderedGrid = 
+               TypeSystem`NestedGrid`PackagePrivate`tmpGrid$]; Null]]; 
+          TypeSystem`NestedGrid`PackagePrivate`initialQ = False; 
+          TypeSystem`NestedGrid`PackagePrivate`$pos$$; If[
+            FailureQ[TypeSystem`NestedGrid`PackagePrivate`renderedGrid], 
+            TypeSystem`SparseGrid[
+             TypeSystem`H["(data no longer present)"]], 
+            If[GeneralUtilities`$DebugMode, 
+             Row[{TypeSystem`NestedGrid`PackagePrivate`renderedGrid, "  ", 
+               TypeSystem`NestedGrid`PackagePrivate`formatState[
+               TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                TypeSystem`NestedGrid`PackagePrivate`$pos$$]}], 
+             TypeSystem`NestedGrid`PackagePrivate`renderedGrid]]], 
+         TrackedSymbols :> {TypeSystem`NestedGrid`PackagePrivate`$pos$$}], 
+        DynamicModuleValues :> {}], 
+      TypeSystem`NestedGrid`PackagePrivate`$posCell$$, 
+      TypeSystem`NestedGrid`PackagePrivate`$topBar$$ = Dynamic[
+        TypeSystem`NestedGrid`PackagePrivate`alignBar[
+        TypeSystem`NestedGrid`PackagePrivate`$state$$][
+         TypeSystem`NestedGrid`PackagePrivate`makeFramedBar[
+          TypeSystem`PackageScope`Pathbar[
+          TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+           TypeSystem`NestedGrid`PackagePrivate`updateState[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$grid$$, 989786238]]]], 
+        TrackedSymbols :> {TypeSystem`NestedGrid`PackagePrivate`$path$$}], 
+      TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$ = Framed[
+        Dynamic[
+         Replace[
+          MouseAnnotation[Null], {
+          TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][Null] -> 
+           "", TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[989786238][
+             Pattern[TypeSystem`NestedGrid`PackagePrivate`path, 
+              Blank[]]] :> (
+            TypeSystem`NestedGrid`PackagePrivate`$lastPath = 
+             TypeSystem`NestedGrid`PackagePrivate`path; 
+            TypeSystem`NestedGrid`PackagePrivate`makePathTrail[
+             TypeSystem`NestedGrid`PackagePrivate`path, 
+              TypeSystem`NestedGrid`PackagePrivate`makePathElements]), Null :> 
+           Spacer[10], Blank[] :> Spacer[10]}], TrackedSymbols :> {}], 
+        FrameStyle -> None, ImageMargins -> 0, FrameMargins -> 0, Alignment -> 
+        Top, ImageSize -> {Automatic, 14}]}, 
+     DynamicBox[
+      ToBoxes[
+       Column[
+        If[TypeSystem`NestedGrid`PackagePrivate`$path$$ == {}, {
+          TypeSystem`NestedGrid`PackagePrivate`displayScrollBar[
+          TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$pos$$], 
+          TypeSystem`NestedGrid`PackagePrivate`onDesktopShow[
+           TypeSystem`NestedGrid`PackagePrivate`alignBar[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$][
+           TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$]]}, {
+         TypeSystem`NestedGrid`PackagePrivate`$topBar$$, 
+          TypeSystem`NestedGrid`PackagePrivate`displayScrollBar[
+          TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$pos$$], 
+          TypeSystem`NestedGrid`PackagePrivate`onDesktopShow[
+           TypeSystem`NestedGrid`PackagePrivate`alignBar[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$][
+           TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$]]}], Spacings -> 
+        If[TypeSystem`NestedGrid`PackagePrivate`$path$$ == {}, 
+          0, {{}, {0, 0.05, 0}}]], StandardForm], 
+      ImageSizeCache -> {480., {69., 75.}}, 
+      TrackedSymbols :> {
+       TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+        TypeSystem`NestedGrid`PackagePrivate`$grid$$}], 
+     BaseStyle -> {LineBreakWithin -> False}, Deinitialization :> 
+     TypeSystem`NestedGrid`PackagePrivate`deleteState[
+      TypeSystem`NestedGrid`PackagePrivate`$state$$], 
+     DynamicModuleValues :> {}, Initialization :> 
+     Block[{$ContextPath = $ContextPath}, 
+       Needs["TypeSystem`"]]], Deploy, DefaultBaseStyle -> "Deploy"]},
+  "CopyTag",
+  DisplayFunction->(#& ),
+  InterpretationFunction->("Dataset[<>]"& )]], "Output",
+ CellChangeTimes->{3.7627333843415813`*^9},
+ CellLabel->"Out[61]=",
+ CellID->510915971,ExpressionUUID->"9079b814-6446-4bb6-8e98-ffabe1bfe927"]
+}, Open  ]],
+
+Cell["\<\
+Normally rule importance is used in determining the style cascade. The class \
+selectors \".h\" and \".header\" have the same specificity and the \
+\".header\" rule appears last. However, the \".h\" rule is important so it is \
+used even though it is declared earlier.\
+\>", "ExampleText",
+ CellChangeTimes->{{3.7627339913057404`*^9, 3.7627340322342663`*^9}, {
+  3.7627342175112047`*^9, 3.762734227482669*^9}},
+ CellID->328254856,ExpressionUUID->"a8d3045b-400a-43e8-8114-00dab44db1a5"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ResolveCSSCascade", "[", 
+  RowBox[{"Cell", ",", "cssData", ",", 
+   RowBox[{"{", 
+    RowBox[{"\"\<.h\>\"", ",", "\"\<.header\>\""}], "}"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.762001901594259*^9, 3.762001971232093*^9}, 
+   3.7627328412080374`*^9, {3.762734244920356*^9, 3.7627342554395885`*^9}},
+ CellLabel->"In[68]:=",
+ CellID->415776725,ExpressionUUID->"509c9b49-fc04-407b-bfcb-b11948c08540"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"FontSize", "\[Rule]", "22.5`"}], "}"}]], "Output",
+ CellChangeTimes->{
+  3.7620019400520115`*^9, 3.762001972191798*^9, 3.7627328520788746`*^9, 
+   3.7627331874175787`*^9, {3.762734246650782*^9, 3.762734255755934*^9}},
+ CellLabel->"Out[68]=",
+ CellID->6226931,ExpressionUUID->"d6c16d05-b3c3-4072-a376-a67d60417d9b"]
+}, Open  ]],
+
+Cell["\<\
+Ignoring importance, the last selector in the list of selectors is used to \
+determine the style.\
+\>", "ExampleText",
+ CellChangeTimes->{{3.762734046570868*^9, 3.762734128111518*^9}, {
+  3.7627342666257725`*^9, 3.762734267790305*^9}},
+ CellID->156540000,ExpressionUUID->"50c16e01-07be-453a-b110-6f4d6ea269e9"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ResolveCSSCascade", "[", 
+  RowBox[{"Cell", ",", "cssData", ",", 
+   RowBox[{"{", 
+    RowBox[{"\"\<.h\>\"", ",", "\"\<.header\>\""}], "}"}], ",", 
+   RowBox[{"\"\<IgnoreImportance\>\"", "\[Rule]", "True"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.7627341409810877`*^9, 3.7627341483164225`*^9}, {
+  3.7627342764611964`*^9, 3.7627342895146523`*^9}},
+ CellLabel->"In[70]:=",
+ CellID->814919511,ExpressionUUID->"667f39c5-985a-4f73-8224-0e4451b63378"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"FontSize", "\[Rule]", "15.`"}], "}"}]], "Output",
+ CellChangeTimes->{
+  3.762734148820431*^9, {3.762734280865424*^9, 3.7627342902633715`*^9}},
+ CellLabel->"Out[70]=",
+ CellID->524196320,ExpressionUUID->"d52ff07b-41ca-49f7-97c7-4b5c2d5e7502"]
+}, Open  ]],
+
+Cell["\<\
+However, specificity is still used to determine the style. Including the \
+element selector \"h1\" has no effect since it has a lower specificity.\
+\>", "ExampleText",
+ CellChangeTimes->{{3.7627341592909317`*^9, 3.7627341740045595`*^9}, {
+  3.7627342972166586`*^9, 3.762734298550301*^9}, {3.762734352996971*^9, 
+  3.762734367599273*^9}},
+ CellID->375301362,ExpressionUUID->"ce6dd233-5577-4ea4-8183-0c5e76ff5eb1"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ResolveCSSCascade", "[", 
+  RowBox[{"Cell", ",", "cssData", ",", 
+   RowBox[{"{", 
+    RowBox[{"\"\<h1\>\"", ",", "\"\<.h\>\"", ",", "\"\<.header\>\""}], "}"}], 
+   ",", 
+   RowBox[{"\"\<IgnoreImportance\>\"", "\[Rule]", "True"}]}], "]"}]], "Input",
+ CellChangeTimes->{{3.762734182177323*^9, 3.762734183540351*^9}, {
+  3.7627343180217705`*^9, 3.7627343496129055`*^9}},
+ CellLabel->"In[73]:=",
+ CellID->47133936,ExpressionUUID->"b9616fc8-3fb7-4135-a98a-72b19f53b629"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"FontSize", "\[Rule]", "15.`"}], "}"}]], "Output",
+ CellChangeTimes->{
+  3.762734184666148*^9, {3.76273433473697*^9, 3.762734350930483*^9}},
+ CellLabel->"Out[73]=",
+ CellID->9879418,ExpressionUUID->"2bd96c1a-8be1-4357-9483-0e9eee039901"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]],
 
 Cell[BoxData[
  InterpretationBox[Cell[
@@ -299,8 +3111,8 @@ Cell[BoxData[
  CellID->589267740,ExpressionUUID->"077cee6a-f751-415c-89e9-90a9f701f073"]
 }, Open  ]]
 },
-WindowSize->{700, 770},
-WindowMargins->{{Automatic, 174}, {Automatic, 49}},
+WindowSize->{748, 908},
+WindowMargins->{{77, Automatic}, {Automatic, 0}},
 CellContext->"Global`",
 FrontEndVersion->"11.3 for Microsoft Windows (64-bit) (March 6, 2018)",
 StyleDefinitions->FrontEnd`FileName[{"Wolfram"}, "FunctionPageStyles.nb", 
@@ -312,14 +3124,14 @@ StyleDefinitions->FrontEnd`FileName[{"Wolfram"}, "FunctionPageStyles.nb",
 (*CellTagsOutline
 CellTagsIndex->{
  "ExtendedExamples"->{
-  Cell[7130, 223, 155, 2, 54, "ExtendedExamplesSection",ExpressionUUID->"d1a9ab58-fca7-4902-b258-1a4c0ce85345",
+  Cell[43873, 991, 155, 2, 54, "ExtendedExamplesSection",ExpressionUUID->"d1a9ab58-fca7-4902-b258-1a4c0ce85345",
    CellTags->"ExtendedExamples",
    CellID->1854448968]}
  }
 *)
 (*CellTagsIndex
 CellTagsIndex->{
- {"ExtendedExamples", 10276, 313}
+ {"ExtendedExamples", 146089, 3125}
  }
 *)
 (*NotebookFileOutline
@@ -380,73 +3192,201 @@ Cell[3969, 125, 122, 2, 70, "Details",ExpressionUUID->"07fb67f0-2d30-452a-8f21-f
 Cell[CellGroupData[{
 Cell[4128, 132, 115, 1, 62, "ObjectName",ExpressionUUID->"f51ce40f-2cf9-4c91-bfa1-ec32abc0d736",
  CellID->1224892054],
-Cell[4246, 135, 356, 7, 72, "Usage",ExpressionUUID->"a2795b5e-0066-434b-b2bc-8fb6dc722074",
+Cell[4246, 135, 965, 22, 88, "Usage",ExpressionUUID->"a2795b5e-0066-434b-b2bc-8fb6dc722074",
  CellID->982511436],
-Cell[4605, 144, 97, 1, 23, "Notes",ExpressionUUID->"3b725dab-ca02-4bab-83b2-5c84ff4563f8",
- CellID->1067943069]
+Cell[5214, 159, 378, 6, 37, "Notes",ExpressionUUID->"3b725dab-ca02-4bab-83b2-5c84ff4563f8",
+ CellID->1067943069],
+Cell[5595, 167, 710, 14, 40, "3ColumnTableMod",ExpressionUUID->"e0159d89-ac50-4714-9b39-ea1f2dcfcbf8",
+ CellID->56488170],
+Cell[6308, 183, 570, 13, 37, "Notes",ExpressionUUID->"22a66f17-12af-4f4b-bd36-05eeae470922",
+ CellID->38300189]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[4739, 150, 112, 1, 44, "TutorialsSection",ExpressionUUID->"a7c142f6-db8a-4644-9c50-f1d15ab2161b",
+Cell[6915, 201, 112, 1, 44, "TutorialsSection",ExpressionUUID->"a7c142f6-db8a-4644-9c50-f1d15ab2161b",
  CellID->250839057],
-Cell[4854, 153, 261, 4, 16, "Tutorials",ExpressionUUID->"3231d808-6356-4011-a098-9647dc34971f",
+Cell[7030, 204, 261, 4, 16, "Tutorials",ExpressionUUID->"3231d808-6356-4011-a098-9647dc34971f",
  CellID->341631938]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[5152, 162, 138, 1, 31, "RelatedDemonstrationsSection",ExpressionUUID->"450825dd-2c43-46a2-b610-fbc2f74e0407",
+Cell[7328, 213, 138, 1, 31, "RelatedDemonstrationsSection",ExpressionUUID->"450825dd-2c43-46a2-b610-fbc2f74e0407",
  CellID->1268215905],
-Cell[5293, 165, 113, 1, 16, "RelatedDemonstrations",ExpressionUUID->"b30b7f4a-0fe8-41d5-849d-d816d126e67c",
+Cell[7469, 216, 113, 1, 16, "RelatedDemonstrations",ExpressionUUID->"b30b7f4a-0fe8-41d5-849d-d816d126e67c",
  CellID->1129518860]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[5443, 171, 120, 1, 31, "RelatedLinksSection",ExpressionUUID->"5ee20b13-9b68-4620-a7ad-c4865cacd0f5",
+Cell[7619, 222, 120, 1, 31, "RelatedLinksSection",ExpressionUUID->"5ee20b13-9b68-4620-a7ad-c4865cacd0f5",
  CellID->1584193535],
-Cell[5566, 174, 104, 1, 16, "RelatedLinks",ExpressionUUID->"c9ca7645-6cac-40d1-9c99-85d0ccaf8780",
+Cell[7742, 225, 104, 1, 16, "RelatedLinks",ExpressionUUID->"c9ca7645-6cac-40d1-9c99-85d0ccaf8780",
  CellID->1038487239]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[5707, 180, 110, 1, 31, "SeeAlsoSection",ExpressionUUID->"9eb84af0-e84b-44ee-86c1-03a56da32b68",
+Cell[7883, 231, 110, 1, 31, "SeeAlsoSection",ExpressionUUID->"9eb84af0-e84b-44ee-86c1-03a56da32b68",
  CellID->1255426704],
-Cell[5820, 183, 444, 10, 16, "SeeAlso",ExpressionUUID->"3078abfd-6145-4fde-ace1-fdac7d6bfeec",
+Cell[7996, 234, 640, 16, 16, "SeeAlso",ExpressionUUID->"3078abfd-6145-4fde-ace1-fdac7d6bfeec",
  CellID->929782353]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[6301, 198, 112, 1, 31, "MoreAboutSection",ExpressionUUID->"3a2d5e1a-f16b-4171-b6d8-4a45aa782030",
+Cell[8673, 255, 112, 1, 31, "MoreAboutSection",ExpressionUUID->"3a2d5e1a-f16b-4171-b6d8-4a45aa782030",
  CellID->38303248],
-Cell[6416, 201, 263, 4, 16, "MoreAbout",ExpressionUUID->"b475c6bc-3850-40a6-a0f2-df2f1eafc454",
+Cell[8788, 258, 263, 4, 16, "MoreAbout",ExpressionUUID->"b475c6bc-3850-40a6-a0f2-df2f1eafc454",
  CellID->1665078683]
 }, Open  ]],
-Cell[6694, 208, 411, 11, 68, "PrimaryExamplesSection",ExpressionUUID->"fc207952-6bbf-4490-a7ee-41f8f7e2a7c6",
- CellID->880084151],
 Cell[CellGroupData[{
-Cell[7130, 223, 155, 2, 54, "ExtendedExamplesSection",ExpressionUUID->"d1a9ab58-fca7-4902-b258-1a4c0ce85345",
+Cell[9088, 267, 411, 11, 68, "PrimaryExamplesSection",ExpressionUUID->"fc207952-6bbf-4490-a7ee-41f8f7e2a7c6",
+ CellID->880084151],
+Cell[9502, 280, 148, 2, 25, "Input",ExpressionUUID->"c16aa1dd-7a4f-4973-8591-71c202dcb6b3",
+ CellID->14098569],
+Cell[9653, 284, 311, 5, 20, "ExampleText",ExpressionUUID->"24b430f6-702d-42f1-bd03-c3d2ed884c0a",
+ CellID->104691956],
+Cell[CellGroupData[{
+Cell[9989, 293, 631, 12, 80, "Input",ExpressionUUID->"2965936b-276e-44c5-99eb-32effdccceaa",
+ CellID->9491473],
+Cell[10623, 307, 29176, 577, 156, "Output",ExpressionUUID->"4d04e430-2522-483b-bc6a-7b7907d855c8",
+ CellID->244525884]
+}, Open  ]],
+Cell[39814, 887, 681, 12, 46, "ExampleText",ExpressionUUID->"011b798c-7310-4a09-819c-ef6f62104483",
+ CellID->339362087],
+Cell[CellGroupData[{
+Cell[40520, 903, 596, 13, 25, "Input",ExpressionUUID->"f845f691-3203-457b-9388-ac3745c82975",
+ CellID->571563147],
+Cell[41119, 918, 376, 9, 24, "Output",ExpressionUUID->"a994dcb7-ac65-4eb8-83e1-702368d7bfd1",
+ CellID->308123595]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[41532, 932, 377, 8, 25, "Input",ExpressionUUID->"b61770d7-42ad-44ed-9bd6-2bd7832c6871",
+ CellID->202779533],
+Cell[41912, 942, 304, 6, 24, "Output",ExpressionUUID->"98d4ded9-b1aa-46af-8858-7bf5f475b029",
+ CellID->19396224]
+}, Open  ]],
+Cell[42231, 951, 801, 14, 46, "ExampleText",ExpressionUUID->"8db0525a-3655-4eb8-bdd8-b9d1581d7988",
+ CellID->509811264],
+Cell[CellGroupData[{
+Cell[43057, 969, 429, 8, 25, "Input",ExpressionUUID->"55144a5e-1ccb-44f8-ac73-18dfcb82e337",
+ CellID->481809636],
+Cell[43489, 979, 335, 6, 24, "Output",ExpressionUUID->"f6e5821f-db87-460e-91cc-ea06e2c86809",
+ CellID->120766142]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[43873, 991, 155, 2, 54, "ExtendedExamplesSection",ExpressionUUID->"d1a9ab58-fca7-4902-b258-1a4c0ce85345",
  CellTags->"ExtendedExamples",
  CellID->1854448968],
-Cell[7288, 227, 242, 5, 31, "ExampleSection",ExpressionUUID->"8b7b44ed-ad96-4fb3-840e-1c9b95acb98e",
+Cell[44031, 995, 242, 5, 31, "ExampleSection",ExpressionUUID->"8b7b44ed-ad96-4fb3-840e-1c9b95acb98e",
  CellID->1293636265],
-Cell[7533, 234, 265, 5, 19, "ExampleSection",ExpressionUUID->"be726698-82e3-4a94-b05b-91094515b7b1",
- CellID->1020263627],
 Cell[CellGroupData[{
-Cell[7823, 243, 244, 5, 19, "ExampleSection",ExpressionUUID->"c4358828-14b1-4658-99c7-b5867929dee6",
+Cell[44298, 1004, 265, 5, 19, "ExampleSection",ExpressionUUID->"be726698-82e3-4a94-b05b-91094515b7b1",
+ CellID->1020263627],
+Cell[44566, 1011, 173, 3, 25, "Input",ExpressionUUID->"7871e991-615b-4169-9694-7be6737f5f2f",
+ CellID->137523284],
+Cell[44742, 1016, 311, 5, 20, "ExampleText",ExpressionUUID->"36ce1664-0d48-4d60-96fc-f026d7100f03",
+ CellID->275361121],
+Cell[CellGroupData[{
+Cell[45078, 1025, 632, 12, 80, "Input",ExpressionUUID->"37502537-fd2f-42d4-bd58-86a0d9a8ac47",
+ CellID->48919150],
+Cell[45713, 1039, 29088, 576, 156, "Output",ExpressionUUID->"af53a948-3b2d-4fd1-a50e-308e393c8f3f",
+ CellID->65982193]
+}, Open  ]],
+Cell[74816, 1618, 552, 11, 33, "ExampleText",ExpressionUUID->"b4a9fba0-02c7-4c36-a34e-d9a7e7a273c9",
+ CellID->551044751],
+Cell[CellGroupData[{
+Cell[75393, 1633, 454, 11, 44, "Input",ExpressionUUID->"2ffe2ed3-e3d5-420c-8976-1ccdbc80c7c5",
+ CellID->304063679],
+Cell[75850, 1646, 301, 6, 24, "Output",ExpressionUUID->"7c47d228-031f-4074-9e77-c650c05e6e7e",
+ CellID->672902617]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[76200, 1658, 244, 5, 31, "ExampleSection",ExpressionUUID->"c4358828-14b1-4658-99c7-b5867929dee6",
  CellID->2061341341],
-Cell[8070, 250, 247, 5, 70, "ExampleSubsection",ExpressionUUID->"053b05a6-b845-434f-811e-77ba01820411",
+Cell[CellGroupData[{
+Cell[76469, 1667, 332, 6, 22, "ExampleSubsection",ExpressionUUID->"053b05a6-b845-434f-811e-77ba01820411",
  CellID->1757724783],
-Cell[8320, 257, 247, 5, 70, "ExampleSubsection",ExpressionUUID->"4b062e07-adc8-442c-8cc7-e0a23d7e03da",
- CellID->1295379749]
-}, Closed]],
-Cell[8582, 265, 248, 5, 19, "ExampleSection",ExpressionUUID->"fb13abcf-09aa-42a6-895e-0b587544b87c",
+Cell[76804, 1675, 149, 2, 25, "Input",ExpressionUUID->"e21b123b-af95-4d31-9dab-32fec6b6677b",
+ CellID->405814373],
+Cell[76956, 1679, 311, 5, 20, "ExampleText",ExpressionUUID->"60398388-f0c6-4bbe-b2c2-4d9ad9652408",
+ CellID->108671522],
+Cell[CellGroupData[{
+Cell[77292, 1688, 633, 12, 80, "Input",ExpressionUUID->"3d17f409-79d6-4a5a-a68c-836e1460518f",
+ CellID->289398237],
+Cell[77928, 1702, 29089, 576, 156, "Output",ExpressionUUID->"65fbf359-cf03-4639-9fb0-342a181f8c0d",
+ CellID->636414141]
+}, Open  ]],
+Cell[107032, 2281, 385, 6, 46, "ExampleText",ExpressionUUID->"ffe17a78-c2c2-4679-b804-75d209b7c0ef",
+ CellID->347175432],
+Cell[CellGroupData[{
+Cell[107442, 2291, 377, 8, 25, "Input",ExpressionUUID->"3ffeb617-141c-46f2-bcf3-43996f3c19b8",
+ CellID->329914097],
+Cell[107822, 2301, 305, 6, 24, "Output",ExpressionUUID->"ef6ba795-f8e9-47c3-83a4-2777b63324ac",
+ CellID->696316718]
+}, Open  ]],
+Cell[108142, 2310, 269, 5, 20, "ExampleText",ExpressionUUID->"5e127486-6631-4b5c-b63d-69f0142c340a",
+ CellID->30634469],
+Cell[CellGroupData[{
+Cell[108436, 2319, 420, 8, 44, "Input",ExpressionUUID->"71809268-d840-4d64-8fc5-ffcd07e8d3a1",
+ CellID->162791683],
+Cell[108859, 2329, 230, 5, 24, "Output",ExpressionUUID->"7f6109b1-4700-42b0-8c02-bba8f3a7b2ce",
+ CellID->558658582]
+}, Open  ]],
+Cell[109104, 2337, 226, 3, 20, "ExampleText",ExpressionUUID->"f84410e7-cf88-4400-967a-5e2a8f999b4c",
+ CellID->17930543],
+Cell[CellGroupData[{
+Cell[109355, 2344, 489, 10, 44, "Input",ExpressionUUID->"bd8a64d4-c066-4a77-a3c0-007cc2c61144",
+ CellID->154024933],
+Cell[109847, 2356, 252, 5, 24, "Output",ExpressionUUID->"a66c70cc-5f36-4f47-8e05-0e59de01a6b6",
+ CellID->235900111]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[110148, 2367, 331, 6, 22, "ExampleSubsection",ExpressionUUID->"4b062e07-adc8-442c-8cc7-e0a23d7e03da",
+ CellID->1295379749],
+Cell[110482, 2375, 149, 2, 25, "Input",ExpressionUUID->"66430e8f-51d6-4e87-a340-1ac5f25a82a6",
+ CellID->201519839],
+Cell[110634, 2379, 311, 5, 20, "ExampleText",ExpressionUUID->"0f7f62ba-2591-40e9-b58b-b3b3a72f5a09",
+ CellID->453615333],
+Cell[CellGroupData[{
+Cell[110970, 2388, 632, 12, 80, "Input",ExpressionUUID->"470f27ea-480e-4321-bce6-d23b0181725e",
+ CellID->73940315],
+Cell[111605, 2402, 29089, 576, 156, "Output",ExpressionUUID->"9079b814-6446-4bb6-8e98-ffabe1bfe927",
+ CellID->510915971]
+}, Open  ]],
+Cell[140709, 2981, 495, 8, 46, "ExampleText",ExpressionUUID->"a8d3045b-400a-43e8-8114-00dab44db1a5",
+ CellID->328254856],
+Cell[CellGroupData[{
+Cell[141229, 2993, 425, 8, 25, "Input",ExpressionUUID->"509c9b49-fc04-407b-bfcb-b11948c08540",
+ CellID->415776725],
+Cell[141657, 3003, 354, 7, 24, "Output",ExpressionUUID->"d6c16d05-b3c3-4072-a376-a67d60417d9b",
+ CellID->6226931]
+}, Open  ]],
+Cell[142026, 3013, 320, 6, 20, "ExampleText",ExpressionUUID->"50c16e01-07be-453a-b110-6f4d6ea269e9",
+ CellID->156540000],
+Cell[CellGroupData[{
+Cell[142371, 3023, 472, 9, 44, "Input",ExpressionUUID->"667f39c5-985a-4f73-8224-0e4451b63378",
+ CellID->814919511],
+Cell[142846, 3034, 281, 6, 24, "Output",ExpressionUUID->"d52ff07b-41ca-49f7-97c7-4b5c2d5e7502",
+ CellID->524196320]
+}, Open  ]],
+Cell[143142, 3043, 422, 7, 33, "ExampleText",ExpressionUUID->"ce6dd233-5577-4ea4-8183-0c5e76ff5eb1",
+ CellID->375301362],
+Cell[CellGroupData[{
+Cell[143589, 3054, 490, 10, 44, "Input",ExpressionUUID->"b9616fc8-3fb7-4135-a98a-72b19f53b629",
+ CellID->47133936],
+Cell[144082, 3066, 276, 6, 24, "Output",ExpressionUUID->"2bd96c1a-8be1-4357-9483-0e9eee039901",
+ CellID->9879418]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]],
+Cell[144397, 3077, 248, 5, 31, "ExampleSection",ExpressionUUID->"fb13abcf-09aa-42a6-895e-0b587544b87c",
  CellID->258228157],
-Cell[8833, 272, 259, 5, 19, "ExampleSection",ExpressionUUID->"dc593277-af4e-4ca0-973a-03b2f243c96c",
+Cell[144648, 3084, 259, 5, 19, "ExampleSection",ExpressionUUID->"dc593277-af4e-4ca0-973a-03b2f243c96c",
  CellID->2123667759],
-Cell[9095, 279, 252, 5, 19, "ExampleSection",ExpressionUUID->"bbd12655-a402-42ec-942a-0b8a256b53e0",
+Cell[144910, 3091, 252, 5, 19, "ExampleSection",ExpressionUUID->"bbd12655-a402-42ec-942a-0b8a256b53e0",
  CellID->1305812373],
-Cell[9350, 286, 257, 5, 19, "ExampleSection",ExpressionUUID->"2919d592-784e-4603-9c70-617ea738e0c2",
+Cell[145165, 3098, 257, 5, 19, "ExampleSection",ExpressionUUID->"2919d592-784e-4603-9c70-617ea738e0c2",
  CellID->1653164318],
-Cell[9610, 293, 249, 5, 19, "ExampleSection",ExpressionUUID->"077cee6a-f751-415c-89e9-90a9f701f073",
+Cell[145425, 3105, 249, 5, 19, "ExampleSection",ExpressionUUID->"077cee6a-f751-415c-89e9-90a9f701f073",
  CellID->589267740]
 }, Open  ]]
 }
 ]
 *)
-
-(* End of internal cache information *)
 
