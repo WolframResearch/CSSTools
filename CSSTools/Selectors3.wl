@@ -141,8 +141,8 @@ RE["unicode"]  = "(\\\\[0-9a-fA-F]{1,6}(\r\n|[ \n\r\t\f])?)"; (* \\\\ literal ba
 RE["w"]        = "([ \t\r\n\f]*)";
 
 
-RE["D"] = "(d|D|\\\\0{0,4}(44|64)(\r\n|[ \t\r\n\f])?)";
-RE["E"] = "(e|E|\\\\0{0,4}(45|65)(\r\n|[ \t\r\n\f])?)";
+RE["D"] = "(d|D|\\\\0{0,4}(44|64)(\r\n|[ \t\r\n\f])?|\\\\d|\\\\D)";
+RE["E"] = "(e|E|\\\\0{0,4}(45|65)(\r\n|[ \t\r\n\f])?|\\\\e|\\\\E)";
 RE["N"] = "(n|N|\\\\0{0,4}(4e|6e)(\r\n|[ \t\r\n\f])?|\\\\n|\\\\N)";
 RE["O"] = "(o|O|\\\\0{0,4}(4f|6f)(\r\n|[ \t\r\n\f])?|\\\\o|\\\\O)";
 RE["T"] = "(t|T|(\\\\0{0,4}(54|74)(\r\n|[ \t\r\n\f])?)|\\\\t|\\\\T)";
@@ -387,12 +387,12 @@ parsePseudo[s_String] :=
 parseANB[s_String] :=
 	Module[{x = StringTrim @ s},
 		Which[
-			StringMatchQ[x, RegularExpression["[Oo][Dd][Dd]"]], {2, 1},
-			StringMatchQ[x, RegularExpression["[Ee][Vv][Ee][Nn]"]], {2, 0}, 
-			StringMatchQ[x, RegularExpression["[+\-]?"] ~~ RegularExpression["[0-9]+"]], {0, Interpreter["Integer"][x]}, 
-			StringMatchQ[x, RegularExpression["[+\-]?([0-9]+)?[Nn](([ \t\r\n\f]*)[+\-]([ \t\r\n\f]*)([0-9]+))?"]], 
+			StringMatchQ[x, RegularExpression[RE["O"] ~~ RE["D"] ~~ RE["D"]]],            {2, 1},
+			StringMatchQ[x, RegularExpression[RE["E"] ~~ RE["V"] ~~ RE["E"] ~~ RE["N"]]], {2, 0}, 
+			StringMatchQ[x, RegularExpression["[+\\-]?"] ~~ RegularExpression["[0-9]+"]], {0, Interpreter["Integer"][x]}, 
+			StringMatchQ[x, RegularExpression["[+\\-]?([0-9]+)?" ~~ RE["N"] ~~ "(" ~~ RE["w"] ~~ "[+\\-]" ~~ RE["w"] ~~ "([0-9]+))?"]], 
 				First@ StringCases[x, 
-					(a:RegularExpression["[+\-]?([0-9]+)?"]) ~~ RegularExpression["[Nn]"] ~~ rest__ :> 
+					(a:RegularExpression["[+\\-]?([0-9]+)?"]) ~~ RegularExpression[RE["N"]] ~~ rest__ :> 
 					{
 						Switch[a, "+"|"", 1, "-", -1, _, Interpreter["Integer"][a]], 
 						Interpreter["Integer"][StringReplace[rest, Whitespace -> ""]]}], 
