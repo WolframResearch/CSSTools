@@ -27,7 +27,7 @@ SVGPresntationAttributesData = <|
 		"CSSInitialValue" -> "auto",
 		"WDInitialValue" -> None,
 		"Animatable" -> True,
-		"Values" -> "&lt;shape&gt;| auto |inherit",
+		"Values" -> "<shape>| auto |inherit",
 		"AppliesTo" -> "elementswhich establish a new viewport, pattern elements and marker elements"|>,
  	"clip-path" -> <|
 		"Inherited" -> False,
@@ -159,7 +159,7 @@ SVGPresntationAttributesData = <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "see individual properties",
 		"WDInitialValue" -> None,
-		"Animatable" -> "yes&nbsp;<sup>[1]</sup>",
+		"Animatable" -> True, (* with conditions *)
 		"Values" -> "[ [ font-style|| font-variant|| font-weight]? font-size[ /'line-height']? font-family] | caption | icon | menu | message-box | small-caption |status-bar |inherit",
 		"AppliesTo" -> "textcontent elements"|>,
  	"font-family" -> <|
@@ -167,21 +167,21 @@ SVGPresntationAttributesData = <|
 		"CSSInitialValue" -> "depends on user agent",
 		"WDInitialValue" -> None,
 		"Animatable" -> True,
-		"Values" -> "[[&lt;family-name&gt;|&lt;generic-family&gt;],]* [&lt;family-name&gt;|&lt;generic-family&gt;]|inherit",
+		"Values" -> "[[<family-name>|<generic-family>],]* [<family-name>|<generic-family>]|inherit",
 		"AppliesTo" -> "textcontent elements"|>,
  	"font-size" -> <|
 		"Inherited" -> "yes, the computed value is inherited",
 		"CSSInitialValue" -> "medium",
 		"WDInitialValue" -> None,
 		"Animatable" -> True,
-		"Values" -> "&lt;absolute-size&gt;|&lt;relative-size&gt;| <length>|&lt;percentage&gt;|inherit",
+		"Values" -> "<absolute-size>|<relative-size>| <length>|<percentage>|inherit",
 		"AppliesTo" -> "textcontent elements"|>,
  	"font-size-adjust" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "none",
 		"WDInitialValue" -> None,
-		"Animatable" -> "yes&nbsp;<sup>[1]</sup>",
-		"Values" -> "&lt;number&gt;| none |inherit",
+		"Animatable" -> True, (* with conditions *)
+		"Values" -> "<number>| none |inherit",
 		"AppliesTo" -> "textcontent elements"|>,
  	"font-stretch" -> <|
 		"Inherited" -> True,
@@ -209,7 +209,7 @@ SVGPresntationAttributesData = <|
 		"CSSInitialValue" -> "normal",
 		"WDInitialValue" -> None,
 		"Animatable" -> True,
-		"Values" -> "normal | bold | bolder | lighter | 100 | 200 | 300 |400 | 500 | 600 | 700 | 800 | 900 |inherit",
+		"Values" -> "normal | bold | bolder | lighter | 100 | 200 | 300 |400 | 500 | 600 | 700 | 800 | 900 | inherit",
 		"AppliesTo" -> "textcontent elements"|>,
  	"glyph-orientation-horizontal" -> <|
 		"Inherited" -> True,
@@ -327,7 +327,7 @@ SVGPresntationAttributesData = <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "none",
 		"WDInitialValue" -> None,
-		"Animatable" -> "yes&nbsp;<sup>[1]</sup>",
+		"Animatable" -> True, (* with conditions *)
 		"Values" -> "none | <dasharray> |inherit",
 		"AppliesTo" -> "shapes and text contentelements"|>,
  	"stroke-dashoffset" -> <|

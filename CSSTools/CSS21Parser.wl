@@ -34,6 +34,10 @@ CSS styles are merged following the CSS cascade and the resulting options are fi
 SetUsage[ExtractCSSFromXML, "\
 ExtractCSSFromXML[XMLObject$] imports the CSS declarations within XMLObject$."];
 
+SetUsage[ApplyCSSToXML, "\
+ApplyCSSToXML[XMLObject$, CSSData$] applies the CSSData$ to the symbolic XML, \
+returning the CSSData$ with additional position and specificity information."];
+
 SetUsage[ResolveCSSInterpretations, "\
 ResolveCSSInterpretations[type$, CSSInterpretations$] combines options that were interpreted from the CSS importer. \
 Any Left/Right/Bottom/Top and Min/Max values are merged."];
@@ -3812,6 +3816,10 @@ dynamicColorQ[_] := False
 dynamicThicknessQ[x_Dynamic] := If[Position[x, Thickness | AbsoluteThickness | FontSize, Infinity] === {}, False, True]
 dynamicThicknessQ[_] := False
 
+(* 
+	Merging directives like the following is pretty naive. 
+	We should probably revisit this, but it works for now because the CSS interpretations are in a simple form. *)
+
 mergeDirectives[dNew_Directive, dOld_Directive] := 
 	Module[{c1, t1, d1, c2, t2, d2, dirNew, dirOld},
 		dirNew = If[MatchQ[dNew, Directive[_List]], Directive @@ dNew[[1]], dNew];
@@ -4005,10 +4013,15 @@ styleAttributePattern :=
 	] :> css
 
 
-addSpecifictyAndTarget[doc_, data_] :=
-	With[{t = Selector[doc, #Selector]}, 
-		<|"Selector" -> #Selector, "Specificity" -> t[["Specificity"]], "Targets" -> t[["Elements"]], "Condition" -> #Condition, "Block" -> #Block|>
-	]& /@ data
+ApplyCSSToXML[doc:XMLObject["Document"][___], CSSData_Dataset, wrapInDataset_:True] := ApplyCSSToXML[doc, Normal @ CSSData, wrapInDataset]
+ApplyCSSToXML[doc:XMLObject["Document"][___], CSSData_?validCSSDataQ, wrapInDataset_:True] :=
+	If[TrueQ @ wrapInDataset, Dataset, Identity][
+		With[{t = Selector[doc, #Selector]}, 
+			<|"Selector" -> #Selector, "Specificity" -> t[["Specificity"]], "Targets" -> t[["Elements"]], "Condition" -> #Condition, "Block" -> #Block|>
+		]& /@ CSSData]
+		
+ApplyCSSToXML[_, CSSData_?validCSSDataQ, ___] := Failure["BadDoc", <|"Message" -> "Invalid XML document."|>]
+ApplyCSSToXML[doc:XMLObject["Document"][___], ___] := Failure["BadData", <|"Message" -> "Invalid CSS data."|>]
 
 
 Options[ExtractCSSFromXML] = {"RootDirectory" -> Automatic};
@@ -4029,12 +4042,12 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 		With[{bools =  # =!= $Failed& /@ externalSSContent},
 			externalSSPositions = Pick[externalSSPositions, bools];
 			externalSSContent = Pick[externalSSContent, bools];];
-		externalSSContent = addSpecifictyAndTarget[doc, #]& /@ externalSSContent;
+		externalSSContent = ApplyCSSToXML[doc, #, False]& /@ externalSSContent;
 				
 		(* process internal style sheets given by <style> elements *)
 		internalSSPositions = Position[doc, First @ styleElementPattern];
 		internalSSContent = InternalCSS /@ Cases[doc, styleElementPattern, Infinity];
-		internalSSContent = addSpecifictyAndTarget[doc, #]& /@ internalSSContent;
+		internalSSContent = ApplyCSSToXML[doc, #, False]& /@ internalSSContent;
 		
 		(* process internal styles given by 'style' attributes *)
 		directStylePositions = Position[doc, First @ styleAttributePattern];

@@ -21,7 +21,7 @@ WindowFrame->Normal*)
 Notebook[{
 Cell[BoxData[GridBox[{
    {Cell["C S S TOOLS TUTORIAL", "PacletNameCell",ExpressionUUID->
-     "4df6da2e-bb0e-424a-ad45-8c4375cd1266"], Cell[TextData[{
+     "927c4c6a-aa31-4b03-8fcf-3b7d32a89ef7"], Cell[TextData[{
      Cell[BoxData[
       ActionMenuBox[
        FrameBox[
@@ -29,7 +29,7 @@ Cell[BoxData[GridBox[{
           "Related Guides",
           StyleBox[" \[FilledDownTriangle]", "AnchorBarArrow",
            StripOnInput->False]
-         }],ExpressionUUID->"cf756152-cfe5-49b0-81b7-04f733a6ebd4"],
+         }],ExpressionUUID->"6422e32c-e3d1-458e-9656-3bb8382b1892"],
          TextCell[
           Row[{"Related Guides", 
             Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
@@ -39,7 +39,7 @@ Cell[BoxData[GridBox[{
        MenuAppearance->Automatic,
        MenuStyle->"TutorialMoreAboutSection"]],
       LineSpacing->{1.4, 0},ExpressionUUID->
-      "3ec689ea-608c-4851-bc73-046ea0521d2e"],
+      "b2d295bf-5594-4cc7-9188-2dbf3480b04d"],
      "\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\
 \[ThickSpace]",
      Cell[BoxData[
@@ -49,7 +49,7 @@ Cell[BoxData[GridBox[{
           "Functions",
           StyleBox[" \[FilledDownTriangle]", "AnchorBarArrow",
            StripOnInput->False]
-         }],ExpressionUUID->"4389c3da-07d3-40da-a320-55161d43e661"],
+         }],ExpressionUUID->"b5c43e94-f11e-474b-8693-3d62076c21ce"],
          TextCell[
           Row[{"Functions", 
             Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
@@ -86,7 +86,7 @@ Cell[BoxData[GridBox[{
        MenuAppearance->Automatic,
        MenuStyle->"TutorialFunction"]],
       LineSpacing->{1.4, 0},ExpressionUUID->
-      "a4c4ac58-c621-48e6-b9c9-878a0ff09329"],
+      "a2c8d55a-4e86-45b8-b16f-5aff3e194986"],
      "\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\
 \[ThickSpace]",
      Cell[BoxData[
@@ -96,7 +96,7 @@ Cell[BoxData[GridBox[{
           "URL",
           StyleBox[" \[FilledDownTriangle]", "AnchorBarArrow",
            StripOnInput->False]
-         }],ExpressionUUID->"76d2f761-599c-4797-b6eb-4b744219759e"],
+         }],ExpressionUUID->"e781417c-9a5c-435d-ae78-f093ee6859b4"],
          TextCell[
           Row[{"URL", 
             Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
@@ -128,7 +128,7 @@ CSSTools.html"], StandardForm]], "Input", TextClipboardType -> "PlainText"]},
            URL[
             StringJoin[
              If[
-              TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$13351], 
+              TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$13895], 
               "http://reference.wolfram.com/system-modeler/", 
               "http://reference.wolfram.com/language/"], 
              "CSSTools/tutorial/CSSTools", ".html"]], None}]}]},
@@ -136,10 +136,10 @@ CSSTools.html"], StandardForm]], "Input", TextClipboardType -> "PlainText"]},
        MenuAppearance->Automatic,
        MenuStyle->"URLMenu"]],
       LineSpacing->{1.4, 0},ExpressionUUID->
-      "ec4d21f1-3a9f-43d1-8ad1-e00bc0ed74f1"]
-    }], "AnchorBar",ExpressionUUID->"59ddfd24-d041-4ad5-b83c-a3fff58952a0"]}
+      "4864651e-1b18-4ee5-a9a0-fc69ac5a0cca"]
+    }], "AnchorBar",ExpressionUUID->"9af32c6d-aa30-4ada-ad10-a50db6d7a0e9"]}
   }]], "AnchorBarGrid",
- CellID->1,ExpressionUUID->"67770df6-c416-488c-a376-e714b6177a0d"],
+ CellID->1,ExpressionUUID->"aa6b5cde-7961-4088-ace9-e2a92118a485"],
 
 Cell[CellGroupData[{
 
@@ -762,8 +762,8 @@ Cell[BoxData[GridBox[{
        ImageSize -> {8, 9}]},
      "GrayLinkWithIcon",
      BaseStyle->{"TutorialJumpBoxLink"}]}
-  }]], "TutorialJumpBox",ExpressionUUID->"325a0e26-5b78-41ce-ba47-\
-0ec7bab6f0f0"],
+  }]], "TutorialJumpBox",ExpressionUUID->"6fa83bec-2aaa-46d4-b732-\
+7187268e9ac7"],
 
 Cell["\<\
 Cascading Style Sheets (CSS) is a stylesheet language used for describing the \
@@ -813,7 +813,7 @@ specifications. Please refer to the WD ",
     "https://www.w3.org/Style/CSS/learning"},
    "WebLink",
    BaseStyle->{"Text"}]],ExpressionUUID->
-  "c3a63f44-7f04-4079-ae3d-269b23d095dd"],
+  "a0bde266-7394-4f92-ad5e-210b32bbb3de"],
  " for details with CSS."
 }], "Text",
  CellID->72334175,ExpressionUUID->"a75fc352-5150-4177-b01c-2148207806cc"],
@@ -19627,13 +19627,13 @@ Cell[CellGroupData[{
 Cell[TextData[{
  Cell[BoxData[
   TemplateBox[{6},
-   "Spacer1"]],ExpressionUUID->"10d4d7bc-2fa6-4fe0-be57-8f5b112391d8"],
+   "Spacer1"]],ExpressionUUID->"6bb51fab-3432-4f61-a954-b8c4ae789bb5"],
  "Related Guides"
 }], "TutorialMoreAboutSection",
  WholeCellGroupOpener->True,
  CellID->23220180,ExpressionUUID->"e781eb13-9253-46f5-a89a-71d58b15b174"],
 
-Cell["", "SectionHeaderSpacer",ExpressionUUID->"c175b6d6-0645-4424-acbb-acf12c2805e9"],
+Cell["", "SectionHeaderSpacer",ExpressionUUID->"aec0fced-6462-413c-b443-b7239a111e99"],
 
 Cell[TextData[ButtonBox["CSSTools",
  BaseStyle->"Link",
@@ -19642,7 +19642,7 @@ Cell[TextData[ButtonBox["CSSTools",
 }, Open  ]]
 }, Open  ]],
 
-Cell[" ", "FooterCell",ExpressionUUID->"ce72c7ab-a099-4112-b1f0-b9cdc5884232"]
+Cell[" ", "FooterCell",ExpressionUUID->"65325867-3b24-4d6d-8d8d-76a4661dd967"]
 },
 Saveable->False,
 ScreenStyleEnvironment->"Working",
@@ -19658,7 +19658,7 @@ TaggingRules->{
          BaseStyle -> {"Link", "DockedLinkTrail"}]}]}}, ColumnAlignments -> 
     Left], "ExampleCounter" -> 1, "NeedPlatMsgIn" -> None, "RootCaptions" -> 
   "", "Metadata" -> {
-   "built" -> "{2019, 3, 27, 23, 15, 27.6502601}", 
+   "built" -> "{2019, 4, 18, 21, 48, 36.9857422}", 
     "history" -> {"0.0", "", "", ""}, "context" -> "CSSTools`", 
     "keywords" -> {}, "specialkeywords" -> {}, 
     "tutorialcollectionlinks" -> {}, "index" -> True, "label" -> 
@@ -19673,7 +19673,7 @@ are differences between the two specifications (more than Wolfram Desktop \
 uses the spelling \"stylesheet\" instead of \"style sheet\"). Even so, there \
 is a lot in common once translation is done between the two notations. ", 
     "synonyms" -> {}, "tabletags" -> 
-    DocumentationBuild`Make`Private`tabletaggingrules$13015, "title" -> 
+    DocumentationBuild`Make`Private`tabletaggingrules$13559, "title" -> 
     "CSS Tools Package", "titlemodifier" -> "", "windowtitle" -> 
     "CSS Tools Package", "type" -> "Tutorial", "uri" -> 
     "CSSTools/tutorial/CSSTools", "WorkflowDockedCell" -> ""}, 
@@ -19710,12 +19710,12 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[589, 21, 5546, 120, 55, "AnchorBarGrid",ExpressionUUID->"67770df6-c416-488c-a376-e714b6177a0d",
+Cell[589, 21, 5546, 120, 55, "AnchorBarGrid",ExpressionUUID->"aa6b5cde-7961-4088-ace9-e2a92118a485",
  CellID->1],
 Cell[CellGroupData[{
 Cell[6160, 145, 109, 1, 63, "Title",ExpressionUUID->"66be0c7f-129c-4236-8284-4c50587b284a",
  CellID->509267359],
-Cell[6272, 148, 35312, 617, 114, "TutorialJumpBox",ExpressionUUID->"325a0e26-5b78-41ce-ba47-0ec7bab6f0f0"],
+Cell[6272, 148, 35312, 617, 114, "TutorialJumpBox",ExpressionUUID->"6fa83bec-2aaa-46d4-b732-7187268e9ac7"],
 Cell[41587, 767, 442, 7, 104, "Text",ExpressionUUID->"58cf0cf3-5168-465c-a524-35cb5b1da76e",
  CellID->1534169418],
 Cell[42032, 776, 122, 1, 36, "MathCaption",ExpressionUUID->"6c5f91a0-83cf-46d8-a6f0-c7f574fac3cc",
@@ -20149,12 +20149,12 @@ Cell[723395, 14229, 328658, 5392, 70, "Input",ExpressionUUID->"20158325-a1e8-402
 Cell[CellGroupData[{
 Cell[1052090, 19626, 274, 7, 70, "TutorialMoreAboutSection",ExpressionUUID->"e781eb13-9253-46f5-a89a-71d58b15b174",
  CellID->23220180],
-Cell[1052367, 19635, 86, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"c175b6d6-0645-4424-acbb-acf12c2805e9"],
+Cell[1052367, 19635, 86, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"aec0fced-6462-413c-b443-b7239a111e99"],
 Cell[1052456, 19637, 201, 3, 70, "TutorialMoreAbout",ExpressionUUID->"5bbbc34f-38be-4751-9253-e6cb4e7a204d",
  CellID->1567025153]
 }, Open  ]]
 }, Open  ]],
-Cell[1052684, 19644, 78, 0, 70, "FooterCell",ExpressionUUID->"ce72c7ab-a099-4112-b1f0-b9cdc5884232"]
+Cell[1052684, 19644, 78, 0, 70, "FooterCell",ExpressionUUID->"65325867-3b24-4d6d-8d8d-76a4661dd967"]
 }
 ]
 *)

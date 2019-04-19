@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     16487,        423]
-NotebookOptionsPosition[     10943,        309]
-NotebookOutlinePosition[     11357,        325]
-CellTagsIndexPosition[     11314,        322]
+NotebookDataLength[     17070,        437]
+NotebookOptionsPosition[     11407,        321]
+NotebookOutlinePosition[     11823,        337]
+CellTagsIndexPosition[     11780,        334]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -249,6 +249,18 @@ Cell["Searching SymbolicXML", "GuideFunctionsSubsection",
 
 Cell[TextData[{
  Cell[BoxData[
+  ButtonBox["ApplyCSSToXML",
+   BaseStyle->"Link",
+   ButtonData->"paclet:CSSTools/ref/ApplyCSSToXML"]], "InlineGuideFunction",
+  ExpressionUUID->"6d1e3204-9a0d-49d1-834d-9d9ae641f56e"],
+ " \[LongDash] provides target and specificity information of CSS data acting \
+on XML"
+}], "GuideText",
+ CellChangeTimes->{{3.764630515136366*^9, 3.764630575518057*^9}},
+ CellID->2444546,ExpressionUUID->"3d3dc613-bae0-45a3-970e-a82dcf688d97"],
+
+Cell[TextData[{
+ Cell[BoxData[
   ButtonBox["ExtractCSSFromXML",
    BaseStyle->"Link",
    ButtonData->"paclet:CSSTools/ref/ExtractCSSFromXML"]], 
@@ -308,7 +320,7 @@ Cell["Related Links", "GuideRelatedLinksSection",
  CellID->415694148,ExpressionUUID->"03f3a530-6cb3-417d-bfd1-8cf9cd53e760"]
 },
 WindowSize->{869, 770},
-WindowMargins->{{Automatic, 0}, {Automatic, 62}},
+WindowMargins->{{Automatic, 202}, {Automatic, 56}},
 FrontEndVersion->"11.3 for Microsoft Windows (64-bit) (March 6, 2018)",
 StyleDefinitions->FrontEnd`FileName[{"Wolfram"}, "GuidePageStyles.nb", 
   CharacterEncoding -> "UTF-8"]
@@ -401,33 +413,33 @@ Cell[8298, 239, 102, 1, 26, "GuideDelimiter",ExpressionUUID->"97bc2ebf-8ed5-4a50
 Cell[CellGroupData[{
 Cell[8425, 244, 251, 3, 33, "GuideFunctionsSubsection",ExpressionUUID->"3f2d20fc-7cdc-4adb-8fc5-a03b4a0fdbf4",
  CellID->159396722],
-Cell[8679, 249, 605, 12, 21, "GuideText",ExpressionUUID->"98ed5967-fc25-4d07-95b5-f70816b90d9d",
+Cell[8679, 249, 461, 10, 21, "GuideText",ExpressionUUID->"3d3dc613-bae0-45a3-970e-a82dcf688d97",
+ CellID->2444546],
+Cell[9143, 261, 605, 12, 21, "GuideText",ExpressionUUID->"98ed5967-fc25-4d07-95b5-f70816b90d9d",
  CellID->321169176],
-Cell[9287, 263, 598, 12, 21, "GuideText",ExpressionUUID->"76b7ff53-5475-4aac-af5f-dfa262a0aec6",
+Cell[9751, 275, 598, 12, 21, "GuideText",ExpressionUUID->"76b7ff53-5475-4aac-af5f-dfa262a0aec6",
  CellID->41288703]
 }, Open  ]]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[9934, 281, 117, 1, 70, "GuideTutorialsSection",ExpressionUUID->"3ca24ca6-1273-4b67-b6fb-aac4d9ca4b9d",
+Cell[10398, 293, 117, 1, 70, "GuideTutorialsSection",ExpressionUUID->"3ca24ca6-1273-4b67-b6fb-aac4d9ca4b9d",
  CellID->415694126],
-Cell[10054, 284, 267, 4, 20, "GuideTutorial",ExpressionUUID->"717421b9-35be-4e27-aafb-89bdf7866184",
+Cell[10518, 296, 267, 4, 20, "GuideTutorial",ExpressionUUID->"717421b9-35be-4e27-aafb-89bdf7866184",
  CellID->806871991],
-Cell[10324, 290, 105, 1, 20, "GuideTutorial",ExpressionUUID->"3f3d2612-dd9b-442e-93fd-05aea4cc6148",
+Cell[10788, 302, 105, 1, 20, "GuideTutorial",ExpressionUUID->"3f3d2612-dd9b-442e-93fd-05aea4cc6148",
  CellID->1885805579]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[10466, 296, 117, 1, 70, "GuideMoreAboutSection",ExpressionUUID->"c4c7e779-dc62-456f-a9cd-5dfc7f84f64b",
+Cell[10930, 308, 117, 1, 70, "GuideMoreAboutSection",ExpressionUUID->"c4c7e779-dc62-456f-a9cd-5dfc7f84f64b",
  CellID->23220180],
-Cell[10586, 299, 106, 1, 20, "GuideMoreAbout",ExpressionUUID->"ed62ac3b-d0c9-467c-b99f-dd256402375f",
+Cell[11050, 311, 106, 1, 20, "GuideMoreAbout",ExpressionUUID->"ed62ac3b-d0c9-467c-b99f-dd256402375f",
  CellID->1567025153],
-Cell[10695, 302, 105, 1, 20, "GuideMoreAbout",ExpressionUUID->"62caeb8e-f99b-44c7-aa74-d22e700dbbe7",
+Cell[11159, 314, 105, 1, 20, "GuideMoreAbout",ExpressionUUID->"62caeb8e-f99b-44c7-aa74-d22e700dbbe7",
  CellID->252299663]
 }, Open  ]],
-Cell[10815, 306, 124, 1, 70, "GuideRelatedLinksSection",ExpressionUUID->"03f3a530-6cb3-417d-bfd1-8cf9cd53e760",
+Cell[11279, 318, 124, 1, 70, "GuideRelatedLinksSection",ExpressionUUID->"03f3a530-6cb3-417d-bfd1-8cf9cd53e760",
  CellID->415694148]
 }
 ]
 *)
-
-(* End of internal cache information *)
 
