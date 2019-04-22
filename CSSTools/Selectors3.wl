@@ -391,11 +391,11 @@ parseANB[s_String] :=
 			StringMatchQ[x, RegularExpression[RE["E"] ~~ RE["V"] ~~ RE["E"] ~~ RE["N"]]], {2, 0}, 
 			StringMatchQ[x, RegularExpression["[+\\-]?"] ~~ RegularExpression["[0-9]+"]], {0, Interpreter["Integer"][x]}, 
 			StringMatchQ[x, RegularExpression["[+\\-]?([0-9]+)?" ~~ RE["N"] ~~ "(" ~~ RE["w"] ~~ "[+\\-]" ~~ RE["w"] ~~ "([0-9]+))?"]], 
-				First@ StringCases[x, 
-					(a:RegularExpression["[+\\-]?([0-9]+)?"]) ~~ RegularExpression[RE["N"]] ~~ rest__ :> 
+				First @ StringCases[x, 
+					(a:RegularExpression["[+\\-]?([0-9]+)?"]) ~~ RegularExpression[RE["N"]] ~~ rest___ :> 
 					{
 						Switch[a, "+"|"", 1, "-", -1, _, Interpreter["Integer"][a]], 
-						Interpreter["Integer"][StringReplace[rest, Whitespace -> ""]]}], 
+						With[{str = StringReplace[rest, Whitespace -> ""]}, If[str == "", 0, Interpreter["Integer"][str]]]}], 
 			True, Throw[Failure["SelectorParse", <|"MessageTemplate" -> "Bad ANB pseudo class argument.", "AllTokens" -> s|>]]
 		]		
 	]

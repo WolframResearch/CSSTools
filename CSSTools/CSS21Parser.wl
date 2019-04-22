@@ -997,7 +997,15 @@ initialValues[prop_String] := CSSPropertyData[prop, "WDInitialValue"]
 (*<color>*)
 
 
-(* Some WL named colors do not agree with those of the W3C. We parse those colors following the W3C. *)
+(* 
+	Some WL named colors do not agree with those of the W3C. We parse those colors following the W3C.
+	WL does not currently interpret hex colors with opacity, so do those special cases here. *)
+$1XC = Repeated[RegularExpression[RE["h"]], {1}];
+$2XC = Repeated[RegularExpression[RE["h"]], {2}];
+fromhexdigits[s_] := FromDigits[s, 16]
+hexPattern1 := StartOfString ~~ "#" ~~ r:$2XC ~~ g:$2XC ~~ b:$2XC ~~ a:$2XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b, a} / 255);
+hexPattern2 := StartOfString ~~ "#" ~~ r:$1XC ~~ g:$1XC ~~ b:$1XC ~~ a:$1XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b, a} / 15);	
+	
 parseSingleColor[prop_String, tokens:{{_String, _String}..}] := parseSingleColor[prop, tokens] = 
 	Which[
 		Length[tokens] == 1 && MatchQ[tokens[[1, 1]], "ident"],
@@ -1024,7 +1032,10 @@ parseSingleColor[prop_String, tokens:{{_String, _String}..}] := parseSingleColor
 				_,              Interpreter["Color"][StringJoin @ tokens[[1, 2]]] (* keyword e.g. blue *)
 			],
 		Length[tokens] == 1 && MatchQ[tokens[[1, 1]], "hexcolor"],
-			Interpreter["Color"][tokens[[1, 2]]],
+			Which[
+				StringMatchQ[First @ hexPattern1], First[StringCases[tokens[[1, 2]], hexPattern1], unrecognizedValueFailure @ prop],
+				StringMatchQ[First @ hexPattern2], First[StringCases[tokens[[1, 2]], hexPattern2], unrecognizedValueFailure @ prop],
+				True, Interpreter["Color"][tokens[[1, 2]]]],
 		Length[tokens] > 1 && MatchQ[tokens[[1, 1]], "function"],
 			Interpreter["Color"][StringJoin @ tokens[[All, 2]]], (* rgb(_,_,_) or hsl(_,_,_) *)
 		True, unrecognizedValueFailure @ prop
@@ -3395,7 +3406,7 @@ parse[prop:"visibility", tokens:{{_String, _String}..}] := (*parse[prop, tokens]
 	Attached cells are ordered by their creation order.
 *)
 parse[prop:"z-index", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens]},
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[tokens[[pos, 1]],
