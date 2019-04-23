@@ -7,7 +7,7 @@
 (* All such attributes can be referenced by CSS. *)
 
 
-SVGPresntationAttributesData = <|
+SVGPresentationAttributesData = <|
 	"alignment-baseline" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "see property description",
