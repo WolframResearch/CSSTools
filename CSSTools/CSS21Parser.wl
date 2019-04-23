@@ -268,22 +268,30 @@ RE["B"] = "(b|B|\\\\0{0,4}(42|62)(\r\n|[ \t\r\n\f])?|\\\\b|\\\\B)";
 RE["C"] = "(c|C|\\\\0{0,4}(43|63)(\r\n|[ \t\r\n\f])?|\\\\c|\\\\C)";
 RE["D"] = "(d|D|\\\\0{0,4}(44|64)(\r\n|[ \t\r\n\f])?|\\\\d|\\\\D)";
 RE["E"] = "(e|E|\\\\0{0,4}(45|65)(\r\n|[ \t\r\n\f])?|\\\\e|\\\\E)";
+RE["F"] = "(f|F|\\\\0{0,4}(46|66)(\r\n|[ \t\r\n\f])?|\\\\f|\\\\F)";
 RE["G"] = "(g|G|\\\\0{0,4}(47|67)(\r\n|[ \t\r\n\f])?|\\\\g|\\\\G)";
 RE["H"] = "(h|H|\\\\0{0,4}(48|68)(\r\n|[ \t\r\n\f])?|\\\\h|\\\\H)";
 RE["I"] = "(i|I|\\\\0{0,4}(49|69)(\r\n|[ \t\r\n\f])?|\\\\i|\\\\I)";
+RE["J"] = "(j|J|\\\\0{0,4}(4a|6a)(\r\n|[ \t\r\n\f])?|\\\\j|\\\\J)";
 RE["K"] = "(k|K|\\\\0{0,4}(4b|6b)(\r\n|[ \t\r\n\f])?|\\\\k|\\\\K)";
 RE["L"] = "(l|L|\\\\0{0,4}(4c|6c)(\r\n|[ \t\r\n\f])?|\\\\l|\\\\L)";
 RE["M"] = "(m|M|\\\\0{0,4}(4d|6d)(\r\n|[ \t\r\n\f])?|\\\\m|\\\\M)";
 RE["N"] = "(n|N|\\\\0{0,4}(4e|6e)(\r\n|[ \t\r\n\f])?|\\\\n|\\\\N)";
 RE["O"] = "(o|O|\\\\0{0,4}(4f|6f)(\r\n|[ \t\r\n\f])?|\\\\o|\\\\O)";
 RE["P"] = "(p|P|\\\\0{0,4}(50|70)(\r\n|[ \t\r\n\f])?|\\\\p|\\\\P)";
+RE["Q"] = "(q|Q|\\\\0{0,4}(51|71)(\r\n|[ \t\r\n\f])?|\\\\q|\\\\Q)";
 RE["R"] = "(r|R|\\\\0{0,4}(52|72)(\r\n|[ \t\r\n\f])?|\\\\r|\\\\R)";
 RE["S"] = "(s|S|\\\\0{0,4}(53|73)(\r\n|[ \t\r\n\f])?|\\\\s|\\\\S)";
 RE["T"] = "(t|T|\\\\0{0,4}(44|74)(\r\n|[ \t\r\n\f])?|\\\\t|\\\\T)";
 RE["U"] = "(u|U|\\\\0{0,4}(55|75)(\r\n|[ \t\r\n\f])?|\\\\u|\\\\U)";
+RE["V"] = "(v|V|\\\\0{0,4}(56|76)(\r\n|[ \t\r\n\f])?|\\\\v|\\\\V)";
+RE["W"] = "(w|W|\\\\0{0,4}(57|77)(\r\n|[ \t\r\n\f])?|\\\\w|\\\\W)";
 RE["X"] = "(x|X|\\\\0{0,4}(58|78)(\r\n|[ \t\r\n\f])?|\\\\x|\\\\X)";
+RE["Y"] = "(y|Y|\\\\0{0,4}(59|79)(\r\n|[ \t\r\n\f])?|\\\\y|\\\\Y)";
 RE["Z"] = "(z|Z|\\\\0{0,4}(5a|7a)(\r\n|[ \t\r\n\f])?|\\\\z|\\\\Z)";
 
+characterNormalizationRules = MapThread[RegularExpression[RE[#1]] :> #2 &, {CharacterRange["A", "Z"], CharacterRange["a", "z"]}];
+normalizeKeyWord[s_String] := StringReplace[s, characterNormalizationRules]
 
 (* ::Subsection::Closed:: *)
 (*Tokens (alphabetical)*)
@@ -1010,7 +1018,7 @@ hexPattern2 := StartOfString ~~ "#" ~~ r:$1XC ~~ g:$1XC ~~ b:$1XC ~~ a:$1XC ~~ E
 parseSingleColor[prop_String, tokens:{{_String, _String}..}] := parseSingleColor[prop, tokens] = 
 	Which[
 		Length[tokens] == 1 && MatchQ[tokens[[1, 1]], "ident"],
-			Switch[ToLowerCase @ tokens[[1, 2]],
+			Switch[normalizeKeyWord @ tokens[[1, 2]],
 				"initial",      initialValues @ prop,
 				"inherit",      Inherited,
 				"currentcolor", Dynamic @ CurrentValue[FontColor], 
@@ -1049,7 +1057,7 @@ parseSingleColor[prop_String, tokens:{{_String, _String}..}] := parseSingleColor
 
 parseCounter[prop_String, tokens:{{_String, _String}...}] := parseCounter[prop, tokens] =
 	Module[{pos = 1, l = Length[tokens], style, listtype = "decimal"},
-		Switch[ToLowerCase @ tokens[[pos, 2]],
+		Switch[normalizeKeyWord @ tokens[[pos, 2]],
 			"counter(",
 				skipWhitespace[pos, l, tokens];
 				If[pos <= l && tokens[[pos, 1]] == "ident", style = tokens[[pos, 2]], Return @ invalidFunctionFailure @ StringJoin @ tokens[[All, 2]]];
@@ -1090,7 +1098,7 @@ parseLength[s_String, inFontSize_:False] := parseLength[s, inFontSize] =
 			'em' and 'ex' are relative values. If within the 'font-size' property, then first inherit from the parent.
 			If an 'em' or 'ex' length is given outside the 'font-size' property, then it's a function of the current FontSize.
 		*)
-		Switch[ToLowerCase @ unit, 
+		Switch[normalizeKeyWord @ unit, 
 			"em", If[inFontSize, val*Inherited,     With[{v = val}, Dynamic[v*CurrentValue[FontSize]]]],
 			"ex", If[inFontSize, val*0.5*Inherited, With[{v = val}, Dynamic[v*CurrentValue["FontXHeight"]]]],
 			"in", val*dpi,
@@ -1198,7 +1206,7 @@ parseSingleBG[prop_String, tokens:{{_String, _String}..}] :=
 		While[pos <= l, 
 			Which[
 				tokens[[pos, 1]] == "function", (* only color can be a function; eventually should support gradients *)
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"rgb(" | "rgba(" | "hsl(" | "hsla(", 
 							If[hasColor, Return @ repeatedPropValueFailure @ "background-color"]; 
 							hasColor = True; values["c"] = parseSingleColor[prop, consumeFunction[pos, l, tokens]];,
@@ -1278,7 +1286,7 @@ parseSingleBG[prop_String, tokens:{{_String, _String}..}] :=
 parseSingleBGAttachment[prop_String, token:{_String, _String}] := parseSingleBGAttachment[prop, token] =
 	Switch[token[[1]],
 		"ident", 
-			Switch[ToLowerCase @ token[[2]],
+			Switch[normalizeKeyWord @ token[[2]],
 				"scroll",  Missing["Not supported."],
 				"fixed",   Automatic, (* FE's only allowed value *)
 				"inherit", Inherited,
@@ -1318,7 +1326,7 @@ parse[prop:"background-color", tokens:{{_String, _String}..}] := (*parse[prop, t
 parseSingleBGImage[prop_String, token:{_String, _String}] := 
 	Switch[token[[1]],
 		"ident", 
-			Switch[ToLowerCase @ token[[2]],
+			Switch[normalizeKeyWord @ token[[2]],
 				"none",    None,
 				"inherit", Inherited,
 				"initial", initialValues @ prop,
@@ -1347,7 +1355,7 @@ parse[prop:"background-image", tokens:{{_String, _String}..}] := (*parse[prop, t
 parseSingleBGPosition[prop_String, token:{_String, _String}] :=
 	Switch[token[[1]],
 		"ident", 
-			Switch[ToLowerCase @ token[[2]],
+			Switch[normalizeKeyWord @ token[[2]],
 				"left",    Left,
 				"center",  Center,
 				"right",   Right,
@@ -1400,7 +1408,7 @@ parse[prop:"background-position", tokens:{{_String, _String}..}] := (*parse[prop
 parseSingleBGRepeat[prop_String, token:{_String, _String}] :=
 	Switch[token[[1]],
 		"ident", 
-			Switch[ToLowerCase @ token[[2]],
+			Switch[normalizeKeyWord @ token[[2]],
 				"no-repeat", "NoRepeat",
 				"repeat-x",  "RepeatX",
 				"repeat-y",  "RepeatY",
@@ -1448,7 +1456,7 @@ parse[prop:"border-collapse", tokens:{{_String, _String}..}] := (*parse[prop, to
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		Switch[tokens[[pos, 1]],
 			"ident", 
-				Switch[ToLowerCase @ tokens[[pos, 2]],
+				Switch[normalizeKeyWord @ tokens[[pos, 2]],
 					"inherit",  {},
 					"initial",  initialValues @ prop,
 					"separate", Missing["Not supported."],
@@ -1510,7 +1518,7 @@ parse[prop:"border-spacing", tokens:{{_String, _String}..}] := (*parse[prop, tok
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		If[l == 1 && MatchQ[tokens[[1, 1]], "ident"], 
 			Return @ 
-				Switch[ToLowerCase @ tokens[[1, 2]],
+				Switch[normalizeKeyWord @ tokens[[1, 2]],
 					"inherit", Spacings -> Inherited,
 					"initial", Spacings -> initialValues @ prop,
 					_,         unrecognizedKeyWordFailure @ prop
@@ -1541,7 +1549,7 @@ parse[prop:"border-spacing", tokens:{{_String, _String}..}] := (*parse[prop, tok
 parseSingleBorderStyle[prop_String, token:{_String, _String}] :=
 	Switch[token[[1]],
 		"ident",
-			Switch[ToLowerCase @ token[[2]],
+			Switch[normalizeKeyWord @ token[[2]],
 				"initial", initialValues @ prop,
 				"inherit", Inherited,
 				"none",    None, 
@@ -1597,7 +1605,7 @@ parse[prop:"border-style", tokens:{{_String, _String}..}] := (*parse[prop, token
 parseSingleBorderWidth[prop_String, token:{_String, _String}] :=
 	Switch[token[[1]],
 		"ident", 
-			Switch[ToLowerCase @ token[[2]],
+			Switch[normalizeKeyWord @ token[[2]],
 				"initial", initialValues @ prop,
 				"inherit", Inherited,
 				"thin",    Thickness[Small],
@@ -1674,7 +1682,7 @@ parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", t
 		
 		(* if only one token is present, then check that it is a universal keyword *)
 		If[l == 1,
-			Switch[ToLowerCase @ tokens[[1, 2]],
+			Switch[normalizeKeyWord @ tokens[[1, 2]],
 				"inherit", Return @ {FrameStyle -> wrapper[Inherited], CellFrame -> wrapper[Inherited], CellFrameStyle -> wrapper[Inherited]},
 				"initial", Return @ {
 					FrameStyle -> wrapper[Directive[Values @ values]], 
@@ -1724,7 +1732,7 @@ parse[prop:"clip", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 		If[l == 1, (* if only one token is present, then it should be a keyword *)
 			Switch[tokens[[pos, 1]],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"initial",  Missing["Not supported."],
 						"inherit",  Missing["Not supported."],
 						"auto",     Missing["Not supported."],
@@ -1773,7 +1781,7 @@ parse[prop:"content", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 			value = 
 				Switch[tokens[[pos, 1]],
 					"ident", 
-						Switch[ToLowerCase @ tokens[[pos, 2]],
+						Switch[normalizeKeyWord @ tokens[[pos, 2]],
 							"normal",         CellDingbat->"\[FilledCircle]",
 							"none",           CellDingbat->None,
 							"inherit",        CellDingbat->Inherited,
@@ -1787,7 +1795,7 @@ parse[prop:"content", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 					"string", CellLabel -> tokens[[pos, 2]], (* is this even doing this option justice? *)
 					"uri",    With[{i = parseURI @ tokens[[pos, 2]]}, If[FailureQ[i] || MissingQ[i], notAnImageFailure @ tokens[[pos, 2]], CellDingbat -> i]],
 					"function", 
-						Switch[ToLowerCase @ tokens[[pos, 2]],
+						Switch[normalizeKeyWord @ tokens[[pos, 2]],
 							"counter(" | "counters(", CellDingbat -> parseCounter[prop, consumeFunction[pos, l, tokens]],
 							"attr(",                  (*TODO*)parseAttr[prop, consumeFunction[pos, l, tokens]],
 							_,                        unrecognizedValueFailure @ prop
@@ -1816,7 +1824,7 @@ parse[prop:"counter-increment", tokens:{{_String, _String}..}] := (*parse[prop, 
 		While[pos <= l,
 			Switch[tokens[[pos, 1]],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"none",    If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = {}],
 						"inherit", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = Inherited],
 						"initial", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = initialValues @ prop],
@@ -1853,7 +1861,7 @@ parse[prop:"counter-reset", tokens:{{_String, _String}..}] := (*parse[prop, toke
 		While[pos <= l,
 			Switch[tokens[[pos, 1]],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"none",    If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = {}],
 						"inherit", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = Inherited],
 						"initial", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = initialValues @ prop],
@@ -1885,7 +1893,7 @@ parse[prop:"counter-reset", tokens:{{_String, _String}..}] := (*parse[prop, toke
 parseSingleListStyleImage[prop_String, token:{_String, _String}] := 
 	Switch[token[[1]],
 		"ident",
-			Switch[ToLowerCase @ token[[2]],
+			Switch[normalizeKeyWord @ token[[2]],
 				"inherit", Inherited,
 				"initial", initialValues @ prop, 
 				"none",    None,
@@ -1922,7 +1930,7 @@ parse[prop:"list-style-image", tokens:{{_String, _String}..}] := (*parse[prop, t
 parseSingleListStylePosition[prop_String, token:{_String, _String}] := 
 	Switch[token[[1]],
 		"ident",
-			Switch[ToLowerCase @ token[[2]],
+			Switch[normalizeKeyWord @ token[[2]],
 				"inherit", Inherited,
 				"initial", initialValues @ prop, 
 				"inside",  Missing["Not supported."],
@@ -1947,7 +1955,7 @@ parse[prop:"list-style-position", tokens:{{_String, _String}..}] := (*parse[prop
 parseSingleListStyleType[prop_String, token:{_String, _String}, style_String:"Item"] := 
 	Switch[token[[1]],
 		"ident",
-			Switch[ToLowerCase @ token[[2]],
+			Switch[normalizeKeyWord @ token[[2]],
 				"inherit",              Inherited,
 				"initial",              initialValues @ prop, 
 				"disc",                 "\[FilledCircle]",
@@ -1992,7 +2000,7 @@ parse[prop:"list-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens]
 		*)
 		values = <|"image" -> None, "pos" -> Missing["Not supported."], "type" -> None|>;
 		While[pos <= l,
-			If[TrueQ[ToLowerCase @ tokens[[pos, 2]] == "none"], 
+			If[TrueQ[normalizeKeyWord @ tokens[[pos, 2]] == "none"], 
 				noneCount++
 				,
 				value = Through[{parseSingleListStyleImage, parseSingleListStylePosition, parseSingleListStyleType}[prop, tokens[[pos]]]];
@@ -2028,7 +2036,7 @@ parse[prop:"quotes", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *
 		While[pos <= l,
 			Switch[tokens[[pos, 1]],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"none",    If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = {}],
 						"inherit", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = Inherited],
 						"initial", If[l > 1, Return @ illegalIdentifierFailure @ tokens[[pos, 2]], values = initialValues @ prop]
@@ -2059,7 +2067,7 @@ parse[prop:"cursor", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"inherit",       Inherited,
 						"initial",       initialValues @ prop,
 						"auto",          Automatic,
@@ -2100,7 +2108,7 @@ parse[prop:"display", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"inline",             Automatic, (* wrap in Cell[]? *)
 						"block",              Automatic,
 						"list-item",          Automatic,
@@ -2137,7 +2145,7 @@ parse[prop:"float", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"left",    Automatic,
 						"right",   Automatic,
 						"none",    Automatic,
@@ -2157,7 +2165,7 @@ parse[prop:"clear", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"left",    Automatic,
 						"right",   Automatic,
 						"both",    Automatic,
@@ -2199,7 +2207,7 @@ parse[prop:"font", tokens:{{_String, _String}..}] :=
 		(* parse and assign new font values *)
 		If[l == 1, (* if only one token is present, then it should be a keyword that represents a system font (or font style?) *)
 			newValue = 
-				Switch[ToLowerCase @ tokens[[pos, 2]],
+				Switch[normalizeKeyWord @ tokens[[pos, 2]],
 					"caption" | "icon" | "menu" | "small-caption", 
 						{FontFamily :> CurrentValue["ControlsFontFamily"], FontSize :> CurrentValue["ControlsFontSize"]},
 					"message-box" | "status-bar", 
@@ -2227,7 +2235,7 @@ parse[prop:"font", tokens:{{_String, _String}..}] :=
 		*)
 		(* FIXME: could check that property is not duplicated like we do in e.g. border-top *)
 		While[pos <= l && FailureQ[temp = parse["font-size", {tokens[[pos]]}]],
-			If[!MatchQ[ToLowerCase @ tokens[[pos, 2]], "normal" | "initial" | "inherit"],
+			If[!MatchQ[normalizeKeyWord @ tokens[[pos, 2]], "normal" | "initial" | "inherit"],
 				AppendTo[newValue, FirstCase[parse[#, {tokens[[pos]]}]& /@ {"font-style", "font-variant", "font-weight"}, _Rule, Nothing]]
 			];
 			skipWhitespace[pos, l, tokens];
@@ -2281,7 +2289,7 @@ parseSingleFontFamily[tokens:{{_String, _String}..}] := parseSingleFontFamily[to
 				"ident", (* all other tokens must be 'ident' (or whitespace); it could be only be a single 'ident' *)
 					Which[
 						!AllTrue[tokensNoWS[[All, 1]], StringMatchQ["ident"]], fail,
-						l == 1 && MemberQ[generic, ToLowerCase @ tokensNoWS[[pos, 2]]], parseFontFamilySingleIdent @ tokensNoWS[[pos, 2]],
+						l == 1 && MemberQ[generic, normalizeKeyWord @ tokensNoWS[[pos, 2]]], parseFontFamilySingleIdent @ tokensNoWS[[pos, 2]],
 						True, 
 							font = StringJoin @ Riffle[tokensNoWS[[All, 2]], " "];
 							First[Pick[$FontFamilies, StringMatchQ[$FontFamilies, font, IgnoreCase -> True]], Missing["FontAbsent", font]]
@@ -2304,7 +2312,7 @@ parseSingleFontFamily[tokens:{{_String, _String}..}] := parseSingleFontFamily[to
 	but always default to Automatic if it can't be found on the system.
 *)
 parseFontFamilySingleIdent[s_String] := 
-	Switch[ToLowerCase @ s,
+	Switch[normalizeKeyWord @ s,
 		"inherit",    Inherited,
 		"initial",    initialValues["font-family"], 
 		"serif",      "Times New Roman",
@@ -2339,7 +2347,7 @@ parse[prop:"font-size", tokens:{{_String, _String}..}] := (*parse[prop, tokens] 
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"initial",  initialValues[prop],
 						"inherit",  Inherited,
 						"larger",   Larger,
@@ -2372,7 +2380,7 @@ parse[prop:"font-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens]
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"inherit", Inherited,
 						"initial", initialValues @ prop, 
 						"normal",  Plain,
@@ -2396,7 +2404,7 @@ parse[prop:"font-variant", tokens:{{_String, _String}..}] := (*parse[prop, token
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"inherit",    Inherited,
 						"initial",    initialValues @ prop,
 						"normal",     "Normal",
@@ -2423,7 +2431,7 @@ parse[prop:"font-weight", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"inherit", Inherited,
 						"initial", initialValues[prop], 
 						"normal"|"book"|"plain"|"regular"|"roman", Plain,
@@ -2471,7 +2479,7 @@ parse[prop:"font-weight", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 parseSingleSize[prop_String, token:{_String, _String}] := parseSingleSize[prop, token] =
 	Switch[token[[1]],
 		"ident", 
-			Switch[ToLowerCase @ token[[2]],
+			Switch[normalizeKeyWord @ token[[2]],
 				"initial", initialValues @ prop,
 				"inherit", Inherited,
 				"auto",    Automatic, (* let Mathematica decide what to do *)
@@ -2531,7 +2539,7 @@ parse[prop:"line-height", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"inherit", Inherited,
 						"initial", initialValues[prop], 
 						"normal",  {1.2, 0},
@@ -2555,7 +2563,7 @@ parse[prop:"line-height", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 parseSingleMargin[prop_String, token:{_String, _String}] := parseSingleMargin[prop, token] = 
 	Switch[token[[1]],
 		"ident", 
-			Switch[ToLowerCase @ token[[2]],
+			Switch[normalizeKeyWord @ token[[2]],
 				"initial", initialValues @ prop,
 				"inherit", Inherited,
 				"auto",    Automatic, (* let FE decide what to do *)
@@ -2620,7 +2628,7 @@ parse[prop:"margin", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *
 
 parse[prop:"outline-color", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
-		If[l == 1 && tokens[[1, 1]] == "ident" && ToLowerCase @ tokens[[1, 2]] == "invert",
+		If[l == 1 && tokens[[1, 1]] == "ident" && normalizeKeyWord @ tokens[[1, 2]] == "invert",
 			CellFrameColor -> Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]]
 			,
 			While[pos <= l,
@@ -2693,7 +2701,7 @@ parse[prop:"outline", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 		
 		(* if only one token is present, then check that it is a universal keyword *)
 		If[l == 1,
-			Switch[ToLowerCase @ tokens[[pos, 2]],
+			Switch[normalizeKeyWord @ tokens[[pos, 2]],
 				"inherit", Return @ Missing["Not supported."],
 				"initial", Return @ Missing["Not supported."], 
 				_, Null
@@ -2741,7 +2749,7 @@ parse[prop:"overflow", tokens:{{_String, _String}..}] := (*parse[prop, tokens] =
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos, 1]],
 			"ident",
-				Switch[ToLowerCase @ tokens[[pos, 2]],
+				Switch[normalizeKeyWord @ tokens[[pos, 2]],
 					"visible", Missing["Not supported."],
 					"hidden",  {ImageSizeAction -> "Clip", Scrollbars -> False},
 					"scroll",  {ImageSizeAction -> "Clip", Scrollbars -> True},
@@ -2762,7 +2770,7 @@ parse[prop:"overflow", tokens:{{_String, _String}..}] := (*parse[prop, tokens] =
 parseSinglePadding[prop_String, token:{_String, _String}] := parseSinglePadding[prop, token] = 
 	Switch[token[[1]],
 		"ident", 
-			Switch[ToLowerCase @ token[[2]],
+			Switch[normalizeKeyWord @ token[[2]],
 				"initial", initialValues @ prop,
 				"inherit", Inherited,
 				_,         unrecognizedKeyWordFailure @ prop
@@ -2828,7 +2836,7 @@ parse[prop:"orphans"|"widows", tokens:{{_String, _String}..}] := (*parse[prop, t
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"inherit", Inherited,
 						"initial", initialValues @ prop,
 						_,         unrecognizedKeyWordFailure @ prop
@@ -2850,7 +2858,7 @@ parse[prop:("page-break-after"|"page-break-before"), tokens:{{_String, _String}.
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"auto",    Automatic,
 						"always",  True,
 						"avoid",   False,
@@ -2880,7 +2888,7 @@ parse[prop:"page-break-inside", tokens:{{_String, _String}..}] := (*parse[prop, 
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"auto",    Automatic, 
 						"avoid",   False,
 						"inherit", Inherited,
@@ -2914,7 +2922,7 @@ parse[prop:"position", tokens:{{_String, _String}..}] := (*parse[prop, tokens] =
 		value =
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"static",   Automatic, (* normal layout, ignoring any left/right/top/bottom offsets *)
 						"relative", Automatic, (* normal layout, offset relative to normal position and floats above "siblings" *)
 						"absolute", Automatic, (* non-normal layout, attached cell attached to a parent box with absolute offset *)
@@ -2935,7 +2943,7 @@ parse[prop:"left"|"right"|"top"|"bottom", tokens:{{_String, _String}..}] := (*pa
 		value =
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"auto",    Automatic,
 						"inherit", Inherited,
 						"initial", initialValues @ prop,
@@ -2970,7 +2978,7 @@ parse[prop:"caption-side", tokens:{{_String, _String}..}] := (*parse[prop, token
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"top",     Automatic,
 						"bottom",  Automatic,
 						"inherit", Inherited,
@@ -2994,7 +3002,7 @@ parse[prop:"empty-cells", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"show",    Automatic,
 						"hide",    Automatic,
 						"inherit", Inherited,
@@ -3018,7 +3026,7 @@ parse[prop:"table-layout", tokens:{{_String, _String}..}] := (*parse[prop, token
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"auto",    Automatic,
 						"fixed",   Automatic,
 						"inherit", Inherited,
@@ -3045,7 +3053,7 @@ parse[prop:"direction", tokens:{{_String, _String}..}] := (*parse[prop, tokens] 
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"ltr",     Automatic,
 						"rtl",     Missing["Not supported."],
 						"inherit", Inherited,
@@ -3068,7 +3076,7 @@ parse[prop:"text-align", tokens:{{_String, _String}..}] := (*parse[prop, tokens]
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos, 1]],
 			"ident",
-				Switch[ToLowerCase @ tokens[[pos, 2]],
+				Switch[normalizeKeyWord @ tokens[[pos, 2]],
 					"left",    TextAlignment -> Left,
 					"right",   TextAlignment -> Right,
 					"center",  TextAlignment -> Center,
@@ -3092,7 +3100,7 @@ parse[prop:"text-indent", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"inherit", Inherited,
 						"initial", initialValues @ prop,
 						_,         unrecognizedKeyWordFailure @ prop
@@ -3118,7 +3126,7 @@ parse[prop:"text-decoration", tokens:{{_String, _String}..}] := (*parse[prop, to
 			value =
 				Switch[tokens[[pos, 1]],
 					"ident",
-						Switch[ToLowerCase @ tokens[[pos, 2]],
+						Switch[normalizeKeyWord @ tokens[[pos, 2]],
 							"none",         If[pos > 1, tooManyTokensFailure @ "none",    Nothing],
 							"inherit",      If[pos > 1, tooManyTokensFailure @ "inherit", Inherited],
 							"initial",      If[pos > 1, tooManyTokensFailure @ "initial", Nothing],
@@ -3146,7 +3154,7 @@ parse[prop:"text-transform", tokens:{{_String, _String}..}] := (*parse[prop, tok
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos, 1]],
 			"ident",
-				Switch[ToLowerCase @ tokens[[pos, 2]],
+				Switch[normalizeKeyWord @ tokens[[pos, 2]],
 					"capitalize", Missing["Not supported."], (* Not by the FE at least, but see WL Capitalize[..., "AllWords"] *)
 					"uppercase",  FontVariations -> {"CapsType" -> "AllCaps"},
 					"lowercase",  FontVariations -> {"CapsType" -> "AllLower"},
@@ -3175,7 +3183,7 @@ parse[prop:"letter-spacing", tokens:{{_String, _String}..}] := (*parse[prop, tok
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"inherit", Inherited,
 						"initial", initialValues @ prop,
 						"normal",  "Plain",
@@ -3199,7 +3207,7 @@ parse[prop:"font-stretch", tokens:{{_String, _String}..}] :=
 		value = 
 			Switch[tokens[[1, 1]],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[1, 2]],
+					Switch[normalizeKeyWord @ tokens[[1, 2]],
 						"initial",         initialValues @ prop,
 						"inherit",         Inherited,
 						"ultra-condensed", "Narrow",        (* CSSFM4 50% *)
@@ -3230,7 +3238,7 @@ parse[prop:"unicode-bidi", tokens:{{_String, _String}..}] := (*parse[prop, token
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"normal",        Automatic,
 						"embed",         Missing["Not supported."],
 						"bidi-override", Missing["Not supported."],
@@ -3258,7 +3266,7 @@ parse[prop:"word-spacing", tokens:{{_String, _String}..}] := (*parse[prop, token
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"inherit", Inherited,
 						"initial", initialValues @ prop,
 						"normal",  "Plain",
@@ -3281,7 +3289,7 @@ parse[prop:"white-space", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos, 1]],
 			"ident",
-				Switch[ToLowerCase @ tokens[[pos, 2]],
+				Switch[normalizeKeyWord @ tokens[[pos, 2]],
 					"inherit",  Missing["Not supported."],
 					"initial",  initialValues @ prop,
 					"normal",   Missing["Not supported."],
@@ -3323,7 +3331,7 @@ parseBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] := parseBase
 		value = 
 			Switch[tokens[[1, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[1, 2]],
+					Switch[normalizeKeyWord @ tokens[[1, 2]],
 						"baseline",    Baseline -> Baseline,
 						"sub",         Baseline -> Bottom,
 						"super",       Baseline -> Axis, (* maybe not the best approximation *)
@@ -3352,7 +3360,7 @@ parseCellBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] := parse
 		value = 
 			Switch[tokens[[1, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[1, 2]],
+					Switch[normalizeKeyWord @ tokens[[1, 2]],
 						"baseline", Center,
 						"middle",   Baseline,
 						"super" | "sub", Missing["Not supported."],
@@ -3384,7 +3392,7 @@ parse[prop:"visibility", tokens:{{_String, _String}..}] := (*parse[prop, tokens]
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"visible",  True,
 						"hidden",   False,
 						"collapse", False,
@@ -3412,7 +3420,7 @@ parse[prop:"z-index", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 		value = 
 			Switch[tokens[[pos, 1]],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos, 2]],
+					Switch[normalizeKeyWord @ tokens[[pos, 2]],
 						"auto",     Automatic,
 						"inherit",  Inherited,
 						"initial",  initialValues @ prop,
@@ -3478,7 +3486,7 @@ consumeFunction[positionIndex_, l_, tokens:{{_String, _String}..}] :=
 			,
 			positionIndex++;
 			While[positionIndex < l && i>0,
-				Switch[ToLowerCase @ tokens[[positionIndex, 1]],
+				Switch[normalizeKeyWord @ tokens[[positionIndex, 1]],
 					"function", i++; positionIndex++,
 					")",        i--; If[i==0, Break[], positionIndex++],
 					_,          positionIndex++
@@ -3652,7 +3660,7 @@ processDeclarationBlock[tokens:{{_String, _String}..}] :=
 					While[tokens[[valueStopPosition, 1]] == "whitespace", valueStopPosition--]; (* trim whitespace from the end of the value *)
 					declarations[[i]] = <|
 						"Important" -> important,
-						"Property" -> ToLowerCase @ tokens[[propertyPosition, 2]], 
+						"Property" -> normalizeKeyWord @ tokens[[propertyPosition, 2]], 
 						"Value" -> (*check for empty property*)If[valueStopPosition < valueStartPosition, {}, tokens[[valueStartPosition ;; valueStopPosition]]],
 						"Interpretation" -> None|>;
 					skipWhitespace[pos, l, tokens];
@@ -4100,7 +4108,7 @@ ResolveCSSInheritance[position_, CSSData_Dataset] := ResolveCSSInheritance[posit
 	2. starting from the most ancient ancestor, calculate the styles of each ancestor, including inherited properties
 	3. with all inheritance resolved, recalculate the style at the XMLObject position *)
 ResolveCSSInheritance[position:{___?IntegerQ}, CSSData_?validCSSDataFullQ] :=
-	Module[{lineage, data = CSSData, a, temp, temp2},
+	Module[{lineage, data = CSSData, a, temp, temp2, i},
 		(* order data by specificity *)
 		data = data[[Ordering[data[[All, "Specificity"]]]]];
 		
