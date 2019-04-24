@@ -272,12 +272,12 @@ RE["F"] = "(f|F|\\\\0{0,4}(46|66)(\r\n|[ \t\r\n\f])?|\\\\f|\\\\F)";
 RE["G"] = "(g|G|\\\\0{0,4}(47|67)(\r\n|[ \t\r\n\f])?|\\\\g|\\\\G)";
 RE["H"] = "(h|H|\\\\0{0,4}(48|68)(\r\n|[ \t\r\n\f])?|\\\\h|\\\\H)";
 RE["I"] = "(i|I|\\\\0{0,4}(49|69)(\r\n|[ \t\r\n\f])?|\\\\i|\\\\I)";
-RE["J"] = "(j|J|\\\\0{0,4}(4a|6a)(\r\n|[ \t\r\n\f])?|\\\\j|\\\\J)";
-RE["K"] = "(k|K|\\\\0{0,4}(4b|6b)(\r\n|[ \t\r\n\f])?|\\\\k|\\\\K)";
-RE["L"] = "(l|L|\\\\0{0,4}(4c|6c)(\r\n|[ \t\r\n\f])?|\\\\l|\\\\L)";
-RE["M"] = "(m|M|\\\\0{0,4}(4d|6d)(\r\n|[ \t\r\n\f])?|\\\\m|\\\\M)";
-RE["N"] = "(n|N|\\\\0{0,4}(4e|6e)(\r\n|[ \t\r\n\f])?|\\\\n|\\\\N)";
-RE["O"] = "(o|O|\\\\0{0,4}(4f|6f)(\r\n|[ \t\r\n\f])?|\\\\o|\\\\O)";
+RE["J"] = "(j|J|\\\\0{0,4}(4a|6a|4A|6A)(\r\n|[ \t\r\n\f])?|\\\\j|\\\\J)";
+RE["K"] = "(k|K|\\\\0{0,4}(4b|6b|4B|6B)(\r\n|[ \t\r\n\f])?|\\\\k|\\\\K)";
+RE["L"] = "(l|L|\\\\0{0,4}(4c|6c|4C|6C)(\r\n|[ \t\r\n\f])?|\\\\l|\\\\L)";
+RE["M"] = "(m|M|\\\\0{0,4}(4d|6d|4D|6D)(\r\n|[ \t\r\n\f])?|\\\\m|\\\\M)";
+RE["N"] = "(n|N|\\\\0{0,4}(4e|6e|4E|6E)(\r\n|[ \t\r\n\f])?|\\\\n|\\\\N)";
+RE["O"] = "(o|O|\\\\0{0,4}(4f|6f|4F|6F)(\r\n|[ \t\r\n\f])?|\\\\o|\\\\O)";
 RE["P"] = "(p|P|\\\\0{0,4}(50|70)(\r\n|[ \t\r\n\f])?|\\\\p|\\\\P)";
 RE["Q"] = "(q|Q|\\\\0{0,4}(51|71)(\r\n|[ \t\r\n\f])?|\\\\q|\\\\Q)";
 RE["R"] = "(r|R|\\\\0{0,4}(52|72)(\r\n|[ \t\r\n\f])?|\\\\r|\\\\R)";
@@ -288,7 +288,7 @@ RE["V"] = "(v|V|\\\\0{0,4}(56|76)(\r\n|[ \t\r\n\f])?|\\\\v|\\\\V)";
 RE["W"] = "(w|W|\\\\0{0,4}(57|77)(\r\n|[ \t\r\n\f])?|\\\\w|\\\\W)";
 RE["X"] = "(x|X|\\\\0{0,4}(58|78)(\r\n|[ \t\r\n\f])?|\\\\x|\\\\X)";
 RE["Y"] = "(y|Y|\\\\0{0,4}(59|79)(\r\n|[ \t\r\n\f])?|\\\\y|\\\\Y)";
-RE["Z"] = "(z|Z|\\\\0{0,4}(5a|7a)(\r\n|[ \t\r\n\f])?|\\\\z|\\\\Z)";
+RE["Z"] = "(z|Z|\\\\0{0,4}(5a|7a|5A|7A)(\r\n|[ \t\r\n\f])?|\\\\z|\\\\Z)";
 
 characterNormalizationRules = MapThread[RegularExpression[RE[#1]] :> #2 &, {CharacterRange["A", "Z"], CharacterRange["a", "z"]}];
 normalizeKeyWord[s_String] := StringReplace[s, characterNormalizationRules]
@@ -388,6 +388,7 @@ P["term"] :=
 			"(" ~~ T["EMS"]         ~~ T["S*"] ~~ ")" ~~ "|" ~~
 			"(" ~~ T["EXS"]         ~~ T["S*"] ~~ ")" ~~ "|" ~~
 			"(" ~~ T["PERCENTAGE"]  ~~ T["S*"] ~~ ")" ~~ "|" ~~
+			"(" ~~ T["DIMENSION"]   ~~ T["S*"] ~~ ")" ~~ "|" ~~ (* dimension is a catch-all *)
 			"(" ~~ T["NUMBER"]      ~~ T["S*"] ~~ ")" ~~ 
 		")"];
 		
@@ -537,6 +538,7 @@ parseDeclaration[x_String] :=
 					RegularExpression @ T["EMS"],
 					RegularExpression @ T["EXS"],
 					RegularExpression @ T["PERCENTAGE"],
+					RegularExpression @ T["DIMENSION"],
 					RegularExpression @ T["NUMBER"],
 					RegularExpression @ T["IMPORTANT_SYM"],
 					":", ";", ",", "/", ")"
@@ -558,6 +560,7 @@ label["term", x_String] :=
 		StringMatchQ[x, RegularExpression @ T["EMS"]],           "ems",
 		StringMatchQ[x, RegularExpression @ T["EXS"]],           "exs",
 		StringMatchQ[x, RegularExpression @ T["PERCENTAGE"]],    "percentage",
+		StringMatchQ[x, RegularExpression @ T["DIMENSION"]],     "dimension", (* catch-all for other units *)
 		StringMatchQ[x, RegularExpression @ T["NUMBER"]],        "number",
 		StringMatchQ[x, RegularExpression @ T["IMPORTANT_SYM"]], "important",
 		StringMatchQ[x, "," | "/"],                              "operator",
@@ -594,7 +597,7 @@ label["term", x_String] :=
 
 couldNotImportFailure[uri_String] :=       Failure["ImportFailure",   <|"URI" -> uri|>];
 illegalIdentifierFailure[ident_String] :=  Failure["UnexpectedParse", <|"Message" -> "Illegal identifier.", "Ident" -> ident|>];
-invalidFunctionFailure[function_string] := Failure["InvalidFunction", <|"Function" -> function|>];
+invalidFunctionFailure[function_String] := Failure["InvalidFunction", <|"Function" -> function|>];
 negativeIntegerFailure[prop_String] :=     Failure["BadLength",       <|"Message" -> prop <> "integer must be non-negative."|>];
 negativeLengthFailure[prop_String] :=      Failure["BadLength",       <|"Message" -> prop <> "length must be non-negative."|>];
 notAnImageFailure[uri_String] :=           Failure["NoImageFailure",  <|"URI" -> uri|>];
@@ -1006,49 +1009,7 @@ initialValues[prop_String] := CSSPropertyData[prop, "WDInitialValue"]
 (*<color>*)
 
 
-(* 
-	Some WL named colors do not agree with those of the W3C. We parse those colors following the W3C.
-	WL does not currently interpret hex colors with opacity, so do those special cases here. *)
-$1XC = Repeated[RegularExpression[RE["h"]], {1}];
-$2XC = Repeated[RegularExpression[RE["h"]], {2}];
-fromhexdigits[s_] := FromDigits[s, 16]
-hexPattern1 := StartOfString ~~ "#" ~~ r:$2XC ~~ g:$2XC ~~ b:$2XC ~~ a:$2XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b, a} / 255);
-hexPattern2 := StartOfString ~~ "#" ~~ r:$1XC ~~ g:$1XC ~~ b:$1XC ~~ a:$1XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b, a} / 15);	
-	
-parseSingleColor[prop_String, tokens:{{_String, _String}..}] := parseSingleColor[prop, tokens] = 
-	Which[
-		Length[tokens] == 1 && MatchQ[tokens[[1, 1]], "ident"],
-			Switch[normalizeKeyWord @ tokens[[1, 2]],
-				"initial",      initialValues @ prop,
-				"inherit",      Inherited,
-				"currentcolor", Dynamic @ CurrentValue[FontColor], 
-				"transparent",  None, (* this 'ident' is interpreted as GrayLevel[0, 0] by Interpreter["Color"] *)
-				"brown",        RGBColor[Rational[11, 17], Rational[14, 85], Rational[14, 85]],
-				"gray"|"grey",  RGBColor[Rational[128, 255], Rational[128, 255], Rational[128, 255]],
-				"green",        RGBColor[0, Rational[128, 255], 0], 
-				"orange",       RGBColor[1, Rational[11, 17], 0],
-				"pink",         RGBColor[1, Rational[64, 85], Rational[203, 255]],
-				"purple",       RGBColor[Rational[128, 255], 0, Rational[128, 255]],
-				"lightblue",    RGBColor[Rational[173, 255], Rational[72, 85], Rational[46, 51]],
-				"lightcyan",    RGBColor[Rational[224, 255], 1, 1],
-				"lightgray"|"lightgrey", RGBColor[Rational[211, 255], Rational[211, 255], Rational[211, 255]],
-				"lightgreen",   RGBColor[Rational[48, 85], Rational[14, 15], Rational[48, 85]],
-				"lightpink",    RGBColor[1, Rational[182, 255], Rational[193, 255]],
-				"lightyellow",  RGBColor[1, 1, Rational[224, 255]],
-				"darkgrey",     RGBColor[Rational[169, 255], Rational[169, 255], Rational[169, 255]],
-				"darkslategrey", RGBColor[Rational[47, 255], Rational[79, 255], Rational[79, 255]],
-				"lightslategrey", RGBColor[Rational[7, 15], Rational[8, 15], Rational[3, 5]], 
-				_,              Interpreter["Color"][StringJoin @ tokens[[1, 2]]] (* keyword e.g. blue *)
-			],
-		Length[tokens] == 1 && MatchQ[tokens[[1, 1]], "hexcolor"],
-			Which[
-				StringMatchQ[First @ hexPattern1], First[StringCases[tokens[[1, 2]], hexPattern1], unrecognizedValueFailure @ prop],
-				StringMatchQ[First @ hexPattern2], First[StringCases[tokens[[1, 2]], hexPattern2], unrecognizedValueFailure @ prop],
-				True, Interpreter["Color"][tokens[[1, 2]]]],
-		Length[tokens] > 1 && MatchQ[tokens[[1, 1]], "function"],
-			Interpreter["Color"][StringJoin @ tokens[[All, 2]]], (* rgb(_,_,_) or hsl(_,_,_) *)
-		True, unrecognizedValueFailure @ prop
-	]
+(* parseSingleColor is defined in CSSColors4.wl *)
 
 
 (* ::Subsection::Closed:: *)

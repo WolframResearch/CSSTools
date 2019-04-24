@@ -181,7 +181,7 @@ parseSingleColorHex[prop_String, hexString_String] :=
 		StringMatchQ[hexString, First @ hexPattern4], First[StringCases[hexString, hexPattern4], unrecognizedValueFailure @ prop],
 		StringMatchQ[hexString, First @ hexPattern6], First[StringCases[hexString, hexPattern6], unrecognizedValueFailure @ prop],
 		StringMatchQ[hexString, First @ hexPattern8], First[StringCases[hexString, hexPattern8], unrecognizedValueFailure @ prop],
-		True, Interpreter["Color"][tokens[[1, 2]]]]
+		True, Failure["UnexpectedParse", <|"Message" -> "Unrecognized hex color " <> hexString <> "."|>]]
 
 
 (* RGB *)
@@ -257,7 +257,8 @@ hslPattern :=
 			ToExpression[If[ang == "angle", First @ StringCases[h, n:RegularExpression[RE["num"]] ~~ RegularExpression[RE["D"] ~~ RE["E"] ~~ RE["G"]] :> n], h]]/360,
 			ToExpression[StringTake[s, ;;-2]]/100,
 			ToExpression[StringTake[l, ;;-2]]/100]
-			
+
+(* HSL legacy *)
 hslaPatternL := 
 	{
 		{ang:"angle", h_} | {ang:"number", h_}, {"operator", ","}, {"percentage", s_}, {"operator", ","}, {"percentage", l_}, {"operator", ","}, {"number", a_}
@@ -308,7 +309,7 @@ parseSingleColorFunction[prop_String, tokens:{{_String, _String}..}] :=
 					MatchQ[relevantTokens, First @ hslPatternL],  Replace[relevantTokens, hslPatternL], 
 					True, unrecognizedValueFailure @ prop 
 				],
-			True, unrecognizedValueFailure @ prop]
+			True, Failure["UnexpectedParse", <|"Message" -> "Unrecognized color function" <> tokens[[1, 2]] <> "."|>]]
 	]
 
 
