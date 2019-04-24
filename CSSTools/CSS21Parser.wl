@@ -247,13 +247,15 @@ RE["baduri3"]     = "(" ~~ RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["w"] ~~ 
 RE["comment"]     = "(\\/\\*[^*]*\\*+([^/*][^*]*\\*+)*\\/)";
 RE["h"]           = "([0-9a-fA-F])";
 RE["ident"]       = "(-?" ~~ RE["nmstart"] ~~ RE["nmchar"] ~~ "*)";
+RE["integer"]     = "([\\-+]?[0-9]+)"; (* not part of the CSS 2.1 spec, but useful *)
 RE["escape"]      = "(" ~~ RE["unicode"] ~~ "|\\\\[^\n\r\f0-9a-fA-F])"; 
 RE["name"]        = "(" ~~ RE["nmchar"] ~~ "+)";
 RE["nl"]          = "(\n|\r\n|\r|\f)";
 RE["nmchar"]      = "([_a-zA-Z0-9\\-]|" ~~ RE["nonascii"] ~~ "|" ~~ RE["escape"] ~~ ")";
 RE["nmstart"]     = "([_a-zA-Z]|" ~~ RE["nonascii"] ~~ "|" ~~ RE["escape"] ~~ ")";
 RE["nonascii"]    = (*FIXME?*) "([^[:ascii:]])";
-RE["num"]         = "([\\-+]?[0-9]*\\.[0-9]+|[\\-+]?[0-9]+)"; (* \\. literal dot for RE; pattern match against reals before integers *)
+RE["num"]         = "(" ~~ RE["number"] ~~ "|" ~~ RE["integer"] ~~ ")"; (* pattern match against reals before integers *)
+RE["number"]      = "([\\-+]?[0-9]*\\.[0-9]+)"; (* literal dot *) (* not part of the CSS 2.1 spec, but useful *)
 RE["s"]           = "([ \t\r\n\f]+)";
 RE["string"]      = "(" ~~ RE["string1"] ~~ "|" ~~ RE["string2"] ~~ ")";
 RE["string1"]     = "(\\\"([^\n\r\f\\\"]|\\\\" ~~ RE["nl"] ~~ "|" ~~ RE["escape"] ~~ ")*\\\")"; (* [] contains escaped double quote *)
@@ -262,6 +264,9 @@ RE["unicode"]     = "(\\\\" ~~ RE["h"] ~~ "{1,6}(\r\n|[ \n\r\t\f])?)";
 RE["url"]         = "(([!#$%&*-~]|" ~~ RE["nonascii"] ~~ "|" ~~ RE["escape"] ~~ ")*)";
 RE["w"]           = "(" ~~ RE["s"] ~~ "?)";
 
+(* 
+	Strictly following the specification leaves out some of the following letter patterns. 
+	We include them all here for easier pattern matching of corner cases. *)
 
 RE["A"] = "(a|A|\\\\0{0,4}(41|61)(\r\n|[ \t\r\n\f])?|\\\\a|\\\\A)";
 RE["B"] = "(b|B|\\\\0{0,4}(42|62)(\r\n|[ \t\r\n\f])?|\\\\b|\\\\B)";
@@ -303,8 +308,9 @@ T["ANGLE"] =
 		"(" ~~ RE["num"] ~~ RE["R"] ~~ RE["A"] ~~ RE["D"] ~~ ")" ~~ "|",
 		"(" ~~ RE["num"] ~~ RE["G"] ~~ RE["R"] ~~ RE["A"] ~~ RE["D"] ~~ ")"];
 
-T["BADSTRING"] = RE["badstring"];
-T["BADURI"]    = RE["baduri"];
+T["BAD_COMMENT"] = RE["badcomment"]; 
+T["BAD_STRING"]  = RE["badstring"];
+T["BAD_URI"]     = RE["baduri"];
 
 T["CDC"]         = "(-->)";
 T["CDO"]         = "(<!--)";
@@ -348,6 +354,7 @@ T["STRING"] = RE["string"];
 
 T["TIME"] = "((" ~~ RE["num"] ~~ RE["M"] ~~ RE["S"] ~~ ")|(" ~~ RE["num"] ~~ RE["H"] ~~ RE["Z"] ~~ "))";
 
+T["UNICODE-RANGE"] = "((u|U)\\+[0-9A-Fa-f?]{1,6}(-[0-9a-fA-F]{1,6})?)";
 T["URI"] =
 	StringExpression[
 		"(" ~~ RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["w"] ~~ RE["string"] ~~ RE["w"] ~~ "\\)" ~~ ")" ~~ "|",
@@ -409,50 +416,30 @@ T["FUNCTION"] ~~ T["S*"] ~~
 
 
 (* ::Section::Closed:: *)
-(*Parse File*)
+(*Tokenize File*)
 
 
 (* ::Subsection::Closed:: *)
 (*Identify @charset, @import, and rulesets (selector + block declarations)*)
 
 
-trimFront[s_String] := StringReplace[s, StartOfString ~~ Whitespace -> ""]
-
-
-(* DeleteCases removes any comment-like token. Perhaps we should allow an option flag to keep comments...? *)
-parseBlock[x_String] := 
-	DeleteCases[
-		Map[With[{l = label["block", #]}, {l, If[l != "other", trimFront @ #, #]}]&, 
-			StringSplit[x, 
-				s:Alternatives[
-					RegularExpression @ RE["comment"],
-					RegularExpression @ RE["badcomment"],
-					RegularExpression @ P["charset"],
-					RegularExpression @ P["import"],
-					(*RegularExpression @ T["MEDIA_SYM"], (* we don't parse media queries, but we recognize the symbol *)*)
-					RegularExpression @ T["URI"],
-					RegularExpression @ T["BADURI"],
-					RegularExpression @ T["STRING"],
-					RegularExpression @ T["BADSTRING"],
-					"{", "}"
-				] :> s]],
-		{"comment" | "badcomment", _} | {"other", s_String /; StringMatchQ[s, Whitespace | ""]}]		
-
-
-label["block", x_String] := 
-	Which[
-		StringMatchQ[x, RegularExpression @ RE["comment"]],    "comment",
-		StringMatchQ[x, RegularExpression @ RE["badcomment"]], "badcomment",
-		StringMatchQ[x, RegularExpression @ P["charset"]],     "charset",
-		StringMatchQ[x, RegularExpression @ P["import"]],      "import",
-		(*StringMatchQ[x, RegularExpression @ T["MEDIA_SYM"]],   "@media",*)
-		StringMatchQ[x, RegularExpression @ T["URI"]],         "uri",
-		StringMatchQ[x, RegularExpression @ T["BADURI"]],      "baduri",
-		StringMatchQ[x, RegularExpression @ T["STRING"]],      "string",
-		StringMatchQ[x, RegularExpression @ T["BADSTRING"]],   "badstring",
-		StringMatchQ[x, "{" | "}"], x,
-		True, "other"
-	]
+tokenizeFirstPass[x_String] := 
+	Replace[
+		StringSplit[x, 
+			{
+				s:RegularExpression @ RE["comment"]    :> Nothing,
+				s:RegularExpression @ RE["badcomment"] :> Nothing,
+				s:RegularExpression @ P["charset"]     :> {"charset",   s},
+				s:RegularExpression @ P["import"]      :> {"import",    s},
+				(*s:RegularExpression @ T["MEDIA_SYM"] :> {"@media", s}, (* we don't parse media queries, but we recognize the symbol *)*)
+				s:RegularExpression @ T["URI"]         :> {"uri",       s},
+				s:RegularExpression @ T["BAD_URI"]     :> {"baduri",    s},
+				s:RegularExpression @ T["STRING"]      :> {"string",    s},
+				s:RegularExpression @ T["BAD_STRING"]  :> {"badstring", s},
+				"{" -> {"{", "{"}, 
+				"}" -> {"}", "}"}}],
+		s_String :> {"other", s},
+		{1}]
 
 
 (* ::Subsection::Closed:: *)
@@ -460,31 +447,22 @@ label["block", x_String] :=
 
 
 tokenizeAtImportKeyword[x_String] := 
-	DeleteCases[
-		Map[With[{l = label["import", #]}, {l, StringTrim @ #}]&, 
-			StringSplit[x, 
-				s:Alternatives[
-					RegularExpression @ T["IMPORT_SYM"],
-					RegularExpression @ T["URI"],
-					RegularExpression @ T["STRING"],
-					RegularExpression @ P["medium"],
-					",", ";"
-				] :> s]],
-		{"other", ""}]		
+	Replace[
+		StringSplit[x,
+			{
+				s:RegularExpression @ T["IMPORT_SYM"] :> {"import", s},
+				s:RegularExpression @ T["URI"]        :> {"uri",    s},
+				s:RegularExpression @ T["STRING"]     :> {"string", s},
+				s:RegularExpression @ P["medium"]     :> {"medium", s},
+				"," -> {",", ","}, 
+				";" -> {";", ";"}}],
+		{
+			s_String /; StringMatchQ[s, Whitespace | ""] :> Nothing, (* whitespace is OK to remove here *)
+			s_String :> {"other", s}},
+		{1}]
 
 
-label["import", x_String] := 
-	Which[
-		StringMatchQ[x, RegularExpression @ T["IMPORT_SYM"]],  "import",
-		StringMatchQ[x, RegularExpression @ T["URI"]],         "uri",
-		StringMatchQ[x, RegularExpression @ T["STRING"]],      "string",
-		StringMatchQ[x, RegularExpression @ P["medium"]],      "medium",
-		StringMatchQ[x, "," | ";"], x,
-		True, "other"
-	]
-
-
-parse["atImportKeyword", tokens:{{_String, _String}..}] :=
+parse["atImportKeyword", tokens:{{__String}..}] :=
 	Module[{pos = 2 (* first token must be @import *), l = Length[tokens], path, mediums = {}, data},
 		(* second token must be URL or string path to file *)
 		path = 
@@ -521,53 +499,63 @@ parse["atImportKeyword", tokens:{{_String, _String}..}] :=
 (*Identify declarations*)
 
 
-parseDeclaration[x_String] := 
-	DeleteCases[
-		Map[{label["term", #], #}&, 
-			StringSplit[x, 
-				s:Alternatives[
-					RegularExpression @ T["STRING"],
-					RegularExpression @ T["URI"],
-					RegularExpression @ T["FUNCTION"],
-					RegularExpression @ T["IDENT"],
-					RegularExpression @ P["hexcolor"],
-					RegularExpression @ T["TIME"],
-					RegularExpression @ T["LENGTH"],
-					RegularExpression @ T["FREQ"],
-					RegularExpression @ T["ANGLE"],
-					RegularExpression @ T["EMS"],
-					RegularExpression @ T["EXS"],
-					RegularExpression @ T["PERCENTAGE"],
-					RegularExpression @ T["DIMENSION"],
-					RegularExpression @ T["NUMBER"],
-					RegularExpression @ T["IMPORTANT_SYM"],
-					":", ";", ",", "/", ")"
-				] :> s]],
-		{"other", ""}]		
+tokenizeDeclaration[x_String] := 
+	Replace[
+		StringSplit[x, 
+			{
+				s:RegularExpression @ T["STRING"]        :> {"string", s},
+				s:RegularExpression @ T["URI"]           :> {"uri", s},
+				s:RegularExpression @ T["FUNCTION"]      :> {"function", s},
+				s:RegularExpression @ T["UNICODE-RANGE"] :> {"unicode-range", s},
+				s:RegularExpression @ T["IDENT"]         :> {"ident", s},
+				s:RegularExpression @ P["hexcolor"]      :> {"hexcolor", StringTrim @ s},
+				s:RegularExpression @ T["PERCENTAGE"]    :> Flatten @ {"percentage", tokenizePercentage[s]},
+				s:RegularExpression @ T["DIMENSION"]     :> Flatten @ {"dimension",  tokenizeDimension[s]},
+				s:RegularExpression @ T["NUMBER"]        :> Flatten @ {"number",     tokenizeNumber[s]},
+				s:RegularExpression @ T["IMPORTANT_SYM"] :> {"important", s},
+				":" -> {":", ":"}, 
+				";" -> {";", ";"},
+				"," -> {"delim", ","}, 
+				"/" -> {"/", "/"}, 
+				")" -> {")", ")"},
+				s:Whitespace :> {"whitespace", s}}],
+		{	
+			s_String /; StringMatchQ[s, ""] -> Nothing,
+			s_String :> {"other", s}},
+		{1}]
 
 
-label["term", x_String] := 
-	Which[
-		StringMatchQ[x, RegularExpression @ T["STRING"]],        "string",
-		StringMatchQ[x, RegularExpression @ T["URI"]],           "uri",
-		StringMatchQ[x, RegularExpression @ T["FUNCTION"]],      "function",
-		StringMatchQ[x, RegularExpression @ T["IDENT"]],         "ident",
-		StringMatchQ[x, RegularExpression @ P["hexcolor"]],      "hexcolor",
-		StringMatchQ[x, RegularExpression @ T["TIME"]],          "time",
-		StringMatchQ[x, RegularExpression @ T["LENGTH"]],        "length",
-		StringMatchQ[x, RegularExpression @ T["FREQ"]],          "freq",
-		StringMatchQ[x, RegularExpression @ T["ANGLE"]],         "angle",
-		StringMatchQ[x, RegularExpression @ T["EMS"]],           "ems",
-		StringMatchQ[x, RegularExpression @ T["EXS"]],           "exs",
-		StringMatchQ[x, RegularExpression @ T["PERCENTAGE"]],    "percentage",
-		StringMatchQ[x, RegularExpression @ T["DIMENSION"]],     "dimension", (* catch-all for other units *)
-		StringMatchQ[x, RegularExpression @ T["NUMBER"]],        "number",
-		StringMatchQ[x, RegularExpression @ T["IMPORTANT_SYM"]], "important",
-		StringMatchQ[x, "," | "/"],                              "operator",
-		StringMatchQ[x, WhitespaceCharacter..],                  "whitespace",
-		StringMatchQ[x, ":" | ";" | ")"], x,
-		True, "other"
-	]
+tokenizePercentage[x_String] := StringSplit[x, num:RegularExpression[RE["num"]] ~~ unit:"%" :> tokenizeNumber @ num]
+		
+		
+tokenizeDimension[x_String] :=
+	StringSplit[x, 
+		{
+			(* relative units *)
+			num:RegularExpression[RE["num"]] ~~ unit:RegularExpression[RE["E"] ~~ RE["M"]] :> {tokenizeNumber @ num, normalizeKeyWord @ unit},
+			num:RegularExpression[RE["num"]] ~~ unit:RegularExpression[RE["E"] ~~ RE["X"]] :> {tokenizeNumber @ num, normalizeKeyWord @ unit},
+			
+			(* length *)
+			num:RegularExpression[RE["num"]] ~~ unit:RegularExpression[RE["P"] ~~ RE["X"]] :> {tokenizeNumber @ num, normalizeKeyWord @ unit},
+			num:RegularExpression[RE["num"]] ~~ unit:RegularExpression[RE["C"] ~~ RE["M"]] :> {tokenizeNumber @ num, normalizeKeyWord @ unit},
+			num:RegularExpression[RE["num"]] ~~ unit:RegularExpression[RE["M"] ~~ RE["M"]] :> {tokenizeNumber @ num, normalizeKeyWord @ unit},
+			num:RegularExpression[RE["num"]] ~~ unit:RegularExpression[RE["I"] ~~ RE["N"]] :> {tokenizeNumber @ num, normalizeKeyWord @ unit},
+			num:RegularExpression[RE["num"]] ~~ unit:RegularExpression[RE["P"] ~~ RE["T"]] :> {tokenizeNumber @ num, normalizeKeyWord @ unit},
+			num:RegularExpression[RE["num"]] ~~ unit:RegularExpression[RE["P"] ~~ RE["C"]] :> {tokenizeNumber @ num, normalizeKeyWord @ unit},
+			
+			(* time and frequency *)
+			num:RegularExpression[RE["num"]] ~~ unit:RegularExpression[RE["M"] ~~ RE["S"]] :> {tokenizeNumber @ num, normalizeKeyWord @ unit},
+			num:RegularExpression[RE["num"]] ~~ unit:RegularExpression[RE["H"] ~~ RE["Z"]] :> {tokenizeNumber @ num, normalizeKeyWord @ unit},
+			num:RegularExpression[RE["num"]] ~~ unit:RegularExpression[RE["K"] ~~ RE["H"] ~~ RE["Z"]] :> {tokenizeNumber @ num, normalizeKeyWord @ unit},
+			
+			(* angle *)
+			num:RegularExpression[RE["num"]] ~~ unit:RegularExpression[RE["D"] ~~ RE["E"] ~~ RE["G"]] :> {tokenizeNumber @ num, normalizeKeyWord @ unit},
+			num:RegularExpression[RE["num"]] ~~ unit:RegularExpression[RE["R"] ~~ RE["A"] ~~ RE["D"]] :> {tokenizeNumber @ num, normalizeKeyWord @ unit},
+			num:RegularExpression[RE["num"]] ~~ unit:RegularExpression[RE["G"] ~~ RE["R"] ~~ RE["A"] ~~ RE["D"]] :> {tokenizeNumber @ num, normalizeKeyWord @ unit}}]
+			
+			
+tokenizeNumber[x_String] := If[StringMatchQ[x, RegularExpression[RE["number"]]], {x, "Number"}, {x, "Integer"}]
+			
 
 
 (* ::Section::Closed:: *)
@@ -1016,7 +1004,7 @@ initialValues[prop_String] := CSSPropertyData[prop, "WDInitialValue"]
 (*<counter>*)
 
 
-parseCounter[prop_String, tokens:{{_String, _String}...}] := parseCounter[prop, tokens] =
+parseCounter[prop_String, tokens:{{__String}...}] := parseCounter[prop, tokens] =
 	Module[{pos = 1, l = Length[tokens], style, listtype = "decimal"},
 		Switch[normalizeKeyWord @ tokens[[pos, 2]],
 			"counter(",
@@ -1025,7 +1013,7 @@ parseCounter[prop_String, tokens:{{_String, _String}...}] := parseCounter[prop, 
 				skipWhitespace[pos, l, tokens];
 				If[pos > l, Return @ invalidFunctionFailure @ StringJoin @ tokens[[All, 2]]];
 				Switch[tokens[[pos, 1]],
-					"ident", listtype = tokens[[pos, 2]], (* updates listtype *)
+					"ident", listtype = tokens[[pos, 2]],
 					")",     Null,
 					_,       tooManyTokensFailure @ tokens
 				];
@@ -1089,6 +1077,7 @@ negativeQ[n_, prop_String, default_] :=
 
 
 parsePercentage[s_String] := parsePercentage[s] = Interpreter["Number"] @ StringDrop[s, -1]
+parsePercentage[token:{__String}] := Interpreter[(*type*)token[[3]]][(*number*)token[[2]]]
 
 
 (* ::Subsection::Closed:: *)
@@ -1144,14 +1133,14 @@ parseURI[uri_String] :=
 
 
 (*TODO: parse multiple background specs but only take the first valid one*)
-parse[prop:"background", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)parseSingleBG[prop, tokens]
+parse[prop:"background", tokens:{{__String}..}] := (*parse[prop, tokens] = *)parseSingleBG[prop, tokens]
 
 (* 
 	Shorthand for all background properties.
 	Any properties not set by this are reset to their initial values.
 	Commas separate background layers, so split on comma, but FE only supports one image so take last...?
 *)
-parseSingleBG[prop_String, tokens:{{_String, _String}..}] := 
+parseSingleBG[prop_String, tokens:{{__String}..}] := 
 	Module[
 		{
 			pos = 1, l = Length[tokens], value, start, 
@@ -1244,7 +1233,7 @@ parseSingleBG[prop_String, tokens:{{_String, _String}..}] :=
 (*background-attachment*)
 
 
-parseSingleBGAttachment[prop_String, token:{_String, _String}] := parseSingleBGAttachment[prop, token] =
+parseSingleBGAttachment[prop_String, token:{__String}] := parseSingleBGAttachment[prop, token] =
 	Switch[token[[1]],
 		"ident", 
 			Switch[normalizeKeyWord @ token[[2]],
@@ -1257,7 +1246,7 @@ parseSingleBGAttachment[prop_String, token:{_String, _String}] := parseSingleBGA
 		_, unrecognizedValueFailure @ prop
 	]
 
-parse[prop:"background-attachment", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"background-attachment", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBGAttachment[prop, tokens[[1]]];
@@ -1273,7 +1262,7 @@ parse[prop:"background-attachment", tokens:{{_String, _String}..}] := (*parse[pr
 	Effectively the same as color, except a successful parse returns as a rule Background -> value.
 	Also 'currentColor' value needs to know the current value of 'color', instead of inherited from the parent.	
 *) 
-parse[prop:"background-color", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"background-color", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		value = parseSingleColor[prop, tokens];
 		If[FailureQ[value], value, Background -> value]
@@ -1284,7 +1273,7 @@ parse[prop:"background-color", tokens:{{_String, _String}..}] := (*parse[prop, t
 (*background-image*)
 
 
-parseSingleBGImage[prop_String, token:{_String, _String}] := 
+parseSingleBGImage[prop_String, token:{__String}] := 
 	Switch[token[[1]],
 		"ident", 
 			Switch[normalizeKeyWord @ token[[2]],
@@ -1297,7 +1286,7 @@ parseSingleBGImage[prop_String, token:{_String, _String}] :=
 		_,     unrecognizedValueFailure @ prop
 	]
 
-parse[prop:"background-image", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"background-image", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		value = 
 			Switch[tokens[[pos, 1]], 
@@ -1313,7 +1302,7 @@ parse[prop:"background-image", tokens:{{_String, _String}..}] := (*parse[prop, t
 (*background-position*)
 
 
-parseSingleBGPosition[prop_String, token:{_String, _String}] :=
+parseSingleBGPosition[prop_String, token:{__String}] :=
 	Switch[token[[1]],
 		"ident", 
 			Switch[normalizeKeyWord @ token[[2]],
@@ -1326,12 +1315,12 @@ parseSingleBGPosition[prop_String, token:{_String, _String}] :=
 				"initial", initialValues @ prop,
 				_,         unrecognizedKeyWordFailure @ prop
 			],
-		"percentage",      With[{v = parsePercentage @ token[[2]]}, Scaled[v/100]],
+		"percentage",      With[{v = parsePercentage @ token}, Scaled[v/100]],
 		"length"|"number", parseLength @ token[[2]],
 		_,                 unrecognizedValueFailure @ prop
 	]
 
-parseSingleBGPositionPair[values:{__}, tokens:{{_String, _String}..}] :=
+parseSingleBGPositionPair[values:{__}, tokens:{{__String}..}] :=
 	Switch[Length[values],
 		1, 
 			Switch[values[[1]],
@@ -1350,7 +1339,7 @@ parseSingleBGPositionPair[values:{__}, tokens:{{_String, _String}..}] :=
 	]
 
 (* only "Center" is supported by the FE *)
-parse[prop:"background-position", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"background-position", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, values = {}},
 		While[pos <= l,
 			value = parseSingleBGPosition[prop, tokens[[1]]];
@@ -1366,7 +1355,7 @@ parse[prop:"background-position", tokens:{{_String, _String}..}] := (*parse[prop
 (*background-repeat*)
 
 
-parseSingleBGRepeat[prop_String, token:{_String, _String}] :=
+parseSingleBGRepeat[prop_String, token:{__String}] :=
 	Switch[token[[1]],
 		"ident", 
 			Switch[normalizeKeyWord @ token[[2]],
@@ -1381,7 +1370,7 @@ parseSingleBGRepeat[prop_String, token:{_String, _String}] :=
 		_, unrecognizedValueFailure @ prop
 	]
 
-parse[prop:"background-repeat", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"background-repeat", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBGRepeat[prop, tokens[[1]]];
@@ -1412,7 +1401,7 @@ parse[prop:"background-repeat", tokens:{{_String, _String}..}] := (*parse[prop, 
 (*border-collapse*)
 
 
-parse[prop:"border-collapse", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"border-collapse", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		Switch[tokens[[pos, 1]],
@@ -1434,7 +1423,7 @@ parse[prop:"border-collapse", tokens:{{_String, _String}..}] := (*parse[prop, to
 
 
 (* Setting a single border/frame is only possible in WL if all 4 edges are specified at the same time. *)
-parse[prop:"border-top-color"|"border-right-color"|"border-bottom-color"|"border-left-color", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"border-top-color"|"border-right-color"|"border-bottom-color"|"border-left-color", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, wrapper},
 		value = parseSingleColor[prop, tokens];
 		If[FailureQ[value], 
@@ -1446,7 +1435,7 @@ parse[prop:"border-top-color"|"border-right-color"|"border-bottom-color"|"border
 	]	
 
 (* sets all 4 border/frame edges at once *)
-parse[prop:"border-color", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"border-color", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleColor[prop, If[tokens[[pos, 1]] == "function", consumeFunction[pos, l, tokens], {tokens[[pos]]}]];
@@ -1475,7 +1464,7 @@ parse[prop:"border-color", tokens:{{_String, _String}..}] := (*parse[prop, token
 	Also Spacings applies to the outer margins as well, but 'border-spacing' is internal only.
 	Because each item is padded on either side, divide the result in half.
 *)
-parse[prop:"border-spacing", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"border-spacing", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		If[l == 1 && MatchQ[tokens[[1, 1]], "ident"], 
 			Return @ 
@@ -1507,7 +1496,7 @@ parse[prop:"border-spacing", tokens:{{_String, _String}..}] := (*parse[prop, tok
 (*border-style*)
 
 
-parseSingleBorderStyle[prop_String, token:{_String, _String}] :=
+parseSingleBorderStyle[prop_String, token:{__String}] :=
 	Switch[token[[1]],
 		"ident",
 			Switch[normalizeKeyWord @ token[[2]],
@@ -1529,7 +1518,7 @@ parseSingleBorderStyle[prop_String, token:{_String, _String}] :=
 	Setting a single border/frame is only possible in WL if all 4 edges are specified at the same time.
 	As a compromise set the other edges to Inherited.
 *)
-parse[prop:"border-top-style"|"border-right-style"|"border-bottom-style"|"border-left-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"border-top-style"|"border-right-style"|"border-bottom-style"|"border-left-style", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, wrapper},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBorderStyle[prop, tokens[[1]]];
@@ -1541,7 +1530,7 @@ parse[prop:"border-top-style"|"border-right-style"|"border-bottom-style"|"border
 		]
 	]	
 	
-parse[prop:"border-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"border-style", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleBorderStyle[prop, tokens[[pos]]];
@@ -1563,7 +1552,7 @@ parse[prop:"border-style", tokens:{{_String, _String}..}] := (*parse[prop, token
 
 
 (* WL FrameStyle thickness is best given as a calculated AbsoluteThickness for numerical values. *)
-parseSingleBorderWidth[prop_String, token:{_String, _String}] :=
+parseSingleBorderWidth[prop_String, token:{__String}] :=
 	Switch[token[[1]],
 		"ident", 
 			Switch[normalizeKeyWord @ token[[2]],
@@ -1587,7 +1576,7 @@ convertToCellThickness[x_] := Switch[x, AbsoluteThickness[_], First[x], Thicknes
 	Setting a single border/frame is only possible in WL if all 4 edges are specified at the same time.
 	As a compromise set the other edges to Inherited.
 *)
-parse[prop:"border-top-width"|"border-right-width"|"border-bottom-width"|"border-left-width", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"border-top-width"|"border-right-width"|"border-bottom-width"|"border-left-width", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, wrapper},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBorderWidth[prop, tokens[[1]]];
@@ -1600,7 +1589,7 @@ parse[prop:"border-top-width"|"border-right-width"|"border-bottom-width"|"border
 	]	
 	
 (* sets all frame edge thickness at once *)
-parse[prop:"border-width", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"border-width", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleBorderWidth[prop, tokens[[pos]]];
@@ -1629,7 +1618,7 @@ parse[prop:"border-width", tokens:{{_String, _String}..}] := (*parse[prop, token
 	This effectively resets all edge properties because any property not specified takes on its default value. 
 	'border' by itself sets all 4 edges to be the same.
 *)
-parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[
 	{
 		pos = 1, l = Length[tokens], value, 
@@ -1688,7 +1677,7 @@ parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", t
 (*clip*)
 
 
-parse[prop:"clip", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"clip", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l == 1, (* if only one token is present, then it should be a keyword *)
 			Switch[tokens[[pos, 1]],
@@ -1724,7 +1713,7 @@ parse[prop:"clip", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	The color interpreter appears to mostly follow the CSS-color-3 module.
 	It would be nice if it gave a more detailed failure message, but let's not reinvent the wheel.
 *)
-parse[prop:"color", tokens:{{_String, _String}..}] := FontColor -> parseSingleColor[prop, tokens]
+parse[prop:"color", tokens:{{__String}..}] := FontColor -> parseSingleColor[prop, tokens]
 
 
 (* ::Subsection::Closed:: *)
@@ -1736,7 +1725,7 @@ parse[prop:"color", tokens:{{_String, _String}..}] := FontColor -> parseSingleCo
 
 
 (* only used to add content before or after element, so let's restrict this to Cells' CellDingbat or CellLabel *)
-parse[prop:"content", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"content", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, parsedValues = {}},
 		While[pos <= l,
 			value = 
@@ -1780,7 +1769,7 @@ parse[prop:"content", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 
 
 (* In WL each style must be repeated n times to get an increment of n *)
-parse[prop:"counter-increment", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"counter-increment", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], v, values = {}, next},
 		While[pos <= l,
 			Switch[tokens[[pos, 1]],
@@ -1817,7 +1806,7 @@ parse[prop:"counter-increment", tokens:{{_String, _String}..}] := (*parse[prop, 
 (*counter-reset*)
 
 
-parse[prop:"counter-reset", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"counter-reset", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], v = {}, values = {}, next},
 		While[pos <= l,
 			Switch[tokens[[pos, 1]],
@@ -1851,7 +1840,7 @@ parse[prop:"counter-reset", tokens:{{_String, _String}..}] := (*parse[prop, toke
 (*list-style-image*)
 
 
-parseSingleListStyleImage[prop_String, token:{_String, _String}] := 
+parseSingleListStyleImage[prop_String, token:{__String}] := 
 	Switch[token[[1]],
 		"ident",
 			Switch[normalizeKeyWord @ token[[2]],
@@ -1872,7 +1861,7 @@ parseSingleListStyleImage[prop_String, token:{_String, _String}] :=
 		_, unrecognizedValueFailure @ prop
 	]
 	
-parse[prop:"list-style-image", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"list-style-image", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStyleImage[prop, First @ tokens];
@@ -1888,7 +1877,7 @@ parse[prop:"list-style-image", tokens:{{_String, _String}..}] := (*parse[prop, t
 	CellDingbat position is always outside the cell content and aligned with the first line of content.
 	Though the following validates the CSS, Mathematica does not include any position option.
 *)
-parseSingleListStylePosition[prop_String, token:{_String, _String}] := 
+parseSingleListStylePosition[prop_String, token:{__String}] := 
 	Switch[token[[1]],
 		"ident",
 			Switch[normalizeKeyWord @ token[[2]],
@@ -1901,7 +1890,7 @@ parseSingleListStylePosition[prop_String, token:{_String, _String}] :=
 		_, unrecognizedValueFailure @ prop
 	]
 	
-parse[prop:"list-style-position", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"list-style-position", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStylePosition[prop, First @ tokens];
@@ -1913,7 +1902,7 @@ parse[prop:"list-style-position", tokens:{{_String, _String}..}] := (*parse[prop
 (*list-style-type*)
 
 
-parseSingleListStyleType[prop_String, token:{_String, _String}, style_String:"Item"] := 
+parseSingleListStyleType[prop_String, token:{__String}, style_String:"Item"] := 
 	Switch[token[[1]],
 		"ident",
 			Switch[normalizeKeyWord @ token[[2]],
@@ -1939,7 +1928,7 @@ parseSingleListStyleType[prop_String, token:{_String, _String}, style_String:"It
 		_, unrecognizedValueFailure @ prop
 	]
 	
-parse[prop:"list-style-type", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"list-style-type", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStyleType[prop, First @ tokens];
@@ -1952,7 +1941,7 @@ parse[prop:"list-style-type", tokens:{{_String, _String}..}] := (*parse[prop, to
 
 
 (* short-hand for list-style-image/position/type properties given in any order *)
-parse[prop:"list-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"list-style", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, values, p, noneCount = 0, hasImage = False, hasPos = False, hasType = False},
 		(* 
 			li-image, li-position, and li-type can appear in any order.
@@ -1992,7 +1981,7 @@ parse[prop:"list-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens]
 	There's also ShowStringCharacters, but this only hides/shows the double quote.
 	We treat this then as not available, but we validate the form anyway.
 *)
-parse[prop:"quotes", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"quotes", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], v, values = {}, next},
 		While[pos <= l,
 			Switch[tokens[[pos, 1]],
@@ -2022,7 +2011,7 @@ parse[prop:"quotes", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *
 
 
 (* WL uses a TagBox[..., MouseAppearanceTag[""]] instead of an option to indicate mouse appearance *)
-parse[prop:"cursor", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"cursor", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -2063,7 +2052,7 @@ parse[prop:"cursor", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *
 	WL automatically lays out blocks either inline or as nested boxes. 
 	If a Cell appears within TextData or BoxData then it is considered inline.
 *)
-parse[prop:"display", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"display", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -2100,7 +2089,7 @@ parse[prop:"display", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 
 
 (* WL does not support the flow of boxes around other boxes. *)
-parse[prop:"float", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"float", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -2120,7 +2109,7 @@ parse[prop:"float", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	]
 
 
-parse[prop:"clear", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"clear", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -2154,7 +2143,7 @@ parse[prop:"clear", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
 	[['font-style' || 'font-variant' || 'font-weight' ]? 'font-size' [ / 'line-height' ]? 'font-family' ]
 	All font properties are reset to their initial values, then the listed properties are calculated.
 *)
-parse[prop:"font", tokens:{{_String, _String}..}] :=
+parse[prop:"font", tokens:{{__String}..}] :=
 	Module[{pos = 1, l = Length[tokens], value, newValue = {}, temp},
 		(* reset font properties *)
 		value = {
@@ -2226,7 +2215,7 @@ parse[prop:"font", tokens:{{_String, _String}..}] :=
 (*font-family*)
 
 
-parse[prop:"font-family", tokens:{{_String, _String}..}] :=
+parse[prop:"font-family", tokens:{{__String}..}] :=
 	Module[{fontTokens, parsed, result},
 		fontTokens = DeleteCases[SplitBy[tokens, MatchQ[{"operator", ","}]], {{"operator", ","}}];
 		parsed = parseSingleFontFamily /@ fontTokens;
@@ -2235,7 +2224,7 @@ parse[prop:"font-family", tokens:{{_String, _String}..}] :=
 		FirstCase[parsed, _Rule, Failure["UnexpectedParse", <|"Message" -> "No font-family found."|>]]
 	]
 
-parseSingleFontFamily[tokens:{{_String, _String}..}] := parseSingleFontFamily[tokens] =
+parseSingleFontFamily[tokens:{{__String}..}] := parseSingleFontFamily[tokens] =
 	Module[
 	{
 		value, l, pos = 1, font, tokensNoWS,
@@ -2302,7 +2291,7 @@ parseFontFamilySingleIdent[s_String] :=
 (*font-size*)
 
 
-parse[prop:"font-size", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"font-size", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2322,7 +2311,7 @@ parse[prop:"font-size", tokens:{{_String, _String}..}] := (*parse[prop, tokens] 
 						"xx-large", 36,
 						_, unrecognizedKeyWordFailure @ prop
 					],
-				"percentage",        With[{n = parsePercentage @ tokens[[pos, 2]]}, negativeQ[n, prop, Scaled[n/100]]],
+				"percentage",        With[{n = parsePercentage @ tokens[[pos]]},          negativeQ[n, prop, Scaled[n/100]]],
 				"length" | "number", With[{n = parseLength[#, True]& @ tokens[[pos, 2]]}, negativeQ[n, prop, n]],
 				"ems" | "exs",       With[{n = parseLength[#, True]& @ tokens[[pos, 2]]}, negativeQ[Quiet @ First @ n, prop, n]],
 				_, unrecognizedValueFailure @ prop
@@ -2335,7 +2324,7 @@ parse[prop:"font-size", tokens:{{_String, _String}..}] := (*parse[prop, tokens] 
 (*font-style*)
 
 
-parse[prop:"font-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"font-style", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2359,7 +2348,7 @@ parse[prop:"font-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens]
 (*font-variant*)
 
 
-parse[prop:"font-variant", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"font-variant", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2386,7 +2375,7 @@ parse[prop:"font-variant", tokens:{{_String, _String}..}] := (*parse[prop, token
 	"lighter" and "bolder" are not supported.
 	Weight mappings come from https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight.
 *)
-parse[prop:"font-weight", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"font-weight", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2437,7 +2426,7 @@ parse[prop:"font-weight", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 	CSS max/min-height --> WL ImageSize with UpTo (only max) or {{wmin, wmax}, {hmin, hmax}} (both max and min)
 	CSS overflow       --> WL ImageSizeAction
 *)
-parseSingleSize[prop_String, token:{_String, _String}] := parseSingleSize[prop, token] =
+parseSingleSize[prop_String, token:{__String}] := parseSingleSize[prop, token] =
 	Switch[token[[1]],
 		"ident", 
 			Switch[normalizeKeyWord @ token[[2]],
@@ -2449,12 +2438,12 @@ parseSingleSize[prop_String, token:{_String, _String}] := parseSingleSize[prop, 
 			],
 		"length" | "number", With[{n = parseLength @ token[[2]]}, negativeQ[n, prop, n]],
 		"ems" | "exs",       With[{n = parseLength @ token[[2]]}, negativeQ[First @ n, prop, n]],
-		"percentage",        Scaled[(parsePercentage @ token[[2]])/100], (* should be percentage of height of containing block; not possible in WL *)
+		"percentage",        With[{n = parsePercentage @ token},  Scaled[n/100]], (* should be percentage of height of containing block; not possible in WL *)
 		_, unrecognizedValueFailure @ prop
 	]
 	
 (* min-width and max-width override width property *)
-parse[prop:"width"|"max-width"|"min-width", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"width"|"max-width"|"min-width", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleSize[prop, tokens[[1]]];
@@ -2471,7 +2460,7 @@ parse[prop:"width"|"max-width"|"min-width", tokens:{{_String, _String}..}] := (*
 		]
 	]
 
-parse[prop:"height"|"max-height"|"min-height", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"height"|"max-height"|"min-height", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleSize[prop, tokens[[1]]];
@@ -2494,7 +2483,7 @@ parse[prop:"height"|"max-height"|"min-height", tokens:{{_String, _String}..}] :=
 
 
 (* Similar to WL LineSpacing, but LineSpacing already takes FontSize into account, so intercept number before 'ems' returns CurrentValue[FontSize] *)
-parse[prop:"line-height", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"line-height", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2510,7 +2499,7 @@ parse[prop:"line-height", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 				"length",      With[{n = parseLength @ tokens[[pos, 2]]},           negativeQ[n, prop, {n, 0}]],
 				"ems",         With[{n = parseEmNonRelative @ tokens[[pos, 2]]},    negativeQ[n, prop, {n, 0}]],
 				"exs",         With[{n = parseEmNonRelative @ tokens[[pos, 2]]},    negativeQ[n, prop, {n/2, 0}]],
-				"percentage",  With[{n = parsePercentage @ tokens[[pos, 2]]},       negativeQ[n, prop, {n/100, 0}]],
+				"percentage",  With[{n = parsePercentage @ tokens[[pos]]},          negativeQ[n, prop, {n/100, 0}]],
 				_,             unrecognizedValueFailure @ prop
 			];
 		If[FailureQ[value], value, LineSpacing -> value]
@@ -2521,7 +2510,7 @@ parse[prop:"line-height", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 (*margin(-left, -right, -top, -bottom)*)
 
 
-parseSingleMargin[prop_String, token:{_String, _String}] := parseSingleMargin[prop, token] = 
+parseSingleMargin[prop_String, token:{__String}] := parseSingleMargin[prop, token] = 
 	Switch[token[[1]],
 		"ident", 
 			Switch[normalizeKeyWord @ token[[2]],
@@ -2531,7 +2520,7 @@ parseSingleMargin[prop_String, token:{_String, _String}] := parseSingleMargin[pr
 				_,         unrecognizedKeyWordFailure @ prop
 			],
 		"length" | "number" | "ems" | "exs", parseLength @ token[[2]] (* can be positive, negative, or 0 *),
-		"percentage", Scaled[(parsePercentage @ token[[2]])/100],
+		"percentage", Scaled[(parsePercentage @ token)/100],
 		_, unrecognizedValueFailure @ prop
 	]
 	
@@ -2539,7 +2528,7 @@ parseSingleMargin[prop_String, token:{_String, _String}] := parseSingleMargin[pr
 	CSS margins --> WL ImageMargins and CellMargins
 	CSS padding --> WL FrameMargins and CellFrameMargins
 *)
-parse[prop:"margin-top"|"margin-right"|"margin-bottom"|"margin-left", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"margin-top"|"margin-right"|"margin-bottom"|"margin-left", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{l = Length[tokens], wrapper, value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleMargin[prop, tokens[[1]]];
@@ -2551,7 +2540,7 @@ parse[prop:"margin-top"|"margin-right"|"margin-bottom"|"margin-left", tokens:{{_
 		]
 	]
 		
-parse[prop:"margin", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"margin", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleMargin[prop, tokens[[pos]]];
@@ -2587,7 +2576,7 @@ parse[prop:"margin", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *
 (*outline-color*)
 
 
-parse[prop:"outline-color", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"outline-color", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		If[l == 1 && tokens[[1, 1]] == "ident" && normalizeKeyWord @ tokens[[1, 2]] == "invert",
 			CellFrameColor -> Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]]
@@ -2610,7 +2599,7 @@ parse[prop:"outline-color", tokens:{{_String, _String}..}] := (*parse[prop, toke
 
 
 (* only a solid border is allowed for cells; 'hidden' is not allowed here *)
-parse[prop:"outline-style", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"outline-style", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value =
@@ -2627,7 +2616,7 @@ parse[prop:"outline-style", tokens:{{_String, _String}..}] := (*parse[prop, toke
 (*outline-width*)
 
 
-parse[prop:"outline-width", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"outline-width", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = parseSingleBorderWidth[prop, tokens[[pos]]];
@@ -2649,7 +2638,7 @@ parse[prop:"outline-width", tokens:{{_String, _String}..}] := (*parse[prop, toke
 
 
 (* Shorthand for outline-width/style/color. 'outline' always sets all 4 edges to be the same. *)
-parse[prop:"outline", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"outline", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[
 	{
 		pos = 1, l = Length[tokens], value, 
@@ -2705,7 +2694,7 @@ parse[prop:"outline", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 	This would mostly be found with WL Pane expression as PaneBox supports scrollbars. 
 	Other boxes may support ImageSizeAction.
 *)
-parse[prop:"overflow", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"overflow", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos, 1]],
@@ -2728,7 +2717,7 @@ parse[prop:"overflow", tokens:{{_String, _String}..}] := (*parse[prop, tokens] =
 (*padding(-left, -right, -top, -bottom)*)
 
 
-parseSinglePadding[prop_String, token:{_String, _String}] := parseSinglePadding[prop, token] = 
+parseSinglePadding[prop_String, token:{__String}] := parseSinglePadding[prop, token] = 
 	Switch[token[[1]],
 		"ident", 
 			Switch[normalizeKeyWord @ token[[2]],
@@ -2738,7 +2727,7 @@ parseSinglePadding[prop_String, token:{_String, _String}] := parseSinglePadding[
 			],
 		"length" | "number", With[{n = parseLength @ token[[2]]},     negativeQ[n, prop, n]],
 		"ems" | "exs",       With[{n = parseLength @ token[[2]]},     negativeQ[First @ n, prop, n]],
-		"percentage",        With[{n = parsePercentage @ token[[2]]}, negativeQ[n, prop, Scaled[n/100]]],
+		"percentage",        With[{n = parsePercentage @ token},      negativeQ[n, prop, Scaled[n/100]]],
 		_,                   unrecognizedValueFailure @ prop
 	]
 
@@ -2747,7 +2736,7 @@ parseSinglePadding[prop_String, token:{_String, _String}] := parseSinglePadding[
 	CSS margins --> WL ImageMargins and CellMargins
 	CSS padding --> WL FrameMargins and CellFrameMargins
 *)
-parse[prop:"padding-top"|"padding-right"|"padding-bottom"|"padding-left", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"padding-top"|"padding-right"|"padding-bottom"|"padding-left", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{l = Length[tokens], wrapper, value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSinglePadding[prop, tokens[[1]]];
@@ -2759,7 +2748,7 @@ parse[prop:"padding-top"|"padding-right"|"padding-bottom"|"padding-left", tokens
 		]
 	]
 		
-parse[prop:"padding", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"padding", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSinglePadding[prop, tokens[[pos]]];
@@ -2791,7 +2780,7 @@ parse[prop:"padding", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = 
 	FE uses LinebreakAdjustments with a blackbox algorithm. 
 	AFAIK there's no way to directly prevent orphans/widows.
 *)
-parse[prop:"orphans"|"widows", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"orphans"|"widows", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2813,7 +2802,7 @@ parse[prop:"orphans"|"widows", tokens:{{_String, _String}..}] := (*parse[prop, t
 (*page-break-after/before*)
 
 
-parse[prop:("page-break-after"|"page-break-before"), tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:("page-break-after"|"page-break-before"), tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2843,7 +2832,7 @@ parse[prop:("page-break-after"|"page-break-before"), tokens:{{_String, _String}.
 (*page-break-inside*)
 
 
-parse[prop:"page-break-inside", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"page-break-inside", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2877,7 +2866,7 @@ parse[prop:"page-break-inside", tokens:{{_String, _String}..}] := (*parse[prop, 
 	Moreover, attached cells aren't an option, but rather a cell.
 	Perhaps can use NotebookDynamicExpression -> Dynamic[..., TrackedSymbols -> {}] where "..." includes a list of attached cells.
 *)
-parse[prop:"position", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"position", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value =
@@ -2898,7 +2887,7 @@ parse[prop:"position", tokens:{{_String, _String}..}] := (*parse[prop, tokens] =
 	]
 
 
-parse[prop:"left"|"right"|"top"|"bottom", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"left"|"right"|"top"|"bottom", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value =
@@ -2911,7 +2900,7 @@ parse[prop:"left"|"right"|"top"|"bottom", tokens:{{_String, _String}..}] := (*pa
 						_,         unrecognizedKeyWordFailure @ prop
 					],
 				"percentage", 
-					With[{n = parsePercentage @ tokens[[pos, 2]]}, 
+					With[{n = parsePercentage @ tokens[[pos]]}, 
 						If[n > 100 || n < 0, Missing["Out of range."], Rescale[n, {0, 100}, Switch[prop, "left"|"bottom", {-1, 1}, "right"|"top", {1, -1}]]]
 					],
 				"length" | "ems" | "exs", 
@@ -2933,7 +2922,7 @@ parse[prop:"left"|"right"|"top"|"bottom", tokens:{{_String, _String}..}] := (*pa
 
 
 (* WL Grid does not support an option to have a grid caption. *)
-parse[prop:"caption-side", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"caption-side", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2957,7 +2946,7 @@ parse[prop:"caption-side", tokens:{{_String, _String}..}] := (*parse[prop, token
 
 
 (* There is no WL equivalent because FE uses only 'border-collapse' in Grid.*)
-parse[prop:"empty-cells", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"empty-cells", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2981,7 +2970,7 @@ parse[prop:"empty-cells", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 
 
 (* The FE does its own formatting passes depending on the column width settings and content. *)
-parse[prop:"table-layout", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"table-layout", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3008,7 +2997,7 @@ parse[prop:"table-layout", tokens:{{_String, _String}..}] := (*parse[prop, token
 (*direction*)
 
 
-parse[prop:"direction", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"direction", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3032,7 +3021,7 @@ parse[prop:"direction", tokens:{{_String, _String}..}] := (*parse[prop, tokens] 
 
 
 (* WL distinguishes between alignment and justification, but CSS does not *)
-parse[prop:"text-align", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"text-align", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos, 1]],
@@ -3055,7 +3044,7 @@ parse[prop:"text-align", tokens:{{_String, _String}..}] := (*parse[prop, tokens]
 (*text-indent*)
 
 
-parse[prop:"text-indent", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"text-indent", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3081,7 +3070,7 @@ parse[prop:"text-indent", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 
 
 (* WL distinguishes between alignment and justification, but CSS does not *)
-parse[prop:"text-decoration", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"text-decoration", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, values = {}},
 		While[pos <= l,
 			value =
@@ -3110,7 +3099,7 @@ parse[prop:"text-decoration", tokens:{{_String, _String}..}] := (*parse[prop, to
 (*text-transform*)
 
 
-parse[prop:"text-transform", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"text-transform", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos, 1]],
@@ -3138,7 +3127,7 @@ parse[prop:"text-transform", tokens:{{_String, _String}..}] := (*parse[prop, tok
 	The FontTracking options gives some additional control, but appears to be mis-appropriated to CSS font-stretch.
 	Not to be confused with CSS font-stretch.
 *)
-parse[prop:"letter-spacing", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"letter-spacing", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3162,7 +3151,7 @@ parse[prop:"letter-spacing", tokens:{{_String, _String}..}] := (*parse[prop, tok
 	Added back in Level 3. CSS Fonts Module Level 4 supports percentages as well.
 	Mathematica supports both level 3 and 4 features in FontTracking.
 *)
-parse[prop:"font-stretch", tokens:{{_String, _String}..}] := 
+parse[prop:"font-stretch", tokens:{{__String}..}] := 
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3182,7 +3171,7 @@ parse[prop:"font-stretch", tokens:{{_String, _String}..}] :=
 						"ultra-expanded",  "Wide",          (* CSSFM4 200% *)
 						_,                 unrecognizedKeyWordFailure @ prop
 					],
-				"percentage", With[{n = parsePercentage @ tokens[[1, 2]]}, negativeQ[n, prop, n/100]],
+				"percentage", With[{n = parsePercentage @ tokens[[1]]}, negativeQ[n, prop, n/100]],
 				_,            unrecognizedValueFailure @ prop
 			];
 		If[FailureQ[value], value, FontTracking -> value]
@@ -3193,7 +3182,7 @@ parse[prop:"font-stretch", tokens:{{_String, _String}..}] :=
 (*unicode-bidi*)
 
 
-parse[prop:"unicode-bidi", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"unicode-bidi", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3221,7 +3210,7 @@ parse[prop:"unicode-bidi", tokens:{{_String, _String}..}] := (*parse[prop, token
 	General letter and word spacing is controlled by the Mathematica Front End. 
 	The CSS is still validated.
 *)
-parse[prop:"word-spacing", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"word-spacing", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3245,7 +3234,7 @@ parse[prop:"word-spacing", tokens:{{_String, _String}..}] := (*parse[prop, token
 
 
 (* Whitespace is controlled by the Mathematica Front End. The CSS is still validated. *)
-parse[prop:"white-space", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"white-space", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos, 1]],
@@ -3275,7 +3264,7 @@ parse[prop:"white-space", tokens:{{_String, _String}..}] := (*parse[prop, tokens
 	Percentages are relative to the font-size i.e. 100% is one line-height upward.
 	CellBaseline is limited and always aligns the top of the inline cell to the Bottom/Top/Etc of the parent
 *)
-parse[prop:"vertical-align", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"vertical-align", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{value1, value2},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value1 = parseBaseline[prop, tokens];
@@ -3286,7 +3275,7 @@ parse[prop:"vertical-align", tokens:{{_String, _String}..}] := (*parse[prop, tok
 	]
 
 (* this is effectively for RowBox alignment *)
-parseBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] := parseBaseline[prop, tokens] = 
+parseBaseline[prop:"vertical-align", tokens:{{__String}..}] := parseBaseline[prop, tokens] = 
 	Module[{value (* for Baseline *)},
 		(* tooManyTokens failure check occurs in higher-level function parse["vertical-align",...]*)
 		value = 
@@ -3307,14 +3296,14 @@ parseBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] := parseBase
 					],
 				"length" | "number", Baseline -> With[{v = parseLength @ tokens[[1, 2]]},        Scaled @ Dynamic[v/CurrentValue[FontSize]]], (* could be zero *)
 				"ems" | "exs" ,      Baseline -> With[{v = parseEmNonRelative @ tokens[[1, 2]]}, Scaled @ v],
-				"percentage",        Baseline -> With[{n = parsePercentage @ tokens[[1, 2]]},    Scaled[n/100]],
+				"percentage",        Baseline -> With[{n = parsePercentage @ tokens[[1]]},       Scaled[n/100]],
 				_, unrecognizedValueFailure @ prop
 			];
 		If[FailureQ[value], value, BaselinePosition -> value]
 	]
 
 (* it's unfortunate that CellBaseline is so limited *)
-parseCellBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] := parseCellBaseline[prop, tokens] = 
+parseCellBaseline[prop:"vertical-align", tokens:{{__String}..}] := parseCellBaseline[prop, tokens] = 
 	Module[{value},
 		(* tooManyTokens failure check occurs in higher-level function parse["vertical-align",...]*)
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
@@ -3347,7 +3336,7 @@ parseCellBaseline[prop:"vertical-align", tokens:{{_String, _String}..}] := parse
 	WL option ShowContents is only applicable within a StyleBox.
 	Often this is implemented using the Invisible function.
 *)
-parse[prop:"visibility", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"visibility", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3375,7 +3364,7 @@ parse[prop:"visibility", tokens:{{_String, _String}..}] := (*parse[prop, tokens]
 	The FE does its own depth ordering of boxes. 
 	Attached cells are ordered by their creation order.
 *)
-parse[prop:"z-index", tokens:{{_String, _String}..}] := (*parse[prop, tokens] = *)
+parse[prop:"z-index", tokens:{{__String}..}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3412,14 +3401,14 @@ parse[prop_String, _] := unsupportedValueFailure @ prop
 (*Utilities*)
 
 
-findOpeningBracketPosition[positionIndex_Integer, openBracket_String, tokens:{{_String, _String}..}] :=
+findOpeningBracketPosition[positionIndex_Integer, openBracket_String, tokens:{{__String}..}] :=
 	Module[{p = positionIndex},
 		While[tokens[[p, 1]] != openBracket, p++];
 		p
 	]
 
 
-findClosingBracketPosition[positionIndex_Integer, openBracket_String, closeBracket_String, tokens:{{_String, _String}..}]:=
+findClosingBracketPosition[positionIndex_Integer, openBracket_String, closeBracket_String, tokens:{{__String}..}]:=
 	Module[{p = positionIndex, depth = 1, l = Length[tokens]},
 		p++;
 		While[depth > 0 && p <= l,
@@ -3440,7 +3429,7 @@ skipWhitespace[positionIndex_, length_Integer, tokens_List] := (
 
 
 Attributes[consumeFunction] = {HoldFirst};
-consumeFunction[positionIndex_, l_, tokens:{{_String, _String}..}] :=
+consumeFunction[positionIndex_, l_, tokens:{{__String}..}] :=
 	Module[{start = positionIndex, i=1},
 		If[tokens[[positionIndex, 1]] != "function", 
 			$Failed
@@ -3465,7 +3454,7 @@ consumeFunction[positionIndex_, l_, tokens:{{_String, _String}..}] :=
 processRulesets[s_String] :=
 	Module[{i = 1, pos = 1, blockStartPos, blockStopPos, atBlockStartPos, atBlockStopPos, l, lRulesets, relevantTokens, rulesets, imports={}},
 	
-		relevantTokens = parseBlock[s]; (* identifies curly-braces, strings, URIs, @import, @charset. Removes comments. *)
+		relevantTokens = tokenizeFirstPass[s]; (* identifies curly-braces, strings, URIs, @import, @charset. Removes comments. *)
 		l = Length[relevantTokens];
 		
 		(*TODO: handle charset statement *)
@@ -3569,7 +3558,7 @@ processDeclarations[rulesets:{_Association..}] :=
 	Module[{aCopy, temp},
 		aCopy = rulesets;
 		temp = aCopy[[All, "Block"]];
-		temp = temp /. {"other", x_String} :> Sequence @@ parseDeclaration[x];
+		temp = temp /. {"other", x_String} :> Sequence @@ tokenizeDeclaration[x];
 		temp = processDeclarationBlock /@ temp;
 		aCopy[[All, "Block"]] = temp;
 		aCopy
@@ -3578,7 +3567,7 @@ processDeclarations[rulesets:{_Association..}] :=
 processDeclarations[{}] := {} 
 
 
-processDeclarationBlock[tokens:{{_String, _String}..}] :=
+processDeclarationBlock[tokens:{{__String}..}] :=
 	Module[{pos, l, lDeclarations, i, propertyPosition, valueStartPosition, valueStopPosition, declarations, important},
 		pos = 1;
 		l = Length[tokens];
@@ -4040,7 +4029,7 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 					"Specificity" -> {1, 0, 0, 0}, 
 					"Targets" -> {#1}, 
 					"Condition" -> None, 
-					"Block" -> processDeclarationBlock @ parseDeclaration @ #2|>&, 
+					"Block" -> processDeclarationBlock @ tokenizeDeclaration @ #2|>&, 
 				{directStylePositions, directStyleContent}];
 		
 		(* combine all CSS sources based on position in XMLObject *)
