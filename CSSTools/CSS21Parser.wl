@@ -246,7 +246,7 @@ RE["baduri2"]     = "(" ~~ RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["w"] ~~ 
 RE["baduri3"]     = "(" ~~ RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["w"] ~~ RE["badstring"] ~~ ")";
 RE["comment"]     = "(\\/\\*[^*]*\\*+([^/*][^*]*\\*+)*\\/)";
 RE["h"]           = "([0-9a-fA-F])";
-RE["ident"]       = "(-?" ~~ RE["nmstart"] ~~ RE["nmchar"] ~~ "*)";
+RE["ident"]       = "(((--)|(-?" ~~ RE["nmstart"] ~~ "))" ~~ RE["nmchar"] ~~ "*)";
 RE["integer"]     = "([\\-+]?[0-9]+)"; (* not part of the CSS 2.1 spec, but useful *)
 RE["integerSCI"]  = "([\\-+]?[0-9]+[Ee][\\-+]?[0-9]+)"; (* not part of the CSS 2.1 spec, but useful *)
 RE["escape"]      = "(" ~~ RE["unicode"] ~~ "|\\\\[^\n\r\f0-9a-fA-F])"; 
@@ -357,7 +357,7 @@ T["STRING"] = RE["string"];
 
 T["TIME"] = "((" ~~ RE["num"] ~~ RE["M"] ~~ RE["S"] ~~ ")|(" ~~ RE["num"] ~~ RE["H"] ~~ RE["Z"] ~~ "))";
 
-T["UNICODE-RANGE"] = "((u|U)\\+[0-9A-Fa-f?]{1,6}(-[0-9a-fA-F]{1,6})?)";
+T["UNICODE-RANGE"] = "(([uU]\\+[0-9A-Fa-f]{1,6}[?]*)|([uU]\\+[0-9A-Fa-f]{1,6}-[0-9A-Fa-f]{1,6}))"; (* FIXME: not sure if correct *)
 T["URI"] =
 	StringExpression[
 		"(" ~~ RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["w"] ~~ RE["string"] ~~ RE["w"] ~~ "\\)" ~~ ")" ~~ "|",
@@ -422,12 +422,15 @@ T["FUNCTION"] ~~ T["S*"] ~~
 (*Tokenize File*)
 
 
-validTokenQ[x_] := MatchQ[x, {_?StringQ, Repeated[_?NumberQ | _?StringQ]}] 
-tokenType[x_] := x[[1]]      (* assumes already valid token as input *)
-tokenString[x_] := x[[2]]    (* assumes already valid token as input *)
-tokenValue[x_] := x[[3]]     (* assumes already valid number or dimension token as input *)
-tokenValueType[x_] := x[[4]] (* assumes already valid number or dimension token as input *)
-dimensionUnit[x_] := x[[5]]  (* assumes already valid dimension token as input *)
+validTokenQ[x_] := MatchQ[x, _?StringQ | {_?StringQ, Repeated[_?NumberQ | _?StringQ]}]
+ 
+tokenType[x_String]    := x
+tokenType[x_List]      := x[[1]] (* assumes already valid token as input *)
+tokenString[x_List]    := x[[2]] (* assumes already valid token as input *)
+tokenValue[x_List]     := x[[3]] (* assumes already valid number or dimension token as input *)
+tokenValueType[x_List] := x[[4]] (* assumes already valid number or dimension token as input *)
+
+dimensionUnit[x_List]  := x[[5]] (* assumes already valid dimension token as input *)
   
 
 (*Identify @charset, @import, and rulesets (selector + block declarations)*)
@@ -444,9 +447,9 @@ tokenizeFirstPass[x_String] :=
 				s:RegularExpression @ T["BAD_URI"]     :> {"baduri",    s},
 				s:RegularExpression @ T["STRING"]      :> {"string",    s},
 				s:RegularExpression @ T["BAD_STRING"]  :> {"badstring", s},
-				"{" -> {"{", "{"}, 
-				"}" -> {"}", "}"}}],
-		s_String :> {"other", s},
+				"{" -> "{", 
+				"}" -> "}"}],
+		s_String /; StringLength[s] > 1 :> {"other", s},
 		{1}]
 
 
@@ -462,11 +465,11 @@ tokenizeAtImportKeyword[x_String] :=
 				s:RegularExpression @ T["URI"]        :> {"uri",    s},
 				s:RegularExpression @ T["STRING"]     :> {"string", s},
 				s:RegularExpression @ P["medium"]     :> {"medium", s},
-				"," -> {",", ","}, 
-				";" -> {";", ";"}}],
+				"," -> ",", 
+				";" -> ";"}],
 		{
 			s_String /; StringMatchQ[s, Whitespace | ""] :> Nothing, (* whitespace is OK to remove here *)
-			s_String :> {"other", s}},
+			s_String /; StringLength[s] > 1              :> {"other", s}},
 		{1}]
 
 
@@ -527,15 +530,15 @@ tokenizeDeclaration[x_String] :=
 				s:RegularExpression @ T["DIMENSION"]     :> Flatten @ {"dimension",  tokenizeDimension[s]},
 				s:RegularExpression @ T["NUMBER"]        :> Flatten @ {"number",     tokenizeNumber[s]},
 				s:RegularExpression @ T["IMPORTANT_SYM"] :> {"important", s},
-				":" -> {":", ":"}, 
-				";" -> {";", ";"},
-				"," -> {"delim", ","}, 
-				"/" -> {"/", "/"}, 
-				")" -> {")", ")"},
-				s:Whitespace :> {"whitespace", s}}],
+				":" -> ":", 
+				";" -> ";",
+				"," -> ",", 
+				"/" -> "/", 
+				")" -> ")",
+				s:Whitespace :> " "}],
 		{	
 			s_String /; StringMatchQ[s, ""] -> Nothing,
-			s_String :> {"other", s}},
+			s_String /; StringLength[s] > 1 :> {"other", s}},
 		{1}]
 
 
@@ -582,7 +585,7 @@ noValueFailure[prop_String] :=             Failure["UnexpectedParse", <|"Message
 positiveLengthFailure[prop_String] :=      Failure["BadLength",       <|"Message" -> prop <> "length must be positive."|>];
 repeatedPropValueFailure[prop_] :=         Failure["UnexpectedParse", <|"Message" -> "Repeated property value type.", "Prop" -> prop|>];
 tooManyPropValuesFailure[props_List] :=    Failure["UnexpectedParse", <|"Message" -> "Too many property values provided.", "Props" -> props|>];
-tooManyTokensFailure[tokens_List] :=       Failure["UnexpectedParse", <|"Message" -> "Too many tokens.", "Tokens" -> tokens[[All, 1]]|>];
+tooManyTokensFailure[tokens_List] :=       Failure["UnexpectedParse", <|"Message" -> "Too many tokens.", "Tokens" -> tokenType /@ tokens|>];
 unrecognizedKeyWordFailure[prop_String] := Failure["UnexpectedParse", <|"Message" -> "Unrecognized " <> prop <> " keyword."|>];
 unrecognizedValueFailure[prop_String] :=   Failure["UnexpectedParse", <|"Message" -> "Unrecognized " <> prop <> " value."|>];
 unsupportedValueFailure[prop_String] :=    Failure["UnsupportedProp", <|"Property" -> prop|>]
@@ -1009,9 +1012,13 @@ parseCounter[prop_String, tokens:{___?validTokenQ}] := parseCounter[prop, tokens
 		Switch[normalizeKeyWord @ tokenString @ tokens[[pos]],
 			"counter(",
 				skipWhitespace[pos, l, tokens];
-				If[pos <= l && tokenType @ tokens[[pos]] == "ident", style = tokenString @ tokens[[pos]], Return @ invalidFunctionFailure @ StringJoin @ tokens[[All, 2]]];
+				If[pos <= l && tokenType @ tokens[[pos]] == "ident", 
+					style = tokenString @ tokens[[pos]]
+					, 
+					Return @ invalidFunctionFailure @ StringJoin[tokenString /@ tokens]
+				];
 				skipWhitespace[pos, l, tokens];
-				If[pos > l, Return @ invalidFunctionFailure @ StringJoin @ tokens[[All, 2]]];
+				If[pos > l, Return @ invalidFunctionFailure @ StringJoin[tokenString /@ tokens]];
 				Switch[tokenType @ tokens[[pos]],
 					"ident", listtype = tokenString @ tokens[[pos]],
 					")",     Null,
@@ -1467,7 +1474,7 @@ parse[prop:"border-color", tokens:{__?validTokenQ}] := (*parse[prop, tokens] = *
 *)
 parse[prop:"border-spacing", tokens:{__?validTokenQ}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
-		If[l == 1 && MatchQ[tokens[[1, 1]], "ident"], 
+		If[l == 1 && tokenType @ tokens[[1]] == "ident", 
 			Return @ 
 				Switch[normalizeKeyWord @ tokenString @ tokens[[1]],
 					"inherit", Spacings -> Inherited,
@@ -1790,7 +1797,7 @@ parse[prop:"counter-increment", tokens:{__?validTokenQ}] := (*parse[prop, tokens
 								,
 								(* otherwise check for a non-negative integer and add that style name n times *)
 								v = tokenString @ tokens[[pos]]; next = pos; skipWhitespace[next, l, tokens];
-								With[{n = Interpreter["Integer"][tokens[[next, 2]]]}, 
+								With[{n = Interpreter["Integer"][tokenString @ tokens[[next]]]}, 
 									If[IntegerQ[n],
 										If[n < 0, 
 											Return @ negativeIntegerFailure @ prop
@@ -1827,7 +1834,7 @@ parse[prop:"counter-reset", tokens:{__?validTokenQ}] := (*parse[prop, tokens] = 
 								,
 								(* otherwise check for an integer *)
 								v = tokenString @ tokens[[pos]]; next = pos; skipWhitespace[next, l, tokens];
-								With[{n = Interpreter["Integer"][tokens[[next, 2]]]}, 
+								With[{n = Interpreter["Integer"][tokenString @ tokens[[next]]]}, 
 									If[IntegerQ[n], (* if integer exists, use it and skip ahead, otherwise use 0 and don't increment pos *)
 										AppendTo[values, {v, n}]; pos = next
 										,
@@ -1998,8 +2005,8 @@ parse[prop:"quotes", tokens:{__?validTokenQ}] := (*parse[prop, tokens] = *)
 					],
 				"string",
 					v = tokenString @ tokens[[pos]]; next = pos; skipWhitespace[next, l, tokens];
-					If[next <= l && tokens[[next, 1]] == "string", 
-						AppendTo[values, {v, tokens[[next, 2]]}]; pos = next
+					If[next <= l && tokenType @ tokens[[next]] == "string", 
+						AppendTo[values, {v, tokenString @ tokens[[next]]}]; pos = next
 						,
 						Return @ Failure["UnexpectedParse", <|"Message" -> "Expected pairs of strings."|>]
 					],
@@ -2237,23 +2244,23 @@ parseSingleFontFamily[tokens:{__?validTokenQ}] := parseSingleFontFamily[tokens] 
 		generic = {"inherit", "initial", "serif", "sans-serif", "monospace", "fantasy", "cursive"},
 		fail = Failure["UnexpectedParse", <|"Message" -> "Font family syntax error."|>]
 	},
-		tokensNoWS = DeleteCases[tokens, {"whitespace", _}];
+		tokensNoWS = DeleteCases[tokens, " ", {1}];
 		l = Length[tokensNoWS];
 		value =
-			Switch[tokensNoWS[[pos, 1]],
+			Switch[tokenType @ tokensNoWS[[pos]],
 				"ident", (* all other tokens must be 'ident' (or whitespace); it could be only be a single 'ident' *)
 					Which[
-						!AllTrue[tokensNoWS[[All, 1]], StringMatchQ["ident"]], fail,
-						l == 1 && MemberQ[generic, normalizeKeyWord @ tokensNoWS[[pos, 2]]], parseFontFamilySingleIdent @ tokensNoWS[[pos, 2]],
+						!AllTrue[tokenType /@ tokensNoWS, StringMatchQ["ident"]], fail,
+						l == 1 && MemberQ[generic, normalizeKeyWord @ tokenString @ tokensNoWS[[pos]]], parseFontFamilySingleIdent @ tokenString @ tokensNoWS[[pos]],
 						True, 
-							font = StringJoin @ Riffle[tokensNoWS[[All, 2]], " "];
+							font = StringJoin @ Riffle[tokenString /@ tokensNoWS, " "];
 							First[Pick[$FontFamilies, StringMatchQ[$FontFamilies, font, IgnoreCase -> True]], Missing["FontAbsent", font]]
 					],
 				"string", (* must only have a single string token up to the delimiting comma *)
 					Which[
 						l > 1, fail,
 						True,
-							font = StringTake[tokensNoWS[[All, 2]], {2, -2}];
+							font = StringTake[tokenString /@ tokensNoWS, {2, -2}];
 							First[Pick[$FontFamilies, StringMatchQ[$FontFamilies, font, IgnoreCase -> True]], Missing["FontAbsent", font]]
 					],
 				_, fail
@@ -2593,7 +2600,7 @@ parse[prop:"margin", tokens:{__?validTokenQ}] := (*parse[prop, tokens] = *)
 
 parse[prop:"outline-color", tokens:{__?validTokenQ}] := (*parse[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
-		If[l == 1 && tokens[[1, 1]] == "ident" && normalizeKeyWord @ tokenString @ tokens[[1]] == "invert",
+		If[l == 1 && tokenType @ tokens[[1]] == "ident" && normalizeKeyWord @ tokenString @ tokens[[1]] == "invert",
 			CellFrameColor -> Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]]
 			,
 			While[pos <= l,
@@ -3440,7 +3447,7 @@ parse[prop_String, _] := unsupportedValueFailure @ prop
 
 findOpeningBracketPosition[positionIndex_Integer, openBracket_String, tokens:{__?validTokenQ}] :=
 	Module[{p = positionIndex},
-		While[tokens[[p, 1]] != openBracket, p++];
+		While[tokenType @ tokens[[p]] != openBracket, p++];
 		p
 	]
 
@@ -3449,7 +3456,7 @@ findClosingBracketPosition[positionIndex_Integer, openBracket_String, closeBrack
 	Module[{p = positionIndex, depth = 1, l = Length[tokens]},
 		p++;
 		While[depth > 0 && p <= l,
-			Switch[tokens[[p ,1]],
+			Switch[tokenType @ tokens[[p]],
 				openBracket,  depth++; p++,
 				closeBracket, depth--; p++,
 				_, p++
@@ -3460,20 +3467,20 @@ findClosingBracketPosition[positionIndex_Integer, openBracket_String, closeBrack
 
 
 Attributes[skipWhitespace] = {HoldFirst};
-skipWhitespace[positionIndex_, length_Integer, tokens_List] := (
+skipWhitespace[positionIndex_, length_Integer, tokens:{__?validTokenQ}] := (
 	positionIndex++;
-	While[positionIndex < length && tokens[[positionIndex, 1]] == "whitespace", positionIndex++])
+	While[positionIndex < length && tokenType @ tokens[[positionIndex]] == " ", positionIndex++])
 
 
 Attributes[consumeFunction] = {HoldFirst};
 consumeFunction[positionIndex_, l_, tokens:{__?validTokenQ}] :=
-	Module[{start = positionIndex, i=1},
-		If[tokens[[positionIndex, 1]] != "function", 
+	Module[{start = positionIndex, i = 1},
+		If[tokenType @ tokens[[positionIndex]] != "function", 
 			$Failed
 			,
 			positionIndex++;
 			While[positionIndex < l && i>0,
-				Switch[normalizeKeyWord @ tokens[[positionIndex, 1]],
+				Switch[normalizeKeyWord @ tokenType @ tokens[[positionIndex]],
 					"function", i++; positionIndex++,
 					")",        i--; If[i==0, Break[], positionIndex++],
 					_,          positionIndex++
@@ -3495,9 +3502,9 @@ processRulesets[s_String] :=
 		l = Length[relevantTokens];
 		
 		(*TODO: handle charset statement *)
-		If[MatchQ[tokenType @ relevantTokens[[pos]], "charset"], skipWhitespace[pos, l, relevantTokens]];
-		If[MatchQ[tokenType @ relevantTokens[[pos]], "whitespace"], skipWhitespace[pos, l, relevantTokens]];
-		While[MatchQ[tokenType @ relevantTokens[[pos]], "import"], 
+		If[tokenType @ relevantTokens[[pos]] == "charset", skipWhitespace[pos, l, relevantTokens]];
+		If[tokenType @ relevantTokens[[pos]] == " ",       skipWhitespace[pos, l, relevantTokens]];
+		While[tokenType @ relevantTokens[[pos]] == "import", 
 			AppendTo[imports, parse["atImportKeyword", tokenizeAtImportKeyword[tokenString @ relevantTokens[[pos]]]]]; 
 			skipWhitespace[pos, l, relevantTokens]
 		];
@@ -3508,7 +3515,7 @@ processRulesets[s_String] :=
 			The last declaration block may not have a closing bracket, so count only open brackets as an upper limit to the number of possible blocks.
 			@keywords cannot be nested in CSS 2.1.
 		*)
-		lRulesets = Count[relevantTokens, {"{", _}];
+		lRulesets = Count[relevantTokens, "{"];
 		rulesets = ConstantArray[0, lRulesets];
 		While[pos < l && i <= lRulesets,
 			(* pos indicates first non-whitespace token *)
@@ -3524,9 +3531,9 @@ processRulesets[s_String] :=
 					blockStopPos  = findClosingBracketPosition[blockStartPos, "{", "}", relevantTokens];
 					rulesets[[i]] = 
 						<|
-							"Selector" -> StringTrim @ StringJoin @ relevantTokens[[pos ;; blockStartPos-1, 2]], 
+							"Selector" -> StringTrim @ StringJoin[tokenString /@ relevantTokens[[pos ;; blockStartPos-1]]], 
 							"Condition" -> StyleData[All, "Printout"],
-							"Block" -> relevantTokens[[blockStartPos+1 ;; If[relevantTokens[[blockStopPos, 1]] == "}", blockStopPos-1, blockStopPos]]]|>;
+							"Block" -> relevantTokens[[blockStartPos+1 ;; If[tokenType @ relevantTokens[[blockStopPos]] == "}", blockStopPos-1, blockStopPos]]]|>;
 					skipWhitespace[blockStopPos, l, relevantTokens]; pos = blockStopPos;
 					i++,
 					
@@ -3554,9 +3561,9 @@ processRulesets[s_String] :=
 							blockStopPos  = findClosingBracketPosition[blockStartPos, "{", "}", relevantTokens];
 							rulesets[[i]] = 
 								<|
-									"Selector" -> StringTrim @ StringJoin @ relevantTokens[[pos ;; blockStartPos-1, 2]], 
+									"Selector" -> StringTrim @ StringJoin[tokenString /@ relevantTokens[[pos ;; blockStartPos-1]]], 
 									"Condition" -> None,
-									"Block" -> relevantTokens[[blockStartPos+1 ;; If[relevantTokens[[blockStopPos, 1]] == "}", blockStopPos-1, blockStopPos]]]|>;
+									"Block" -> relevantTokens[[blockStartPos+1 ;; If[tokenType @ relevantTokens[[blockStopPos]] == "}", blockStopPos-1, blockStopPos]]]|>;
 							skipWhitespace[blockStopPos, l, relevantTokens]; pos = blockStopPos;
 						];
 						i++
@@ -3564,7 +3571,7 @@ processRulesets[s_String] :=
 					skipWhitespace[atBlockStopPos, l, relevantTokens]; pos = atBlockStopPos,
 					
 				(* skip unknown "at rules" including @import *)
-				StringStartsQ[relevantTokens[[blockStartPos-1, 2]], RegularExpression[RE["w"] ~~ "@"]],
+				StringStartsQ[tokenString @ relevantTokens[[blockStartPos-1]], RegularExpression[RE["w"] ~~ "@"]],
 					atBlockStartPos = blockStartPos;
 					atBlockStopPos = findClosingBracketPosition[atBlockStartPos, "{", "}", relevantTokens];
 					skipWhitespace[atBlockStopPos, l, relevantTokens]; pos = atBlockStopPos,
@@ -3575,9 +3582,9 @@ processRulesets[s_String] :=
 					blockStopPos  = findClosingBracketPosition[blockStartPos, "{", "}", relevantTokens];
 					rulesets[[i]] = 
 						<|
-							"Selector" -> StringTrim @ StringJoin @ relevantTokens[[pos ;; blockStartPos-1, 2]], 
+							"Selector" -> StringTrim @ StringJoin[tokenString /@ relevantTokens[[pos ;; blockStartPos-1]]], 
 							"Condition" -> None,
-							"Block" -> relevantTokens[[blockStartPos+1 ;; If[relevantTokens[[blockStopPos, 1]] == "}", blockStopPos-1, blockStopPos]]]|>;
+							"Block" -> relevantTokens[[blockStartPos+1 ;; If[tokenType @ relevantTokens[[blockStopPos]] == "}", blockStopPos-1, blockStopPos]]]|>;
 					skipWhitespace[blockStopPos, l, relevantTokens]; pos = blockStopPos;
 					i++
 			];
@@ -3609,12 +3616,12 @@ processDeclarationBlock[tokens:{__?validTokenQ}] :=
 		pos = 1;
 		l = Length[tokens];
 		i = 1;
-		If[tokenType @ tokens[[pos]] == "whitespace", skipWhitespace[pos, l, tokens]]; (* skip any initial whitespace *)
+		If[tokenType @ tokens[[pos]] == " ", skipWhitespace[pos, l, tokens]]; (* skip any initial whitespace *)
 		(*
 			Each declaration is of the form 'property:value;'. The last declaration may leave off the semicolon.
 			Like we did with parsing blocks, we count the number of colons as the upper limit of the number of declarations.
 		*)
-		lDeclarations = Count[tokens, {":", _}];
+		lDeclarations = Count[tokens, ":"];
 		declarations = ConstantArray[0, lDeclarations];
 		While[pos < l && i <= lDeclarations,
 			If[tokenType @ tokens[[pos]] == "ident",
@@ -3644,7 +3651,7 @@ processDeclarationBlock[tokens:{__?validTokenQ}] :=
 							important = False;
 							valueStopPosition = pos;
 					];
-					While[tokenType @ tokens[[valueStopPosition]] == "whitespace", valueStopPosition--]; (* trim whitespace from the end of the value *)
+					While[tokenType @ tokens[[valueStopPosition]] == " ", valueStopPosition--]; (* trim whitespace from the end of the value *)
 					declarations[[i]] = <|
 						"Important" -> important,
 						"Property" -> normalizeKeyWord @ tokenString @ tokens[[propertyPosition]], 
