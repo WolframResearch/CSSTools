@@ -185,140 +185,73 @@ parseSingleColorHex[prop_String, hexString_String] :=
 
 
 (* RGB *)
-rgbaPatternNN := 
+rgbaPattern := 
 	{
-		{"number", r_}, {"number", g_}, {"number", b_}, {"number", a_}
-	} :> Apply[RGBColor, Append[ToExpression[{r, g, b}]/255, Clip[ToExpression[a], {0, 1}]]]
-rgbaPatternNP := 
+		{v1:"number"|"percentage", _String, r_, _String}, d:Repeated[{"delim", ","}, {0, 1}], 
+		{v1:"number"|"percentage", _String, g_, _String}, d:Repeated[{"delim", ","}, {0, 1}], 
+		{v1:"number"|"percentage", _String, b_, _String}, d:Repeated[{"delim", ","}, {0, 1}], 
+		{v2:"number"|"percentage", _String, a_, _String}
+	} :> Apply[RGBColor, Append[{r, g, b}/If[v1 == "number", 255, 100.], If[v2 == "number", Clip[a, {0, 1}], a/100.]]]
+rgbPattern := 
 	{
-		{"number", r_}, {"number", g_}, {"number", b_}, {"percentage", a_}
-	} :> Apply[RGBColor, Append[ToExpression[{r, g, b}]/255, ToExpression[StringTake[a, ;;-2]]/100.]]
-rgbaPatternPN := 
-	{
-		{"percentage", r_}, {"percentage", g_}, {"percentage", b_}, {"number", a_}
-	} :> Apply[RGBColor, Append[ToExpression[StringTake[{r, g, b}, ;; -2]]/100., Clip[ToExpression[a], {0, 1}]]]
-rgbaPatternPP := 
-	{
-		{"percentage", r_}, {"percentage", g_}, {"percentage", b_}, {"percentage", a_}
-	} :> Apply[RGBColor, ToExpression[StringTake[{r, g, b, a}, ;; -2]]/100.]
-rgbPatternN := 
-	{
-		{"number", r_}, {"number", g_}, {"number", b_}
-	} :> Apply[RGBColor, ToExpression[{r, g, b}]/255]
-rgbPatternP := 
-	{
-		{"percentage", r_}, {"percentage", g_},	{"percentage", b_}
-	} :> Apply[RGBColor, ToExpression[StringTake[{r, g, b}, ;; -2]]/100.]
-	
-(* RGB legacy *)
-rgbaPatternNNL := 
-	{
-		{"number", r_}, {"operator", ","}, {"number", g_}, {"operator", ","}, {"number", b_}, {"operator", ","}, {"number", a_}
-	} :> Apply[RGBColor, Append[ToExpression[{r, g, b}]/255, Clip[ToExpression[a], {0, 1}]]]
-rgbaPatternNPL := 
-	{
-		{"number", r_}, {"operator", ","}, {"number", g_}, {"operator", ","}, {"number", b_}, {"operator", ","}, {"percentage", a_}
-	} :> Apply[RGBColor, Append[ToExpression[{r, g, b}]/255, ToExpression[StringTake[a, ;;-2]]/100.]]
-rgbaPatternPNL := 
-	{
-		{"percentage", r_}, {"operator", ","}, {"percentage", g_}, {"operator", ","}, {"percentage", b_}, {"operator", ","}, {"number", a_}
-	} :> Apply[RGBColor, Append[ToExpression[StringTake[{r, g, b}, ;; -2]]/100., Clip[ToExpression[a], {0, 1}]]]
-rgbaPatternPPL := 
-	{
-		{"percentage", r_}, {"operator", ","}, {"percentage", g_}, {"operator", ","}, {"percentage", b_}, {"operator", ","}, {"percentage", a_}
-	} :> Apply[RGBColor, ToExpression[StringTake[{r, g, b, a}, ;; -2]]/100.]
-rgbPatternNL := 
-	{
-		{"number", r_}, {"operator", ","}, {"number", g_}, {"operator", ","}, {"number", b_}
-	} :> Apply[RGBColor, ToExpression[{r, g, b}]/255]
-rgbPatternPL := 
-	{
-		{"percentage", r_}, {"operator", ","}, {"percentage", g_}, {"operator", ","},	{"percentage", b_}
-	} :> Apply[RGBColor, ToExpression[StringTake[{r, g, b}, ;; -2]]/100.]
-	
-	
+		{v1:"number"|"percentage", _String, r_, _String}, d:Repeated[{"delim", ","}, {0, 1}], 
+		{v1:"number"|"percentage", _String, g_, _String}, d:Repeated[{"delim", ","}, {0, 1}], 
+		{v1:"number"|"percentage", _String, b_, _String}
+	} :> Apply[RGBColor, {r, g, b}/If[v1 == "number", 255, 100.]]
+
+
 (* HSL *)
 HSLtoHSB[h_, s_, l_, a___] := With[{b = (2 * l + s * (1 - Abs[2 * l - 1])) / 2}, If[b == 0, Hue[h, 0, 0, a], Hue[h, 2 * (b - l) / b, b, a]]]
 
 hslaPattern := 
 	{
-		{ang:"angle", h_} | {a:"number", h_}, {"percentage", s_}, {"percentage", l_}, {"number", a_}
-	} :> 
-		HSLtoHSB[
-			ToExpression[If[ang == "angle", First @ StringCases[h, n:RegularExpression[RE["num"]] ~~ RegularExpression[RE["D"] ~~ RE["E"] ~~ RE["G"]] :> n], h]]/360,
-			ToExpression[StringTake[s, ;;-2]]/100,
-			ToExpression[StringTake[l, ;;-2]]/100,
-			Clip[ToExpression[a], {0, 1}]]
+		Alternatives[
+			hAll:{type:"dimension", _String, h_, _String, "deg"|"grad"|"rad"|"turn"},
+			hAll:{type:"number",    _String, h_, _String}], 
+		d:Repeated[{"delim", ","}, {0, 1}], {"percentage", _String, s_, _String}, 
+		d:Repeated[{"delim", ","}, {0, 1}], {"percentage", _String, l_, _String}, 
+		d:Repeated[{"delim", ","}, {0, 1}], {"number",     _String, a_, _String}
+	} :> HSLtoHSB[If[type == "number", h, parseAngle[hAll]]/360, s/100, l/100, Clip[a, {0, 1}]]
 hslPattern := 
 	{
-		{ang:"angle", h_} | {ang:"number", h_}, {"percentage", s_}, {"percentage", l_}
-	} :> 
-		HSLtoHSB[
-			ToExpression[If[ang == "angle", First @ StringCases[h, n:RegularExpression[RE["num"]] ~~ RegularExpression[RE["D"] ~~ RE["E"] ~~ RE["G"]] :> n], h]]/360,
-			ToExpression[StringTake[s, ;;-2]]/100,
-			ToExpression[StringTake[l, ;;-2]]/100]
-
-(* HSL legacy *)
-hslaPatternL := 
-	{
-		{ang:"angle", h_} | {ang:"number", h_}, {"operator", ","}, {"percentage", s_}, {"operator", ","}, {"percentage", l_}, {"operator", ","}, {"number", a_}
-	} :> 
-		HSLtoHSB[
-			ToExpression[If[ang == "angle", First @ StringCases[h, n:RegularExpression[RE["num"]] ~~ RegularExpression[RE["D"] ~~ RE["E"] ~~ RE["G"]] :> n], h]]/360,
-			ToExpression[StringTake[s, ;;-2]]/100,
-			ToExpression[StringTake[l, ;;-2]]/100,
-			Clip[ToExpression[a], {0, 1}]]
-hslPatternL := 
-	{
-		{ang:"angle", h_} | {ang:"number", h_}, {"operator", ","}, {"percentage", s_}, {"operator", ","}, {"percentage", l_}
-	} :> 
-		HSLtoHSB[
-			ToExpression[If[ang == "angle", First @ StringCases[h, n:RegularExpression[RE["num"]] ~~ RegularExpression[RE["D"] ~~ RE["E"] ~~ RE["G"]] :> n], h]]/360,
-			ToExpression[StringTake[s, ;;-2]]/100,
-			ToExpression[StringTake[l, ;;-2]]/100]
+		Alternatives[
+			hAll:{type:"dimension", _String, h_, _String, "deg"|"grad"|"rad"|"turn"},
+			hAll:{type:"number",    _String, h_, _String}], 
+		d:Repeated[{"delim", ","}, {0, 1}], {"percentage", _String, s_, _String}, 
+		d:Repeated[{"delim", ","}, {0, 1}], {"percentage", _String, l_, _String}
+	} :> HSLtoHSB[If[type == "number", h, parseAngle[hAll]]/360, s/100, l/100]
 
 
-parseSingleColorFunction[prop_String, tokens:{{_String, _String}..}] :=
+parseSingleColorFunction[prop_String, tokens:{__?validTokenQ}] :=
 	Module[{relevantTokens},
 		(* relevantTokens drops the function head and closing paren and removes all whitespace tokens *)
 		relevantTokens = DeleteCases[tokens, {"whitespace", _}, {1}][[2 ;; -2]];
 		Which[
 			(* the "a" of rgb function heads is optional *)
-			StringMatchQ[tokens[[1, 2]], RegularExpression[RE["R"] ~~ RE["G"] ~~ RE["B"] ~~ "(" ~~ RE["A"] ~~ "?)" ~~ "\\("]],
+			StringMatchQ[tokenString @ tokens[[1]], RegularExpression[RE["R"] ~~ RE["G"] ~~ RE["B"] ~~ "(" ~~ RE["A"] ~~ "?)" ~~ "\\("]],
 				Which[
-					MatchQ[relevantTokens, First @ rgbaPatternNN],  Replace[relevantTokens, rgbaPatternNN], 
-					MatchQ[relevantTokens, First @ rgbaPatternNP],  Replace[relevantTokens, rgbaPatternNP], 
-					MatchQ[relevantTokens, First @ rgbaPatternPN],  Replace[relevantTokens, rgbaPatternPN], 
-					MatchQ[relevantTokens, First @ rgbaPatternPP],  Replace[relevantTokens, rgbaPatternPP],
-					MatchQ[relevantTokens, First @ rgbPatternN],    Replace[relevantTokens, rgbPatternN], 
-					MatchQ[relevantTokens, First @ rgbPatternP],    Replace[relevantTokens, rgbPatternP], 
-					MatchQ[relevantTokens, First @ rgbPatternNL],   Replace[relevantTokens, rgbPatternNL], 
-					MatchQ[relevantTokens, First @ rgbPatternPL],   Replace[relevantTokens, rgbPatternPL], 
-					MatchQ[relevantTokens, First @ rgbaPatternNNL], Replace[relevantTokens, rgbaPatternNNL], 
-					MatchQ[relevantTokens, First @ rgbaPatternNPL], Replace[relevantTokens, rgbaPatternNPL], 
-					MatchQ[relevantTokens, First @ rgbaPatternPNL], Replace[relevantTokens, rgbaPatternPNL], 
-					MatchQ[relevantTokens, First @ rgbaPatternPPL], Replace[relevantTokens, rgbaPatternPPL],
+					MatchQ[relevantTokens, First @ rgbaPattern], Replace[relevantTokens, rgbaPattern], 
+					MatchQ[relevantTokens, First @ rgbPattern],  Replace[relevantTokens, rgbPattern], 
 					True, unrecognizedValueFailure @ prop 
 				],
 			(* the "a" of hsl function heads is optional *)
-			StringMatchQ[tokens[[1, 2]], RegularExpression[RE["H"] ~~ RE["S"] ~~ RE["L"] ~~ "(" ~~ RE["A"] ~~ "?)" ~~ "\\("]],
+			StringMatchQ[tokenString @ tokens[[1]], RegularExpression[RE["H"] ~~ RE["S"] ~~ RE["L"] ~~ "(" ~~ RE["A"] ~~ "?)" ~~ "\\("]],
 				Which[
-					MatchQ[relevantTokens, First @ hslaPattern],  Replace[relevantTokens, hslaPattern], 
-					MatchQ[relevantTokens, First @ hslaPatternL], Replace[relevantTokens, hslaPatternL], 
-					MatchQ[relevantTokens, First @ hslPattern],   Replace[relevantTokens, hslPattern], 
-					MatchQ[relevantTokens, First @ hslPatternL],  Replace[relevantTokens, hslPatternL], 
+					MatchQ[relevantTokens, First @ hslaPattern], Replace[relevantTokens, hslaPattern], 
+					MatchQ[relevantTokens, First @ hslPattern],  Replace[relevantTokens, hslPattern], 
 					True, unrecognizedValueFailure @ prop 
 				],
-			True, Failure["UnexpectedParse", <|"Message" -> "Unrecognized color function" <> tokens[[1, 2]] <> "."|>]]
+			True, Failure["UnexpectedParse", <|"Message" -> "Unrecognized color function" <> tokens[[1, 2]] <> "."|>]
+		]
 	]
 
 
 (* parse all color types *)
-parseSingleColor[prop_String, tokens:{{_String, _String}..}] := parseSingleColor[prop, tokens] = 
+parseSingleColor[prop_String, tokens:{__?validTokenQ}] := parseSingleColor[prop, tokens] = 
 	Which[
-		Length[tokens] == 1 && MatchQ[tokens[[1, 1]], "ident"],    parseSingleColorKeyWord[prop, tokens[[1, 2]]],
-		Length[tokens] == 1 && MatchQ[tokens[[1, 1]], "hexcolor"], parseSingleColorHex[prop, tokens[[1, 2]]],
-		Length[tokens] > 1  && MatchQ[tokens[[1, 1]], "function"], parseSingleColorFunction[prop, tokens],
+		Length[tokens] == 1 && MatchQ[tokenType @ tokens[[1]], "ident"],    parseSingleColorKeyWord[prop, tokenString @ tokens[[1]]],
+		Length[tokens] == 1 && MatchQ[tokenType @ tokens[[1]], "hexcolor"], parseSingleColorHex[prop, tokenString @ tokens[[1]]],
+		Length[tokens] > 1  && MatchQ[tokenType @ tokens[[1]], "function"], parseSingleColorFunction[prop, tokens],
 		True, unrecognizedValueFailure @ prop
 	]
 
