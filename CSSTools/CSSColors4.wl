@@ -187,15 +187,15 @@ parseSingleColorHex[prop_String, hexString_String] :=
 (* RGB *)
 rgbaPattern := 
 	{
-		{v1:"number"|"percentage", _String, r_, _String}, d:Repeated[{"delim", ","}, {0, 1}], 
-		{v1:"number"|"percentage", _String, g_, _String}, d:Repeated[{"delim", ","}, {0, 1}], 
-		{v1:"number"|"percentage", _String, b_, _String}, d:Repeated[{"delim", ","}, {0, 1}], 
+		{v1:"number"|"percentage", _String, r_, _String}, d:Repeated[",", {0, 1}], 
+		{v1:"number"|"percentage", _String, g_, _String}, d:Repeated[",", {0, 1}], 
+		{v1:"number"|"percentage", _String, b_, _String}, d:Repeated[",", {0, 1}], 
 		{v2:"number"|"percentage", _String, a_, _String}
 	} :> Apply[RGBColor, Append[{r, g, b}/If[v1 == "number", 255, 100.], If[v2 == "number", Clip[a, {0, 1}], a/100.]]]
 rgbPattern := 
 	{
-		{v1:"number"|"percentage", _String, r_, _String}, d:Repeated[{"delim", ","}, {0, 1}], 
-		{v1:"number"|"percentage", _String, g_, _String}, d:Repeated[{"delim", ","}, {0, 1}], 
+		{v1:"number"|"percentage", _String, r_, _String}, d:Repeated[",", {0, 1}], 
+		{v1:"number"|"percentage", _String, g_, _String}, d:Repeated[",", {0, 1}], 
 		{v1:"number"|"percentage", _String, b_, _String}
 	} :> Apply[RGBColor, {r, g, b}/If[v1 == "number", 255, 100.]]
 
@@ -208,17 +208,17 @@ hslaPattern :=
 		Alternatives[
 			hAll:{type:"dimension", _String, h_, _String, "deg"|"grad"|"rad"|"turn"},
 			hAll:{type:"number",    _String, h_, _String}], 
-		d:Repeated[{"delim", ","}, {0, 1}], {"percentage", _String, s_, _String}, 
-		d:Repeated[{"delim", ","}, {0, 1}], {"percentage", _String, l_, _String}, 
-		d:Repeated[{"delim", ","}, {0, 1}], {"number",     _String, a_, _String}
+		d:Repeated[",", {0, 1}], {"percentage", _String, s_, _String}, 
+		d:Repeated[",", {0, 1}], {"percentage", _String, l_, _String}, 
+		d:Repeated[",", {0, 1}], {"number",     _String, a_, _String}
 	} :> HSLtoHSB[If[type == "number", h, parseAngle[hAll]]/360, s/100, l/100, Clip[a, {0, 1}]]
 hslPattern := 
 	{
 		Alternatives[
 			hAll:{type:"dimension", _String, h_, _String, "deg"|"grad"|"rad"|"turn"},
 			hAll:{type:"number",    _String, h_, _String}], 
-		d:Repeated[{"delim", ","}, {0, 1}], {"percentage", _String, s_, _String}, 
-		d:Repeated[{"delim", ","}, {0, 1}], {"percentage", _String, l_, _String}
+		d:Repeated[",", {0, 1}], {"percentage", _String, s_, _String}, 
+		d:Repeated[",", {0, 1}], {"percentage", _String, l_, _String}
 	} :> HSLtoHSB[If[type == "number", h, parseAngle[hAll]]/360, s/100, l/100]
 
 
