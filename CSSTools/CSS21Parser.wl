@@ -238,20 +238,20 @@ RE["badcomment"]  = "(" ~~ RE["badcomment1"] ~~ "|" ~~ RE["badcomment2"] ~~ ")";
 RE["badcomment1"] = "(\\/\\*[^*]*\\*+([^/*][^*]*\\*+)*)"; (* literal asterisks in RE only outside of RE character class [] *)
 RE["badcomment2"] = "(\\/\\*[^*]*(\\*+[^/*][^*]*)*)";
 RE["badstring"]   = "(" ~~ RE["badstring1"] ~~ "|" ~~ RE["badstring2"] ~~ ")";
-RE["badstring1"]  = "(\\\"([^\n\r\f\\\"]|\\\\" ~~ RE["nl"] ~~ "|" ~~ RE["escape"] ~~ ")*\\\\?)"; 
-RE["badstring2"]  = "(\\'([^\n\r\f\\']|\\\\" ~~ RE["nl"] ~~ "|" ~~ RE["escape"] ~~ ")*\\\\?)"; 
+RE["badstring1"]  = "(\\\"([^\n\r\f\\\"]|\\\\" ~~ RE["newline"] ~~ "|" ~~ RE["escape"] ~~ ")*\\\\?)"; 
+RE["badstring2"]  = "(\\'([^\n\r\f\\']|\\\\" ~~ RE["newline"] ~~ "|" ~~ RE["escape"] ~~ ")*\\\\?)"; 
 RE["baduri"]      = "(" ~~ RE["baduri1"] ~~ "|" ~~ RE["baduri2"] ~~ "|" ~~ RE["baduri3"] ~~ ")";
 RE["baduri1"]     = "(" ~~ RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["w"] ~~ "([!#$%&*-\\[\\]-~]|" ~~ RE["nonascii"] ~~ "|" ~~ RE["escape"] ~~ ")*" ~~ RE["w"] ~~ ")"; (* literal ( after url; CharacterRange["*", "~"]*)
 RE["baduri2"]     = "(" ~~ RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["w"] ~~ RE["string"] ~~ RE["w"] ~~ ")";
 RE["baduri3"]     = "(" ~~ RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["w"] ~~ RE["badstring"] ~~ ")";
 RE["comment"]     = "(\\/\\*[^*]*\\*+([^/*][^*]*\\*+)*\\/)";
-RE["h"]           = "([0-9a-fA-F])";
+RE["hex digit"]   = "([0-9a-fA-F])";
 RE["ident"]       = "(((--)|(-?" ~~ RE["nmstart"] ~~ "))" ~~ RE["nmchar"] ~~ "*)";
 RE["integer"]     = "([\\-+]?[0-9]+)"; (* not part of the CSS 2.1 spec, but useful *)
 RE["integerSCI"]  = "([\\-+]?[0-9]+[Ee][\\-+]?[0-9]+)"; (* not part of the CSS 2.1 spec, but useful *)
 RE["escape"]      = "(" ~~ RE["unicode"] ~~ "|\\\\[^\n\r\f0-9a-fA-F])"; 
 RE["name"]        = "(" ~~ RE["nmchar"] ~~ "+)";
-RE["nl"]          = "(\n|\r\n|\r|\f)";
+RE["newline"]     = "(\n|\r\n|\r|\f)";
 RE["nmchar"]      = "([_a-zA-Z0-9\\-]|" ~~ RE["nonascii"] ~~ "|" ~~ RE["escape"] ~~ ")";
 RE["nmstart"]     = "([_a-zA-Z]|" ~~ RE["nonascii"] ~~ "|" ~~ RE["escape"] ~~ ")";
 RE["nonascii"]    = (*FIXME?*) "([^[:ascii:]])";
@@ -259,13 +259,13 @@ RE["num"]         = "(" ~~ RE["number"] ~~ "|" ~~ RE["integer"] ~~ ")";       (*
 RE["numSCI"]      = "(" ~~ RE["numberSCI"] ~~ "|" ~~ RE["integerSCI"] ~~ ")"; (* pattern match against reals before integers *)
 RE["number"]      = "([\\-+]?[0-9]*\\.[0-9]+)"; (* literal dot *) (* not part of the CSS 2.1 spec, but useful *)
 RE["numberSCI"]   = "([\\-+]?[0-9]*\\.[0-9]+[Ee][\\-+]?[0-9]+)"; (* not part of the CSS 2.1 spec, but useful *)
-RE["s"]           = "([ \t\r\n\f]+)";
+RE["whitespace"]  = "( |\t|" ~~ RE["newline"] ~~ ")";
 RE["string"]      = "(" ~~ RE["string1"] ~~ "|" ~~ RE["string2"] ~~ ")";
-RE["string1"]     = "(\\\"([^\n\r\f\\\"]|\\\\" ~~ RE["nl"] ~~ "|" ~~ RE["escape"] ~~ ")*\\\")"; (* [] contains escaped double quote *)
-RE["string2"]     = "(\\'([^\n\r\f\\']|\\\\" ~~ RE["nl"] ~~ "|" ~~ RE["escape"] ~~ ")*\\')"; (* [] contains escaped single quote *)
-RE["unicode"]     = "(\\\\" ~~ RE["h"] ~~ "{1,6}(\r\n|[ \n\r\t\f])?)";
+RE["string1"]     = "(\\\"([^\n\r\f\\\"]|\\\\" ~~ RE["newline"] ~~ "|" ~~ RE["escape"] ~~ ")*\\\")"; (* [] contains escaped double quote *)
+RE["string2"]     = "(\\'([^\n\r\f\\']|\\\\" ~~ RE["newline"] ~~ "|" ~~ RE["escape"] ~~ ")*\\')"; (* [] contains escaped single quote *)
+RE["unicode"]     = "(\\\\" ~~ RE["hex digit"] ~~ "{1,6}(\r\n|[ \n\r\t\f])?)";
 RE["url"]         = "(([!#$%&*-~]|" ~~ RE["nonascii"] ~~ "|" ~~ RE["escape"] ~~ ")*)";
-RE["w"]           = "(" ~~ RE["s"] ~~ "?)";
+RE["w"]           = "(" ~~ RE["whitespace"] ~~ "?)";
 
 (* 
 	Strictly following the specification leaves out some of the following letter patterns. 
@@ -304,6 +304,8 @@ normalizeKeyWord[s_String] := StringReplace[s, characterNormalizationRules]
 (* ::Subsection::Closed:: *)
 (*Tokens (alphabetical)*)
 
+
+T["AT_KEYWORD"] = "(@" ~~ T["IDENT"] ~~ ")";
 
 T["ANGLE"] = 
 	StringExpression[
@@ -351,8 +353,8 @@ T["NUMBER"] = RE["num"];
 T["PAGE_SYM"]   = "(@" ~~ RE["P"] ~~ RE["A"] ~~ RE["G"] ~~ RE["E"] ~~ ")";
 T["PERCENTAGE"] = "(" ~~ RE["num"] ~~ "%)";
 
-T["S"]      = RE["s"];
-T["S*"]     = "(" ~~ RE["s"] ~~ "*" ~~ ")"; (* this is not in the spec, but makes productions cleaner *)
+T["S"]      = RE["whitespace"];
+T["S*"]     = "(" ~~ RE["whitespace"] ~~ "*" ~~ ")"; (* this is not in the spec, but makes productions cleaner *)
 T["STRING"] = RE["string"];
 
 T["TIME"] = "((" ~~ RE["num"] ~~ RE["M"] ~~ RE["S"] ~~ ")|(" ~~ RE["num"] ~~ RE["H"] ~~ RE["Z"] ~~ "))";
@@ -362,6 +364,8 @@ T["URI"] =
 	StringExpression[
 		"(" ~~ RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["w"] ~~ RE["string"] ~~ RE["w"] ~~ "\\)" ~~ ")" ~~ "|",
 		"(" ~~ RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["w"] ~~ RE["url"] ~~ RE["w"] ~~ "\\)" ~~ ")"];
+		
+T["WHITESPACE"] = "(" ~~ RE["whitespace"] ~~ "+)";
 
 
 (* ::Subsection::Closed:: *)
@@ -422,7 +426,7 @@ T["FUNCTION"] ~~ T["S*"] ~~
 (*Tokenize File*)
 
 
-validTokenQ[x_] := MatchQ[x, _?StringQ | {_?StringQ, Repeated[_?NumberQ | _?StringQ]}]
+validTokenQ[x_] := MatchQ[x, _?StringQ | {_?StringQ, __}]
  
 tokenType[x_String]    := x
 tokenType[x_List]      := x[[1]] (* assumes already valid token as input *)
@@ -440,17 +444,98 @@ tokenizeFirstPass[x_String] :=
 			{
 				s:RegularExpression @ RE["comment"]    :> Nothing,
 				s:RegularExpression @ RE["badcomment"] :> Nothing,
-				s:RegularExpression @ P["charset"]     :> {"charset",   s},
-				s:RegularExpression @ P["import"]      :> {"import",    s},
+				s:RegularExpression @ T["AT_KEYWORD"]  :> {"at-keyword", normalizeKeyWord @ StringDrop[s, 1]},
+				s:RegularExpression @ T["FUNCTION"]      :> {"function", normalizeKeyWord @ StringDrop[s, -1]},
+				(*s:RegularExpression @ P["charset"]     :> {"charset",   s},*)
+				(*s:RegularExpression @ P["import"]      :> {"import",    s},*)
 				(*s:RegularExpression @ T["MEDIA_SYM"] :> {"@media", s}, (* we don't parse media queries, but we recognize the symbol *)*)
 				s:RegularExpression @ T["URI"]         :> {"uri",       s},
 				s:RegularExpression @ T["BAD_URI"]     :> {"baduri",    s},
-				s:RegularExpression @ T["STRING"]      :> {"string",    s},
+				s:RegularExpression @ T["STRING"]      :> {"string",    StringTake[s, {2, -2}]},
 				s:RegularExpression @ T["BAD_STRING"]  :> {"badstring", s},
-				"{" -> "{", 
-				"}" -> "}"}],
-		s_String /; StringLength[s] > 1 :> {"other", s},
+				
+				s:Alternatives[";", ":",  ",", "/", "(", ")", "{", "}", "[", "]"] :> s}],
+		{
+			s_String /; StringLength[s] > 1 :> {"other", s},
+			"" :> Nothing},
 		{1}]
+		
+
+reverseBracket["{"] := "}"
+reverseBracket["["] := "]"
+reverseBracket["("] := ")"
+reverseBracket["function"] := ")"
+
+nestTokens[tokens:{__?validTokenQ}] :=
+	Module[{pos = 1, l = Length[tokens], depth = 0, brackets, t = tokens},
+		(* The number of nestings is no larger than the number of open brackets *)
+		brackets = ConstantArray[0, Count[tokens, "{" | "[" | "(" | {"function", _}]];
+		
+		(* 
+			The main nesting algorithm tracks the depth of the nesting, increasing with every open bracket.
+			The location and type of the open brackets are tracked.
+			Every closing bracket checks that it belongs to a matching open bracket;
+			if it does not match, then the bracket is in error; 
+			else it is a match; 
+				group all t into a "block" token with appropriate label at the open bracket position;
+				mark tokens for removal that are not at the open bracket positions since they are now in the block token
+			This algorithm scans the token list only once.*)
+		While[pos < l,
+			Switch[t[[pos]],
+				"{" | "[" | "(", depth++; brackets[[depth]] = {t[[pos]], pos},
+				{"function", _}, depth++; brackets[[depth]] = {"function", pos},
+				"}",
+					If[depth == 0 || brackets[[depth, 1]] != "{",
+						t[[pos]] = {"error", t[[pos]]}
+						,
+						t[[brackets[[depth, 2]]]] = Prepend[t[[brackets[[depth, 2]] + 1 ;; pos - 1]], "{}"];
+						Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
+						brackets[[depth]] = 0;
+						depth--],
+				")", 
+					If[depth == 0 || !MatchQ[brackets[[depth, 1]], "function"|"("], 
+						t[[pos]] = {"error", t[[pos]]}
+						,
+						t[[brackets[[depth, 2]]]] = 
+							Prepend[
+								t[[brackets[[depth, 2]] + 1 ;; pos - 1]], 
+								If[brackets[[depth, 1]] == "(", 
+									"()"
+									,
+									Unevaluated[Sequence @@ t[[brackets[[depth, 2]]]]]]];
+						Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
+						brackets[[depth]] = 0;
+						depth--], 
+				"]",  
+					If[depth == 0 || brackets[[depth, 1]] != "[", 
+						t[[pos]] = {"error", t[[pos]]}
+						, 
+						t[[brackets[[depth, 2]]]] = Prepend[t[[brackets[[depth, 2]] + 1 ;; pos - 1]], "[]"];
+						Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
+						brackets[[depth]] = 0;
+						depth--], 
+				_, Null];
+			pos++];
+		
+		(* 
+			CSS allows open brackets a without matching closing bracket.
+			Any remaining open brackets are closed with an assumed matching bracket at the very end.*)
+		While[depth > 0,
+			t[[brackets[[depth, 2]]]] = 
+				Prepend[
+					t[[brackets[[depth, 2]] + 1 ;; ]], 
+					Switch[brackets[[depth, 1]], 
+						"{", "{}", 
+						"(", "()", 
+						"function", Unevaluated[Sequence @@ t[[brackets[[depth, 2]]]]],
+						"[", "[]"]];
+			Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
+			brackets[[depth]] = 0;
+			depth--];
+		
+		(* remove all tokens that were marked for removal *)	
+		DeleteCases[t, {"error", "REMOVE"}, Infinity]
+	]
 
 
 (* ::Subsection::Closed:: *)
@@ -514,9 +599,9 @@ tokenizeDeclaration[x_String] :=
 	Replace[
 		StringSplit[x, 
 			{
-				s:RegularExpression @ T["STRING"]        :> {"string", s},
+				s:RegularExpression @ T["STRING"]        :> {"string", StringTake[s, {2, -2}]},
 				s:RegularExpression @ T["URI"]           :> {"uri", s},
-				s:RegularExpression @ T["FUNCTION"]      :> {"function", s},
+				s:RegularExpression @ T["FUNCTION"]      :> {"function", StringDrop[s, -1]},
 				s:RegularExpression @ T["UNICODE-RANGE"] :> {"unicode-range", s},
 				s:RegularExpression @ T["IDENT"]         :> {"ident", s},
 				s:RegularExpression @ P["hexcolor"]      :> {"hexcolor", StringTrim @ s},
@@ -530,11 +615,8 @@ tokenizeDeclaration[x_String] :=
 				s:RegularExpression @ T["DIMENSION"]     :> Flatten @ {"dimension",  tokenizeDimension[s]},
 				s:RegularExpression @ T["NUMBER"]        :> Flatten @ {"number",     tokenizeNumber[s]},
 				s:RegularExpression @ T["IMPORTANT_SYM"] :> {"important", s},
-				":" -> ":", 
-				";" -> ";",
-				"," -> ",", 
-				"/" -> "/", 
-				")" -> ")",
+				
+				s:Alternatives[":", ":",  ",", "/", "(", ")"] :> s, 
 				s:Whitespace :> " "}],
 		{	
 			s_String /; StringMatchQ[s, ""] -> Nothing,
@@ -3496,9 +3578,28 @@ consumeFunction[positionIndex_, l_, tokens:{__?validTokenQ}] :=
 
 
 processRulesets[s_String] :=
+	Module[{pos, l, tokens},
+			tokens = nestTokens @ tokenizeFirstPass @ s;
+			pos = 1; l = Length[tokens];
+						
+			(* check for @charset rule *)
+			skipWhitespace[pos, l, tokens];
+			If[MatchQ[tokens[[pos ;; pos + 3]], {{"at-keyword", "charset"}, " ", {"string", _}, ";"}],
+				pos = pos + 4
+				,
+				(* invalid @charset *)
+				While[tokenType @ tokens[[pos]] != ";", pos++]
+			]; 
+			
+			(* check for @import rules *)
+			
+	]
+	
+
+(*processRulesets[s_String] :=
 	Module[{i = 1, pos = 1, blockStartPos, blockStopPos, atBlockStartPos, atBlockStopPos, l, lRulesets, relevantTokens, rulesets, imports={}},
 	
-		relevantTokens = tokenizeFirstPass[s]; (* identifies curly-braces, strings, URIs, @import, @charset. Removes comments. *)
+		relevantTokens = nestTokens @ tokenizeFirstPass[s]; (* identifies curly-braces, strings, URIs, @import, @charset. Removes comments. *)
 		l = Length[relevantTokens];
 		
 		(*TODO: handle charset statement *)
@@ -3591,7 +3692,7 @@ processRulesets[s_String] :=
 		];
 		(* remove possible excess blocks *)
 		Join[imports, DeleteCases[rulesets, 0, {1}]]
-	]
+	]*)
 
 
 (* ::Subsection::Closed:: *)
