@@ -234,22 +234,17 @@ Select[Flatten[table[[5, 1]]], StringEndsQ[#, "()"]&]
 *)
 
 (* The following regular expressions are not in the spec, but useful for further definitions *)
-RE["identPrefix"] = "((--)|(-?))";     (* -- is from CSS Variables module *)    
-RE["identStart"]  = "(([_a-zA-Z]|[^[:ascii:]])|" ~~ RE["escape"] ~~ ")";        
+RE["identStart"]  = "((--)|(-?(([_a-zA-Z]|[^[:ascii:]])|" ~~ RE["escape"] ~~ ")))";    (* -- is from CSS Variables module *)
 RE["identBody"]   = "((([_a-zA-Z0-9\\-]|[^[:ascii:]])|" ~~ RE["escape"] ~~ ")*)";  
+RE["integerSCI"]  = "([+\\-]?[0-9]+[Ee][+\\-]?[0-9]+)"; 
+RE["numberSCI"]   = "([+\\-]?[0-9]*\\.[0-9]+[Ee][+\\-]?[0-9]+)";
+RE["numSCI"]      = "(" ~~ RE["numberSCI"] ~~ "|" ~~ RE["integerSCI"] ~~ ")"; (* pattern match against reals before integers *)
+RE["integer"]     = "([\\-+]?[0-9]+)";
+RE["number"]      = "([+\\-]?[0-9]*\\.[0-9]+)"; 
+RE["num"]         = "(" ~~ RE["number"] ~~ "|" ~~ RE["integer"] ~~ ")";
 RE["string1"]     = "(\"([^\n\r\f\"\\\\]|(\\\\" ~~ RE["newline"] ~~ ")|" ~~ RE["escape"] ~~ ")*\")"; 
 RE["string2"]     = "('([^\n\r\f'\\\\]|(\\\\" ~~ RE["newline"] ~~ ")|" ~~ RE["escape"] ~~ ")*')";    
-RE["num-sign"]    = "([+\\-]?)";                                
-RE["num-body"]    = "(([0-9]+\\.[0-9]+)|(\\.[0-9]+)|([0-9]+))"; 
-RE["num-exp"]     = "(([eE]([+\\-]?)[0-9]+)?)";
 RE["uniRange"]    = "(" ~~ RE["hex digit"] ~~ "{1,6}-" ~~ RE["hex digit"] ~~ "{1,6})";
-RE["uni6?"]       = "(\\?\\?\\?\\?\\?\\?)";
-RE["uni5?"]       = "([0-9a-fA-F]{1,1}\\?\\?\\?\\?\\?)";
-RE["uni4?"]       = "([0-9a-fA-F]{2,2}\\?\\?\\?\\?)";
-RE["uni3?"]       = "([0-9a-fA-F]{3,3}\\?\\?\\?)";
-RE["uni2?"]       = "([0-9a-fA-F]{4,4}\\?\\?)";
-RE["uni1?"]       = "([0-9a-fA-F]{5,5}\\?)";
-RE["uni?"]        = "(" ~~ RE["uni6?"] ~~ "|" ~~ RE["uni5?"] ~~ "|" ~~ RE["uni4?"] ~~ "|" ~~ RE["uni3?"] ~~ "|" ~~ RE["uni2?"] ~~ "|" ~~ RE["uni1?"] ~~ ")";
 RE["uni"]         = "([0-9a-fA-F]{1,6})";
 RE["urlhead"]     = RE["U"] ~~ RE["R"] ~~ RE["L"] ~~ "\\(" ~~ RE["ws*"];
 RE["urlbody"]     = "(((" ~~ RE["url-unquoted"] ~~ "|" ~~ RE["string-token"] ~~ ")" ~~ RE["ws*"] ~~ ")?)";
@@ -261,19 +256,22 @@ RE["whitespace"]   = "( |\t|" ~~ RE["newline"] ~~ ")";
 RE["hex digit"]    = "([0-9a-fA-F])";
 RE["escape"]       = "(\\\\((" ~~ RE["hex digit"] ~~ "{1,6}" ~~ RE["whitespace"] ~~ "?)|([^\n\r\f0-9a-fA-F])))";
 RE["ws*"]          = "(" ~~ RE["whitespace-token"] ~~ "*)";
-RE["url-unquoted"] = "((([^\"'()\\\\]|" ~~ RE["whitespace"] ~~ ")|" ~~ RE["escape"] ~~ ")+)"; 
+RE["url-unquoted"] = "(([^\"'()\n\f\r\t \\\\]|" ~~ RE["escape"] ~~ ")+)"; 
 
+(* 
+	The following regular expression tokens are in the spec;
+	The number-token is not used because of confusion between dimensions and scientific notation *)
 RE["whitespace-token"]      = "(" ~~ RE["whitespace"] ~~ "+)";
-RE["ident-token"]           = "(" ~~ RE["identPrefix"] ~~ RE["identStart"] ~~ RE["identBody"] ~~ ")";
+RE["ident-token"]           = "(" ~~ RE["identStart"] ~~ RE["identBody"] ~~ ")";
 RE["function-token"]        = "(" ~~ RE["ident-token"] ~~ "\\()";
 RE["at-keyword-token"]      = "(@" ~~ RE["ident-token"] ~~ ")";
 RE["hash-token"]            = "(#" ~~ "(([_a-zA-Z0-9\\-]|[^[:ascii:]])|" ~~ RE["escape"] ~~ ")+)";
 RE["string-token"]          = "(" ~~ RE["string1"] ~~ "|" ~~ RE["string2"] ~~ ")";
 RE["url-token"]             = "(" ~~ RE["urlhead"] ~~ RE["urlbody"] ~~ "\\))";
-RE["number-token"]          = "(" ~~ RE["num-sign"] ~~ RE["num-body"] ~~ RE["num-exp"] ~~ ")";
-RE["dimension-token"]       = "(" ~~ RE["number-token"] ~~ RE["ident-token"] ~~ ")";
-RE["percentage-token"]      = "(" ~~ RE["number-token"] ~~ "%)";
-RE["unicode-range-token"]   = "([uU]\\+" ~~ "(" ~~ RE["uniRange"] ~~ "|" ~~ RE["uni?"] ~~ "|" ~~ RE["uni"] ~~ ")" ~~ ")";
+(*RE["number-token"]          = "(..........)";*)
+RE["dimension-token"]       = "(" ~~ RE["num"] ~~ RE["ident-token"] ~~ ")";
+RE["percentage-token"]      = "(" ~~ RE["num"] ~~ "%)";
+RE["unicode-range-token"]   = "([uU]\\+" ~~ "(" ~~ RE["uniRange"] ~~ "|([a-fA-F0-9]*[\\?]+)|" ~~ RE["uni"] ~~ ")" ~~ ")";
 RE["include-match-token"]   = "~=";
 RE["dash-match-token"]      = "\\|=";
 RE["prefix-match-token"]    = "\\^=";
@@ -396,15 +394,22 @@ tokenizeAll[x_String] :=
 			{
 				s:RegularExpression @ RE["comment"]             :> Nothing,
 				s:RegularExpression @ RE["at-keyword-token"]    :> {"at-keyword", normalizeKeyWord @ StringDrop[s, 1]},
-				s:RegularExpression @ RE["url-token"]           :> {"uri", s},
+				s:RegularExpression @ RE["url-token"]           :> {"url", s},
+				s:RegularExpression @ RE["urlhead"]             :> {"urlhead", ""},
 				s:RegularExpression @ RE["function-token"]      :> {"function", normalizeKeyWord @ StringDrop[s, -1]},
 				s:RegularExpression @ RE["string-token"]        :> {"string", StringTake[s, {2, -2}]},
 				s:RegularExpression @ RE["hash-token"]          :> {"hash", StringDrop[s, 1]},
-				s:RegularExpression @ RE["unicode-range-token"] :> {"unicode-range", s},
+				s:RegularExpression @ RE["unicode-range-token"] :> Flatten @ {"unicode-range", calculateUnicodeRange @ s},
 				s:RegularExpression @ RE["ident-token"]         :> {"ident", s},
-				s:RegularExpression @ RE["percentage-token"]    :> Flatten @ {"percentage", tokenizePercentage[s]},
-				s:RegularExpression @ RE["dimension-token"]     :> Flatten @ {"dimension",  tokenizeDimension[s]},
-				s:RegularExpression @ RE["number-token"]        :> Flatten @ {"number",     tokenizeNumber[s]},
+				
+				(* scientific notation is tricky; it can look like a dimension but can also be part of a dimension *)
+				num:RegularExpression[RE["numSCI"]] ~~ "%" :> Flatten @ {"percentage", tokenizeNumber @ num},
+				num:RegularExpression[RE["numSCI"]] ~~ unit:RegularExpression[RE["ident-token"]] :> Flatten @ {"dimension", tokenizeNumber[num], normalizeKeyWord @ unit},
+				num:RegularExpression[RE["numSCI"]] :> Flatten @ {"number", tokenizeNumber @ num},
+								
+				s:RegularExpression @ RE["percentage-token"]    :> Flatten @ {"percentage", tokenizePercentage @ s},
+				s:RegularExpression @ RE["dimension-token"]     :> Flatten @ {"dimension",  tokenizeDimension @ s},
+				s:RegularExpression @ RE["num"]                 :> Flatten @ {"number",     tokenizeNumber @ s},
 				
 				s:Alternatives[";", ":", ",", "(", ")", "{", "}", "[", "]", "~=", "|=", "^=", "$=", "*=", "||", "<!--", "-->", "/"] :> s,
 				s:Whitespace :> " "}],
@@ -413,15 +418,11 @@ tokenizeAll[x_String] :=
 			"" :> Nothing},
 		{1}]
 
-reverseBracket["{"] := "}"
-reverseBracket["["] := "]"
-reverseBracket["("] := ")"
-reverseBracket["function"] := ")"
 
 nestTokens[tokens:{__?validTokenQ}] :=
-	Module[{pos = 1, l = Length[tokens], depth = 0, brackets, t = tokens},
+	Module[{pos = 1, l = Length[tokens], depth = 0, brackets, t = tokens, inURL = False},
 		(* The number of nestings is no larger than the number of open brackets *)
-		brackets = ConstantArray[0, Count[tokens, "{" | "[" | "(" | {"function", _}]];
+		brackets = ConstantArray[0, Count[tokens, "{" | "[" | "(" | {"function", _} | {"urlhead", _}]];
 		
 		(* 
 			The main nesting algorithm tracks the depth of the nesting, increasing with every open bracket.
@@ -431,13 +432,17 @@ nestTokens[tokens:{__?validTokenQ}] :=
 			else it is a match; 
 				group all t into a "block" token with appropriate label at the open bracket position;
 				mark tokens for removal that are not at the open bracket positions since they are now in the block token
-			This algorithm scans the token list only once.*)
+			This algorithm scans the token list only once.
+			
+			URL heads are the exception to the nesting. 
+			While in a URL the depth cannot increase further until a closing paren is found.*)
 		While[pos < l,
 			Switch[t[[pos]],
-				"{" | "[" | "(", depth++; brackets[[depth]] = {t[[pos]], pos},
-				{"function", _}, depth++; brackets[[depth]] = {"function", pos},
+				"{" | "[" | "(", If[!inURL, depth++; brackets[[depth]] = {t[[pos]], pos}],
+				{"urlhead", _}, depth++; inURL = True; brackets[[depth]] = {t[[pos, 1]], pos},
+				{"function", _}, If[!inURL, depth++; brackets[[depth]] = {t[[pos, 1]], pos}],
 				"}",
-					If[depth == 0 || brackets[[depth, 1]] != "{",
+					If[!inURL && (depth == 0 || brackets[[depth, 1]] != "{"),
 						t[[pos]] = {"error", t[[pos]]}
 						,
 						t[[brackets[[depth, 2]]]] = Prepend[t[[brackets[[depth, 2]] + 1 ;; pos - 1]], "{}"];
@@ -445,21 +450,37 @@ nestTokens[tokens:{__?validTokenQ}] :=
 						brackets[[depth]] = 0;
 						depth--],
 				")", 
-					If[depth == 0 || !MatchQ[brackets[[depth, 1]], "function"|"("], 
-						t[[pos]] = {"error", t[[pos]]}
+					If[inURL, 
+						(*TODO close URL *)inURL = False;
+						If[depth == 0 || !MatchQ[brackets[[depth, 1]], "urlhead"], 
+							t[[pos]] = {"error", t[[pos]]}
+							,
+							t[[brackets[[depth, 2]]]] = 
+								Join[
+									If[brackets[[depth, 1]] == "(", 
+										{"()"}
+										,
+										t[[brackets[[depth, 2]]]]],
+									t[[brackets[[depth, 2]] + 1 ;; pos - 1]]];
+							Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
+							brackets[[depth]] = 0;
+							depth--]
 						,
-						t[[brackets[[depth, 2]]]] = 
-							Join[
-								If[brackets[[depth, 1]] == "(", 
-									{"()"}
-									,
-									t[[brackets[[depth, 2]]]]],
-								t[[brackets[[depth, 2]] + 1 ;; pos - 1]]];
-						Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
-						brackets[[depth]] = 0;
-						depth--], 
+						If[depth == 0 || !MatchQ[brackets[[depth, 1]], "function"|"("], 
+							t[[pos]] = {"error", t[[pos]]}
+							,
+							t[[brackets[[depth, 2]]]] = 
+								Join[
+									If[brackets[[depth, 1]] == "(", 
+										{"()"}
+										,
+										t[[brackets[[depth, 2]]]]],
+									t[[brackets[[depth, 2]] + 1 ;; pos - 1]]];
+							Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
+							brackets[[depth]] = 0;
+							depth--]], 
 				"]",  
-					If[depth == 0 || brackets[[depth, 1]] != "[", 
+					If[!inURL && (depth == 0 || brackets[[depth, 1]] != "["), 
 						t[[pos]] = {"error", t[[pos]]}
 						, 
 						t[[brackets[[depth, 2]]]] = Prepend[t[[brackets[[depth, 2]] + 1 ;; pos - 1]], "[]"];
@@ -478,7 +499,7 @@ nestTokens[tokens:{__?validTokenQ}] :=
 					Switch[brackets[[depth, 1]], 
 						"{", {"{}"}, 
 						"(", {"()"}, 
-						"function", t[[brackets[[depth, 2]]]],
+						"function"|"urlhead", t[[brackets[[depth, 2]]]],
 						"[", {"[]"}],
 					t[[brackets[[depth, 2]] + 1 ;; ]]];
 			Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
@@ -581,6 +602,23 @@ tokenizeDimension[x_String] :=  StringSplit[x, num:RegularExpression[RE["number-
 
 tokenizeNumber[x_String] := (* cache the Interpreter calls *)
 	tokenizeNumber[x] = If[StringMatchQ[x, RegularExpression["[0-9]+"]], {x, Interpreter["Integer"][x], "integer"}, {x, Interpreter["Number"][x], "number"}]
+	
+	
+fromHexToBase10[x_String] := 
+	FromDigits[
+		ToExpression @ 
+			Replace[
+				StringCases[x, s:RegularExpression["[0-9a-fA-F]"] :> s], 
+				{"a"|"A" -> 10, "b"|"B" -> 11, "c"|"C" -> 12, "d"|"D" -> 13, "e"|"E" -> 14, "f"|"F" -> 15}, 
+				{1}], 
+		16]
+calculateUnicodeRange[x_String] :=
+	StringCases[x,
+		{
+			s1:RegularExpression["[a-fA-F0-9]{1,6}"] ~~ "-" ~~ s2:RegularExpression["[a-fA-F0-9]{1,6}"] :> {fromHexToBase10 @ s1, fromHexToBase10 @ s2},
+			s:RegularExpression["[a-fA-F0-9]{0,6}[\\?]{1,6}"] :> {fromHexToBase10 @ StringReplace[s, "?" -> "0"], fromHexToBase10 @ StringReplace[s, "?" -> "F"]},
+			s:RegularExpression["[a-fA-F0-9]{1,6}"] :> {fromHexToBase10 @ s, fromHexToBase10 @ s}
+		}]
 			
 
 
