@@ -325,68 +325,12 @@ validTokenQ[x_] := MatchQ[x, _?StringQ | {_?StringQ, __}]
 tokenType[x_String]    := x
 tokenType[x_List]      := x[[1]] (* assumes already valid token as input *)
 tokenString[x_List]    := x[[2]] (* assumes already valid token as input *)
+tokenString[x_String]  := x
 tokenValue[x_List]     := x[[3]] (* assumes already valid number or dimension token as input *)
 tokenValueType[x_List] := x[[4]] (* assumes already valid number or dimension token as input *)
 
 dimensionUnit[x_List]  := x[[5]] (* assumes already valid dimension token as input *)
-  
 
-(*Identify @charset, @import, and rulesets (selector + block declarations)*)
-(*tokenizeFirstPass[x_String] := 
-	Replace[
-		StringSplit[x, 
-			{
-				s:RegularExpression @ RE["comment"]    :> Nothing,
-				s:RegularExpression @ RE["badcomment"] :> Nothing,
-				s:RegularExpression @ T["AT_KEYWORD"]  :> {"at-keyword", normalizeKeyWord @ StringDrop[s, 1]},
-				s:RegularExpression @ T["FUNCTION"]      :> {"function", normalizeKeyWord @ StringDrop[s, -1]},
-				(*s:RegularExpression @ P["charset"]     :> {"charset",   s},*)
-				(*s:RegularExpression @ P["import"]      :> {"import",    s},*)
-				(*s:RegularExpression @ T["MEDIA_SYM"] :> {"@media", s}, (* we don't parse media queries, but we recognize the symbol *)*)
-				s:RegularExpression @ T["URI"]         :> {"uri",       s},
-				s:RegularExpression @ T["BAD_URI"]     :> {"baduri",    s},
-				s:RegularExpression @ T["STRING"]      :> {"string",    StringTake[s, {2, -2}]},
-				s:RegularExpression @ T["BAD_STRING"]  :> {"badstring", s},
-				
-				s:Alternatives[";", ":",  ",", "/", "(", ")", "{", "}", "[", "]"] :> s}],
-		{
-			s_String /; StringLength[s] > 1 :> {"other", s},
-			"" :> Nothing},
-		{1}]*)
-
-tokenizeFirstPass[x_String] := 
-	Replace[
-		StringSplit[x, 
-			{
-				s:RegularExpression @ RE["comment"]          :> Nothing,
-				s:RegularExpression @ RE["at-keyword-token"] :> {"at-keyword", normalizeKeyWord @ StringDrop[s, 1]},
-				s:RegularExpression @ RE["url-token"]        :> {"uri", s},
-				s:RegularExpression @ RE["function-token"]   :> {"function", normalizeKeyWord @ StringDrop[s, -1]},
-				s:RegularExpression @ RE["string-token"]     :> {"string", StringTake[s, {2, -2}]},
-				s:RegularExpression @ RE["hash-token"]       :> {"hash", StringDrop[s, 1]},
-				
-				s:Alternatives[";", ":", ",", "(", ")", "{", "}", "[", "]"] :> s}],
-		{
-			s_String /; StringLength[s] > 1 :> {"other", s},
-			"" :> Nothing},
-		{1}]
-		
-tokenize2[x_String] := 
-	Replace[
-		StringSplit[x, 
-			{
-				s:RegularExpression @ RE["unicode-range-token"] :> {"unicode-range", s},
-				s:RegularExpression @ RE["percentage-token"]    :> Flatten @ {"percentage", tokenizePercentage[s]},
-				s:RegularExpression @ RE["dimension-token"]     :> Flatten @ {"dimension",  tokenizeDimension[s]},
-				s:RegularExpression @ RE["number-token"]        :> Flatten @ {"number",     tokenizeNumber[s]},
-				s:RegularExpression @ RE["ident-token"]         :> {"ident", s},
-				
-				s:Alternatives["~=", "|=", "^=", "$=", "*=", "||", "<!--", "-->", "/"] :> s, 
-				s:Whitespace :> " "}],
-		{	
-			s_String /; StringMatchQ[s, ""] -> Nothing,
-			s_String /; StringLength[s] > 1 :> {"other", s}},
-		{1}]
 		
 tokenizeAll[x_String] := 
 	Replace[
@@ -394,11 +338,11 @@ tokenizeAll[x_String] :=
 			{
 				s:RegularExpression @ RE["comment"]             :> Nothing,
 				s:RegularExpression @ RE["at-keyword-token"]    :> {"at-keyword", normalizeKeyWord @ StringDrop[s, 1]},
-				s:RegularExpression @ RE["url-token"]           :> {"url", s},
+				s:RegularExpression @ RE["url-token"]           :> {"url", stripURL @ s},
 				s:RegularExpression @ RE["urlhead"]             :> {"urlhead", ""},
-				s:RegularExpression @ RE["function-token"]      :> {"function", normalizeKeyWord @ StringDrop[s, -1]},
 				s:RegularExpression @ RE["string-token"]        :> {"string", StringTake[s, {2, -2}]},
-				s:RegularExpression @ RE["hash-token"]          :> {"hash", StringDrop[s, 1]},
+				s:RegularExpression @ RE["function-token"]      :> {"function", normalizeKeyWord @ StringDrop[s, -1]},
+				s:RegularExpression @ RE["hash-token"]          :> Flatten @ {"hash", idHash @ StringDrop[s, 1]},
 				s:RegularExpression @ RE["unicode-range-token"] :> Flatten @ {"unicode-range", calculateUnicodeRange @ s},
 				s:RegularExpression @ RE["ident-token"]         :> {"ident", s},
 				
@@ -411,103 +355,214 @@ tokenizeAll[x_String] :=
 				s:RegularExpression @ RE["dimension-token"]     :> Flatten @ {"dimension",  tokenizeDimension @ s},
 				s:RegularExpression @ RE["num"]                 :> Flatten @ {"number",     tokenizeNumber @ s},
 				
-				s:Alternatives[";", ":", ",", "(", ")", "{", "}", "[", "]", "~=", "|=", "^=", "$=", "*=", "||", "<!--", "-->", "/"] :> s,
+				s:Alternatives[
+					";", ":", ",", "(", ")", "{", "}", "[", "]", 
+					"~=", "|=", "^=", "$=", "*=", "||", "<!--", "-->", 
+					"/", "@", "*", ".", "#"] :> s,
+				s:RegularExpression @ RE["newline"] :> {"newline", s},
 				s:Whitespace :> " "}],
 		{
 			(*s_String /; StringLength[s] > 1 :> {"other", s},*)
 			"" :> Nothing},
 		{1}]
-
-
-nestTokens[tokens:{__?validTokenQ}] :=
-	Module[{pos = 1, l = Length[tokens], depth = 0, brackets, t = tokens, inURL = False},
-		(* The number of nestings is no larger than the number of open brackets *)
-		brackets = ConstantArray[0, Count[tokens, "{" | "[" | "(" | {"function", _} | {"urlhead", _}]];
 		
-		(* 
-			The main nesting algorithm tracks the depth of the nesting, increasing with every open bracket.
-			The location and type of the open brackets are tracked.
-			Every closing bracket checks that it belongs to a matching open bracket;
-			if it does not match, then the bracket is in error; 
-			else it is a match; 
-				group all t into a "block" token with appropriate label at the open bracket position;
-				mark tokens for removal that are not at the open bracket positions since they are now in the block token
-			This algorithm scans the token list only once.
-			
-			URL heads are the exception to the nesting. 
-			While in a URL the depth cannot increase further until a closing paren is found.*)
-		While[pos < l,
+		
+tokenizePercentage[x_String] := StringSplit[x, num:RegularExpression[RE["num"]] ~~ unit:"%" :> tokenizeNumber @ num]
+
+tokenizeDimension[x_String] :=  
+	StringSplit[x, num:RegularExpression[RE["num"]] ~~ unit___ :> {tokenizeNumber @ num, normalizeKeyWord @ unit}]
+
+tokenizeNumber[x_String] := (* cache the Interpreter calls *)
+	tokenizeNumber[x] = 
+		If[StringMatchQ[x, RegularExpression["[+\\-]?[0-9]+"]], 
+			{x, Interpreter["Integer"][x], "integer"}
+			, 
+			{x, Interpreter["Number"][x], "number"}]
+		
+idHash[x_String] := If[StringMatchQ[x, RegularExpression[RE["ident-token"]]], {x, "id"}, x (* unrestrictd type is implied *)]
+
+fromHexToBase10[x_String] := 
+	FromDigits[
+		ToExpression @ 
+			Replace[
+				StringCases[x, s:RegularExpression["[0-9a-fA-F]"] :> s], 
+				{"a"|"A" -> 10, "b"|"B" -> 11, "c"|"C" -> 12, "d"|"D" -> 13, "e"|"E" -> 14, "f"|"F" -> 15}, 
+				{1}], 
+		16]
+		
+calculateUnicodeRange[x_String] :=
+	StringCases[x,
+		{
+			s1:RegularExpression["[a-fA-F0-9]{1,6}"] ~~ "-" ~~ s2:RegularExpression["[a-fA-F0-9]{1,6}"] :> 
+				{fromHexToBase10 @ s1, fromHexToBase10 @ s2},
+			s:RegularExpression["[a-fA-F0-9]{0,6}[\\?]{1,6}"] :> 
+				{fromHexToBase10 @ StringReplace[s, "?" -> "0"], fromHexToBase10 @ StringReplace[s, "?" -> "F"]},
+			s:RegularExpression["[a-fA-F0-9]{1,6}"] :> {fromHexToBase10 @ s, fromHexToBase10 @ s}
+		}]
+		
+stripURL[x_String] := 
+	With[{noURL = First[StringCases[x, RegularExpression[RE["urlhead"]] ~~ s__ ~~ ")" :> StringTrim @ s], ""]},
+		If[StringMatchQ[noURL, RegularExpression[RE["string-token"]]], StringTake[noURL, {2, -2}], noURL]]
+
+untokenize[x_String] := x
+untokenize[{"string", s_}] := If[StringContainsQ[s, "'"], "\"" <> s <> "\"", "'" <> s <> "'"]
+untokenize[{"function", s_}] := s <> "("
+untokenize[{"at-keyword", s_}] := "@" <> s
+untokenize[{"number"|"dimension"|"percentage", s_, __}] := s
+untokenize[{"hash", s_}] := "#" <> s
+untokenize[{"ident", s_}] := s
+untokenize[{"newline", s_}] := s
+untokenize[{"error", "REMOVE"}] := ""
+untokenize[{"error", "bad-string"}] := ""
+untokenize[{"unicode-range", start_, stop_}] := 
+	Module[{t, startString, stopString},
+		t = 
+			StringJoin @ 
+				StringReplace[
+					ToString /@ IntegerDigits[#, 16], 
+					{"10" -> "A", "11" -> "B", "12" -> "C", "13" -> "D", "14" -> "E", "15" -> "F"}]& /@ {start, stop};
+		{startString, stopString} = StringPadLeft[#, Max[StringLength /@ t], "0"] & /@ t;
+		With[{l = Intersection[StringPosition[startString, "0"], StringPosition[stopString, "F"]]},
+			Which[
+				Length[l] > 0, "u+" <> StringReplacePart[startString, "?", l],
+				TrueQ[startString == stopString], "u+" <> startString,
+				True, "u+" <> startString <> "-" <> stopString]]]
+
+
+(* 
+	The main nesting algorithm tracks the depth of the nesting, increasing with every open bracket.
+	The location and type of the open brackets are tracked.
+	Every closing bracket checks that it belongs to a matching open bracket.
+	If it does not match, then the bracket is in error; 
+	else it is a match and 
+		1. group all tokens into a "block" token with appropriate label at the open bracket position;
+		2. mark tokens for removal that are not at the open bracket positions since they are now in the block token
+	This algorithm scans the token list only once.
+	
+	:: URLs ::
+	URL heads are an exception to the nesting. They indicate an improper URL.
+	While in a bad URL, all tokens including " and ' are skipped until the bad-url is closed by a closing paren.
+	A corner case is if the URL is unclosed at the end, an implicit closing paren is added; 
+	this ending URL must be rechecked whether it is a valid URL format.
+	
+	:: strings ::
+	Strings are another exception to the nesting. Isolated " and ' tokens indicate an improper string.
+	While in a bad string, all tokens are skipped until a new line token is found.
+	A corner case is if the string is unclosed at the end, an implicit closing quote is added;
+	this ending string must be rechecked whether it is a valid string format. *)		
+nestTokens[tokens:{__?validTokenQ}] :=
+	Module[{pos = 1, l = Length[tokens], depth = 0, brackets, t = tokens, inBadURL = False, inBadString = False},
+		(* The upper limit of nestings is the number of open brackets and quotation marks *)
+		brackets = ConstantArray[0, Count[tokens, "{" | "[" | "(" | "\"" | "'" | {"function", _} | {"urlhead", _}]];
+		
+		While[pos <= l,
 			Switch[t[[pos]],
-				"{" | "[" | "(", If[!inURL, depth++; brackets[[depth]] = {t[[pos]], pos}],
-				{"urlhead", _}, depth++; inURL = True; brackets[[depth]] = {t[[pos, 1]], pos},
-				{"function", _}, If[!inURL, depth++; brackets[[depth]] = {t[[pos, 1]], pos}],
-				"}",
-					If[!inURL && (depth == 0 || brackets[[depth, 1]] != "{"),
-						t[[pos]] = {"error", t[[pos]]}
-						,
-						t[[brackets[[depth, 2]]]] = Prepend[t[[brackets[[depth, 2]] + 1 ;; pos - 1]], "{}"];
+				"{" | "[" | "(", If[!inBadString && !inBadURL, depth++; brackets[[depth]] = {t[[pos]], pos}],
+				{"urlhead", _},  If[!inBadString && !inBadURL, depth++; brackets[[depth]] = {t[[pos, 1]], pos}; inBadURL = True],
+				{"function", _}, If[!inBadString && !inBadURL, depth++; brackets[[depth]] = {t[[pos, 1]], pos}],
+				"\"" | "'",      
+					If[!inBadString, inBadString = True];
+					depth++; brackets[[depth]] = {t[[pos]], pos},
+				{"newline", _}, 
+					If[inBadString, 
+						inBadString = False;
+						t[[brackets[[depth, 2]]]] = {"error", "bad-string"};
 						Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
 						brackets[[depth]] = 0;
 						depth--],
-				")", 
-					If[inURL, 
-						(*TODO close URL *)inURL = False;
-						If[depth == 0 || !MatchQ[brackets[[depth, 1]], "urlhead"], 
+				"}",
+					If[inBadString || inBadURL, 
+						Null
+						,
+						If[depth == 0 || brackets[[depth, 1]] != "{",
 							t[[pos]] = {"error", t[[pos]]}
 							,
-							t[[brackets[[depth, 2]]]] = 
-								Join[
-									If[brackets[[depth, 1]] == "(", 
-										{"()"}
-										,
-										t[[brackets[[depth, 2]]]]],
-									t[[brackets[[depth, 2]] + 1 ;; pos - 1]]];
+							t[[brackets[[depth, 2]]]] = Prepend[t[[brackets[[depth, 2]] + 1 ;; pos - 1]], "{}"];
 							Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
 							brackets[[depth]] = 0;
-							depth--]
+							depth--]],
+				")", 
+					If[inBadURL, 
+						(* the closing of a bad URL also closes a bad string *)
+						If[inBadString, inBadString = False; brackets[[depth]] = 0; depth--];
+						inBadURL = False;
+						t[[brackets[[depth, 2]]]] = {"error", "bad-url"};
+						Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
+						brackets[[depth]] = 0;
+						depth--
 						,
-						If[depth == 0 || !MatchQ[brackets[[depth, 1]], "function"|"("], 
-							t[[pos]] = {"error", t[[pos]]}
+						If[inBadString,
+							Null
 							,
-							t[[brackets[[depth, 2]]]] = 
-								Join[
-									If[brackets[[depth, 1]] == "(", 
-										{"()"}
-										,
-										t[[brackets[[depth, 2]]]]],
-									t[[brackets[[depth, 2]] + 1 ;; pos - 1]]];
+							If[depth == 0 || !MatchQ[brackets[[depth, 1]], "function"|"("], 
+								t[[pos]] = {"error", t[[pos]]}
+								,
+								t[[brackets[[depth, 2]]]] = 
+									Join[
+										If[brackets[[depth, 1]] == "(", 
+											{"()"}
+											,
+											t[[brackets[[depth, 2]]]]],
+										t[[brackets[[depth, 2]] + 1 ;; pos - 1]]];
+								Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
+								brackets[[depth]] = 0;
+								depth--]]], 
+				"]",  
+					If[inBadString || inBadURL,
+						Null
+						,
+						If[depth == 0 || brackets[[depth, 1]] != "[", 
+							t[[pos]] = {"error", t[[pos]]}
+							, 
+							t[[brackets[[depth, 2]]]] = Prepend[t[[brackets[[depth, 2]] + 1 ;; pos - 1]], "[]"];
 							Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
 							brackets[[depth]] = 0;
 							depth--]], 
-				"]",  
-					If[!inURL && (depth == 0 || brackets[[depth, 1]] != "["), 
-						t[[pos]] = {"error", t[[pos]]}
-						, 
-						t[[brackets[[depth, 2]]]] = Prepend[t[[brackets[[depth, 2]] + 1 ;; pos - 1]], "[]"];
-						Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
-						brackets[[depth]] = 0;
-						depth--], 
 				_, Null];
 			pos++];
+		pos = l;
 		
 		(* 
 			CSS allows open brackets a without matching closing bracket.
 			Any remaining open brackets are closed with an assumed matching bracket at the very end.*)
 		While[depth > 0,
-			t[[brackets[[depth, 2]]]] = 
-				Join[
-					Switch[brackets[[depth, 1]], 
-						"{", {"{}"}, 
-						"(", {"()"}, 
-						"function"|"urlhead", t[[brackets[[depth, 2]]]],
-						"[", {"[]"}],
-					t[[brackets[[depth, 2]] + 1 ;; ]]];
+			Which[
+				inBadString, 
+					inBadString = False; 
+					With[{
+						try = 
+							StringJoin[
+								t[[brackets[[depth, 2]]]], 
+								untokenize /@ t[[brackets[[depth, 2]] + 1 ;; ]], 
+								t[[brackets[[depth, 2]]]]]}, 
+						t[[brackets[[depth, 2]]]] = 
+							If[StringMatchQ[try, RegularExpression[RE["string-token"]]], 
+								{"string", StringTake[try, {2, -2}]}
+								,
+								{"error", "bad-string"}]],
+				inBadURL, 
+					inBadURL = False; 
+					With[{try = StringJoin["url(", untokenize /@ t[[brackets[[depth, 2]] + 1 ;; ]], ")"]}, 
+						t[[brackets[[depth, 2]]]] = 
+							If[StringMatchQ[try, RegularExpression[RE["url-token"]]], 
+								{"url", stripURL @ try}
+								,
+								{"error", "bad-url"}]],
+				True,
+					t[[brackets[[depth, 2]]]] = 
+						Join[
+							Switch[brackets[[depth, 1]], 
+								"{", {"{}"}, 
+								"(", {"()"}, 
+								"function", t[[brackets[[depth, 2]]]],
+								"[", {"[]"}],
+							t[[brackets[[depth, 2]] + 1 ;; ]]]];
 			Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
 			brackets[[depth]] = 0;
 			depth--];
 		
 		(* remove all tokens that were marked for removal *)	
-		DeleteCases[t, {"error", "REMOVE"}, Infinity]
+		DeleteCases[t /. {"newline", _} -> " ", {"error", "REMOVE"}, Infinity]
 	]
 
 
@@ -562,64 +617,6 @@ parse["atImportKeyword", tokens:{__?validTokenQ}] :=
 		If[mediums =!= {}, data[[All, "Condition"]] = ConstantArray[mediums, Length[data]]];
 		data	
 	]
-
-
-(* ::Subsection::Closed:: *)
-(*Identify declarations*)
-
-
-tokenizeDeclaration[x_String] := 
-	Replace[
-		StringSplit[x, 
-			{
-				s:RegularExpression @ T["STRING"]        :> {"string", StringTake[s, {2, -2}]},
-				s:RegularExpression @ T["URI"]           :> {"uri", s},
-				s:RegularExpression @ T["FUNCTION"]      :> {"function", StringDrop[s, -1]},
-				s:RegularExpression @ T["UNICODE-RANGE"] :> {"unicode-range", s},
-				s:RegularExpression @ T["IDENT"]         :> {"ident", s},
-				s:RegularExpression @ P["hexcolor"]      :> {"hexcolor", StringTrim @ s},
-				
-				(* scientific notation is tricky; it can look like a dimension but can also be part of a dimension *)
-				num:RegularExpression[RE["numSCI"]] ~~ "%" :> Flatten @ {"percentage", tokenizeNumber[num]},
-				num:RegularExpression[RE["numSCI"]] ~~ unit:RegularExpression[RE["ident"]] :> Flatten @ {"dimension", tokenizeNumber[num], normalizeKeyWord @ unit},
-				num:RegularExpression[RE["numSCI"]] :> Flatten @ {"number", tokenizeNumber[num]},
-				
-				s:RegularExpression @ T["PERCENTAGE"]    :> Flatten @ {"percentage", tokenizePercentage[s]},
-				s:RegularExpression @ T["DIMENSION"]     :> Flatten @ {"dimension",  tokenizeDimension[s]},
-				s:RegularExpression @ T["NUMBER"]        :> Flatten @ {"number",     tokenizeNumber[s]},
-				s:RegularExpression @ T["IMPORTANT_SYM"] :> {"important", s},
-				
-				s:Alternatives[":", ":",  ",", "/", "(", ")"] :> s, 
-				s:Whitespace :> " "}],
-		{	
-			s_String /; StringMatchQ[s, ""] -> Nothing,
-			s_String /; StringLength[s] > 1 :> {"other", s}},
-		{1}]
-
-
-tokenizePercentage[x_String] := StringSplit[x, num:RegularExpression[RE["number-token"]] ~~ unit:"%" :> tokenizeNumber @ num]
-tokenizeDimension[x_String] :=  StringSplit[x, num:RegularExpression[RE["number-token"]] ~~ unit___ :> {tokenizeNumber @ num, normalizeKeyWord @ unit}]
-
-tokenizeNumber[x_String] := (* cache the Interpreter calls *)
-	tokenizeNumber[x] = If[StringMatchQ[x, RegularExpression["[0-9]+"]], {x, Interpreter["Integer"][x], "integer"}, {x, Interpreter["Number"][x], "number"}]
-	
-	
-fromHexToBase10[x_String] := 
-	FromDigits[
-		ToExpression @ 
-			Replace[
-				StringCases[x, s:RegularExpression["[0-9a-fA-F]"] :> s], 
-				{"a"|"A" -> 10, "b"|"B" -> 11, "c"|"C" -> 12, "d"|"D" -> 13, "e"|"E" -> 14, "f"|"F" -> 15}, 
-				{1}], 
-		16]
-calculateUnicodeRange[x_String] :=
-	StringCases[x,
-		{
-			s1:RegularExpression["[a-fA-F0-9]{1,6}"] ~~ "-" ~~ s2:RegularExpression["[a-fA-F0-9]{1,6}"] :> {fromHexToBase10 @ s1, fromHexToBase10 @ s2},
-			s:RegularExpression["[a-fA-F0-9]{0,6}[\\?]{1,6}"] :> {fromHexToBase10 @ StringReplace[s, "?" -> "0"], fromHexToBase10 @ StringReplace[s, "?" -> "F"]},
-			s:RegularExpression["[a-fA-F0-9]{1,6}"] :> {fromHexToBase10 @ s, fromHexToBase10 @ s}
-		}]
-			
 
 
 (* ::Section::Closed:: *)
@@ -3569,7 +3566,7 @@ consumeFunction[positionIndex_, l_, tokens:{__?validTokenQ}] :=
 
 processRulesets[s_String] :=
 	Module[{pos, l, tokens, imports = {}},
-			tokens = nestTokens @ tokenizeFirstPass @ s;
+			tokens = nestTokens @ tokenizeAll @ s;
 			pos = 1; l = Length[tokens];
 			
 			(* skip any leading whitespace *)
@@ -3579,7 +3576,7 @@ processRulesets[s_String] :=
 			If[MatchQ[tokens[[pos ;; pos + 3]], {{"at-keyword", "charset"}, " ", {"string", _}, ";"}],
 				pos = pos + 4
 				,
-				(* invalid @charset *)
+				(* invalid @charset; skip ahead to nearest semicolon *)
 				While[tokenType @ tokens[[pos]] != ";", pos++]
 			]; 
 			skipWhitespace[pos, l, tokens];
@@ -3596,7 +3593,7 @@ processRulesets[s_String] :=
 (*processRulesets[s_String] :=
 	Module[{i = 1, pos = 1, blockStartPos, blockStopPos, atBlockStartPos, atBlockStopPos, l, lRulesets, relevantTokens, rulesets, imports={}},
 	
-		relevantTokens = nestTokens @ tokenizeFirstPass[s]; (* identifies curly-braces, strings, URIs, @import, @charset. Removes comments. *)
+		relevantTokens = nestTokens @ tokenizeAll[s]; (* identifies curly-braces, strings, URIs, @import, @charset. Removes comments. *)
 		l = Length[relevantTokens];
 		
 		(*TODO: handle charset statement *)
