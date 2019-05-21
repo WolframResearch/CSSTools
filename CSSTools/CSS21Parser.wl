@@ -587,29 +587,26 @@ tokenizeAtImportKeyword[x_String] :=
 
 
 parse["atImportKeyword", tokens:{__?validTokenQ}] :=
-	Module[{pos = 2 (* first token must be @import *), l = Length[tokens], path, mediums = {}, data},
-		(* second token must be URL or string path to file *)
+	Module[{pos = 2 (* first token must be @import *), l = Length[tokens], path, mediaStart, mediums = {}, data},
+		(* skip any whitespace before URL *)
+		If[tokenType @ tokens[[pos]] == " ", skipWhitespace[pos, l, tokens]];
+		
+		(* next token must be URL or string path to file *)
 		path = 
 			Switch[tokenType @ tokens[[pos]],
-				"uri", 
-					path = StringTake[tokenString @ tokens[[pos]], {5, -2}]; (* strip off url() *)
-					If[StringMatchQ[path, RegularExpression @ T["STRING"]], StringTake[path, {2, -2}], path], (* strip off string quotes *)
-				"string", StringTake[tokenString @ tokens[[pos]], {2, -2}],
-			_, (* shouldn't be able to reach this *) ""];
+				"uri",    tokenString @ tokens[[pos]],
+				"string", tokenString @ tokens[[pos]],
+				_,        "" (* shouldn't be able to reach this *)];
 		skipWhitespace[pos, l, tokens]; 	
 		
-		(* anything else is a media condition *)
+		(* anything else is a comma-delimited set of media queries *)
+		(*TODO: implement proper media queries *)
 		While[tokenType @ tokens[[pos]] != ";",
-			If[tokenType @ tokens[[pos]] == "medium", 
-				AppendTo[mediums, tokenString @ tokens[[pos]]]; skipWhitespace[pos, l, tokens]
-				,
-				Return @ Failure["UnexpectedParse", <|"Message" -> "Expected @import media type."|>]];
-			If[tokenType @ tokens[[pos]] == ";", Break[]];
-			If[tokenType @ tokens[[pos]] == ",", 
-				skipWhitespace[pos, l, tokens]
-				,
-				Return @ Failure["UnexpectedParse", <|"Message" -> "Expected @import media delimiter."|>]]];
-		mediums = ToLowerCase @ mediums;
+			mediaStart = pos;
+			While[!MatchQ[tokenType @ tokens[[pos]], "," | ";"], pos++];
+			AppendTo[mediums, StringJoin[tokenString /@ tokens[[mediaStart, pos - 1]]]];
+			If[tokenType @ tokens[[pos]] == ";", Break[]]
+		];
 		
 		(* import without interpretation *)
 		data = Import[Echo[path, "@import"], "Text"];
@@ -3582,7 +3579,7 @@ processRulesets[s_String] :=
 			skipWhitespace[pos, l, tokens];
 			
 			(* check for @import rules *)
-			While[tokenType @ tokens[[pos]] == "import", 
+			While[MatchQ[tokens[[pos]], {"at-keyword", "import"}], 
 				AppendTo[imports, parse["atImportKeyword", tokenizeAtImportKeyword[tokenString @ tokens[[pos]]]]]; 
 				skipWhitespace[pos, l, tokens]
 			];
