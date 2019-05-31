@@ -374,15 +374,15 @@ parsePseudo[s_String] :=
 		pseudoClassesANBArg = Alternatives["nth-child", "nth-last-child", "nth-of-type", "nth-last-of-type"];
 		pseudoElements = Alternatives["first-line", "first-letter", "before", "after"];
 		
-	Which[
-		StringStartsQ[s, ":" ~~  pseudoClassesNoArg,  IgnoreCase -> True], {"pseudoclass",   StringTake[s, {2, -1}]},
-		StringStartsQ[s, ":" ~~  pseudoClassesANBArg, IgnoreCase -> True], 
-			{"pseudoclass",   First @ StringCases[s, ":" ~~ name:pseudoClassesANBArg ~~ "(" ~~ arg:__ ~~")" :> {name, parseANB @ arg}]},
-		StringStartsQ[s, ":" ~~  pseudoElements,      IgnoreCase -> True], {"pseudoelement", StringTake[s, {2, -1}]},
-		StringStartsQ[s, "::" ~~ pseudoElements,      IgnoreCase -> True], {"pseudoelement", StringTake[s, {3, -1}]},
-		True, Throw @ Failure["UnexpectedParse", <|"MessageTemplate" -> "Unrecognized pseudo class or element.", "Token" -> s|>]
+		Which[
+			StringStartsQ[s, ":" ~~  pseudoClassesNoArg,  IgnoreCase -> True], {"pseudoclass",   StringTake[s, {2, -1}]},
+			StringStartsQ[s, ":" ~~  pseudoClassesANBArg, IgnoreCase -> True], 
+				{"pseudoclass",   First @ StringCases[s, ":" ~~ name:pseudoClassesANBArg ~~ "(" ~~ arg:__ ~~")" :> {name, parseANB @ arg}]},
+			StringStartsQ[s, ":" ~~  pseudoElements,      IgnoreCase -> True], {"pseudoelement", StringTake[s, {2, -1}]},
+			StringStartsQ[s, "::" ~~ pseudoElements,      IgnoreCase -> True], {"pseudoelement", StringTake[s, {3, -1}]},
+			True, Throw @ Failure["UnexpectedParse", <|"MessageTemplate" -> "Unrecognized pseudo class or element.", "Token" -> s|>]
+		]
 	]
-]
 
 parseANB[s_String] :=
 	Module[{x = StringTrim @ s},
@@ -779,7 +779,8 @@ selectPseudoClass[content:{{_Integer..}...}, "target"] := (* dynamic only if cur
 	Pick[content, 
 		MatchQ[#,
 			{___, ((name_String | {_String, name_String}) /; StringMatchQ[name, $ID, IgnoreCase -> $IgnoreCase["AttributeName"]]) -> _, ___}
-		]& /@ Extract[$Document, Append[#, 2]& /@ content]]
+		]& /@ Extract[$Document, Append[#, 2]& /@ content]
+	]
 
 
 (* ::Subsubsection::Closed:: *)

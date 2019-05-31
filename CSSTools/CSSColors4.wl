@@ -1,6 +1,8 @@
 (* Wolfram Language Package *)
 
 BeginPackage["CSS21Parser`"];
+Needs["CSSTools`CSSTokenizer`"];
+
 Begin["`Private`"]; (* Begin Private Context *) 
 
 (* we assume that the colors have already been tokenized *)
@@ -8,11 +10,11 @@ Begin["`Private`"]; (* Begin Private Context *)
 
 (* keyword *)
 parseSingleColorKeyWord[prop_String, keyword_String] := 
-	Switch[normalizeKeyWord @ keyword,
+	Switch[ToLowerCase @ CSSNormalizeEscapes @ keyword,
 		"initial",        initialValues @ prop,
 		"inherit",        Inherited,
 		"currentcolor",   Dynamic @ CurrentValue[FontColor], 
-		"transparent",    None, (* this 'ident' is interpreted as GrayLevel[0, 0] by Interpreter["Color"] *)
+		"transparent",    None, (* interpreted as GrayLevel[0, 0] by Interpreter["Color"] *)
 		"aliceblue",      RGBColor[Rational[16, 17], Rational[248, 255], 1], 
 		"antiquewhite",   RGBColor[Rational[50, 51], Rational[47, 51], Rational[43, 51]], 
 		"aqua",           RGBColor[0, 1, 1], 
@@ -167,13 +169,13 @@ parseSingleColorKeyWord[prop_String, keyword_String] :=
 
 
 (* Hex *)
-$1XC = Repeated[RegularExpression[RE["h"]], {1}];
-$2XC = Repeated[RegularExpression[RE["h"]], {2}];
+$1XC = Repeated[RegularExpression[RE["hex digit"]], {1}];
+$2XC = Repeated[RegularExpression[RE["hex digit"]], {2}];
 fromhexdigits[s_] := FromDigits[s, 16]
-(* 3 digits *) hexPattern3 := StartOfString ~~ "#" ~~ r:$1XC ~~ g:$1XC ~~ b:$1XC           ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b   } / 15);
-(* 4 digits *) hexPattern4 := StartOfString ~~ "#" ~~ r:$1XC ~~ g:$1XC ~~ b:$1XC ~~ a:$1XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b, a} / 15);
-(* 6 digits *) hexPattern6 := StartOfString ~~ "#" ~~ r:$2XC ~~ g:$2XC ~~ b:$2XC           ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b   } / 255);
-(* 8 digits *) hexPattern8 := StartOfString ~~ "#" ~~ r:$2XC ~~ g:$2XC ~~ b:$2XC ~~ a:$2XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b, a} / 255);
+(* 3 digits *) hexPattern3 := StartOfString ~~ r:$1XC ~~ g:$1XC ~~ b:$1XC           ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b   } / 15);
+(* 4 digits *) hexPattern4 := StartOfString ~~ r:$1XC ~~ g:$1XC ~~ b:$1XC ~~ a:$1XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b, a} / 15);
+(* 6 digits *) hexPattern6 := StartOfString ~~ r:$2XC ~~ g:$2XC ~~ b:$2XC           ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b   } / 255);
+(* 8 digits *) hexPattern8 := StartOfString ~~ r:$2XC ~~ g:$2XC ~~ b:$2XC ~~ a:$2XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b, a} / 255);
 
 parseSingleColorHex[prop_String, hexString_String] :=
 	Which[
@@ -185,6 +187,7 @@ parseSingleColorHex[prop_String, hexString_String] :=
 
 
 (* RGB *)
+(* The patterns assume all whitespace has been removed. *)
 rgbaPattern := 
 	{
 		{v1:"number"|"percentage", _String, r_, _String}, d:Repeated[",", {0, 1}], 
@@ -203,6 +206,7 @@ rgbPattern :=
 (* HSL *)
 HSLtoHSB[h_, s_, l_, a___] := With[{b = (2 * l + s * (1 - Abs[2 * l - 1])) / 2}, If[b == 0, Hue[h, 0, 0, a], Hue[h, 2 * (b - l) / b, b, a]]]
 
+(* The patterns assume all whitespace has been removed. *)
 hslaPattern := 
 	{
 		Alternatives[
@@ -222,39 +226,36 @@ hslPattern :=
 	} :> HSLtoHSB[If[type == "number", h, parseAngle[hAll]]/360, s/100, l/100]
 
 
-parseSingleColorFunction[prop_String, tokens:{__?validTokenQ}] :=
-	Module[{relevantTokens},
-		(* relevantTokens drops the function head and closing paren and removes all whitespace tokens *)
-		relevantTokens = DeleteCases[tokens, {"whitespace", _}, {1}][[2 ;; -2]];
+parseSingleColorFunction[prop_String, token_?CSSTokenQ] :=
+	Module[{relevantTokens, function = CSSTokenString @ token},
+		(* relevantTokens drops the token's type and string, and removes all whitespace tokens *)
+		relevantTokens = DeleteCases[token[[3 ;;]], " ", {1}];
 		Which[
 			(* the "a" of rgb function heads is optional *)
-			StringMatchQ[tokenString @ tokens[[1]], RegularExpression[RE["R"] ~~ RE["G"] ~~ RE["B"] ~~ "(" ~~ RE["A"] ~~ "?)" ~~ "\\("]],
+			StringMatchQ[function, RegularExpression[RE["R"] ~~ RE["G"] ~~ RE["B"] ~~ "(" ~~ RE["A"] ~~ "?)"]],
 				Which[
 					MatchQ[relevantTokens, First @ rgbaPattern], Replace[relevantTokens, rgbaPattern], 
 					MatchQ[relevantTokens, First @ rgbPattern],  Replace[relevantTokens, rgbPattern], 
-					True, unrecognizedValueFailure @ prop 
-				],
+					True,                                        unrecognizedValueFailure @ prop],
 			(* the "a" of hsl function heads is optional *)
-			StringMatchQ[tokenString @ tokens[[1]], RegularExpression[RE["H"] ~~ RE["S"] ~~ RE["L"] ~~ "(" ~~ RE["A"] ~~ "?)" ~~ "\\("]],
+			StringMatchQ[function, RegularExpression[RE["H"] ~~ RE["S"] ~~ RE["L"] ~~ "(" ~~ RE["A"] ~~ "?)"]],
 				Which[
 					MatchQ[relevantTokens, First @ hslaPattern], Replace[relevantTokens, hslaPattern], 
 					MatchQ[relevantTokens, First @ hslPattern],  Replace[relevantTokens, hslPattern], 
-					True, unrecognizedValueFailure @ prop 
-				],
-			True, Failure["UnexpectedParse", <|"Message" -> "Unrecognized color function" <> tokens[[1, 2]] <> "."|>]
-		]
-	]
+					True,                                        unrecognizedValueFailure @ prop],
+			True, 
+				Failure["UnexpectedParse", <|"Message" -> "Unrecognized color function " <> function <> "."|>]]]
 
 
 (* parse all color types *)
-parseSingleColor[prop_String, tokens:{__?validTokenQ}] := parseSingleColor[prop, tokens] = 
-	Which[
-		Length[tokens] == 1 && MatchQ[tokenType @ tokens[[1]], "ident"],    parseSingleColorKeyWord[prop, tokenString @ tokens[[1]]],
-		Length[tokens] == 1 && MatchQ[tokenType @ tokens[[1]], "hexcolor"], parseSingleColorHex[prop, tokenString @ tokens[[1]]],
-		Length[tokens] > 1  && MatchQ[tokenType @ tokens[[1]], "function"], parseSingleColorFunction[prop, tokens],
-		True, unrecognizedValueFailure @ prop
-	]
-
+parseSingleColor[prop_String, token_?CSSTokenQ] := parseSingleColor[prop, token] = 
+	Switch[CSSTokenType @ token,
+		"ident",    parseSingleColorKeyWord[prop, CSSTokenString @ token],
+		"hash",     parseSingleColorHex[prop, CSSTokenString @ token],
+		"function", parseSingleColorFunction[prop, token],
+		_,          unrecognizedValueFailure @ prop]
+		
+parseSingleColor[prop_String, ___] := unrecognizedValueFailure @ prop
 
 
 End[]; (* End Private Context *)
