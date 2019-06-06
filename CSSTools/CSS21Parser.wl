@@ -3104,7 +3104,7 @@ parse[prop_String, _] := unsupportedValueFailure @ prop
 
 
 (* ::Section::Closed:: *)
-(*Consume StyleSheet*)
+(*Consume Token Sequences*)
 
 
 (* ::Subsection::Closed:: *)
@@ -3122,10 +3122,54 @@ advancePosToNextBlock[] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]]
 
 advancePosToNextSemicolonOrExclamation[] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "!" | ";"], pos++]
 
+retreatPosAndSkipWhitespace[] := (pos--; While[pos > 1 && CSSTokenType @ tokens[[pos]] == " ", pos--])
 
 
 (* ::Subsection::Closed:: *)
-(*Process rulesets ---> {{selector, declaration block}, ...}*)
+(*Consume Style Sheet*)
+
+
+(* Block is used such that the private variables pos, l, and tokens are known by any token consumer. *)
+consumeStyleSheet[s_String] :=
+	Block[{pos, l, tokens, imports = {}, i = 1, lRulesets, rulesets},
+		tokens = CSSTokenize @ s;
+		pos = 1; l = Length[tokens];
+		Echo[l, "Token Length"];
+		
+		(* skip any leading whitespace (there shouldn't be any if @charset exists) *)
+		If[CSSTokenType @ tokens[[pos]] == " ", advancePosAndSkipWhitespace[];];
+		
+		(* check for @charset rule *)
+		If[CSSTokenType @ tokens[[pos]] == "at-keyword" && StringMatchQ[CSSTokenString @ tokens[[pos]], "charset", IgnoreCase -> True],
+			consumeAtCharsetKeyword[]
+		];
+		
+		(* check for @import rules *)
+		While[CSSTokenType @ tokens[[pos]] == "at-keyword" && StringMatchQ[CSSTokenString @ tokens[[pos]], "import", IgnoreCase -> True], 
+			AppendTo[imports, consumeAtImportKeyword[]];
+		];
+		imports = Join @@ imports;
+				
+		lRulesets = Count[tokens, {"{}", ___}]; (* upper bound of possible rulesets *)
+		rulesets = ConstantArray[0, lRulesets]; (* container for processed rulesets *)
+		While[pos < l,
+			Which[
+				(* any at-rule *)
+				CSSTokenType @ tokens[[pos]] == "at-keyword", (*TODO*)consumeAtRule[CSSTokenString @ tokens[[pos]]],
+				
+				(* bad ruleset: missing a selector *)
+				CSSTokenType @ tokens[[pos]] == "{}", advancePosAndSkipWhitespace[], 
+				
+				(* anything else treated as a ruleset *)
+				True, rulesets[[i]] = consumeRuleset[]; i++;
+			];
+		];
+		{pos, l, tokens[[pos ;;]], imports, DeleteCases[rulesets, 0, {1}]}
+	]
+
+
+(* ::Subsection::Closed:: *)
+(*Consume Style Sheet Preambles (charset, import)*)
 
 
 (* The character set is assumed UTF-8 and any charset is ignored. *)
@@ -3133,7 +3177,8 @@ consumeAtCharsetKeyword[] :=
 	Module[{},
 		If[CSSTokenType @ tokens[[pos]] != "at-keyword" || !StringMatchQ[CSSTokenString @ tokens[[pos]], "charset", IgnoreCase -> True],
 			Echo[Row[{"Expected @charset keyword. Had instead ", tokens[[pos]]}], "@charset error"];
-			advancePosToNextSemicolon[]; advancePosAndSkipWhitespace[]; Return @ Null;
+			advancePosToNextSemicolon[]; advancePosAndSkipWhitespace[]; 
+			Return @ Null;
 		];
 		pos++;
 		If[MatchQ[tokens[[pos ;; pos + 2]], {" ", {"string", _}, ";"}],
@@ -3184,13 +3229,35 @@ consumeAtImportKeyword[] :=
 		If[FailureQ[data],
 			Return @ {}
 			, 
-			data = processRulesets[data];
+			data = consumeStyleSheet[data];
 			If[mediums =!= {}, data[[All, "Condition"]] = ConstantArray[mediums, Length[data]]];
 			Return @ data
 		]
 	]
 	
 	
+(* ::Subsection::Closed:: *)
+(*Consume Style Sheet Body (@rule, ruleset)*)
+
+
+consumeAtRule[type_String] :=
+	Which[
+		(* @import not allowed *)
+		StringMatchQ[CSSTokenString @ tokens[[pos]], "import", IgnoreCase -> True], 
+			advancePosToNextSemicolon[]; advancePosAndSkipWhitespace[], 
+			
+		(* @page *)
+		StringMatchQ[CSSTokenString @ tokens[[pos]], "page", IgnoreCase -> True], 
+			Null,
+			
+		(* @media *)
+		StringMatchQ[CSSTokenString @ tokens[[pos]], "media", IgnoreCase -> True], 
+			Null,
+			
+		(* unrecognized @rule *)
+		True, 
+			Null]
+
 consumeRuleset[] :=
 	Module[{selectorStartPos = pos, ruleset},
 		advancePosToNextBlock[];
@@ -3198,157 +3265,72 @@ consumeRuleset[] :=
 			<|
 				"Selector" -> StringTrim @ CSSUntokenize @ tokens[[selectorStartPos ;; pos - 1]], 
 				"Condition" -> None,
-				"Block" -> If[Length[tokens[[pos]]] > 1, tokens[[pos, 2 ;; ]], {}]|>; (* The block token is already encapsulated {{}, CSSTokens...} *)
+				(* The block token is already encapsulated {{}, CSSTokens...} *)
+				"Block" -> consumeDeclarationBlock @  If[Length[tokens[[pos]]] > 1, tokens[[pos, 2 ;; ]], {}]|>; 
 		advancePosAndSkipWhitespace[];
-		Return @ ruleset]
-
-
-(* Block is used such that the private variables pos, l, and tokens are known by any processing functions. *)
-consumeStyleSheet[s_String] :=
-	Block[{pos, l, tokens, imports = {}, i = 1, lRulesets, rulesets},
-		tokens = CSSTokenize @ s;
-		pos = 1; l = Length[tokens];
-		Echo[l, "Token Length"];
-		
-		(* skip any leading whitespace (there shouldn't be any if @charset exists) *)
-		If[CSSTokenType @ tokens[[pos]] == " ", advancePosAndSkipWhitespace[];];
-		
-		(* check for @charset rule *)
-		If[CSSTokenType @ tokens[[pos]] == "at-keyword" && StringMatchQ[CSSTokenString @ tokens[[pos]], "charset", IgnoreCase -> True],
-			consumeAtCharsetKeyword[]
-		];
-		
-		(* check for @import rules *)
-		While[CSSTokenType @ tokens[[pos]] == "at-keyword" && StringMatchQ[CSSTokenString @ tokens[[pos]], "import", IgnoreCase -> True], 
-			AppendTo[imports, consumeAtImportKeyword[]];
-		];
-		imports = Join @@ imports;
-		
-		
-		lRulesets = Count[tokens, {"{}", ___}]; (* upper bound of possible rulesets *)
-		rulesets = ConstantArray[0, lRulesets]; (* container for processed rulesets *)
-		While[pos < l,
-			Which[
-				(* any at-rule *)
-				CSSTokenType @ tokens[[pos]] == "at-keyword", consumeAtRule[CSSTokenString @ tokens[[pos]]],
-				
-				(* bad ruleset: missing a selector *)
-				CSSTokenType @ tokens[[pos]] == "{}", advancePosAndSkipWhitespace[], 
-				
-				(* anything else treated as a ruleset *)
-				True, rulesets[[i]] = consumeRuleset[]; i++;
-			];
-		];
-		
-		(*
-		(* process rest of rulesets or other @keywords *)
-		tokens = tokens[[pos ;;]];
-		lRulesets = Count[tokens, {"{}", ___}];
-		rulesets = ConstantArray[0, lRulesets];
-		While[pos < l && i <= lRulesets,
-			(* pos indicates first non-whitespace token *)
-			blockStartPos = pos; While[CSSTokenType @ tokens[[pos]] != "{}", blockStartPos++];
-			Which[
-				(* @page *)
-				StringStartsQ[CSSTokenString @ tokens[[pos]], RegularExpression[RE["w"] ~~ T["PAGE_SYM"]]],
-					blockStopPos  = findClosingBracketPosition[blockStartPos, "{", "}", tokens];
-					rulesets[[i]] = 
-						<|
-							"Selector" -> StringTrim @ StringJoin[CSSTokenString /@ tokens[[pos ;; blockStartPos-1]]], 
-							"Condition" -> StyleData[All, "Printout"],
-							"Block" -> tokens[[blockStartPos+1 ;; If[CSSTokenType @ tokens[[blockStopPos]] == "}", blockStopPos-1, blockStopPos]]]|>;
-					advancePosAndSkipWhitespace[blockStopPos, l, tokens]; pos = blockStopPos;
-					i++,
-					
-					
-				(* skip unknown "at rules" including @import *)
-				StringStartsQ[CSSTokenString @ tokens[[blockStartPos-1]], RegularExpression[RE["w"] ~~ "@"]],
-					atBlockStartPos = blockStartPos;
-					atBlockStopPos = findClosingBracketPosition[atBlockStartPos, "{", "}", tokens];
-					advancePosAndSkipWhitespace[atBlockStopPos, l, tokens]; pos = atBlockStopPos,
-			];
-		];
-		(* remove possible excess blocks *)
-		Join[imports, DeleteCases[rulesets, 0, {1}]];*)
-		
-		{pos, l, tokens[[pos ;;]], imports, DeleteCases[rulesets, 0, {1}]}
-	]
-
-consumeImportantFlag[] :=
-	Module[{},
-		If[CSSTokenType @ tokens[[pos]] != "!", 
-			Return @ $Failed
-		];
-	]
-
-consumeDeclaration[] :=
-	Module[{propertyPosition, valueStartPosition, valueStopPosition, important, declaration},
-		(* check for bad property *)
-		If[CSSTokenType @ tokens[[pos]] != "ident",
-			advancePosToNextSemicolon[]; advancePosAndSkipWhitespace[]; Return @ "Bad declaration."
-		];
-		propertyPosition = pos; advancePosAndSkipWhitespace[];
-		
-		(* check for missing semicolon *)
-		If[CSSTokenType @ tokens[[pos]] != ":",
-			advancePosToNextSemicolon[]; advancePosAndSkipWhitespace[]; Return @ "Bad declaration."
-		];
-		advancePosAndSkipWhitespace[];
-		
-		(* consume value *)
-		valueStartPosition = pos;
-		(* check for 'important' token sequence, which would be the last token before ';' *)
-		advancePosToNextSemicolonOrExclamation[];
-		Switch[CSSTokenType @ tokens[[pos]],
-			"!", 
-				important = True; 
-				valueStopPosition = pos-1;
-				advancePosAndSkipWhitespace[];
-				Which[
-					(* do nothing extra as 'important' must be on the last declaration that also is missing a semi-colon *)
-					pos > l, Null, 
-					(* skip over the semi-colon *)
-					CSSTokenType @ tokens[[pos]] == ";", pos++,  
-					(* syntax error; reset values and let a further parser flag the error *)
-					True, valueStopPosition = pos; important = False; While[CSSTokenType @ tokens[[pos]] != ";" && pos < l, pos++]
-				],
-			";", 
-				important = False;
-				valueStopPosition = pos-1,
-			_, (* case of no 'important' ident and no semi-colon after last declaration in block *)
-				important = False;
-				valueStopPosition = pos;
-		];
-		While[CSSTokenType @ tokens[[valueStopPosition]] == " ", valueStopPosition--]; (* trim whitespace from the end of the value *)
-		declaration = <|
-			"Important" -> important,
-			"Property" -> CSSNormalizeEscapes @ CSSTokenString @ tokens[[propertyPosition]], 
-			"Value" -> (*check for empty property*)If[valueStopPosition < valueStartPosition, {}, tokens[[valueStartPosition ;; valueStopPosition]]],
-			"Interpretation" -> None|>;
-		advancePosAndSkipWhitespace[];		
+		ruleset
 	]
 
 consumeDeclarationBlock[{}] := {} 
 
-consumeDeclarationBlock[{tokens__?CSSTokenQ}] :=
-	Block[{pos, l, lDeclarations, i = 1, propertyPosition, valueStartPosition, valueStopPosition, declarations, important},
+consumeDeclarationBlock[inputTokens:{__?CSSTokenQ}] :=
+	Block[{pos, l, tokens = inputTokens, lDeclarations, i = 1, decStart, dec, validDeclarations},
 		pos = 1; l = Length[tokens];
-		If[CSSTokenType @ tokens[[pos]] == " ", advancePosAndSkipWhitespace[]]; (* skip any initial whitespace *)
+		
+		(* skip any initial whitespace *)
+		If[CSSTokenType @ tokens[[pos]] == " ", advancePosAndSkipWhitespace[]]; 
+		
 		(*
 			Each declaration is of the form 'property:value;'. The last declaration may leave off the semicolon.
 			Like we did with parsing blocks, we count the number of colons as the upper limit of the number of declarations.
 		*)
 		lDeclarations = Count[tokens, ":"];
-		declarations = ConstantArray[0, lDeclarations];
+		validDeclarations = ConstantArray[0, lDeclarations];
 		While[pos < l && i <= lDeclarations,
-			;
-			i++ (* increment number of successfully parsed declarations *)
+			decStart = pos; advancePosToNextSemicolon[];
+			dec = consumeDeclaration[tokens[[decStart ;; pos]]];
+			If[!FailureQ[dec], validDeclarations[[i++]] = dec];
+			advancePosAndSkipWhitespace[]
 		];					
 		(* remove possible excess declarations *)
-		DeleteCases[declarations, 0, {1}]
+		DeleteCases[validDeclarations, 0, {1}]
 	]
 	
-processDeclarationBlock[{}] := {}
+(* a declaration is prop:val or prop:val !important with optional semicolon if it is the last declaration *)
+consumeDeclaration[inputTokens:{__?CSSTokenQ}] :=
+	Block[{pos, l, tokens = inputTokens, propertyPosition, valuePosition, important = False, declaration},
+		pos = 1; l = Length[tokens];
+		
+		(* check for bad property *)
+		If[CSSTokenType @ tokens[[pos]] != "ident", Return @ $Failed];
+		propertyPosition = pos; advancePosAndSkipWhitespace[];
+		
+		(* check for EOF or missing colon *)
+		If[pos >= l  || CSSTokenType @ tokens[[pos]] != ":", Return @ $Failed];
+		advancePosAndSkipWhitespace[]; 
+		valuePosition = pos;
+		
+		(* remove trailing whitespace *)
+		pos = l;
+		If[CSSTokenType @ tokens[[pos]] == ";", 
+			retreatPosAndSkipWhitespace[]
+			,
+			While[pos > 1 && CSSTokenType @ tokens[[pos]] == " ", pos--]
+		];
+		
+		(* check for !important token sequence *)
+		If[CSSTokenType @ tokens[[pos]] == "ident" && StringMatchQ[CSSTokenString @ tokens[[pos]], "important", IgnoreCase -> True], 
+			retreatPosAndSkipWhitespace[];
+			If[CSSTokenType @ tokens[[pos]] == "!", important = True; retreatPosAndSkipWhitespace[]]];
+		
+		declaration = <|
+			"Important" -> important,
+			"Property" -> CSSNormalizeEscapes @ ToLowerCase @ CSSTokenString @ tokens[[propertyPosition]], 
+			"Value" -> (*check for empty property*)If[pos < valuePosition, {}, tokens[[valuePosition ;; pos]]],
+			"Interpretation" -> None|>;
+		advancePosAndSkipWhitespace[];
+		declaration		
+	]
 
 
 (* ::Subsection::Closed:: *)
