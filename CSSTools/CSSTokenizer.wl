@@ -270,7 +270,11 @@ calculateUnicodeRange[x_String] :=
 		
 stripURL[x_String] := 
 	With[{noURL = First[StringCases[x, RegularExpression[RE["urlhead"]] ~~ s__ ~~ ")" :> StringTrim @ s], ""]},
-		If[StringMatchQ[noURL, RegularExpression[RE["string-token"]]], StringTake[noURL, {2, -2}], CSSNormalizeEscapes @ noURL]]
+		If[StringMatchQ[noURL, RegularExpression[RE["string-token"]]], 
+			StringTake[noURL, {2, -2}]
+			, 
+			(* only normalize escapes if the URL was unquoted *)
+			CSSNormalizeEscapes @ noURL]] 
 
 
 (* ::Subsection::Closed:: *)
