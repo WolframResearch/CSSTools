@@ -670,28 +670,35 @@ parseAngle[token:{"dimension", n_String, val_, type:"integer"|"number", "turn"}]
 (*<counter>*)
 
 
+(* counter() function *)
 parseCounter[prop_String, tokens:{___?CSSTokenQ}] := parseCounter[prop, tokens] =
-	Block[{pos = 1, l = Length[tokens], style, listtype = "decimal"},
-		Switch[CSSNormalizeEscapes @ CSSTokenString @ tokens[[pos]],
-			"counter(",
-				advancePosAndSkipWhitespace[];
-				If[pos <= l && CSSTokenType @ tokens[[pos]] == "ident", 
-					style = CSSTokenString @ tokens[[pos]]
-					, 
-					Return @ invalidFunctionFailure @ StringJoin[CSSTokenString /@ tokens]
-				];
-				advancePosAndSkipWhitespace[];
-				If[pos > l, Return @ invalidFunctionFailure @ StringJoin[CSSTokenString /@ tokens]];
-				Switch[CSSTokenType @ tokens[[pos]],
-					"ident", listtype = CSSTokenString @ tokens[[pos]],
-					")",     Null,
-					_,       tooManyTokensFailure @ tokens
-				];
-				parseSingleListStyleType["list-style-type", {"ident", listtype}, style],
-			"counters(", Return @ Missing["Not supported."],
-			_, unrecognizedValueFailure @ prop
-		]
+	Block[{pos = 3, l = Length[tokens], style = "Item", listtype = "decimal"},
+		(* pos starts at 3 as this skips the function identifier and name *)
+		If[pos <= l && tokenTypeIs[" "], advancePosAndSkipWhitespace[]];
+		
+		(* get custom identifier *)
+		If[pos <= l && tokenTypeIs["ident"], 
+			style = CSSTokenString @ tokens[[pos]]
+			, 
+			Return @ invalidFunctionFailure @ CSSUntokenize @ tokens
+		];
+		advancePosAndSkipWhitespace[];
+		If[pos > l, Return @ parseSingleListStyleType["list-style-type", {"ident", listtype}, style]];
+		
+		(* get optional counter style *)
+		If[pos <= l && tokenTypeIs["ident"],
+			listtype = CSSTokenString @ tokens[[pos]]
+			,
+			Return @ invalidFunctionFailure @ CSSUntokenize @ tokens
+		];
+		advancePosAndSkipWhitespace[];
+		If[pos > l, Return @ parseSingleListStyleType["list-style-type", {"ident", listtype}, style]];
+		
+		tooManyTokensFailure @ tokens
 	]
+	
+(* counters() function *)
+parseCounters[prop_String, tokens:{___?CSSTokenQ}] := Missing["Not supported."]
 
 
 (* ::Subsection::Closed:: *)
@@ -811,61 +818,69 @@ parse[prop:"background", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)par
 	Any properties not set by this are reset to their initial values.
 	Commas separate background layers, so split on comma, but FE only supports one image so take last...?
 *)
-parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] := 
-	Module[
+parseSingleBG[prop_String, inputTokens:{{"ident", "inherit"}}] := Background -> Inherited
+parseSingleBG[prop_String, inputTokens:{{"ident", "initial"}}] := Background -> initialValues @ "background"
+parseSingleBG[prop_String, inputTokens:{__?CSSTokenQ}] := 
+	Block[
 		{
-			pos = 1, l = Length[tokens], value, start, 
+			pos = 1, l = Length[inputTokens], tokens = inputTokens, value, start, startToken, 
 			values = <|
 				"a" -> initialValues @ "background-attachment", 
 				"c" -> initialValues @ "background-color",
 				"i" -> initialValues @ "background-image",
 				"p" -> initialValues @ "background-position",
 				"r" -> initialValues @ "background-repeat"|>,
-			hasAttachment = False, hasColor = False, hasImage = False, hasPosition = False, hasRepeat = False,
-			i1 = 0, i2 = 0
+			hasAttachment = False, hasColor = False, hasImage = False, hasPosition = False, hasRepeat = False
 		},
 		While[pos <= l, 
 			Which[
-				CSSTokenType @ tokens[[pos]] == "function", (* only color can be a function; eventually should support gradients *)
-					Switch[CSSNormalizeEscapes @ CSSTokenString @ tokens[[pos]],
-						"rgb(" | "rgba(" | "hsl(" | "hsla(", 
+				tokenTypeIs["function"], 
+					Switch[CSSTokenString @ tokens[[pos]],
+						(* color *)
+						"rgb" | "rgba" | "hsl" | "hsla", 
 							If[hasColor, Return @ repeatedPropValueFailure @ "background-color"]; 
-							hasColor = True; values["c"] = parseSingleColor[prop, consumeFunction[pos, l, tokens]];,
-						_, (* linear- or radial-gradient *)
+							hasColor = True; values["c"] = parseSingleColor[prop, tokens[[pos]]];,
+						(*TODO support gradients *)
+						"linear-gradient" | "repeating-linear-gradient" | "radial-gradient" | "repeating-radial-gradient" | "conic-gradient", 
 							If[hasImage, Return @ repeatedPropValueFailure @ "background-image"];
-							hasImage = True; values["i"] = Missing["Not supported."]; consumeFunction[pos, l, tokens] (* advances pos but return value is not used *)
+							hasImage = True; values["i"] = Missing["Not supported."];,
+						_,
+							Return @ invalidFunctionFailure @ CSSUntokenize @ tokens[[pos, 2 ;;]]
 					],
-					
-				StringMatchQ[CSSTokenString @ tokens[[pos]], "inherit", IgnoreCase -> True], i1++,
-				StringMatchQ[CSSTokenString @ tokens[[pos]], "initial", IgnoreCase -> True], i2++,
-								
+				
+				(* scroll or fixed keyword *)
 				!FailureQ[value = parseSingleBGAttachment[prop, tokens[[pos]]]],
 					If[hasAttachment, Return @ repeatedPropValueFailure @ "background-attachment"];
 					hasAttachment = True; values["a"] = value,
 					
-				!FailureQ[value = parseSingleColor[prop, {tokens[[pos]]}]], (* color can also be hex or keyword *)
+				(* color hex or color keyword *)
+				!FailureQ[value = parseSingleColor[prop, tokens[[pos]]]], (* color can also be hex or keyword *)
 					If[hasColor, Return @ repeatedPropValueFailure @ "background-color"];
 					hasColor = True; values["c"] = value,
-					
+				
+				(* uri token or none keyword *)
 				!FailureQ[value = parseSingleBGImage[prop, tokens[[pos]]]], 
 					If[hasImage, Return @ repeatedPropValueFailure @ "background-image"];
 					hasImage = True; values["i"] = value,
-					
-				!FailureQ[value = parseSingleBGPosition[prop, tokens[[pos]]]], 
-					If[hasPosition, Return @ repeatedPropValueFailure @ "background-position"];
-					hasPosition = True; values["p"] = {value, Center};
-					(* check for a pair of position values; they must be sequential *)
-					start = pos; advancePosAndSkipWhitespace[start, l, tokens];
-					If[!FailureQ[value = parseSingleBGPosition[prop, tokens[[pos]]]], 
-						values["p"] = {values["p"][[1]], value};
-						pos = start;
-					];
-					values["p"] = parseSingleBGPositionPair[values["p"], {"", #}& /@ values["p"]],
-					
+				
+				(* one of the keywords repeat | repeat-x | repeat-y | no-repeat *)
 				!FailureQ[value = parseSingleBGRepeat[prop, tokens[[pos]]]], 
 					If[hasRepeat, Return @ repeatedPropValueFailure @ "background-repeat"];
 					hasRepeat = True; values["r"] = value,
 				
+				(* one of the key words left | center | right | top | bottom, *)
+				!FailureQ[value = parseSingleBGPosition[prop, tokens[[pos]]]], 
+					If[hasPosition, Return @ repeatedPropValueFailure @ "background-position"];
+					hasPosition = True; values["p"] = {value, Center};
+					(* check for a pair of position values; they must be sequential *)
+					start = pos; startToken = tokens[[pos]]; advancePosAndSkipWhitespace[];
+					If[!FailureQ[value = parseSingleBGPosition[prop, tokens[[pos]]]], 
+						values["p"] = {values["p"][[1]], value}
+						,
+						pos = start (* if this next token leads to a parse failure, then reset the position *)
+					];
+					values["p"] = parseSingleBGPositionPair[values["p"], {startToken, tokens[[pos]]}],
+								
 				True, unrecognizedValueFailure @ prop						
 			];
 			advancePosAndSkipWhitespace[]
@@ -877,14 +892,8 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 			position: System`BackgroundAppearanceOptions, 
 			repeat: System`BackgroundAppearanceOptions *)
 		Which[
-			l==1 && i1==1, Background -> Inherited,
-			l==1 && i2==1, Background -> initialValues @ "background",
-			i1>1, tooManyPropValuesFailure @ "inherit",
-			i2>1, tooManyPropValuesFailure @ "initial",
-			
 			hasColor && Not[hasAttachment || hasImage || hasPosition || hasRepeat], 
 				Background -> values["c"],
-			
 			True,
 				{
 					System`BackgroundAppearanceOptions ->
@@ -892,7 +901,7 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 							values["p"] === {0,0}    && values["r"] === "NoRepeat", "NoRepeat",
 							values["p"] === "Center" && values["r"] === "NoRepeat", "Center",
 							values["p"] === {0,0},                                  values["r"],
-							True,                                                     Missing["Not supported."]
+							True,                                                   Missing["Not supported."]
 						],
 					System`BackgroundAppearance -> values["i"],
 					Background -> values["c"]}
@@ -947,7 +956,7 @@ parse[prop:"background-color", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] =
 parseSingleBGImage[prop_String, token_?CSSTokenQ] := 
 	Switch[CSSTokenType @ token,
 		"ident", 
-			Switch[CSSNormalizeEscapes @ CSSTokenString @ token,
+			Switch[CSSTokenString @ token,
 				"none",    None,
 				"inherit", Inherited,
 				"initial", initialValues @ prop,
@@ -976,7 +985,7 @@ parse[prop:"background-image", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] =
 parseSingleBGPosition[prop_String, token_?CSSTokenQ] :=
 	Switch[CSSTokenType @ token,
 		"ident", 
-			Switch[CSSNormalizeEscapes @ CSSTokenString @ token,
+			Switch[CSSTokenString @ token,
 				"left",    Left,
 				"center",  Center,
 				"right",   Right,
@@ -1403,16 +1412,16 @@ parse[prop:"color", tokens:{__?CSSTokenQ}] := FontColor -> parseSingleColor[prop
 
 
 (* only used to add content before or after element, so let's restrict this to Cells' CellDingbat or CellLabel *)
-parse[prop:"content", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], value, parsedValues = {}},
+parse[prop:"content", inputTokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, parsedValues = {}},
 		While[pos <= l,
 			value = 
 				Switch[CSSTokenType @ tokens[[pos]],
 					"ident", 
-						Switch[CSSNormalizeEscapes @ CSSTokenString @ tokens[[pos]],
-							"normal",         CellDingbat->"\[FilledCircle]",
-							"none",           CellDingbat->None,
-							"inherit",        CellDingbat->Inherited,
+						Switch[CSSTokenString @ tokens[[pos]],
+							"normal",         CellDingbat -> "\[FilledCircle]",
+							"none",           CellDingbat -> None,
+							"inherit",        CellDingbat -> Inherited,
 							"initial",        initialValues @ prop,
 							"open-quote",     Missing["Not supported."],
 							"close-quote",    Missing["Not supported."],
@@ -1421,12 +1430,20 @@ parse[prop:"content", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 							_,                unrecognizedKeyWordFailure @ prop
 						],
 					"string", CellLabel -> CSSTokenString @ tokens[[pos]], (* is this even doing this option justice? *)
-					"uri",    With[{i = parseURI @ CSSTokenString @ tokens[[pos]]}, If[FailureQ[i] || MissingQ[i], notAnImageFailure @ CSSTokenString @ tokens[[pos]], CellDingbat -> i]],
+					"uri",    
+						With[{i = parseURI @ CSSTokenString @ tokens[[pos]]}, 
+							If[FailureQ[i] || MissingQ[i], 
+								notAnImageFailure @ CSSTokenString @ tokens[[pos]]
+								, 
+								CellDingbat -> i
+							]
+						],
 					"function", 
-						Switch[CSSNormalizeEscapes @ CSSTokenString @ tokens[[pos]],
-							"counter(" | "counters(", CellDingbat -> parseCounter[prop, consumeFunction[pos, l, tokens]],
-							"attr(",                  (*TODO*)parseAttr[prop, consumeFunction[pos, l, tokens]],
-							_,                        unrecognizedValueFailure @ prop
+						Switch[CSSTokenString @ tokens[[pos]],
+							"counter",  CellDingbat -> parseCounter[prop, tokens[[pos, 3;;]]],
+							"counters", CellDingbat -> parseCounters[prop, tokens[[pos, 3;;]]],
+							"attr",     (*TODO*)parseAttr[prop, tokens[[pos, 3;;]]],
+							_,          unrecognizedValueFailure @ prop
 						],
 					_, unrecognizedValueFailure @ prop
 				];
@@ -3094,6 +3111,14 @@ parse[prop:"z-index", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 
 
 (* ::Subsection::Closed:: *)
+(*initial/inherit*)
+
+
+parse[prop_String, {{"ident", "initial"}}] := initialValues @ prop
+parse[prop_String, {{"ident", "inherit"}}] := Inherited
+
+
+(* ::Subsection::Closed:: *)
 (*FALL THROUGH *)
 
 
@@ -3112,8 +3137,8 @@ parse[prop_String, _] := unsupportedValueFailure @ prop
 
 
 (* The utilities are assumed to be used within "consume" functions where pos, l, and tokens are defined. *)
-currentToken[] := CSSTokenType @ tokens[[pos]]
-tokenStringMatchesQ[s_String] := StringMatchQ[CSSTokenString @ tokens[[pos]], s, IgnoreCase -> True]
+tokenTypeIs[s:(_String | Alternatives[__String])] := StringMatchQ[CSSTokenType @ tokens[[pos]], s, IgnoreCase -> False]
+tokenStringIs[s_String] := StringMatchQ[CSSTokenString @ tokens[[pos]], s, IgnoreCase -> True]
 
 advancePosAndSkipWhitespace[] := (pos++; While[pos < l && CSSTokenType @ tokens[[pos]] == " ", pos++])
 retreatPosAndSkipWhitespace[] := (pos--; While[pos > 1 && CSSTokenType @ tokens[[pos]] == " ", pos--])
@@ -3138,13 +3163,13 @@ consumeStyleSheet[s_String] :=
 		Echo[l, "Token Length"];
 		
 		(* skip any leading whitespace (there shouldn't be any if @charset exists) *)
-		If[currentToken[] == " ", advancePosAndSkipWhitespace[];];
+		If[tokenTypeIs[" "], advancePosAndSkipWhitespace[]];
 		
 		(* check for @charset rule *)
-		If[currentToken[] == "at-keyword" && tokenStringMatchesQ["charset"], consumeAtCharsetKeyword[]];
+		If[tokenTypeIs["at-keyword"] && tokenStringIs["charset"], consumeAtCharsetKeyword[]];
 		
 		(* check for @import rules *)
-		While[currentToken[] == "at-keyword" && tokenStringMatchesQ["import"], AppendTo[imports, consumeAtImportKeyword[]];];
+		While[tokenTypeIs["at-keyword"] && tokenStringIs["import"], AppendTo[imports, consumeAtImportKeyword[]];];
 		imports = Join @@ imports;
 				
 		lRulesets = Count[tokens, {"{}", ___}]; (* upper bound of possible rulesets *)
@@ -3152,10 +3177,10 @@ consumeStyleSheet[s_String] :=
 		While[pos < l,
 			Which[
 				(* any at-rule *)
-				currentToken[] == "at-keyword", (*TODO*)consumeAtRule[CSSTokenString @ tokens[[pos]]],
+				tokenTypeIs["at-keyword"], (*TODO*)consumeAtRule[CSSTokenString @ tokens[[pos]]],
 				
 				(* bad ruleset: missing a selector *)
-				currentToken[] == "{}", advancePosAndSkipWhitespace[], 
+				tokenTypeIs["{}"], advancePosAndSkipWhitespace[], 
 				
 				(* anything else treated as a ruleset *)
 				True, rulesets[[i]] = consumeRuleset[]; i++;
@@ -3172,7 +3197,7 @@ consumeStyleSheet[s_String] :=
 (* The character set is assumed UTF-8 and any charset is ignored. *)
 consumeAtCharsetKeyword[] :=
 	Module[{},
-		If[currentToken[] != "at-keyword" || !tokenStringMatchesQ["charset"],
+		If[!tokenTypeIs["at-keyword"] || !tokenStringIs["charset"],
 			Echo[Row[{"Expected @charset keyword. Had instead ", tokens[[pos]]}], "@charset error"];
 			advancePosToNextSemicolon[]; advancePosAndSkipWhitespace[]; 
 			Return @ Null;
@@ -3190,13 +3215,13 @@ consumeAtCharsetKeyword[] :=
 
 consumeAtImportKeyword[] :=  
 	Module[{path, mediums, mediaStart, data},
-		If[currentToken[] != "at-keyword" || !tokenStringMatchesQ["import"],
+		If[!tokenTypeIs["at-keyword"] || !tokenStringIs["import"],
 			Echo[Row[{"Expected @import keyword. Had instead ", tokens[[pos]]}], "@import error"];
 			advancePosToNextSemicolon[]; advancePosAndSkipWhitespace[]; Return @ {};
 		];
 		advancePosAndSkipWhitespace[];
 		(* next token must be URL or string path to file *)
-		If[!MatchQ[currentToken[], "url" | "string"],
+		If[!tokenTypeIs["url" | "string"],
 			Echo["Expected URL not found.", "@import error"];
 			advancePosToNextSemicolon[]; advancePosAndSkipWhitespace[]; Return @ {};
 		];
@@ -3206,12 +3231,12 @@ consumeAtImportKeyword[] :=
 		(* anything else is a comma-delimited set of media queries *)
 		(*TODO: implement proper media queries *)
 		mediums = {};
-		While[currentToken[] != ";",
+		While[!tokenTypeIs[";"],
 			mediaStart = pos;
 			advancePosToNextSemicolonOrComma[];
 			If[pos == l, Echo["Media query has no closing. Reached EOF.", "@import error"]; Return @ {}];
 			AppendTo[mediums, CSSUntokenize @ tokens[[mediaStart, pos - 1]]];
-			If[currentToken[] == ";",
+			If[tokenTypeIs[";"],
 				(* break out of media loop*)
 				Break[] 
 				, 
@@ -3240,14 +3265,14 @@ consumeAtImportKeyword[] :=
 consumeAtRule[type_String] :=
 	Which[
 		(* @import not allowed so skip them *)
-		tokenStringMatchesQ["import"], advancePosToNextSemicolon[]; advancePosAndSkipWhitespace[], 
+		tokenStringIs["import"], advancePosToNextSemicolon[]; advancePosAndSkipWhitespace[], 
 			
 		(* @page *)
-		tokenStringMatchesQ["page"], 
+		tokenStringIs["page"], 
 			Null,
 			
 		(* @media *)
-		tokenStringMatchesQ["media"], 
+		tokenStringIs["media"], 
 			Null,
 			
 		(* unrecognized @rule *)
@@ -3275,7 +3300,7 @@ consumeDeclarationBlock[inputTokens:{__?CSSTokenQ}] :=
 		pos = 1; l = Length[tokens];
 		
 		(* skip any initial whitespace *)
-		If[currentToken[] == " ", advancePosAndSkipWhitespace[]]; 
+		If[tokenTypeIs[" "], advancePosAndSkipWhitespace[]]; 
 		
 		(*
 			Each declaration is of the form 'property:value;'. The last declaration may leave off the semicolon.
@@ -3299,26 +3324,26 @@ consumeDeclaration[inputTokens:{__?CSSTokenQ}] :=
 		pos = 1; l = Length[tokens];
 		
 		(* check for bad property *)
-		If[currentToken[] != "ident", Return @ $Failed];
+		If[!tokenTypeIs["ident"], Return @ $Failed];
 		propertyPosition = pos; advancePosAndSkipWhitespace[];
 		
 		(* check for EOF or missing colon *)
-		If[pos >= l  || currentToken[] != ":", Return @ $Failed];
+		If[pos >= l  || !tokenTypeIs[":"], Return @ $Failed];
 		advancePosAndSkipWhitespace[]; 
 		valuePosition = pos;
 		
 		(* remove trailing whitespace *)
 		pos = l;
-		If[currentToken[] == ";", 
+		If[tokenTypeIs[";"], 
 			retreatPosAndSkipWhitespace[]
 			,
-			While[pos > 1 && currentToken[] == " ", pos--]
+			While[pos > 1 && tokenTypeIs[" "], pos--]
 		];
 		
 		(* check for !important token sequence *)
-		If[currentToken[] == "ident" && tokenStringMatchesQ["important"], 
+		If[tokenTypeIs["ident"] && tokenStringIs["important"], 
 			retreatPosAndSkipWhitespace[];
-			If[currentToken[] == "!", important = True; retreatPosAndSkipWhitespace[]]];
+			If[tokenTypeIs["!"], important = True; retreatPosAndSkipWhitespace[]]];
 		
 		declaration = <|
 			"Important" -> important,
