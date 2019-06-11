@@ -811,15 +811,16 @@ parseURI[uri_String] :=
 
 
 (*TODO: parse multiple background specs but only take the first valid one*)
-parse[prop:"background", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)parseSingleBG[prop, tokens]
-
 (* 
 	Shorthand for all background properties.
-	Any properties not set by this are reset to their initial values.
+	Any properties not set by this are reset to their initial values. (FE generally uses None.)
 	Commas separate background layers, so split on comma, but FE only supports one image so take last...?
 *)
-parseSingleBG[prop_String, inputTokens:{{"ident", "inherit"}}] := Background -> Inherited
-parseSingleBG[prop_String, inputTokens:{{"ident", "initial"}}] := Background -> initialValues @ "background"
+consumeProperty[prop:"background", {{"ident", x_?StringQ /; StringMatchQ[x, "inherit", IgnoreCase -> True]}}] := Background -> Inherited
+consumeProperty[prop:"background", {{"ident", x_?StringQ /; StringMatchQ[x, "initial", IgnoreCase -> True]}}] := Background -> None
+
+consumeProperty[prop:"background", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)parseSingleBG[prop, tokens]
+
 parseSingleBG[prop_String, inputTokens:{__?CSSTokenQ}] := 
 	Block[
 		{
@@ -845,7 +846,7 @@ parseSingleBG[prop_String, inputTokens:{__?CSSTokenQ}] :=
 							If[hasImage, Return @ repeatedPropValueFailure @ "background-image"];
 							hasImage = True; values["i"] = Missing["Not supported."];,
 						_,
-							Return @ invalidFunctionFailure @ CSSUntokenize @ tokens[[pos, 2 ;;]]
+							Return @ invalidFunctionFailure @ CSSUntokenize @ tokens[[pos]]
 					],
 				
 				(* scroll or fixed keyword *)
@@ -913,24 +914,26 @@ parseSingleBG[prop_String, inputTokens:{__?CSSTokenQ}] :=
 (*background-attachment*)
 
 
+consumeProperty[prop:"background-attachment", {{"ident", x_?StringQ /; StringMatchQ[x, "inherit"|"initial", IgnoreCase -> True]}}] := 
+	Missing["Not supported."]
+
+consumeProperty[prop:"background-attachment", inputTokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
+	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+		If[l > 1, Return @ tooManyTokensFailure @ tokens];
+		value = parseSingleBGAttachment[prop, tokens[[pos]]];
+		If[FailureQ[value] || MissingQ[value], value, Missing["Only fixed supported."]]
+	]
+
+
 parseSingleBGAttachment[prop_String, token_?CSSTokenQ] := parseSingleBGAttachment[prop, token] =
 	Switch[CSSTokenType @ token,
 		"ident", 
-			Switch[CSSNormalizeEscapes @ CSSTokenString @ token,
+			Switch[ToLowerCase @ CSSTokenString @ token,
 				"scroll",  Missing["Not supported."],
-				"fixed",   Automatic, (* FE's only allowed value *)
-				"inherit", Inherited,
-				"initial", initialValues @ prop,
+				"fixed",   Automatic, (* FE follows this mode, but there's no FE option for it *)
 				_,         unrecognizedKeyWordFailure @ prop
 			],
 		_, unrecognizedValueFailure @ prop
-	]
-
-parse[prop:"background-attachment", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
-	Module[{l = Length[tokens], value},
-		If[l > 1, Return @ tooManyTokensFailure @ tokens];
-		value = parseSingleBGAttachment[prop, tokens[[1]]];
-		If[FailureQ[value] || MissingQ[value], value, Missing["Only fixed supported."]]
 	]
 
 
@@ -942,7 +945,12 @@ parse[prop:"background-attachment", tokens:{__?CSSTokenQ}] := (*parse[prop, toke
 	Effectively the same as color, except a successful parse returns as a rule Background -> value.
 	Also 'currentColor' value needs to know the current value of 'color', instead of inherited from the parent.	
 *) 
-parse[prop:"background-color", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"background-color", {{"ident", x_?StringQ /; StringMatchQ[x, "inherit", IgnoreCase -> True]}}] := 
+	Background -> Inherited
+consumeProperty[prop:"background-color", {{"ident", x_?StringQ /; StringMatchQ[x, "initial", IgnoreCase -> True]}}] := 
+	Background -> None
+
+consumeProperty[prop:"background-color", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value},
 		value = parseSingleColor[prop, tokens];
 		If[FailureQ[value], value, Background -> value]
@@ -953,28 +961,36 @@ parse[prop:"background-color", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] =
 (*background-image*)
 
 
+consumeProperty[prop:"background-image", {{"ident", x_?StringQ /; StringMatchQ[x, "inherit", IgnoreCase -> True]}}] := 
+	System`BackgroundAppearance -> Inherited
+consumeProperty[prop:"background-image", {{"ident", x_?StringQ /; StringMatchQ[x, "initial", IgnoreCase -> True]}}] := 
+	System`BackgroundAppearance -> None
+
+consumeProperty[prop:"background-image", inputTokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
+	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+		If[l > 1, Return @ tooManyTokensFailure @ tokens];
+		value = parseSingleBGImage[prop, First @ tokens];
+		If[FailureQ[value], value, System`BackgroundAppearance -> value]
+	]
+
 parseSingleBGImage[prop_String, token_?CSSTokenQ] := 
 	Switch[CSSTokenType @ token,
 		"ident", 
+			Switch[ToLowerCase @ CSSTokenString @ token,
+				"none", None,
+				_,      unrecognizedKeyWordFailure @ prop
+			],
+		"function", 
 			Switch[CSSTokenString @ token,
-				"none",    None,
-				"inherit", Inherited,
-				"initial", initialValues @ prop,
-				_,         unrecognizedKeyWordFailure @ prop
+				Alternatives[
+					"linear-gradient", "repeating-linear-gradient",
+					"radial-gradient", "repeating-radial-gradient", "conic-gradient"
+				],
+				   Missing["Not supported."],
+				_, invalidFunctionFailure @ CSSUntokenize @ token
 			],
 		"uri", parseURI @ CSSTokenString @ token,
 		_,     unrecognizedValueFailure @ prop
-	]
-
-parse[prop:"background-image", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], value},
-		value = 
-			Switch[CSSTokenType @ tokens[[pos]], 
-				"function", (* possible linear- or radial-gradient *)
-					consumeFunction[pos, l, tokens]; Missing["Not supported."], (* advances pos but return value is not used *)
-				_, parseSingleBGImage[prop, tokens[[pos]]]
-			];
-		If[FailureQ[value], value, System`BackgroundAppearance -> value]
 	]
 
 
@@ -982,17 +998,32 @@ parse[prop:"background-image", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] =
 (*background-position*)
 
 
+consumeProperty[prop:"background-image", {{"ident", x_?StringQ /; StringMatchQ[x, "inherit", IgnoreCase -> True]}}] := 
+	System`BackgroundAppearanceOptions -> Inherited
+consumeProperty[prop:"background-image", {{"ident", x_?StringQ /; StringMatchQ[x, "initial", IgnoreCase -> True]}}] := 
+	System`BackgroundAppearanceOptions -> "Center"
+
+(* only "Center" is supported by the FE *)
+consumeProperty[prop:"background-position", inputTokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
+	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, values = {}},
+		While[pos <= l,
+			value = parseSingleBGPosition[prop, tokens[[pos]]];
+			If[FailureQ[value], Return @ value, AppendTo[values, value]];
+			advancePosAndSkipWhitespace[]
+		];
+		value = parseSingleBGPositionPair[values, tokens];		
+		If[FailureQ[value], value, System`BackgroundAppearanceOptions -> value]
+	]
+
 parseSingleBGPosition[prop_String, token_?CSSTokenQ] :=
 	Switch[CSSTokenType @ token,
 		"ident", 
-			Switch[CSSTokenString @ token,
+			Switch[ToLowerCase @ CSSTokenString @ token,
 				"left",    Left,
 				"center",  Center,
 				"right",   Right,
 				"top",     Top,
 				"bottom",  Bottom,
-				"inherit", Inherited,
-				"initial", initialValues @ prop,
 				_,         unrecognizedKeyWordFailure @ prop
 			],
 		"percentage", parsePercentage @ token,
@@ -1011,24 +1042,15 @@ parseSingleBGPositionPair[values:{__}, tokens:{__?CSSTokenQ}] :=
 			],
 		2, 
 			Switch[values,
+				Alternatives[
+					{Top, Left}, {Left, Top}, 
+					{0, 0},	{0, Top}, {Left, 0}
+				],                                  "NoRepeat",
 				{Center, Center},                   "Center", 
-				{Top, Left} | {Left, Top} | {0, 0}, "NoRepeat",
 				{Inherited, _} | {_, Inherited},    illegalIdentifierFailure @ "inherit",
 				_,                                  Missing["Not supported."]
 			],
 		_, tooManyTokensFailure @ tokens
-	]
-
-(* only "Center" is supported by the FE *)
-parse[prop:"background-position", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
-	Module[{pos = 1, l = Length[tokens], value, values = {}},
-		While[pos <= l,
-			value = parseSingleBGPosition[prop, tokens[[1]]];
-			If[FailureQ[value], Return @ value, AppendTo[values, value]];
-			advancePosAndSkipWhitespace[]
-		];
-		value = parseSingleBGPositionPair[values, tokens];		
-		If[FailureQ[value], value, System`BackgroundAppearanceOptions -> value]
 	]
 
 
@@ -1036,26 +1058,30 @@ parse[prop:"background-position", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens
 (*background-repeat*)
 
 
+consumeProperty[prop:"background-repeat", {{"ident", x_?StringQ /; StringMatchQ[x, "inherit", IgnoreCase -> True]}}] := 
+	System`BackgroundAppearanceOptions -> Inherited
+consumeProperty[prop:"background-repeat", {{"ident", x_?StringQ /; StringMatchQ[x, "initial", IgnoreCase -> True]}}] := 
+	System`BackgroundAppearanceOptions -> initialValues @ prop
+
+consumeProperty[prop:"background-repeat", inputTokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
+	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+		If[l > 1, Return @ tooManyTokensFailure @ tokens];
+		value = parseSingleBGRepeat[prop, tokens[[pos]]];
+		If[FailureQ[value], value, System`BackgroundAppearanceOptions -> value]
+	]
+	
+
 parseSingleBGRepeat[prop_String, token_?CSSTokenQ] :=
 	Switch[CSSTokenType @ token,
 		"ident", 
-			Switch[CSSNormalizeEscapes @ CSSTokenString @ token,
+			Switch[ToLowerCase @ CSSTokenString @ token,
 				"no-repeat", "NoRepeat",
 				"repeat-x",  "RepeatX",
 				"repeat-y",  "RepeatY",
 				"repeat",    "Repeat",
-				"inherit",   Inherited,
-				"initial",   initialValues @ prop,
 				_,           unrecognizedKeyWordFailure @ prop
 			],
 		_, unrecognizedValueFailure @ prop
-	]
-
-parse[prop:"background-repeat", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
-	Module[{l = Length[tokens], value},
-		If[l > 1, Return @ tooManyTokensFailure @ tokens];
-		value = parseSingleBGRepeat[prop, tokens[[1]]];
-		If[FailureQ[value], value, System`BackgroundAppearanceOptions -> value]
 	]
 
 
@@ -1082,14 +1108,15 @@ parse[prop:"background-repeat", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] 
 (*border-collapse*)
 
 
-parse[prop:"border-collapse", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"border-collapse", {{"ident", x_?StringQ /; StringMatchQ[x, "inherit", IgnoreCase -> True]}}] := {}
+consumeProperty[prop:"border-collapse", {{"ident", x_?StringQ /; StringMatchQ[x, "initial", IgnoreCase -> True]}}] := initialValues @ prop
+
+consumeProperty[prop:"border-collapse", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		Switch[CSSTokenType @ tokens[[pos]],
 			"ident", 
-				Switch[CSSNormalizeEscapes @ CSSTokenString @ tokens[[pos]],
-					"inherit",  {},
-					"initial",  initialValues @ prop,
+				Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]],
 					"separate", Missing["Not supported."],
 					"collapse", {}, (* this is all Mathematica supports *)
 					_,          unrecognizedKeyWordFailure @ prop
@@ -1104,19 +1131,46 @@ parse[prop:"border-collapse", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = 
 
 
 (* Setting a single border/frame is only possible in WL if all 4 edges are specified at the same time. *)
-parse[prop:"border-top-color"|"border-right-color"|"border-bottom-color"|"border-left-color", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+
+consumeProperty[
+	prop:"border-top-color"|"border-right-color"|"border-bottom-color"|"border-left-color", 
+	{{"ident", x_?StringQ /; StringMatchQ[x, "inherit"|"initial", IgnoreCase -> True]}}
+] := (*consumeProperty[prop, tokens] = *)
+	Module[{wrapper, value},
+		value = Switch[ToLowerCase @ x, "inherit", Inherited, "initial", initialValues @ prop];
+		wrapper = 
+			Switch[prop, 
+				"border-top-color",    Top, 
+				"border-right-color",  Right, 
+				"border-bottom-color", Bottom, 
+				"border-left-color",   Left
+			];
+		# -> wrapper[value]& /@ {FrameStyle, CellFrameStyle}
+	]	
+	
+	
+consumeProperty[
+	prop:"border-top-color"|"border-right-color"|"border-bottom-color"|"border-left-color", 
+	tokens:{__?CSSTokenQ}
+] := (*consumeProperty[prop, tokens] = *)
 	Module[{value, wrapper},
 		value = parseSingleColor[prop, tokens];
 		If[FailureQ[value], 
 			value
 			, 
-			wrapper = Switch[prop, "border-top-color", Top, "border-right-color", Right, "border-bottom-color", Bottom, "border-left-color", Left];
+			wrapper = 
+				Switch[prop, 
+					"border-top-color",    Top, 
+					"border-right-color",  Right, 
+					"border-bottom-color", Bottom, 
+					"border-left-color",   Left
+				];
 			# -> wrapper[value]& /@ {FrameStyle, CellFrameStyle}
 		]
 	]	
 
 (* sets all 4 border/frame edges at once *)
-parse[prop:"border-color", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"border-color", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleColor[prop, If[CSSTokenType @ tokens[[pos]] == "function", consumeFunction[pos, l, tokens], {tokens[[pos]]}]];
@@ -1147,7 +1201,7 @@ parse[prop:"border-color", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 	Also WL Spacings applies to the outer margins as well, but 'border-spacing' is internal only.
 	Because each item is padded on either side, divide the result in half.
 *)
-parse[prop:"border-spacing", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"border-spacing", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		If[l == 1 && CSSTokenType @ tokens[[1]] == "ident", 
 			Return @ 
@@ -1209,7 +1263,7 @@ parseSingleBorderStyle[prop_String, token_?CSSTokenQ] :=
 	Setting a single border/frame is only possible in WL if all 4 edges are specified at the same time.
 	As a compromise set the other edges to Inherited.
 *)
-parse[prop:"border-top-style"|"border-right-style"|"border-bottom-style"|"border-left-style", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"border-top-style"|"border-right-style"|"border-bottom-style"|"border-left-style", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value, wrapper},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBorderStyle[prop, tokens[[1]]];
@@ -1221,7 +1275,7 @@ parse[prop:"border-top-style"|"border-right-style"|"border-bottom-style"|"border
 		]
 	]	
 	
-parse[prop:"border-style", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"border-style", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleBorderStyle[prop, tokens[[pos]]];
@@ -1267,7 +1321,7 @@ convertToCellThickness[x_] := Switch[x, AbsoluteThickness[_], First[x], Thicknes
 	Setting a single border/frame is only possible in WL if all 4 edges are specified at the same time.
 	As a compromise set the other edges to Inherited.
 *)
-parse[prop:"border-top-width"|"border-right-width"|"border-bottom-width"|"border-left-width", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"border-top-width"|"border-right-width"|"border-bottom-width"|"border-left-width", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value, wrapper},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBorderWidth[prop, tokens[[1]]];
@@ -1280,7 +1334,7 @@ parse[prop:"border-top-width"|"border-right-width"|"border-bottom-width"|"border
 	]	
 	
 (* sets all frame edge thickness at once *)
-parse[prop:"border-width", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"border-width", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleBorderWidth[prop, tokens[[pos]]];
@@ -1309,7 +1363,7 @@ parse[prop:"border-width", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 	This effectively resets all edge properties because any property not specified takes on its default value. 
 	'border' by itself sets all 4 edges to be the same.
 *)
-parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[
 	{
 		pos = 1, l = Length[tokens], value, 
@@ -1368,7 +1422,7 @@ parse[prop:"border"|"border-top"|"border-right"|"border-bottom"|"border-left", t
 (*clip*)
 
 
-parse[prop:"clip", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"clip", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l == 1, (* if only one token is present, then it should be a keyword *)
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -1400,7 +1454,7 @@ parse[prop:"clip", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 (*color*)
 
 
-parse[prop:"color", tokens:{__?CSSTokenQ}] := FontColor -> parseSingleColor[prop, tokens]
+consumeProperty[prop:"color", tokens:{__?CSSTokenQ}] := FontColor -> parseSingleColor[prop, tokens]
 
 
 (* ::Subsection::Closed:: *)
@@ -1412,7 +1466,7 @@ parse[prop:"color", tokens:{__?CSSTokenQ}] := FontColor -> parseSingleColor[prop
 
 
 (* only used to add content before or after element, so let's restrict this to Cells' CellDingbat or CellLabel *)
-parse[prop:"content", inputTokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"content", inputTokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, parsedValues = {}},
 		While[pos <= l,
 			value = 
@@ -1464,7 +1518,7 @@ parse[prop:"content", inputTokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 
 
 (* In WL each style must be repeated n times to get an increment of n *)
-parse[prop:"counter-increment", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"counter-increment", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], v, values = {}, next},
 		While[pos <= l,
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -1501,7 +1555,7 @@ parse[prop:"counter-increment", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] 
 (*counter-reset*)
 
 
-parse[prop:"counter-reset", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"counter-reset", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], v = {}, values = {}, next},
 		While[pos <= l,
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -1556,7 +1610,7 @@ parseSingleListStyleImage[prop_String, token_?CSSTokenQ] :=
 		_, unrecognizedValueFailure @ prop
 	]
 	
-parse[prop:"list-style-image", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"list-style-image", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStyleImage[prop, First @ tokens];
@@ -1585,7 +1639,7 @@ parseSingleListStylePosition[prop_String, token_?CSSTokenQ] :=
 		_, unrecognizedValueFailure @ prop
 	]
 	
-parse[prop:"list-style-position", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"list-style-position", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStylePosition[prop, First @ tokens];
@@ -1623,7 +1677,7 @@ parseSingleListStyleType[prop_String, token_?CSSTokenQ, style_String:"Item"] :=
 		_, unrecognizedValueFailure @ prop
 	]
 	
-parse[prop:"list-style-type", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"list-style-type", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStyleType[prop, First @ tokens];
@@ -1636,7 +1690,7 @@ parse[prop:"list-style-type", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = 
 
 
 (* short-hand for list-style-image/position/type properties given in any order *)
-parse[prop:"list-style", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"list-style", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, values, p, noneCount = 0, hasImage = False, hasPos = False, hasType = False},
 		(* 
 			li-image, li-position, and li-type can appear in any order.
@@ -1676,7 +1730,7 @@ parse[prop:"list-style", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 	There's also ShowStringCharacters, but this only hides/shows the double quote.
 	We treat this then as not available, but we validate the form anyway.
 *)
-parse[prop:"quotes", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"quotes", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], v, values = {}, next},
 		While[pos <= l,
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -1706,7 +1760,7 @@ parse[prop:"quotes", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 
 
 (* WL uses a TagBox[..., MouseAppearanceTag[""]] instead of an option to indicate mouse appearance *)
-parse[prop:"cursor", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"cursor", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -1747,7 +1801,7 @@ parse[prop:"cursor", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 	WL automatically lays out blocks either inline or as nested boxes. 
 	If a Cell appears within TextData or BoxData then it is considered inline.
 *)
-parse[prop:"display", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"display", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -1784,7 +1838,7 @@ parse[prop:"display", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 
 
 (* WL does not support the flow of boxes around other boxes. *)
-parse[prop:"float", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"float", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -1804,7 +1858,7 @@ parse[prop:"float", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 	]
 
 
-parse[prop:"clear", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"clear", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -1838,7 +1892,7 @@ parse[prop:"clear", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 	[['font-style' || 'font-variant' || 'font-weight' ]? 'font-size' [ / 'line-height' ]? 'font-family' ]
 	All font properties are reset to their initial values, then the listed properties are calculated.
 *)
-parse[prop:"font", tokens:{__?CSSTokenQ}] :=
+consumeProperty[prop:"font", tokens:{__?CSSTokenQ}] :=
 	Module[{pos = 1, l = Length[tokens], value, newValue = {}, temp},
 		(* reset font properties *)
 		value = {
@@ -1866,8 +1920,8 @@ parse[prop:"font", tokens:{__?CSSTokenQ}] :=
 							FontWeight  -> Inherited,
 							LineSpacing -> Inherited},
 					"initial",          {} (* keep reset values *),
-					"italic"|"oblique", {parse["font-style", tokens]},
-					"small-caps",       {parse["font-variant", tokens]},
+					"italic"|"oblique", {consumeProperty["font-style", tokens]},
+					"small-caps",       {consumeProperty["font-variant", tokens]},
 					_,                  unrecognizedKeyWordFailure @ prop
 				];
 			Return @ If[FailureQ[newValue], newValue, DeleteDuplicates[Join[newValue, value], SameQ[First[#1], First[#2]]&]]
@@ -1879,9 +1933,9 @@ parse[prop:"font", tokens:{__?CSSTokenQ}] :=
 			Besides "normal", the keywords of each property are unique (ignoring 'inherit').
 		*)
 		(* FIXME: could check that property is not duplicated like we do in e.g. border-top *)
-		While[pos <= l && FailureQ[temp = parse["font-size", {tokens[[pos]]}]],
+		While[pos <= l && FailureQ[temp = consumeProperty["font-size", {tokens[[pos]]}]],
 			If[!MatchQ[CSSNormalizeEscapes @ CSSTokenString @ tokens[[pos]], "normal" | "initial" | "inherit"],
-				AppendTo[newValue, FirstCase[parse[#, {tokens[[pos]]}]& /@ {"font-style", "font-variant", "font-weight"}, _Rule, Nothing]]
+				AppendTo[newValue, FirstCase[consumeProperty[#, {tokens[[pos]]}]& /@ {"font-style", "font-variant", "font-weight"}, _Rule, Nothing]]
 			];
 			advancePosAndSkipWhitespace[];
 		];
@@ -1893,12 +1947,12 @@ parse[prop:"font", tokens:{__?CSSTokenQ}] :=
 		If[pos > l, Return @ noValueFailure["font-family"]];
 		If[MatchQ[tokens[[pos]], {"operator", "/"}],
 			pos++; 
-			temp = parse["line-height", {tokens[[pos]]}]; 
+			temp = consumeProperty["line-height", {tokens[[pos]]}]; 
 			If[FailureQ[temp], Return @ temp, AppendTo[newValue, temp]; advancePosAndSkipWhitespace[]];
 		];
 		
 		(* everything else must be a font-family *)
-		temp = parse["font-family", tokens[[pos ;;]]];
+		temp = consumeProperty["font-family", tokens[[pos ;;]]];
 		If[FailureQ[temp], Return @ temp, AppendTo[newValue, temp]];
 		
 		(* overwrite old with any new values *)
@@ -1910,7 +1964,7 @@ parse[prop:"font", tokens:{__?CSSTokenQ}] :=
 (*font-family*)
 
 
-parse[prop:"font-family", tokens:{__?CSSTokenQ}] :=
+consumeProperty[prop:"font-family", tokens:{__?CSSTokenQ}] :=
 	Module[{fontTokens, parsed, result},
 		fontTokens = DeleteCases[SplitBy[tokens, MatchQ[{"operator", ","}]], {{"operator", ","}}];
 		parsed = parseSingleFontFamily /@ fontTokens;
@@ -1986,7 +2040,7 @@ parseFontFamilySingleIdent[s_String] :=
 (*font-size*)
 
 
-parse[prop:"font-size", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"font-size", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2019,7 +2073,7 @@ parse[prop:"font-size", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 (*font-style*)
 
 
-parse[prop:"font-style", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"font-style", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2043,7 +2097,7 @@ parse[prop:"font-style", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 (*font-variant*)
 
 
-parse[prop:"font-variant", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"font-variant", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2070,7 +2124,7 @@ parse[prop:"font-variant", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 	"lighter" and "bolder" are not supported.
 	Weight mappings come from https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight.
 *)
-parse[prop:"font-weight", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"font-weight", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2138,7 +2192,7 @@ parseSingleSize[prop_String, token_?CSSTokenQ] := parseSingleSize[prop, token] =
 	]
 	
 (* min-width and max-width override width property *)
-parse[prop:"width"|"max-width"|"min-width", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"width"|"max-width"|"min-width", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleSize[prop, tokens[[1]]];
@@ -2155,7 +2209,7 @@ parse[prop:"width"|"max-width"|"min-width", tokens:{__?CSSTokenQ}] := (*parse[pr
 		]
 	]
 
-parse[prop:"height"|"max-height"|"min-height", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"height"|"max-height"|"min-height", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleSize[prop, tokens[[1]]];
@@ -2181,7 +2235,7 @@ parse[prop:"height"|"max-height"|"min-height", tokens:{__?CSSTokenQ}] := (*parse
 	Similar to WL LineSpacing, but LineSpacing already takes FontSize into account.
 	Thus, we intercept 'em' and 'ex' before getting a dynamic FontSize and we keep 
 	the percentage from being wrapped in Scaled. *)
-parse[prop:"line-height", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"line-height", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2233,7 +2287,7 @@ parseSingleMargin[prop_String, token_?CSSTokenQ] := parseSingleMargin[prop, toke
 	CSS margins --> WL ImageMargins and CellMargins
 	CSS padding --> WL FrameMargins and CellFrameMargins
 *)
-parse[prop:"margin-top"|"margin-right"|"margin-bottom"|"margin-left", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"margin-top"|"margin-right"|"margin-bottom"|"margin-left", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{l = Length[tokens], wrapper, value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleMargin[prop, tokens[[1]]];
@@ -2245,7 +2299,7 @@ parse[prop:"margin-top"|"margin-right"|"margin-bottom"|"margin-left", tokens:{__
 		]
 	]
 		
-parse[prop:"margin", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"margin", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleMargin[prop, tokens[[pos]]];
@@ -2281,7 +2335,7 @@ parse[prop:"margin", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 (*outline-color*)
 
 
-parse[prop:"outline-color", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"outline-color", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		If[l == 1 && CSSTokenType @ tokens[[1]] == "ident" && CSSNormalizeEscapes @ CSSTokenString @ tokens[[1]] == "invert",
 			CellFrameColor -> Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]]
@@ -2304,7 +2358,7 @@ parse[prop:"outline-color", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 
 
 (* only a solid border is allowed for cells; 'hidden' is not allowed here *)
-parse[prop:"outline-style", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"outline-style", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value =
@@ -2321,7 +2375,7 @@ parse[prop:"outline-style", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 (*outline-width*)
 
 
-parse[prop:"outline-width", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"outline-width", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = parseSingleBorderWidth[prop, tokens[[pos]]];
@@ -2343,7 +2397,7 @@ parse[prop:"outline-width", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 
 
 (* Shorthand for outline-width/style/color. 'outline' always sets all 4 edges to be the same. *)
-parse[prop:"outline", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"outline", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[
 	{
 		pos = 1, l = Length[tokens], value, 
@@ -2399,7 +2453,7 @@ parse[prop:"outline", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 	This would mostly be found with WL Pane expression as PaneBox supports scrollbars. 
 	Other boxes may support ImageSizeAction.
 *)
-parse[prop:"overflow", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"overflow", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[CSSTokenType @ tokens[[pos]],
@@ -2440,7 +2494,7 @@ parseSinglePadding[prop_String, token_?CSSTokenQ] := parseSinglePadding[prop, to
 	CSS margins --> WL ImageMargins and CellMargins
 	CSS padding --> WL FrameMargins and CellFrameMargins
 *)
-parse[prop:"padding-top"|"padding-right"|"padding-bottom"|"padding-left", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"padding-top"|"padding-right"|"padding-bottom"|"padding-left", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{l = Length[tokens], wrapper, value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSinglePadding[prop, tokens[[1]]];
@@ -2452,7 +2506,7 @@ parse[prop:"padding-top"|"padding-right"|"padding-bottom"|"padding-left", tokens
 		]
 	]
 		
-parse[prop:"padding", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"padding", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSinglePadding[prop, tokens[[pos]]];
@@ -2484,7 +2538,7 @@ parse[prop:"padding", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 	FE uses LinebreakAdjustments with a blackbox algorithm. 
 	AFAIK there's no way to directly prevent orphans/widows.
 *)
-parse[prop:"orphans"|"widows", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"orphans"|"widows", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2511,7 +2565,7 @@ parse[prop:"orphans"|"widows", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] =
 (*page-break-after/before*)
 
 
-parse[prop:("page-break-after"|"page-break-before"), tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:("page-break-after"|"page-break-before"), tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2541,7 +2595,7 @@ parse[prop:("page-break-after"|"page-break-before"), tokens:{__?CSSTokenQ}] := (
 (*page-break-inside*)
 
 
-parse[prop:"page-break-inside", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"page-break-inside", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value, pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2575,7 +2629,7 @@ parse[prop:"page-break-inside", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] 
 	Moreover, attached cells aren't an option, but rather a cell.
 	Perhaps can use NotebookDynamicExpression -> Dynamic[..., TrackedSymbols -> {}] where "..." includes a list of attached cells.
 *)
-parse[prop:"position", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"position", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value =
@@ -2596,7 +2650,7 @@ parse[prop:"position", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 	]
 
 
-parse[prop:"left"|"right"|"top"|"bottom", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"left"|"right"|"top"|"bottom", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value =
@@ -2635,7 +2689,7 @@ parse[prop:"left"|"right"|"top"|"bottom", tokens:{__?CSSTokenQ}] := (*parse[prop
 
 
 (* WL Grid does not support an option to have a grid caption. *)
-parse[prop:"caption-side", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"caption-side", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2659,7 +2713,7 @@ parse[prop:"caption-side", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 
 
 (* There is no WL equivalent because FE uses only 'border-collapse' in Grid.*)
-parse[prop:"empty-cells", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"empty-cells", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2683,7 +2737,7 @@ parse[prop:"empty-cells", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 
 
 (* The FE does its own formatting passes depending on the column width settings and content. *)
-parse[prop:"table-layout", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"table-layout", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2710,7 +2764,7 @@ parse[prop:"table-layout", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 (*direction*)
 
 
-parse[prop:"direction", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"direction", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2734,7 +2788,7 @@ parse[prop:"direction", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 
 
 (* WL distinguishes between alignment and justification, but CSS does not *)
-parse[prop:"text-align", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"text-align", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[CSSTokenType @ tokens[[pos]],
@@ -2757,7 +2811,7 @@ parse[prop:"text-align", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 (*text-indent*)
 
 
-parse[prop:"text-indent", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"text-indent", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2786,7 +2840,7 @@ parse[prop:"text-indent", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 
 
 (* WL distinguishes between alignment and justification, but CSS does not *)
-parse[prop:"text-decoration", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"text-decoration", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value, values = {}},
 		While[pos <= l,
 			value =
@@ -2815,7 +2869,7 @@ parse[prop:"text-decoration", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = 
 (*text-transform*)
 
 
-parse[prop:"text-transform", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"text-transform", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[CSSTokenType @ tokens[[pos]],
@@ -2843,7 +2897,7 @@ parse[prop:"text-transform", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *
 	The FontTracking options gives some additional control, but appears to be mis-appropriated to CSS font-stretch.
 	Not to be confused with CSS font-stretch.
 *)
-parse[prop:"letter-spacing", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"letter-spacing", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2867,7 +2921,7 @@ parse[prop:"letter-spacing", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *
 	Added back in Level 3. CSS Fonts Module Level 4 supports percentages as well.
 	Mathematica supports both level 3 and 4 features in FontTracking.
 *)
-parse[prop:"font-stretch", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"font-stretch", tokens:{__?CSSTokenQ}] := 
 	Module[{value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2898,7 +2952,7 @@ parse[prop:"font-stretch", tokens:{__?CSSTokenQ}] :=
 (*unicode-bidi*)
 
 
-parse[prop:"unicode-bidi", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"unicode-bidi", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2926,7 +2980,7 @@ parse[prop:"unicode-bidi", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 	General letter and word spacing is controlled by the Mathematica Front End. 
 	The CSS is still validated.
 *)
-parse[prop:"word-spacing", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"word-spacing", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2950,7 +3004,7 @@ parse[prop:"word-spacing", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 
 
 (* Whitespace is controlled by the Mathematica Front End. The CSS is still validated. *)
-parse[prop:"white-space", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"white-space", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[CSSTokenType @ tokens[[pos]],
@@ -2981,7 +3035,7 @@ parse[prop:"white-space", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 	Percentages are relative to the font-size i.e. 100% is one line-height upward.
 	CellBaseline is limited and always aligns the top of the inline cell to the Bottom/Top/Etc of the parent
 *)
-parse[prop:"vertical-align", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"vertical-align", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{value1, value2},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value1 = parseBaseline[prop, First @ tokens];
@@ -2994,7 +3048,7 @@ parse[prop:"vertical-align", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *
 (* this is effectively for RowBox alignment *)
 parseBaseline[prop:"vertical-align", token_?CSSTokenQ] := parseBaseline[prop, token] = 
 	Module[{value (* for Baseline *)},
-		(* tooManyTokens failure check occurs in higher-level function parse["vertical-align",...]*)
+		(* tooManyTokens failure check occurs in higher-level function consumeProperty["vertical-align",...]*)
 		value = 
 			Switch[CSSTokenType @ token,
 				"ident",
@@ -3058,7 +3112,7 @@ parseCellBaseline[prop:"vertical-align", token_?CSSTokenQ] := parseCellBaseline[
 	WL option ShowContents is only applicable within a StyleBox.
 	Often this is implemented using the Invisible function.
 *)
-parse[prop:"visibility", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"visibility", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3086,7 +3140,7 @@ parse[prop:"visibility", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 	The FE does its own depth ordering of boxes. 
 	Attached cells are ordered by their creation order.
 *)
-parse[prop:"z-index", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
+consumeProperty[prop:"z-index", tokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3114,18 +3168,18 @@ parse[prop:"z-index", tokens:{__?CSSTokenQ}] := (*parse[prop, tokens] = *)
 (*initial/inherit*)
 
 
-parse[prop_String, {{"ident", "initial"}}] := initialValues @ prop
-parse[prop_String, {{"ident", "inherit"}}] := Inherited
+consumeProperty[prop_String, {{"ident", x_?StringQ /; StringMatchQ[x, "initial", IgnoreCase -> True]}}] := initialValues @ prop
+consumeProperty[prop_String, {{"ident", x_?StringQ /; StringMatchQ[x, "inherit", IgnoreCase -> True]}}] := Inherited
 
 
 (* ::Subsection::Closed:: *)
 (*FALL THROUGH *)
 
 
-parse[prop_String, {}] := noValueFailure @ prop
+consumeProperty[prop_String, {}] := noValueFailure @ prop
 
 
-parse[prop_String, _] := unsupportedValueFailure @ prop
+consumeProperty[prop_String, _] := unsupportedValueFailure @ prop
 
 
 (* ::Section::Closed:: *)
@@ -3363,7 +3417,7 @@ process[property_String, a:{__Association}] :=
 	Module[{valuePositions, interpretationPositions, tokens, values, interpretations},
 		{valuePositions, interpretationPositions} = getPropertyPositions[property, a];
 		tokens = Extract[a, valuePositions];
-		{values, interpretations} = {StringJoin /@ tokens[[All, All, 2]], parse[property, #]& /@ tokens};
+		{values, interpretations} = {StringJoin /@ tokens[[All, All, 2]], consumeProperty[property, #]& /@ tokens};
 		ReplacePart[a, Join[Thread[valuePositions -> values], Thread[interpretationPositions -> interpretations]]]
 	]
 
