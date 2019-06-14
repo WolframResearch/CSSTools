@@ -466,56 +466,6 @@ untokenize[{"unicode-range", start_?NumericQ, stop_?NumericQ}] :=
 			True,                             "u+" <> startString <> "-" <> stopString]]
 
 
-(* ::Section::Closed:: *)
-(*Identify @import components*)
-
-
-(*tokenizeAtImportKeyword[x_String] := 
-	Replace[
-		StringSplit[x,
-			{
-				s:RegularExpression @ T["IMPORT_SYM"] :> {"import", s},
-				s:RegularExpression @ T["URI"]        :> {"uri",    s},
-				s:RegularExpression @ T["STRING"]     :> {"string", s},
-				s:RegularExpression @ P["medium"]     :> {"medium", s},
-				"," -> ",", 
-				";" -> ";"}],
-		{
-			s_String /; StringMatchQ[s, Whitespace | ""] :> Nothing, (* whitespace is OK to remove here *)
-			s_String /; StringLength[s] > 1              :> {"other", s}},
-		{1}]*)
-
-
-(*parse["atImportKeyword", tokens:{__?CSSTokenQ}] :=
-	Module[{pos = 2 (* first token must be @import *), l = Length[tokens], path, mediaStart, mediums = {}, data},
-		(* skip any whitespace before URL *)
-		If[CSSTokenType @ tokens[[pos]] == " ", skipWhitespace[pos, l, tokens]];
-		
-		(* next token must be URL or string path to file *)
-		path = 
-			Switch[CSSTokenType @ tokens[[pos]],
-				"uri",    CSSTokenString @ tokens[[pos]],
-				"string", CSSTokenString @ tokens[[pos]],
-				_,        "" (* shouldn't be able to reach this *)];
-		skipWhitespace[pos, l, tokens]; 	
-		
-		(* anything else is a comma-delimited set of media queries *)
-		(*TODO: implement proper media queries *)
-		While[CSSTokenType @ tokens[[pos]] != ";",
-			mediaStart = pos;
-			While[!MatchQ[CSSTokenType @ tokens[[pos]], "," | ";"], pos++];
-			AppendTo[mediums, StringJoin[CSSTokenString /@ tokens[[mediaStart, pos - 1]]]];
-			If[CSSTokenType @ tokens[[pos]] == ";", Break[]]
-		];
-		
-		(* import without interpretation *)
-		data = Import[Echo[path, "@import"], "Text"];
-		If[FailureQ[data], Return @ {}, data = processRulesets[data]];
-		If[mediums =!= {}, data[[All, "Condition"]] = ConstantArray[mediums, Length[data]]];
-		data	
-	]*)
-
-
 (* ::Section:: *)
 (*Package End*)
 
