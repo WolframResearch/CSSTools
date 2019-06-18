@@ -174,7 +174,7 @@ CSSTokenQ[x_] :=
 			{"{}"|"()"|"[]", ___?CSSTokenQ},
 			{"unicode-range", _?NumericQ, _?NumericQ},
 			{"url", _?StringQ},
-			{"newline", "\n"},
+			{"newline", "\n" | "\r\n" | "\r" | "\f"},
 			{"error", _}]] 
 
 CSSTokenize[x_String] := nestTokens @ tokenizeFlat @ x
@@ -307,44 +307,58 @@ stripURL[x_String] :=
 	Comments like /**/ are another candidate for an exception to the nesting. If an isolated /* is found,
 	then it suggests a closing comment */ is missing. The CSS validator https://jigsaw.w3.org/css-validator/validator
 	does not allow unclosed comments (nor does the CSS specification) so neither do we. *)		
-nestTokens[tokens:{__?CSSTokenQ}] :=
-	Module[{pos = 1, l = Length[tokens], depth = 0, brackets, t = tokens, inBadURL = False, inBadString = False},
+nestTokens[inputTokens:{__?CSSTokenQ}] :=
+	Module[
+		{
+			pos = 1, l = Length[inputTokens], depth = 0, brackets, tokens = inputTokens, 
+			inBadURL = False, inBadString = False, inWS = False
+		},
 		(* The upper limit of nestings is the number of open brackets and quotation marks *)
 		brackets = ConstantArray[0, Count[tokens, "{" | "[" | "(" | "\"" | "'" | {"function", _} | {"urlhead", _}]];
 		
 		While[pos <= l,
-			Switch[t[[pos]],
-				"{" | "[" | "(", If[!inBadString && !inBadURL, depth++; brackets[[depth]] = {t[[pos]], pos}],
-				{"urlhead", _},  If[!inBadString && !inBadURL, depth++; brackets[[depth]] = {t[[pos, 1]], pos}; inBadURL = True],
-				{"function", _}, If[!inBadString && !inBadURL, depth++; brackets[[depth]] = {t[[pos, 1]], pos}],
+			Switch[CSSTokenType @ tokens[[pos]],
+				"{" | "[" | "(", 
+					If[!inBadString && !inBadURL, depth++; brackets[[depth]] = {tokens[[pos]], pos}];
+					inWS = False,
+				"urlhead",  
+					If[!inBadString && !inBadURL, depth++; brackets[[depth]] = {tokens[[pos, 1]], pos}; inBadURL = True];
+					inWS = False,
+				"function", 
+					If[!inBadString && !inBadURL, depth++; brackets[[depth]] = {tokens[[pos, 1]], pos}];
+					inWS = False,
 				"\"" | "'",      
 					If[!inBadString, inBadString = True];
-					depth++; brackets[[depth]] = {t[[pos]], pos},
-				{"newline", _}, 
+					depth++; brackets[[depth]] = {tokens[[pos]], pos};
+					inWS = False,
+				"newline", 
 					If[inBadString, 
 						inBadString = False;
-						t[[brackets[[depth, 2]]]] = {"error", "bad-string"};
-						Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
+						tokens[[brackets[[depth, 2]]]] = {"error", "bad-string"};
+						Do[tokens[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
 						brackets[[depth]] = 0;
-						depth--],
+						depth--];
+					If[inWS, tokens[[pos]] = {"error", "extra-ws"}, inWS = True],
+				" ", If[inWS, tokens[[pos]] = {"error", "extra-ws"}, inWS = True],
 				"}",
 					If[inBadString || inBadURL, 
 						Null
 						,
 						If[depth == 0 || brackets[[depth, 1]] != "{",
-							t[[pos]] = {"error", t[[pos]]}
+							tokens[[pos]] = {"error", tokens[[pos]]}
 							,
-							t[[brackets[[depth, 2]]]] = Prepend[t[[brackets[[depth, 2]] + 1 ;; pos - 1]], "{}"];
-							Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
+							tokens[[brackets[[depth, 2]]]] = Prepend[tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]], "{}"];
+							Do[tokens[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
 							brackets[[depth]] = 0;
-							depth--]],
+							depth--]];
+					inWS = False,
 				")", 
 					If[inBadURL, 
 						(* the closing of a bad URL also closes a bad string *)
 						If[inBadString, inBadString = False; brackets[[depth]] = 0; depth--];
 						inBadURL = False;
-						t[[brackets[[depth, 2]]]] = {"error", "bad-url"};
-						Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
+						tokens[[brackets[[depth, 2]]]] = {"error", "bad-url"};
+						Do[tokens[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
 						brackets[[depth]] = 0;
 						depth--
 						,
@@ -352,30 +366,32 @@ nestTokens[tokens:{__?CSSTokenQ}] :=
 							Null
 							,
 							If[depth == 0 || !MatchQ[brackets[[depth, 1]], "function"|"("], 
-								t[[pos]] = {"error", t[[pos]]}
+								tokens[[pos]] = {"error", tokens[[pos]]}
 								,
-								t[[brackets[[depth, 2]]]] = 
+								tokens[[brackets[[depth, 2]]]] = 
 									Join[
 										If[brackets[[depth, 1]] == "(", 
 											{"()"}
 											,
-											t[[brackets[[depth, 2]]]]],
-										t[[brackets[[depth, 2]] + 1 ;; pos - 1]]];
-								Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
+											tokens[[brackets[[depth, 2]]]]],
+										tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]]];
+								Do[tokens[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
 								brackets[[depth]] = 0;
-								depth--]]], 
+								depth--]]];
+					inWS = False, 
 				"]",  
 					If[inBadString || inBadURL,
 						Null
 						,
 						If[depth == 0 || brackets[[depth, 1]] != "[", 
-							t[[pos]] = {"error", t[[pos]]}
+							tokens[[pos]] = {"error", tokens[[pos]]}
 							, 
-							t[[brackets[[depth, 2]]]] = Prepend[t[[brackets[[depth, 2]] + 1 ;; pos - 1]], "[]"];
-							Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
+							tokens[[brackets[[depth, 2]]]] = Prepend[tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]], "[]"];
+							Do[tokens[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
 							brackets[[depth]] = 0;
-							depth--]], 
-				_, Null];
+							depth--]];
+					inWS = False, 
+				_, inWS = False];
 			pos++];
 		pos = l;
 		
@@ -389,37 +405,37 @@ nestTokens[tokens:{__?CSSTokenQ}] :=
 					With[{
 						try = 
 							StringJoin[
-								t[[brackets[[depth, 2]]]], 
-								untokenize /@ t[[brackets[[depth, 2]] + 1 ;; ]], 
-								t[[brackets[[depth, 2]]]]]}, 
-						t[[brackets[[depth, 2]]]] = 
+								tokens[[brackets[[depth, 2]]]], 
+								untokenize /@ tokens[[brackets[[depth, 2]] + 1 ;; ]], 
+								tokens[[brackets[[depth, 2]]]]]}, 
+						tokens[[brackets[[depth, 2]]]] = 
 							If[StringMatchQ[try, RegularExpression[RE["string-token"]]], 
 								{"string", StringTake[try, {2, -2}]}
 								,
 								{"error", "bad-string"}]],
 				inBadURL, 
 					inBadURL = False; 
-					With[{try = StringJoin["url(", untokenize /@ t[[brackets[[depth, 2]] + 1 ;; ]], ")"]}, 
-						t[[brackets[[depth, 2]]]] = 
+					With[{try = StringJoin["url(", untokenize /@ tokens[[brackets[[depth, 2]] + 1 ;; ]], ")"]}, 
+						tokens[[brackets[[depth, 2]]]] = 
 							If[StringMatchQ[try, RegularExpression[RE["url-token"]]], 
 								{"url", stripURL @ try}
 								,
 								{"error", "bad-url"}]],
 				True,
-					t[[brackets[[depth, 2]]]] = 
+					tokens[[brackets[[depth, 2]]]] = 
 						Join[
 							Switch[brackets[[depth, 1]], 
 								"{", {"{}"}, 
 								"(", {"()"}, 
-								"function", t[[brackets[[depth, 2]]]],
+								"function", tokens[[brackets[[depth, 2]]]],
 								"[", {"[]"}],
-							t[[brackets[[depth, 2]] + 1 ;; ]]]];
-			Do[t[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
+							tokens[[brackets[[depth, 2]] + 1 ;; ]]]];
+			Do[tokens[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
 			brackets[[depth]] = 0;
 			depth--];
 		
 		(* remove all tokens that were marked for removal *)	
-		DeleteCases[t /. {"newline", _} -> " ", {"error", "REMOVE"}, Infinity]
+		DeleteCases[tokens /. {"newline", _} -> " ", {"error", "REMOVE" | "extra-ws"}, Infinity]
 	]
 nestTokens[{}] := {}
 
