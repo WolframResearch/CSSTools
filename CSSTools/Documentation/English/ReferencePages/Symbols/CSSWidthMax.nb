@@ -51,7 +51,7 @@ Cell["CSSTools`", "Categorization",
  CellLabel->"Context",
  CellID->468444828,ExpressionUUID->"96639c2a-be72-4e63-81a9-9cfb5c2c4af3"],
 
-Cell["CSSTools/ref/WidthMax", "Categorization",
+Cell["CSSTools/ref/CSSWidthMax", "Categorization",
  CellLabel->"URI",ExpressionUUID->"12c723f3-24ea-4869-99b4-a488c6d210db"]
 }, Closed]],
 
@@ -130,13 +130,13 @@ Cell["XXXX", "Details",
 
 Cell[CellGroupData[{
 
-Cell["WidthMax", "ObjectName",
+Cell["CSSWidthMax", "ObjectName",
  CellID->1224892054,ExpressionUUID->"e105adbc-a014-4552-9f6d-5d017b0edf00"],
 
 Cell[TextData[{
  Cell["   ", "ModInfo",ExpressionUUID->"9c1c401e-9d25-411d-aa6a-37765082e99f"],
  Cell[BoxData[
-  RowBox[{"WidthMax", "[", 
+  RowBox[{"CSSWidthMax", "[", 
    StyleBox["value", "TI"], "]"}]], "InlineFormula",ExpressionUUID->
   "526c3802-bb11-479a-bc51-d8b81b043121"],
  " \[LineSeparator]indicates ",
@@ -149,9 +149,9 @@ Cell[TextData[{
  CellID->982511436,ExpressionUUID->"8eda665f-9aab-487a-98ce-0ffb32f29209"],
 
 Cell[TextData[{
- ButtonBox["WidthMax",
+ ButtonBox["CSSWidthMax",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/WidthMax"],
+  ButtonData->"paclet:CSSTools/ref/CSSWidthMax"],
  " serves no other purpose than to assist ",
  ButtonBox["ResolveCSSInterpretations",
   BaseStyle->"Link",
@@ -202,9 +202,9 @@ Cell["See Also", "SeeAlsoSection",
  CellID->1255426704,ExpressionUUID->"20892f9f-c558-43f5-9936-bb7014782295"],
 
 Cell[TextData[{
- ButtonBox["WidthMin",
+ ButtonBox["CSSWidthMin",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/WidthMin"],
+  ButtonData->"paclet:CSSTools/ref/CSSWidthMin"],
  " \[EmptyVerySmallSquare] ",
  ButtonBox["ResolveCSSInterpretations",
   BaseStyle->"Link",
@@ -247,9 +247,9 @@ Cell[BoxData[
 
 Cell[TextData[{
  "If an imported CSS style contains ",
- ButtonBox["WidthMin",
+ ButtonBox["CSSWidthMin",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/WidthMin"],
+  ButtonData->"paclet:CSSTools/ref/CSSWidthMin"],
  " or ",
  ButtonBox["WidthtMax",
   BaseStyle->"Link",
@@ -280,13 +280,13 @@ Cell[BoxData[
      RowBox[{"ImageSize", "\[Rule]", 
       RowBox[{"{", 
        RowBox[{
-        RowBox[{"HeightMin", "[", "24", "]"}], ",", 
-        RowBox[{"HeightMax", "[", "38", "]"}]}], "}"}]}], ",", 
+        RowBox[{"CSSHeightMin", "[", "24", "]"}], ",", 
+        RowBox[{"CSSHeightMax", "[", "38", "]"}]}], "}"}]}], ",", 
      RowBox[{"ImageSize", "\[Rule]", 
       RowBox[{"{", 
        RowBox[{
-        RowBox[{"WidthMin", "[", "40", "]"}], ",", 
-        RowBox[{"WidthMax", "[", "60", "]"}]}], "}"}]}]}], "}"}]}], 
+        RowBox[{"CSSWidthMin", "[", "40", "]"}], ",", 
+        RowBox[{"CSSWidthMax", "[", "60", "]"}]}], "}"}]}]}], "}"}]}], 
   "]"}]], "Input",
  CellChangeTimes->{{3.7616052330113087`*^9, 3.7616052794123416`*^9}, {
    3.761605577789516*^9, 3.761605577927934*^9}, {3.7616057160854735`*^9, 

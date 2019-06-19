@@ -10,7 +10,7 @@
 (*Version: 1*)
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Package Header*)
 
 
@@ -219,18 +219,14 @@ Select[Flatten[table[[5, 1]]], StringEndsQ[#, "()"]&]
 
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Consume Token Sequences*)
 
 
 (* 
 	It is assumed that the string input has already been tokenized into CSS tokens.
-	Every token consuming function follows the same format. 
-	We use Block to set the current value of 
-		pos:    the current position in the token sequence 
-		l:      the length of the token sequence 
-		tokens: the token sequence itself (often a copy of the input token sequence)
-	If the particular consumer function needs its own local values, Block is used again to temporarily set them.
+	The main token consumers have the HoldFirst attribute. 
+	This allows the position variable to be tracked continuously through each token consumer.
 	Some token consumers also advance the position.
 	
 	The tokenizer and token accessor functions are defined in CSSTools`CSSTokenizer:
@@ -242,25 +238,32 @@ Select[Flatten[table[[5, 1]]], StringEndsQ[#, "()"]&]
 *)
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Utilities*)
 
 
 (* The utilities are assumed to be used within "consume" functions where pos, l, and tokens are defined. *)
-tokenTypeIs[s:(_String | Alternatives[__String])] := StringMatchQ[CSSTokenType @ tokens[[pos]], s, IgnoreCase -> False]
-tokenTypeIsNot[s:(_String | Alternatives[__String])] := Not @ tokenTypeIs[s]
-tokenStringIs[s_String] := StringMatchQ[CSSTokenString @ tokens[[pos]], s, IgnoreCase -> True]
-tokenStringIsNot[s_String] := Not @ tokenStringIs[s]
+SetAttributes[
+	{
+		advancePosAndSkipWhitespace, retreatPosAndSkipWhitespace, 
+		advancePosToNextSemicolon, advancePosToNextSemicolonOrBlock, advancePosToNextSemicolonOrComma,
+		advancePosToNextBlock}, 
+	HoldFirst];
 
-advancePosAndSkipWhitespace[] := (pos++; While[pos < l && CSSTokenType @ tokens[[pos]] == " ", pos++])
-retreatPosAndSkipWhitespace[] := (pos--; While[pos > 1 && CSSTokenType @ tokens[[pos]] == " ", pos--])
+tokenTypeIs[s:(_String | Alternatives[__String]), pos_, tokens_] := StringMatchQ[CSSTokenType @ tokens[[pos]], s, IgnoreCase -> False]
+tokenTypeIsNot[s:(_String | Alternatives[__String]), pos_, tokens_] := Not @ tokenTypeIs[s, pos, tokens]
 
-advancePosToNextSemicolon[] := While[pos < l && CSSTokenType @ tokens[[pos]] != ";", pos++]
-advancePosToNextSemicolonOrBlock[] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "{}" | ";"], pos++]
-advancePosToNextSemicolonOrComma[] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "," | ";"], pos++]
-advancePosToNextSemicolonOrExclamation[] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "!" | ";"], pos++]
+tokenStringIs[s_String, pos_, tokens_] := StringMatchQ[CSSTokenString @ tokens[[pos]], s, IgnoreCase -> True]
+tokenStringIsNot[s_String, pos_, tokens_] := Not @ tokenStringIs[s, pos, tokens]
 
-advancePosToNextBlock[] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "{}"], pos++]
+advancePosAndSkipWhitespace[pos_, l_, tokens_] := (pos++; While[pos < l && CSSTokenType @ tokens[[pos]] == " ", pos++])
+retreatPosAndSkipWhitespace[pos_, l_, tokens_] := (pos--; While[pos > 1 && CSSTokenType @ tokens[[pos]] == " ", pos--])
+
+advancePosToNextSemicolon[pos_, l_, tokens_] := While[pos < l && CSSTokenType @ tokens[[pos]] != ";", pos++]
+advancePosToNextSemicolonOrBlock[pos_, l_, tokens_] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "{}" | ";"], pos++]
+advancePosToNextSemicolonOrComma[pos_, l_, tokens_] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "," | ";"], pos++]
+
+advancePosToNextBlock[pos_, l_, tokens_] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "{}"], pos++]
 
 
 (* ::Subsection::Closed:: *)
@@ -268,37 +271,38 @@ advancePosToNextBlock[] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]]
 
 
 (* Block is used such that the private variables pos, l, and tokens are known by any token consumer. *)
-consumeStyleSheet[inputTokens:{__?CSSTokenQ}] :=
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, imports = {}, i = 1, lRulesets, rulesets},
+consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
+	Module[{pos = 1, l = Length[tokens], imports = {}, i = 1, lRulesets, rulesets},
 		If[TrueQ @ $Debug, Echo[l, "Token Length"]];
 		
 		(* skip any leading whitespace (there shouldn't be any if @charset exists) *)
-		If[tokenTypeIs[" "], advancePosAndSkipWhitespace[]];
+		If[tokenTypeIs[" ", pos, tokens], advancePosAndSkipWhitespace[pos, l, tokens]];
 		If[TrueQ @ $Debug, Echo[pos, "position"]];
 		
 		(* check for @charset rule *)
-		If[tokenTypeIs["at-keyword"] && tokenStringIs["charset"], consumeAtCharsetKeyword[]];
+		If[tokenTypeIs["at-keyword", pos, tokens] && tokenStringIs["charset", pos, tokens], consumeAtCharsetKeyword[pos, l, tokens]];
 		If[TrueQ @ $Debug, Echo[pos, "position after @charset check"]];
 		
 		(* check for @import rules *)
-		While[tokenTypeIs["at-keyword"] && tokenStringIs["import"], 
-			AppendTo[imports, consumeAtImportKeyword[]];
+		While[tokenTypeIs["at-keyword", pos, tokens] && tokenStringIs["import", pos, tokens], 
+			AppendTo[imports, consumeAtImportKeyword[pos, l, tokens]];
 			If[TrueQ @ $Debug, Echo[pos, "position after @import check"]];
 		];
 		imports = Join @@ imports;
 				
 		lRulesets = Count[tokens, {"{}", ___}, {1}]; (* upper bound of possible rulesets *)
 		rulesets = ConstantArray[0, lRulesets]; (* container for processed rulesets *)
-		While[pos <= l,
+		While[pos < l,
+			If[TrueQ @ $Debug, Echo[pos, "position before rule"]];
 			Which[
 				(* any at-rule *)
-				tokenTypeIs["at-keyword"], (*TODO*)consumeAtRule[CSSTokenString @ tokens[[pos]]],
+				tokenTypeIs["at-keyword", pos, tokens], (*TODO*)consumeAtRule[pos, l, tokens],
 				
 				(* bad ruleset: missing a selector *)
-				tokenTypeIs["{}"], advancePosAndSkipWhitespace[], 
+				tokenTypeIs["{}", pos, tokens], advancePosAndSkipWhitespace[pos, l, tokens], 
 				
 				(* anything else treated as a ruleset *)
-				True, rulesets[[i]] = consumeRuleset[]; i++;
+				True, rulesets[[i]] = consumeRuleset[pos, l, tokens]; i++;
 			];
 		];
 		Join[imports, DeleteCases[rulesets, 0, {1}]]
@@ -309,12 +313,15 @@ consumeStyleSheet[inputTokens:{__?CSSTokenQ}] :=
 (*Consume Style Sheet Preambles (charset, import)*)
 
 
+SetAttributes[{consumeAtCharsetKeyword, consumeAtImportKeyword}, HoldFirst];
+
+
 (* The character set is assumed UTF-8 and any charset is ignored. *)
-consumeAtCharsetKeyword[] :=
+consumeAtCharsetKeyword[pos_, l_, tokens_] :=
 	Module[{},
-		If[tokenTypeIsNot["at-keyword"] || tokenStringIsNot["charset"],
+		If[tokenTypeIsNot["at-keyword", pos, tokens] || tokenStringIsNot["charset", pos, tokens],
 			Echo[Row[{"Expected @charset keyword. Had instead ", tokens[[pos]]}], "@charset error"];
-			advancePosToNextSemicolon[]; advancePosAndSkipWhitespace[]; 
+			advancePosToNextSemicolon[pos, l, tokens]; advancePosAndSkipWhitespace[pos, l, tokens]; 
 			Return @ Null;
 		];
 		pos++;
@@ -322,46 +329,46 @@ consumeAtCharsetKeyword[] :=
 			pos = pos + 3
 			,
 			(* invalid @charset *)
-			advancePosToNextSemicolon[];
+			advancePosToNextSemicolon[pos, l, tokens];
 		];
-		advancePosAndSkipWhitespace[];
+		advancePosAndSkipWhitespace[pos, l, tokens];
 	]; 
 
 
-consumeAtImportKeyword[] :=  
+consumeAtImportKeyword[pos_, l_, tokens_] :=  
 	Module[{path, mediums, mediaStart, data},
-		If[tokenTypeIsNot["at-keyword"] || tokenStringIsNot["import"],
+		If[tokenTypeIsNot["at-keyword", pos, tokens] || tokenStringIsNot["import", pos, tokens],
 			Echo[Row[{"Expected @import keyword. Had instead ", tokens[[pos]]}], "@import error"];
-			advancePosToNextSemicolon[]; advancePosAndSkipWhitespace[]; Return @ {};
+			advancePosToNextSemicolon[pos, l, tokens]; advancePosAndSkipWhitespace[pos, l, tokens]; Return @ {};
 		];
-		advancePosAndSkipWhitespace[];
+		advancePosAndSkipWhitespace[pos, l, tokens];
 		(* next token must be URL or string path to file *)
-		If[tokenTypeIsNot["url" | "string"],
+		If[tokenTypeIsNot["url" | "string", pos, tokens],
 			Echo["Expected URL not found.", "@import error"];
-			advancePosToNextSemicolon[]; advancePosAndSkipWhitespace[]; Return @ {};
+			advancePosToNextSemicolon[pos, l, tokens]; advancePosAndSkipWhitespace[pos, l, tokens]; Return @ {};
 		];
 		path = CSSTokenString @ tokens[[pos]];
-		advancePosAndSkipWhitespace[]; 	
+		advancePosAndSkipWhitespace[pos, l, tokens]; 	
 		If[TrueQ @ $Debug, Echo[pos, "position before @import media check"]];
 		
 		(* anything else is a comma-delimited set of media queries *)
 		(*TODO: implement proper media queries *)
 		mediums = {};
-		While[tokenTypeIsNot[";"],
+		While[tokenTypeIsNot[";", pos, tokens],
 			mediaStart = pos;
-			advancePosToNextSemicolonOrComma[];
+			advancePosToNextSemicolonOrComma[pos, l, tokens];
 			If[TrueQ @ $Debug, Echo[pos, "here"]];;
 			If[pos == l, Echo["Media query has no closing. Reached EOF.", "@import error"]; Return @ {}];
 			AppendTo[mediums, CSSUntokenize @ tokens[[mediaStart ;; pos - 1]]];
-			If[tokenTypeIs[";"],
+			If[tokenTypeIs[";", pos, tokens],
 				(* break out of media loop*)
 				Break[] 
 				, 
 				(* skip comma only *)
-				advancePosAndSkipWhitespace[] 
+				advancePosAndSkipWhitespace[pos, l, tokens] 
 			]
 		];
-		advancePosAndSkipWhitespace[]; (* skip semicolon *)
+		advancePosAndSkipWhitespace[pos, l, tokens]; (* skip semicolon *)
 				
 		(* import without interpretation *)
 		data = 
@@ -379,99 +386,109 @@ consumeAtImportKeyword[] :=
 			If[mediums =!= {}, data[[All, "Condition"]] = ConstantArray[mediums, Length[data]]];
 			Return @ data
 		]
-	]
-	
-	
+	]	
 
 
 (* ::Subsection::Closed:: *)
 (*Consume Style Sheet Body (@rule, ruleset)*)
 
 
-consumeAtRule[type_String] :=
+SetAttributes[{consumeAtRule, consumeRuleset}, HoldFirst];
+
+consumeAtRule[pos_, l_, tokens_] :=
 	Which[
 		(* @import not allowed so skip them *)
-		tokenStringIs["import"], advancePosToNextSemicolon[]; advancePosAndSkipWhitespace[], 
+		tokenStringIs["import", pos, tokens], 
+			advancePosToNextSemicolon[pos, l, tokens]; 
+			advancePosAndSkipWhitespace[pos, l, tokens], 
 			
 		(* @page *)
-		tokenStringIs["page"], 
-			advancePosToNextSemicolonOrBlock[]; advancePosAndSkipWhitespace[];, 
+		tokenStringIs["page", pos, tokens], 
+			advancePosToNextSemicolonOrBlock[pos, l, tokens]; 
+			advancePosAndSkipWhitespace[pos, l, tokens];, 
 			
 		(* @media *)
-		tokenStringIs["media"], advancePosToNextSemicolonOrBlock[]; advancePosAndSkipWhitespace[], 
+		tokenStringIs["media", pos, tokens], 
+			advancePosToNextSemicolonOrBlock[pos, l, tokens]; 
+			advancePosAndSkipWhitespace[pos, l, tokens], 
 			
 		(* unrecognized @rule *)
-		True, advancePosToNextSemicolonOrBlock[]; advancePosAndSkipWhitespace[]
+		True, 
+			advancePosToNextSemicolonOrBlock[pos, l, tokens]; 
+			advancePosAndSkipWhitespace[pos, l, tokens]
 	] 
 
 
-consumeRuleset[] :=
+consumeRuleset[pos_, l_, tokens_] :=
 	Module[{selectorStartPos = pos, ruleset},
-		advancePosToNextBlock[];
+		advancePosToNextBlock[pos, l, tokens];
 		ruleset = 
 			<|
 				"Selector" -> StringTrim @ CSSUntokenize @ tokens[[selectorStartPos ;; pos - 1]], 
 				"Condition" -> None,
 				(* The block token is already encapsulated {{}, CSSTokens...} *)
 				"Block" -> consumeDeclarationBlock @ If[Length[tokens[[pos]]] > 1, tokens[[pos, 2 ;; ]], {}]|>; 
-		advancePosAndSkipWhitespace[];
+		(* return the formatted ruleset, but first make sure to skip the block *)
+		advancePosAndSkipWhitespace[pos, l, tokens];
 		ruleset
 	]
 
 consumeDeclarationBlock[{}] := {} 
 
-consumeDeclarationBlock[inputTokens:{__?CSSTokenQ}] :=
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, lDeclarations, i = 1, decStart, dec, validDeclarations},
+consumeDeclarationBlock[blockTokens:{__?CSSTokenQ}] :=
+	Module[{blockPos = 1, blockLength = Length[blockTokens], lDeclarations, i = 1, decStart, dec, validDeclarations},
 		(* skip any initial whitespace *)
-		If[tokenTypeIs[" "], advancePosAndSkipWhitespace[]]; 
+		If[tokenTypeIs[" ", blockPos, blockTokens], advancePosAndSkipWhitespace[blockPos, blockLength, blockTokens]]; 
 		
 		(*
 			Each declaration is of the form 'property:value;'. The last declaration may leave off the semicolon.
 			Like we did with parsing blocks, we count the number of colons as the upper limit of the number of declarations.
 		*)
-		lDeclarations = Count[tokens, ":"];
+		lDeclarations = Count[blockTokens, ":"];
 		validDeclarations = ConstantArray[0, lDeclarations];
-		While[pos < l && i <= lDeclarations,
-			decStart = pos; advancePosToNextSemicolon[];
-			dec = consumeDeclaration[tokens[[decStart ;; pos]]];
+		While[blockPos < blockLength && i <= lDeclarations,
+			decStart = blockPos; advancePosToNextSemicolon[blockPos, blockLength, blockTokens];
+			dec = consumeDeclaration[blockTokens[[decStart ;; blockPos]]];
 			If[!FailureQ[dec], validDeclarations[[i++]] = dec];
-			advancePosAndSkipWhitespace[]
+			(* skip over semi-colon *)
+			advancePosAndSkipWhitespace[blockPos, blockLength, blockTokens]
 		];					
 		(* remove possible excess declarations *)
 		DeleteCases[validDeclarations, 0, {1}]
 	]
 	
 (* a declaration is "prop:val" or "prop:val !important" with optional semicolon if it is the last declaration *)
-consumeDeclaration[inputTokens:{__?CSSTokenQ}] :=
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, propertyPosition, valuePosition, important = False, declaration},
+consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
+	Module[{decPos = 1, decLength = Length[decTokens], propertyPosition, valuePosition, important = False, declaration},
 		(* check for bad property *)
-		If[tokenTypeIsNot["ident"], Return @ $Failed];
-		propertyPosition = pos; advancePosAndSkipWhitespace[];
+		If[tokenTypeIsNot["ident", decPos, decTokens], Return @ $Failed];
+		propertyPosition = decPos; advancePosAndSkipWhitespace[decPos, decLength, decTokens];
 		
 		(* check for EOF or missing colon *)
-		If[pos >= l || tokenTypeIsNot[":"], Return @ $Failed];
-		advancePosAndSkipWhitespace[]; 
-		valuePosition = pos;
+		If[decPos >= decLength || tokenTypeIsNot[":", decPos, decTokens], Return @ $Failed];
+		advancePosAndSkipWhitespace[decPos, decLength, decTokens]; 
+		valuePosition = decPos;
 		
-		(* remove trailing whitespace *)
-		pos = l;
-		If[tokenTypeIs[";"], 
-			retreatPosAndSkipWhitespace[]
+		(* remove trailing whitespace and possible trailing semi-colon*)
+		decPos = decLength;
+		If[tokenTypeIs[";", decPos, decTokens], 
+			retreatPosAndSkipWhitespace[decPos, decLength, decTokens]
 			,
-			While[pos > 1 && tokenTypeIs[" "], pos--]
+			While[decPos > 1 && tokenTypeIs[" ", decPos, decTokens], decPos--];
+			If[tokenTypeIs[";", decPos, decTokens], retreatPosAndSkipWhitespace[decPos, decLength, decTokens]];
 		];
 		
 		(* check for !important token sequence *)
-		If[tokenTypeIs["ident"] && tokenStringIs["important"], 
-			retreatPosAndSkipWhitespace[];
-			If[tokenTypeIs["!"], important = True; retreatPosAndSkipWhitespace[]]
+		If[tokenTypeIs["ident", decPos, decTokens] && tokenStringIs["important", decPos, decTokens], 
+			retreatPosAndSkipWhitespace[decPos, decLength, decTokens];
+			If[tokenTypeIs["!", decPos, decTokens], important = True; retreatPosAndSkipWhitespace[decPos, decLength, decTokens]]
 		];
 		
 		With[
 			{
-				prop = CSSNormalizeEscapes @ ToLowerCase @ CSSTokenString @ tokens[[propertyPosition]],
+				prop = CSSNormalizeEscapes @ ToLowerCase @ CSSTokenString @ decTokens[[propertyPosition]],
 				(*check for empty property*)
-				valueTokens = If[pos < valuePosition, {}, tokens[[valuePosition ;; pos]]]
+				valueTokens = If[decPos < valuePosition, {}, decTokens[[valuePosition ;; decPos]]]
 			},
 			declaration = <|
 				"Important" -> important,
@@ -482,238 +499,8 @@ consumeDeclaration[inputTokens:{__?CSSTokenQ}] :=
 					,
 					"Interpretation" -> consumeProperty[prop, valueTokens]
 				]|>
-		];
-		advancePosAndSkipWhitespace[];
-		declaration		
+		]		
 	]
-
-
-(* ::Subsection::Closed:: *)
-(*Merge Properties*)
-
-
-expectedMainKeys     = {"Selector", "Condition", "Block"};
-expectedMainKeysFull = {"Selector", "Specificity", "Targets", "Condition", "Block"};
-expectedBlockKeys    = {"Important", "Property", "Value", "Interpretation"};
-expectedBlockKeysRaw = {"Important", "Property", "Value"};
-
-validCSSDataRawQ[data:{__Association}] := 
-	And[
-		AllTrue[Keys /@ data, MatchQ[expectedMainKeys]],
-		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeysRaw]]]
-validCSSDataBareQ[data:{__Association}] := 
-	And[
-		AllTrue[Keys /@ data, MatchQ[expectedMainKeys]],
-		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeys]]]
-validCSSDataFullQ[data:{__Association}] := 
-	And[
-		AllTrue[Keys /@ data, MatchQ[expectedMainKeysFull]],
-		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeys]]]
-validCSSDataQ[data:{__Association}] := validCSSDataBareQ[data] || validCSSDataFullQ[data]
-validCSSDataQ[___] := False
-
-(* these include all inheritable options that make sense to pass on in a Notebook environment *)
-notebookLevelOptions = 
-	{
-		Background, BackgroundAppearance, BackgroundAppearanceOptions, 
-		FontColor, FontFamily, FontSize, FontSlant, FontTracking, FontVariations, FontWeight, 
-		LineIndent, LineSpacing, ParagraphIndent, ShowContents, TextAlignment};
-		
-(* these include all options (some not inheritable in the CSS sense) that make sense to set at the Cell level *)
-cellLevelOptions = 
-	{
-		Background, 
-		CellBaseline, CellDingbat, CellMargins, 
-		CellFrame, CellFrameColor, CellFrameLabelMargins, CellFrameLabels, CellFrameMargins, CellFrameStyle, 
-		CellLabel, CellLabelMargins, CellLabelPositioning, CellLabelStyle, 
-		CounterIncrements, CounterAssignments,
-		FontColor, FontFamily, FontSize, FontSlant, FontTracking, FontVariations, FontWeight, 
-		LineIndent, LineSpacing, ParagraphIndent, ShowContents, TextAlignment,
-		PageBreakBelow, PageBreakAbove, PageBreakWithin, GroupPageBreakWithin};
-		
-(* these are options that are expected to be Notebook or Cell specific *)
-optionsToAvoidAtBoxLevel = 
-	{
-		BackgroundAppearance, BackgroundAppearanceOptions, 
-		CellBaseline, CellDingbat, CellMargins, 
-		CellFrame, CellFrameColor, CellFrameLabelMargins, CellFrameLabels, CellFrameMargins, CellFrameStyle, 
-		CellLabel, CellLabelMargins, CellLabelPositioning, CellLabelStyle, 
-		ParagraphIndent};
-		
-validBoxes =
-	{
-		ActionMenuBox, AnimatorBox, ButtonBox, CheckboxBox, ColorSetterBox, 
-		DynamicBox, DynamicWrapperBox, FrameBox, Graphics3DBox, GraphicsBox, 
-		GridBox, InputFieldBox, InsetBox, ItemBox, LocatorBox, 
-		LocatorPaneBox, OpenerBox, OverlayBox, PaneBox, PanelBox, 
-		PaneSelectorBox, PopupMenuBox, ProgressIndicatorBox, RadioButtonBox,
-		SetterBox, Slider2DBox, SliderBox, TabViewBox, TogglerBox, TooltipBox};	
-validExpressions =
-	{
-		ActionMenu, Animator, Button, Checkbox, ColorSetter, 
-		Dynamic, DynamicWrapper, Frame, Graphics3D, Graphics, 
-		Grid, InputField, Inset, Item, Locator, 
-		LocatorPane, Opener, Overlay, Pane, Panel, 
-		PaneSelector, PopupMenu, ProgressIndicator, RadioButton,
-		Setter, Slider2D, Slider, TabView, Toggler, Tooltip};	
-validBoxOptions =
-	{
-		Alignment, Appearance, Background, Frame, FrameMargins, FrameStyle, 
-		FontTracking, ImageMargins, ImageSize, ImageSizeAction, Spacings, Scrollbars};
-validBoxesQ = MemberQ[Join[validBoxes, validExpressions], #]&;
-
-removeBoxOptions[allOptions_, boxes:{__?validBoxesQ}] :=
-	Module[{currentOpts, optNames = allOptions[[All, 1]]},
-		Join[
-			Cases[allOptions, Rule[Background, _] | Rule[FontTracking, _], {1}],
-			DeleteCases[allOptions, Alternatives @@ (Rule[#, _]& /@ validBoxOptions)],
-			DeleteCases[
-				Table[
-					currentOpts = Intersection[Options[i][[All, 1]], optNames];
-					Symbol[SymbolName[i] <> "Options"] -> Cases[allOptions, Alternatives @@ (Rule[#, _]& /@ currentOpts), {1}],
-					{i, boxes}],
-				_ -> {}, 
-				{1}]]	
-	]
-	
-(* ResolveCSSInterpretations:
-	1. Remove Missing and Failure interpretations.
-	2. Filter the options based on Notebook/Cell/Box levels.
-	3. Merge together Left/Right/Bottom/Top and Width/Height options.  *)
-ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_Dataset] :=
-	ResolveCSSInterpretations[type, Normal @ interpretationList]
-	
-ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_] := 
-	Module[{valid, initialSet},
-		valid = DeleteCases[Flatten @ interpretationList, _?FailureQ | _Missing, {1}];
-		valid = Select[valid, 
-			Switch[type, 
-				Cell,      MemberQ[cellLevelOptions, #[[1]]]&, 
-				Notebook,  MemberQ[notebookLevelOptions, #[[1]]]&,
-				Box,      !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&,
-				All,       True&]];
-		(* assemble options *)
-		initialSet = assemble[#, valid]& /@ Union[First /@ valid];
-		If[type === Box || type === All,
-			removeBoxOptions[initialSet, validBoxes]
-			,
-			initialSet]
-	]
-
-ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_Dataset] := ResolveCSSInterpretations[{box}, Normal @ interpretationList]
-ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_] := ResolveCSSInterpretations[{box}, interpretationList]	
-ResolveCSSInterpretations[boxes:{__?validBoxesQ}, interpretationList_] := 
-	Module[{valid, initialSet},
-		valid = DeleteCases[Flatten @ interpretationList, _?FailureQ | _Missing, {1}];
-		valid = Select[valid, !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&];
-		(* assemble options *)
-		initialSet = assemble[#, valid]& /@ Union[First /@ valid];
-		removeBoxOptions[initialSet, boxes /. Thread[validExpressions -> validBoxes]]				
-	]
-
-
-thicknessQ[_Thickness | _AbsoluteThickness] := True
-thicknessQ[_] := False
-dashingQ[_Dashing | _AbsoluteDashing] := True
-dashingQ[_] := False
-dynamicColorQ[x_Dynamic] := If[Position[x, _?ColorQ | FontColor, Infinity] === {}, False, True]
-dynamicColorQ[_] := False
-dynamicThicknessQ[x_Dynamic] := If[Position[x, Thickness | AbsoluteThickness | FontSize, Infinity] === {}, False, True]
-dynamicThicknessQ[_] := False
-
-(* 
-	Merging directives like the following is pretty naive. 
-	We should probably revisit this, but it works for now because the CSS interpretations are in a simple form. *)
-
-mergeDirectives[dNew_Directive, dOld_Directive] := 
-	Module[{c1, t1, d1, c2, t2, d2, dirNew, dirOld},
-		dirNew = If[MatchQ[dNew, Directive[_List]], Directive @@ dNew[[1]], dNew];
-		dirOld = If[MatchQ[dOld, Directive[_List]], Directive @@ dOld[[1]], dOld];
-		c1 = Last[Cases[dirOld, _?ColorQ | _?dynamicColorQ], {}];
-		t1 = Last[Cases[dirOld, _?thicknessQ | _?dynamicThicknessQ], {}];
-		d1 = Last[Cases[dirOld, _?dashingQ], {}];
-		c2 = Last[Cases[dirNew, _?ColorQ | _?dynamicColorQ], {}];
-		t2 = Last[Cases[dirNew, _?thicknessQ | _?dynamicThicknessQ], {}];
-		d2 = Last[Cases[dirNew, _?dashingQ], {}];
-		Directive[
-			Last[Flatten[{c1, c2}], Unevaluated[Sequence[]]],
-			Last[Flatten[{t1, t2}], Unevaluated[Sequence[]]],
-			Last[Flatten[{d1, d2}], Unevaluated[Sequence[]]]]
-	]
-
-mergeDirectives[c2_?(ColorQ[#]||dynamicColorQ[#]&), dOld_Directive] := 
-	Module[{t1, d1,dirOld},
-		dirOld = If[MatchQ[dOld, Directive[_List]], Directive @@ dOld[[1]], dOld];
-		t1 = Last[Cases[dirOld, _?thicknessQ | _?dynamicThicknessQ], Unevaluated[Sequence[]]];
-		d1 = Last[Cases[dirOld, _?dashingQ], Unevaluated[Sequence[]]];
-		Directive[c2, t1, d1]
-	]
-
-mergeDirectives[t2_?(thicknessQ[#]||dynamicThicknessQ[#]&), dOld_Directive] := 
-	Module[{c1, d1, dirOld},
-		dirOld = If[MatchQ[dOld, Directive[_List]], Directive @@ dOld[[1]], dOld];
-		c1 = Last[Cases[dirOld, _?ColorQ | _?dynamicColorQ], Unevaluated[Sequence[]]];
-		d1 = Last[Cases[dirOld, _?dashingQ], Unevaluated[Sequence[]]];
-		Directive[c1, t2, d1]
-	]
-	
-mergeDirectives[d2_?dashingQ, dOld_Directive] := 
-	Module[{c1, t1, dirOld},
-		dirOld = If[MatchQ[dOld, Directive[_List]], Directive @@ dOld[[1]], dOld];
-		c1 = Last[Cases[dirOld, _?ColorQ | _?dynamicColorQ], Unevaluated[Sequence[]]];
-		t1 = Last[Cases[dirOld, _?thicknessQ | _?dynamicThicknessQ], Unevaluated[Sequence[]]];
-		Directive[c1, t1, d2]
-	]
-
-mergeDirectives[c_?(ColorQ[#]||dynamicColorQ[#]&), _?(ColorQ[#]||dynamicColorQ[#]&)] := c
-mergeDirectives[t_?(thicknessQ[#]||dynamicThicknessQ[#]&), _?(thicknessQ[#]||dynamicThicknessQ[#]&)] := t
-mergeDirectives[d_?dashingQ, _?dashingQ] := d
-mergeDirectives[newDir_, Automatic] := newDir
-mergeDirectives[newDir_, oldDir_] := Directive[oldDir, newDir]
-
-
-assembleLRBTDirectives[x_List] := 
-	Module[{r = {{Automatic, Automatic}, {Automatic, Automatic}}},
-		Map[
-			With[{v = First[#]}, 
-				Switch[Head[#], 
-					Bottom, r[[2, 1]] = mergeDirectives[v, r[[2, 1]]],
-					Top,    r[[2, 2]] = mergeDirectives[v, r[[2, 2]]],
-					Left,   r[[1, 1]] = mergeDirectives[v, r[[1, 1]]],
-					Right,  r[[1, 2]] = mergeDirectives[v, r[[1, 2]]]]
-			]&,
-			Flatten[x]];
-		r]
-		
-assembleLRBT[x_List] := 
-	Module[{r = {{Automatic, Automatic}, {Automatic, Automatic}}},
-		Map[
-			With[{v = First[#]}, 
-				Switch[Head[#], 
-					Bottom | CSSHeightMin, r[[2, 1]] = v,
-					Top |    CSSHeightMax, r[[2, 2]] = v,
-					Left |   CSSWidthMin,  r[[1, 1]] = v,
-					Right |  CSSWidthMax,  r[[1, 2]] = v]
-			]&,
-			Flatten[x]];
-		r]
-		
-moveDynamicToHead[{{l_, r_}, {b_, t_}}] := 
-	If[AnyTrue[{l, r, b, t}, MatchQ[#, _Dynamic]&], 
-		Replace[Dynamic[{{l, r}, {b, t}}], HoldPattern[Dynamic[x__]] :> x, {3}]
-		, 
-		{{l, r}, {b, t}}
-	]
-
-Clear[assemble]
-assemble[opt:(FrameStyle | CellFrameStyle), rules_List] := opt -> assembleLRBTDirectives @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
-assemble[opt:(FrameMargins | ImageMargins), rules_List] := opt -> assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
-assemble[opt:ImageSize, rules_List] := opt -> Replace[assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], {x_, x_} :> x, {1}] 
-assemble[opt:CellFrame, rules_List] := opt -> Replace[assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], Automatic -> True, {2}]
-assemble[opt:CellMargins|CellFrameMargins, rules_List] := opt -> moveDynamicToHead @ assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
-assemble[opt:CellFrameColor, rules_List] := opt -> Last @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
-assemble[opt_, rules_List] := Last @ Cases[rules, HoldPattern[opt -> _], {1}]
-assemble[opt:FontVariations, rules_List] := opt -> DeleteDuplicates[Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], First[#1] === First[#2]&]
 
 
 (* ::Section::Closed:: *)
@@ -922,7 +709,7 @@ CSSPropertyData = <|
 				CellFrame  -> Through[{Left, Right, Bottom, Top}[Inherited]]},
 			"initial" -> {
 				FrameStyle -> Through[{Left, Right, Bottom, Top}[CSSBorderWidth[Thickness[Medium]]]], 
-				CellFrame  -> Through[{Left, Right, Bottom, Top}[CSSBorderWidth[Thickness[Medium]]]]}|>|>, 
+				CellFrame  -> Through[{Left, Right, Bottom, Top}[CSSBorderWidth[2]]]}|>|>, 
 	"border-top-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
@@ -932,7 +719,7 @@ CSSPropertyData = <|
 				CellFrame  -> Top @ Inherited},
 			"initial" -> {
 				FrameStyle -> Top @ CSSBorderWidth[Thickness[Medium]], 
-				CellFrame  -> Top @ CSSBorderWidth[Thickness[Medium]]}|>|>, 
+				CellFrame  -> Top @ CSSBorderWidth[2]}|>|>, 
 	"border-right-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
@@ -942,7 +729,7 @@ CSSPropertyData = <|
 				CellFrame  -> Right @ Inherited},
 			"initial" -> {
 				FrameStyle -> Right @ CSSBorderWidth[Thickness[Medium]], 
-				CellFrame  -> Right @ CSSBorderWidth[Thickness[Medium]]}|>|>,
+				CellFrame  -> Right @ CSSBorderWidth[2]}|>|>,
 	"border-bottom-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
@@ -952,7 +739,7 @@ CSSPropertyData = <|
 				CellFrame  -> Bottom @ Inherited},
 			"initial" -> {
 				FrameStyle -> Bottom @ CSSBorderWidth[Thickness[Medium]], 
-				CellFrame  -> Bottom @ CSSBorderWidth[Thickness[Medium]]}|>|>,
+				CellFrame  -> Bottom @ CSSBorderWidth[2]}|>|>,
 	"border-left-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
@@ -962,7 +749,7 @@ CSSPropertyData = <|
 				CellFrame  -> Left @ Inherited},
 			"initial" -> {
 				FrameStyle -> Left @ CSSBorderWidth[Thickness[Medium]], 
-				CellFrame  -> Left @ CSSBorderWidth[Thickness[Medium]]}|>|>,
+				CellFrame  -> Left @ CSSBorderWidth[2]}|>|>,
 	"border" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand property, sets all 4 border sides color/style/width*)
@@ -973,7 +760,7 @@ CSSPropertyData = <|
 				CellFrameStyle -> Through[{Left, Right, Bottom, Top}[Inherited]]},
 			"initial" -> {
 				FrameStyle     -> Through[{Left, Right, Bottom, Top}[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None], CSSBorderWidth[Thickness[Medium]]]], 
-				CellFrame      -> Through[{Left, Right, Bottom, Top}[CSSBorderWidth[Thickness[Medium]]]],
+				CellFrame      -> Through[{Left, Right, Bottom, Top}[CSSBorderWidth[2]]],
 				CellFrameStyle -> Through[{Left, Right, Bottom, Top}[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None]]]}|>|>, 
 	"border-top" -> <|
 		"Inherited" -> False,
@@ -985,7 +772,7 @@ CSSPropertyData = <|
 				CellFrameStyle -> Top @ Inherited},
 			"initial" -> {
 				FrameStyle     -> Top[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None], CSSBorderWidth[Thickness[Medium]]], 
-				CellFrame      -> Top[CSSBorderWidth[Thickness[Medium]]],
+				CellFrame      -> Top[CSSBorderWidth[2]],
 				CellFrameStyle -> Top[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None]]}|>|>, 
 	"border-right" -> <|
 		"Inherited" -> False,
@@ -997,7 +784,7 @@ CSSPropertyData = <|
 				CellFrameStyle -> Right @ Inherited},
 			"initial" -> {
 				FrameStyle     -> Right[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None], CSSBorderWidth[Thickness[Medium]]], 
-				CellFrame      -> Right[CSSBorderWidth[Thickness[Medium]]],
+				CellFrame      -> Right[CSSBorderWidth[2]],
 				CellFrameStyle -> Right[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None]]}|>|>, 
 	"border-bottom" -> <|
 		"Inherited" -> False,
@@ -1009,7 +796,7 @@ CSSPropertyData = <|
 				CellFrameStyle -> Bottom @ Inherited},
 			"initial" -> {
 				FrameStyle     -> Bottom[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None], CSSBorderWidth[Thickness[Medium]]], 
-				CellFrame      -> Bottom[CSSBorderWidth[Thickness[Medium]]],
+				CellFrame      -> Bottom[CSSBorderWidth[2]],
 				CellFrameStyle -> Bottom[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None]]}|>|>, 
 	"border-left" -> <|
 		"Inherited" -> False,
@@ -1021,7 +808,7 @@ CSSPropertyData = <|
 				CellFrameStyle -> Left @ Inherited},
 			"initial" -> {
 				FrameStyle     -> Left[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None], CSSBorderWidth[Thickness[Medium]]], 
-				CellFrame      -> Left[CSSBorderWidth[Thickness[Medium]]],
+				CellFrame      -> Left[CSSBorderWidth[2]],
 				CellFrameStyle -> Left[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None]]}|>|>,
 	"border-spacing" -> <|
 		"Inherited" -> True,
@@ -1526,27 +1313,27 @@ parseAngle[token:{"dimension", n_String, val_, type:"integer"|"number", "turn"}]
 
 
 (* counter() function *)
-parseCounter[prop_String, inputTokens:{___?CSSTokenQ}] := parseCounter[prop, inputTokens] =
-	Block[{pos = 3, l = Length[inputTokens], tokens = inputTokens, style = "Item", listtype = "decimal"},
-		(* pos starts at 3 as this skips the function identifier and name *)
-		If[pos <= l && tokenTypeIs[" "], advancePosAndSkipWhitespace[]];
+parseCounter[prop_String, tokens:{___?CSSTokenQ}] := (*parseCounter[prop, tokens] =*)
+	Module[{pos = 1, l = Length[tokens], style = "Item", listtype = "decimal"},
+		(* assumes that the function identifier and name have been skipped *)
+		If[pos <= l && tokenTypeIs[" ", pos, tokens], advancePosAndSkipWhitespace[pos, l, tokens]];
 		
 		(* get custom identifier *)
-		If[pos <= l && tokenTypeIs["ident"], 
+		If[pos <= l && tokenTypeIs["ident", pos, tokens], 
 			style = CSSTokenString @ tokens[[pos]]
 			, 
 			Return @ invalidFunctionFailure @ CSSUntokenize @ tokens
 		];
-		advancePosAndSkipWhitespace[];
+		advancePosAndSkipWhitespace[pos, l, tokens];
 		If[pos > l, Return @ parseSingleListStyleType["list-style-type", {"ident", listtype}, style]];
 		
 		(* get optional counter style *)
-		If[pos <= l && tokenTypeIs["ident"],
+		If[pos <= l && tokenTypeIs["ident", pos, tokens],
 			listtype = CSSTokenString @ tokens[[pos]]
 			,
 			Return @ invalidFunctionFailure @ CSSUntokenize @ tokens
 		];
-		advancePosAndSkipWhitespace[];
+		advancePosAndSkipWhitespace[pos, l, tokens];
 		If[pos > l, Return @ parseSingleListStyleType["list-style-type", {"ident", listtype}, style]];
 		
 		tooManyTokensFailure @ tokens
@@ -1706,9 +1493,9 @@ initialValues[prop_String] :=
 	We only support CSS 2.1 for now and it supports only a single value.
 	For temporary forward compatibility, we split the token sequence on any commas and take the first of the split sequence.
 *)
-consumeProperty[prop:"background", inputTokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"background", tokens:{__?CSSTokenQ}] := 
 	Module[{backgrounds, result},
-		backgrounds = DeleteCases[SplitBy[inputTokens, ","], {","}];
+		backgrounds = DeleteCases[SplitBy[tokens, ","], {","}];
 		backgrounds = parseSingleBG[prop, #]& /@ backgrounds; 
 		result = Cases[backgrounds, Except[_Failure], {1}];
 		If[result === {}, 
@@ -1718,10 +1505,10 @@ consumeProperty[prop:"background", inputTokens:{__?CSSTokenQ}] :=
 		]
 	]
 
-parseSingleBG[prop_String, inputTokens:{__?CSSTokenQ}] := 
-	Block[
+parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] := 
+	Module[
 		{
-			pos = 1, l = Length[inputTokens], tokens = inputTokens, value, start, startToken, 
+			pos = 1, l = Length[tokens], value, start, startToken, 
 			values = <|
 				"a" -> initialValues @ "background-attachment", 
 				"c" -> initialValues @ "background-color",
@@ -1732,7 +1519,7 @@ parseSingleBG[prop_String, inputTokens:{__?CSSTokenQ}] :=
 		},
 		While[pos <= l, 
 			Which[
-				tokenTypeIs["function"], 
+				tokenTypeIs["function", pos, tokens], 
 					Switch[CSSTokenString @ tokens[[pos]],
 						(* color *)
 						"rgb" | "rgba" | "hsl" | "hsla", 
@@ -1771,7 +1558,7 @@ parseSingleBG[prop_String, inputTokens:{__?CSSTokenQ}] :=
 					If[hasPosition, Return @ repeatedPropValueFailure @ "background-position"];
 					hasPosition = True; values["p"] = {value, Center};
 					(* check for a pair of position values; they must be sequential *)
-					start = pos; startToken = tokens[[pos]]; advancePosAndSkipWhitespace[];
+					start = pos; startToken = tokens[[pos]]; advancePosAndSkipWhitespace[pos, l, tokens];
 					If[!FailureQ[value = parseSingleBGPosition[prop, tokens[[pos]]]], 
 						values["p"] = {values["p"][[1]], value}
 						,
@@ -1781,7 +1568,7 @@ parseSingleBG[prop_String, inputTokens:{__?CSSTokenQ}] :=
 								
 				True, unrecognizedValueFailure @ prop						
 			];
-			advancePosAndSkipWhitespace[]
+			advancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		(* 
 			attachment: not supported, 
@@ -1814,8 +1601,8 @@ parseSingleBG[prop_String, inputTokens:{__?CSSTokenQ}] :=
 (* 
 	In CSS Background and Borders 3, this prop can take multiple comma-separated backgrounds and the 'local' value.
 	We only support CSS 2.1 for now and it supports only a single value. *)
-consumeProperty[prop:"background-attachment", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"background-attachment", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBGAttachment[prop, tokens[[pos]]];
 		If[FailureQ[value] || MissingQ[value], value, Missing["Only fixed supported."]]
@@ -1840,9 +1627,9 @@ parseSingleBGAttachment[prop_String, token_?CSSTokenQ] :=
 (* 
 	Effectively the same as color, except a successful parse returns as a rule Background -> value.
 	Also 'currentColor' value needs to know the current value of 'color', instead of inherited from the parent.	*) 
-consumeProperty[prop:"background-color", inputTokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"background-color", tokens:{__?CSSTokenQ}] := 
 	Module[{value},
-		value = parseSingleColor[prop, First @ inputTokens];
+		value = parseSingleColor[prop, First @ tokens];
 		If[FailureQ[value], value, Background -> value]
 	]
 
@@ -1854,8 +1641,8 @@ consumeProperty[prop:"background-color", inputTokens:{__?CSSTokenQ}] :=
 (* 
 	In CSS Background and Borders 3, this prop can take multiple comma-separated backgrounds and any CSS <image> data type.
 	We only support CSS 2.1 for now and it supports only a single value. *)
-consumeProperty[prop:"background-image", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"background-image", tokens:{__?CSSTokenQ}] := 
+	Module[{(*pos = 1, *)l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBGImage[prop, First @ tokens];
 		If[FailureQ[value], value, System`BackgroundAppearance -> value]
@@ -1889,12 +1676,12 @@ parseSingleBGImage[prop_String, token_?CSSTokenQ] :=
 (* 
 	In CSS Background and Borders 3, this prop can take multiple comma-separated backgrounds and use a 4-value syntax.
 	We only support CSS 2.1 for now and it can take up to 2 values. *)
-consumeProperty[prop:"background-position", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, values = {}},
+consumeProperty[prop:"background-position", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value, values = {}},
 		While[pos <= l,
 			value = parseSingleBGPosition[prop, tokens[[pos]]];
 			If[FailureQ[value], Return @ value, AppendTo[values, value]];
-			advancePosAndSkipWhitespace[]
+			advancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		value = parseSingleBGPositionPair[values, tokens];		
 		If[FailureQ[value], value, System`BackgroundAppearanceOptions -> value]
@@ -1918,7 +1705,7 @@ parseSingleBGPosition[prop_String, token_?CSSTokenQ] :=
 	]
 
 (* FE supports a limited number of background positioning and repeat specs. *)
-parseSingleBGPositionPair[values:{__}, inputTokens:{__?CSSTokenQ}] :=
+parseSingleBGPositionPair[values:{__}, tokens:{__?CSSTokenQ}] :=
 	Switch[Length[values],
 		1, 
 			Switch[values[[1]],
@@ -1945,8 +1732,8 @@ parseSingleBGPositionPair[values:{__}, inputTokens:{__?CSSTokenQ}] :=
 (* 
 	In CSS Background and Borders 3, this prop can take multiple comma-separated backgrounds, use a 2-value syntax, and adds 'space' and 'round' keywords.
 	We only support CSS 2.1 for now and it can take only a single value. *)
-consumeProperty[prop:"background-repeat", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"background-repeat", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBGRepeat[prop, tokens[[pos]]];
 		If[FailureQ[value], value, System`BackgroundAppearanceOptions -> value]
@@ -1994,8 +1781,8 @@ parseSingleBGRepeat[prop_String, token_?CSSTokenQ] :=
 	FE only follows the 'collapse' model within Grid but and not provide a modifiable FE option. 
 	As it cannot be modified, we parse for correct syntax but only allow through the 'collapse' value.
 	The empty list return value of a successful parse is ignored during post-processing.*)
-consumeProperty[prop:"border-collapse", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens},
+consumeProperty[prop:"border-collapse", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		Switch[CSSTokenType @ tokens[[pos]],
 			"ident", 
@@ -2018,9 +1805,9 @@ consumeProperty[prop:"border-collapse", inputTokens:{__?CSSTokenQ}] :=
 	This requires post-processing of the parsed result. We use Top/Right/Bottom/Left wrappers to keep track of each edge.*)
 consumeProperty[
 	prop:"border-top-color" | "border-right-color" | "border-bottom-color" | "border-left-color", 
-	inputTokens:{__?CSSTokenQ}
+	tokens:{__?CSSTokenQ}
 ] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, wrapper},
+	Module[{pos = 1, l = Length[tokens], value, wrapper},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleColor[prop, tokens[[pos]]];
 		If[FailureQ[value], 
@@ -2038,12 +1825,12 @@ consumeProperty[
 	]	
 
 (* sets all 4 border/frame edges at once *)
-consumeProperty[prop:"border-color", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, results = {}},
+consumeProperty[prop:"border-color", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleColor[prop, tokens[[pos]]];
 			If[FailureQ[value], Return @ value, AppendTo[results, CSSBorderColor @ value]]; 
-			advancePosAndSkipWhitespace[];
+			advancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		results =
 			Switch[Length[results],
@@ -2069,8 +1856,8 @@ consumeProperty[prop:"border-color", inputTokens:{__?CSSTokenQ}] :=
 	Also WL Spacings applies to the outer margins as well, but 'border-spacing' is internal only.
 	Because each item is padded on either side, divide the result in half.
 *)
-consumeProperty[prop:"border-spacing", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, results = {}},
+consumeProperty[prop:"border-spacing", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = 
 				Switch[CSSTokenType @ tokens[[pos]],
@@ -2087,7 +1874,7 @@ consumeProperty[prop:"border-spacing", inputTokens:{__?CSSTokenQ}] :=
 					_,        unrecognizedValueFailure @ prop
 				];
 			If[FailureQ[value], Return @ value, AppendTo[results, value]];
-			advancePosAndSkipWhitespace[];
+			advancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		Switch[Length[results],
 			1, Spacings -> {First @ results, First @ results}, (* if only one length, then it specifies both horizontal and vertical *)
@@ -2106,10 +1893,10 @@ consumeProperty[prop:"border-spacing", inputTokens:{__?CSSTokenQ}] :=
 	This requires post-processing of the parsed result. We use Top/Right/Bottom/Left wrappers to keep track of each edge. *)
 consumeProperty[
 	prop:"border-top-style" | "border-right-style" | "border-bottom-style" | "border-left-style", 
-	inputTokens:{__?CSSTokenQ}
+	tokens:{__?CSSTokenQ}
 ] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, wrapper},
-		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+	Module[{pos = 1, l = Length[tokens], value, wrapper},
+		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBorderStyle[prop, tokens[[pos]]];
 		If[FailureQ[value], 
 			value
@@ -2120,12 +1907,12 @@ consumeProperty[
 	]	
 	
 (* sets all 4 border/frame edges at once *)
-consumeProperty[prop:"border-style", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, results = {}},
+consumeProperty[prop:"border-style", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleBorderStyle[prop, tokens[[pos]]];
 			If[FailureQ[value], Return @ value, AppendTo[results, CSSBorderStyle @ value]];
-			advancePosAndSkipWhitespace[]
+			advancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		Switch[Length[results],
 			1, # -> {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]}& /@ {FrameStyle, CellFrameStyle},
@@ -2161,26 +1948,26 @@ parseSingleBorderStyle[prop_String, token_?CSSTokenQ] :=
 	This requires post-processing of the parsed result. We use Top/Right/Bottom/Left wrappers to keep track of each edge. *)
 consumeProperty[
 	prop:"border-top-width" | "border-right-width" | "border-bottom-width" | "border-left-width", 
-	inputTokens:{__?CSSTokenQ}
+	tokens:{__?CSSTokenQ}
 ] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, wrapper},
+	Module[{pos = 1, l = Length[tokens], value, wrapper},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBorderWidth[prop, tokens[[pos]]];
 		If[FailureQ[value], 
 			value
 			, 
 			wrapper = Switch[prop, "border-top-width", Top, "border-right-width",  Right, "border-bottom-width", Bottom, "border-left-width", Left];
-			{FrameStyle -> wrapper[CSSBorderWidth @ value], CellFrame -> wrapper[CSSBorderWidth @ value]}
+			{FrameStyle -> wrapper[CSSBorderWidth @ value], CellFrame -> wrapper[CSSBorderWidth @ convertToCellThickness @ value]}
 		]
 	]	
 	
 (* sets all 4 frame edge thickness at once *)
-consumeProperty[prop:"border-width", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, results = {}},
+consumeProperty[prop:"border-width", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleBorderWidth[prop, tokens[[pos]]];
 			If[FailureQ[value], Return @ value, AppendTo[results, CSSBorderWidth @ value]];
-			advancePosAndSkipWhitespace[]
+			advancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		(* expand out results  to {{L,R},{B,T}} *)
 		results = 
@@ -2191,7 +1978,7 @@ consumeProperty[prop:"border-width", inputTokens:{__?CSSTokenQ}] :=
 				4, {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
 				_, Return @ tooManyTokensFailure @ tokens
 			];
-		{FrameStyle -> results, CellFrame -> results}
+		{FrameStyle -> results, CellFrame -> Map[convertToCellThickness, results, {3}]}
 	]
 	
 (* WL FrameStyle thickness is best given as a calculated AbsoluteThickness for numerical values. *)
@@ -2223,11 +2010,11 @@ convertToCellThickness[x_] := Switch[x, AbsoluteThickness[_], First[x], Thicknes
 	'border' by itself sets all 4 edges to be the same. *)
 consumeProperty[
 	prop:"border" | "border-top" | "border-right" | "border-bottom" | "border-left", 
-	inputTokens:{__?CSSTokenQ}
+	tokens:{__?CSSTokenQ}
 ] := 
-	Block[
+	Module[
 		{
-			pos = 1, l = Length[inputTokens], tokens = inputTokens, value, 
+			pos = 1, l = Length[tokens], value, 
 			wrapper = Switch[prop, "border-left", Left, "border-right", Right, "border-top", Top, "border-bottom", Bottom, _, Through[{Left, Right, Top, Bottom}[#]]&],
 			values = <|
 				"c" -> initialValues[prop <> "-color"], 
@@ -2252,7 +2039,7 @@ consumeProperty[
 				
 				True, unrecognizedValueFailure @ prop						
 			];
-			advancePosAndSkipWhitespace[];
+			advancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		
 		{
@@ -2267,8 +2054,8 @@ consumeProperty[
 
 
 (* deprecated, but we still mostly parse it for correctness *)
-consumeProperty[prop:"clip", inputTokens:{__?CSSTokenQ}] := 
-	Block[{value, pos = 1, l = Length[inputTokens], tokens = inputTokens},
+consumeProperty[prop:"clip", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -2289,8 +2076,8 @@ consumeProperty[prop:"clip", inputTokens:{__?CSSTokenQ}] :=
 
 
 (* color is represented by a single token, either a named color, hex e.g. #fff, or function *)
-consumeProperty[prop:"color", inputTokens:{__?CSSTokenQ}] := 
-	With[{value = parseSingleColor[prop, First @ inputTokens]},
+consumeProperty[prop:"color", tokens:{__?CSSTokenQ}] := 
+	With[{value = parseSingleColor[prop, First @ tokens]},
 		If[FailureQ[value], value, FontColor -> value]]
 
 
@@ -2303,8 +2090,8 @@ consumeProperty[prop:"color", inputTokens:{__?CSSTokenQ}] :=
 
 
 (* only used to add content before or after element, so let's restrict this to Cells' CellDingbat or CellLabel *)
-consumeProperty[prop:"content", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, parsedValues = {}},
+consumeProperty[prop:"content", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value, parsedValues = {}},
 		While[pos <= l,
 			value = 
 				Switch[CSSTokenType @ tokens[[pos]],
@@ -2337,7 +2124,7 @@ consumeProperty[prop:"content", inputTokens:{__?CSSTokenQ}] :=
 					_, unrecognizedValueFailure @ prop
 				];
 			AppendTo[parsedValues, value];
-			advancePosAndSkipWhitespace[];
+			advancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		Which[
 			Count[parsedValues, None] > 1,   repeatedPropValueFailure @ "none",
@@ -2352,8 +2139,8 @@ consumeProperty[prop:"content", inputTokens:{__?CSSTokenQ}] :=
 
 
 (* In WL each style must be repeated n times to get an increment of n *)
-consumeProperty[prop:"counter-increment", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, v, values = {}, cPos, n},
+consumeProperty[prop:"counter-increment", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], v, values = {}, cPos, n},
 		While[pos <= l,
 			Switch[CSSTokenType @ tokens[[pos]],
 				"ident", 
@@ -2367,7 +2154,7 @@ consumeProperty[prop:"counter-increment", inputTokens:{__?CSSTokenQ}] :=
 						_,  
 							v = CSSTokenString @ tokens[[pos]];
 							(* check to see if identifier token is immediately followed by an integer; if so, consume the integer, too *)
-							cPos = pos; advancePosAndSkipWhitespace[];
+							cPos = pos; advancePosAndSkipWhitespace[pos, l, tokens];
 							If[pos <= l && CSSTokenType @ tokens[[pos]] == "number",
 								If[CSSTokenValueType @ tokens[[pos]] != "integer", Return @ Failure["BadNumber", <|"Message" -> "Expected integer type."|>]];
 								n = CSSTokenValue @ tokens[[pos]];
@@ -2382,7 +2169,7 @@ consumeProperty[prop:"counter-increment", inputTokens:{__?CSSTokenQ}] :=
 					],
 				_, Return @ unrecognizedValueFailure @ prop
 			];
-			advancePosAndSkipWhitespace[];
+			advancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		CounterIncrements -> values
 	]
@@ -2392,8 +2179,8 @@ consumeProperty[prop:"counter-increment", inputTokens:{__?CSSTokenQ}] :=
 (*counter-reset*)
 
 
-consumeProperty[prop:"counter-reset", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, v, values = {}, cPos},
+consumeProperty[prop:"counter-reset", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], v, values = {}, cPos},
 		While[pos <= l,
 			Switch[CSSTokenType @ tokens[[pos]],
 				"ident", 
@@ -2407,7 +2194,7 @@ consumeProperty[prop:"counter-reset", inputTokens:{__?CSSTokenQ}] :=
 						_,        
 							v = CSSTokenString @ tokens[[pos]];
 							(* check to see if identifier token is immediately followed by an integer; if so, consume the integer, too *)
-							cPos = pos; advancePosAndSkipWhitespace[];
+							cPos = pos; advancePosAndSkipWhitespace[pos, l, tokens];
 							If[pos <= l && CSSTokenType @ tokens[[pos]] == "number",
 								If[CSSTokenValueType @ tokens[[pos]] != "integer", Return @ Failure["BadNumber", <|"Message" -> "Expected integer type."|>]];
 								AppendTo[values, {v, CSSTokenValue @ tokens[[pos]]}]
@@ -2417,7 +2204,7 @@ consumeProperty[prop:"counter-reset", inputTokens:{__?CSSTokenQ}] :=
 					],
 				_, Return @ unrecognizedValueFailure @ prop
 			];
-			advancePosAndSkipWhitespace[];
+			advancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		CounterAssignments -> values
 	]
@@ -2427,8 +2214,8 @@ consumeProperty[prop:"counter-reset", inputTokens:{__?CSSTokenQ}] :=
 (*list-style-image*)
 
 
-consumeProperty[prop:"list-style-image", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"list-style-image", tokens:{__?CSSTokenQ}] := 
+	Module[{(*pos = 1, *)l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStyleImage[prop, First @ tokens];
 		If[FailureQ[value], value, CellDingbat -> value]
@@ -2462,8 +2249,8 @@ parseSingleListStyleImage[prop_String, token_?CSSTokenQ] :=
 	CellDingbat position is always outside the cell content and aligned with the first line of content.
 	Though the following validates the CSS, Mathematica does not include any position option.
 *)
-consumeProperty[prop:"list-style-position", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"list-style-position", tokens:{__?CSSTokenQ}] := 
+	Module[{(*pos = 1, *)l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStylePosition[prop, First @ tokens];
 		If[FailureQ[value], value, Missing["Not supported."]]
@@ -2485,8 +2272,8 @@ parseSingleListStylePosition[prop_String, token_?CSSTokenQ] :=
 (*list-style-type*)
 
 
-consumeProperty[prop:"list-style-type", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"list-style-type", tokens:{__?CSSTokenQ}] := 
+	Module[{(*pos = 1, *)l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStyleType[prop, First @ tokens];
 		If[FailureQ[value], value, CellDingbat -> value]
@@ -2524,8 +2311,8 @@ parseSingleListStyleType[prop_String, token_?CSSTokenQ, style_String:"Item"] :=
 
 
 (* short-hand for list-style-image/position/type properties given in any order *)
-consumeProperty[prop:"list-style", inputTokens:{__?CSSTokenQ}] := (*consumeProperty[prop, tokens] = *)
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, values, p, noneCount = 0, hasImage = False, hasPos = False, hasType = False},
+consumeProperty[prop:"list-style", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value, values, noneCount = 0, hasImage = False, hasPos = False, hasType = False},
 		(* 
 			li-image, li-position, and li-type can appear in any order.
 			A value of 'none' sets whichever of li-type and li-image are not otherwise specified to 'none'. 
@@ -2538,14 +2325,14 @@ consumeProperty[prop:"list-style", inputTokens:{__?CSSTokenQ}] := (*consumePrope
 		While[pos <= l,
 			Which[
 				(* check for 'none' keyword *)
-				ToLowerCase @ CSSTokenString @ tokens[[pos]] == "none", noneCount++,					
+				tokenStringIs["none", pos, tokens], noneCount++,					
 				
 				(* check for list-style-image *)
 				!FailureQ[value = parseSingleListStyleImage[prop, tokens[[pos]]]],
 					If[hasImage, 
 						Return @ repeatedPropValueFailure @ "image"
 						, 
-						values["i"] = value[[p]]; hasImage = True
+						values["i"] = value; hasImage = True
 					],
 					
 				(* check for list-style-position *)
@@ -2553,7 +2340,7 @@ consumeProperty[prop:"list-style", inputTokens:{__?CSSTokenQ}] := (*consumePrope
 					If[hasPos, 
 						Return @ repeatedPropValueFailure @ "position"
 						, 
-						values["p"] = value[[p]]; hasPos = True
+						values["p"] = value; hasPos = True
 					],
 					
 				(* check for list-style-type *)
@@ -2561,18 +2348,18 @@ consumeProperty[prop:"list-style", inputTokens:{__?CSSTokenQ}] := (*consumePrope
 					If[hasType, 
 						Return @ repeatedPropValueFailure @ "type"
 						, 
-						values["t"] = value[[p]]; hasType = True
+						values["t"] = value; hasType = True
 					],
 					
 				(* anything else is an error *)
 				True, Return @ unrecognizedValueFailure @ prop
 			];
-			advancePosAndSkipWhitespace[];
+			advancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		Which[
 			hasImage && hasType && noneCount > 0, repeatedPropValueFailure @ "none",
-			hasImage, CellDingbat -> values["image"], (* default to Image if it could be found *)
-			hasType,  CellDingbat -> values["type"],
+			hasImage, CellDingbat -> values["i"], (* default to Image if it could be found *)
+			hasType,  CellDingbat -> values["t"],
 			True,     CellDingbat -> None]
 	]
 
@@ -2587,8 +2374,8 @@ consumeProperty[prop:"list-style", inputTokens:{__?CSSTokenQ}] := (*consumePrope
 	There's also ShowStringCharacters, but this only hides/shows the double quote.
 	We treat this then as not available, but we validate the form anyway.
 *)
-consumeProperty[prop:"quotes", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, v, values = {}, cPos},
+consumeProperty[prop:"quotes", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], v, values = {}, cPos},
 		While[pos <= l,
 			Switch[CSSTokenType @ tokens[[pos]],
 				"ident", 
@@ -2602,7 +2389,7 @@ consumeProperty[prop:"quotes", inputTokens:{__?CSSTokenQ}] :=
 						_, Return @ unrecognizedKeyWordFailure @ prop
 					],
 				"string",
-					v = CSSTokenString @ tokens[[pos]]; cPos = pos; advancePosAndSkipWhitespace[];
+					v = CSSTokenString @ tokens[[pos]]; cPos = pos; advancePosAndSkipWhitespace[pos, l, tokens];
 					If[pos <= l && CSSTokenType @ tokens[[pos]] == "string", 
 						AppendTo[values, {v, CSSTokenString @ tokens[[pos]]}];
 						,
@@ -2610,7 +2397,7 @@ consumeProperty[prop:"quotes", inputTokens:{__?CSSTokenQ}] :=
 					],
 				_, Return @ unrecognizedValueFailure @ prop
 			];
-			advancePosAndSkipWhitespace[]
+			advancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		Missing["Not supported."]
 	]
@@ -2621,8 +2408,8 @@ consumeProperty[prop:"quotes", inputTokens:{__?CSSTokenQ}] :=
 
 
 (* WL uses a TagBox[..., MouseAppearanceTag[""]] instead of an option to indicate mouse appearance *)
-consumeProperty[prop:"cursor", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"cursor", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -2660,8 +2447,8 @@ consumeProperty[prop:"cursor", inputTokens:{__?CSSTokenQ}] :=
 	WL automatically lays out blocks either inline or as nested boxes. 
 	If a Cell appears within TextData or BoxData then it is considered inline.
 *)
-consumeProperty[prop:"display", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"display", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -2697,8 +2484,8 @@ consumeProperty[prop:"display", inputTokens:{__?CSSTokenQ}] :=
 (* 
 	FE does not support the flow of boxes around other boxes. 
 	AttachedCell exists, but is too ephemeral. *)
-consumeProperty[prop:"float", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"float", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -2715,8 +2502,8 @@ consumeProperty[prop:"float", inputTokens:{__?CSSTokenQ}] :=
 	]
 
 
-consumeProperty[prop:"clear", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"clear", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -2747,10 +2534,10 @@ consumeProperty[prop:"clear", inputTokens:{__?CSSTokenQ}] :=
 	[['font-style' || 'font-variant' || 'font-weight' ]? 'font-size' [ / 'line-height' ]? 'font-family' ]
 	All font properties are reset to their initial values, then the listed properties are calculated.
 *)
-consumeProperty[prop:"font", inputTokens:{__?CSSTokenQ}] :=
-	Block[
+consumeProperty[prop:"font", tokens:{__?CSSTokenQ}] :=
+	Module[
 		{
-			pos = 1, l = Length[inputTokens], tokens = inputTokens, v, value, newValue = {}, temp,
+			pos = 1, l = Length[tokens], v, value, newValue = {}, temp,
 			hasFontFamily = False, hasFontSize = False, hasFontStyle = False, hasFontVariant = False, hasFontWeight = False, hasLineHeight = False	
 		},
 		(* reset font properties *)
@@ -2810,7 +2597,7 @@ consumeProperty[prop:"font", inputTokens:{__?CSSTokenQ}] :=
 					True, Return @ unrecognizedValueFailure @ prop
 				];
 			];
-			advancePosAndSkipWhitespace[];
+			advancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		
 		(* 
@@ -2823,7 +2610,7 @@ consumeProperty[prop:"font", inputTokens:{__?CSSTokenQ}] :=
 		If[CSSTokenType @ tokens[[pos]] == "/",
 			pos++; 
 			temp = consumeProperty["line-height", {tokens[[pos]]}]; 
-			If[FailureQ[temp], Return @ temp, AppendTo[newValue, temp]; advancePosAndSkipWhitespace[]];
+			If[FailureQ[temp], Return @ temp, AppendTo[newValue, temp]; advancePosAndSkipWhitespace[pos, l, tokens]];
 		];
 		
 		(* everything else must be a font-family *)
@@ -2839,23 +2626,23 @@ consumeProperty[prop:"font", inputTokens:{__?CSSTokenQ}] :=
 (*font-family*)
 
 
-consumeProperty[prop:"font-family", inputTokens:{__?CSSTokenQ}] :=
+consumeProperty[prop:"font-family", tokens:{__?CSSTokenQ}] :=
 	Module[{fontTokens, parsed, result},
-		fontTokens = DeleteCases[SplitBy[inputTokens, ","], {","}];
+		fontTokens = DeleteCases[SplitBy[tokens, ","], {","}];
 		parsed = parseSingleFontFamily /@ fontTokens;
 		result = FirstCase[parsed, _Failure, None]; (* FIXME: perhaps use FontSubstitutions here? *)
 		If[FailureQ[result], Return @ result];
 		FirstCase[parsed, _Rule, Failure["UnexpectedParse", <|"Message" -> "No font-family found."|>]]
 	]
 
-parseSingleFontFamily[inputTokens:{__?CSSTokenQ}] := parseSingleFontFamily[inputTokens] =
-	Block[
+parseSingleFontFamily[tokens:{__?CSSTokenQ}] := parseSingleFontFamily[tokens] =
+	Module[
 	{
 		value, l, pos = 1, font, tokensNoWS,
 		generic = {"serif", "sans-serif", "monospace", "fantasy", "cursive"},
 		fail = Failure["UnexpectedParse", <|"Message" -> "Font family syntax error."|>]
 	},
-		tokensNoWS = DeleteCases[inputTokens, " ", {1}];
+		tokensNoWS = DeleteCases[tokens, " ", {1}];
 		l = Length[tokensNoWS];
 		value =
 			Switch[CSSTokenType @ tokensNoWS[[pos]],
@@ -2912,8 +2699,8 @@ parseFontFamilySingleIdent[s_String] :=
 (*font-size*)
 
 
-consumeProperty[prop:"font-size", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"font-size", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -2943,8 +2730,8 @@ consumeProperty[prop:"font-size", inputTokens:{__?CSSTokenQ}] :=
 (*font-style*)
 
 
-consumeProperty[prop:"font-style", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"font-style", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -2965,8 +2752,8 @@ consumeProperty[prop:"font-style", inputTokens:{__?CSSTokenQ}] :=
 (*font-variant*)
 
 
-consumeProperty[prop:"font-variant", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"font-variant", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -2990,8 +2777,8 @@ consumeProperty[prop:"font-variant", inputTokens:{__?CSSTokenQ}] :=
 	"lighter" and "bolder" are not supported.
 	Weight mappings come from https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight.
 *)
-consumeProperty[prop:"font-weight", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"font-weight", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3054,8 +2841,8 @@ parseSingleSize[prop_String, token_?CSSTokenQ] := parseSingleSize[prop, token] =
 	]
 	
 (* min-width and max-width override width property *)
-consumeProperty[prop:"width" | "max-width" | "min-width", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"width" | "max-width" | "min-width", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleSize[prop, tokens[[pos]]];
 		If[FailureQ[value], 
@@ -3071,8 +2858,8 @@ consumeProperty[prop:"width" | "max-width" | "min-width", inputTokens:{__?CSSTok
 		]
 	]
 
-consumeProperty[prop:"height" | "max-height" | "min-height", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"height" | "max-height" | "min-height", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleSize[prop, tokens[[pos]]];
 		If[FailureQ[value], 
@@ -3097,8 +2884,8 @@ consumeProperty[prop:"height" | "max-height" | "min-height", inputTokens:{__?CSS
 	Similar to WL LineSpacing, but LineSpacing already takes FontSize into account.
 	Thus, we intercept 'em' and 'ex' before getting a dynamic FontSize and we keep 
 	the percentage from being wrapped in Scaled. *)
-consumeProperty[prop:"line-height", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"line-height", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3128,6 +2915,41 @@ consumeProperty[prop:"line-height", inputTokens:{__?CSSTokenQ}] :=
 (*margin(-left, -right, -top, -bottom)*)
 
 
+(* 
+	CSS margins --> WL ImageMargins and CellMargins
+	CSS padding --> WL FrameMargins and CellFrameMargins
+*)
+consumeProperty[prop:"margin-top" | "margin-right" | "margin-bottom" | "margin-left", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], wrapper, value},
+		If[l > 1, Return @ tooManyTokensFailure @ tokens];
+		value = parseSingleMargin[prop, tokens[[pos]]];
+		If[FailureQ[value], 
+			value
+			, 
+			wrapper = Switch[prop, "margin-left", Left, "margin-right", Right, "margin-bottom", Bottom, "margin-top", Top];
+			{ImageMargins -> wrapper[value], CellMargins -> wrapper[value]}
+		]
+	]
+		
+consumeProperty[prop:"margin", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value, results = {}},
+		While[pos <= l,
+			value = parseSingleMargin[prop, tokens[[pos]]];
+			If[FailureQ[value], Return @ value, AppendTo[results, value]]; 
+			advancePosAndSkipWhitespace[pos, l, tokens];
+		];
+		(* expand out results  to {{L,R},{B,T}} *)
+		results = 
+			Switch[Length[results],
+				1, {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]},
+				2, {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[1]], Top @ results[[1]]},
+				3, {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}, 
+				4, {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
+				_, Return @ tooManyTokensFailure @ tokens
+			];
+		{ImageMargins -> results, CellMargins -> results}
+	]
+
 parseSingleMargin[prop_String, token_?CSSTokenQ] := parseSingleMargin[prop, token] = 
 	Switch[CSSTokenType @ token,
 		"ident", 
@@ -3141,40 +2963,7 @@ parseSingleMargin[prop_String, token_?CSSTokenQ] := parseSingleMargin[prop, toke
 		_,            unrecognizedValueFailure @ prop
 	]
 	
-(* 
-	CSS margins --> WL ImageMargins and CellMargins
-	CSS padding --> WL FrameMargins and CellFrameMargins
-*)
-consumeProperty[prop:"margin-top" | "margin-right" | "margin-bottom" | "margin-left", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, wrapper, value},
-		If[l > 1, Return @ tooManyTokensFailure @ tokens];
-		value = parseSingleMargin[prop, tokens[[pos]]];
-		If[FailureQ[value], 
-			value
-			, 
-			wrapper = Switch[prop, "margin-left", Left, "margin-right", Right, "margin-bottom", Bottom, "margin-top", Top];
-			{ImageMargins -> wrapper[value], CellMargins -> wrapper[value]}
-		]
-	]
-		
-consumeProperty[prop:"margin", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, results = {}},
-		While[pos <= l,
-			value = parseSingleMargin[prop, tokens[[pos]]];
-			If[FailureQ[value], Return @ value, AppendTo[results, value]]; 
-			advancePosAndSkipWhitespace[];
-		];
-		(* expand out results  to {{L,R},{B,T}} *)
-		results = 
-			Switch[Length[results],
-				1, {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]},
-				2, {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[1]], Top @ results[[1]]},
-				3, {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}, 
-				4, {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
-				_, Return @ tooManyTokensFailure @ tokens
-			];
-		{ImageMargins -> results, CellMargins -> results}
-	]
+
 
 
 (* ::Subsection::Closed:: *)
@@ -3193,8 +2982,8 @@ consumeProperty[prop:"margin", inputTokens:{__?CSSTokenQ}] :=
 (*outline-color*)
 
 
-consumeProperty[prop:"outline-color", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"outline-color", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3219,8 +3008,8 @@ consumeProperty[prop:"outline-color", inputTokens:{__?CSSTokenQ}] :=
 
 
 (* only a solid border is allowed for cells; 'hidden' is not allowed here *)
-consumeProperty[prop:"outline-style", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"outline-style", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value =
 			If[CSSTokenType @ tokens[[pos]] == "ident" && CSSTokenString @ tokens[[pos]] == "hidden",
@@ -3236,8 +3025,8 @@ consumeProperty[prop:"outline-style", inputTokens:{__?CSSTokenQ}] :=
 (*outline-width*)
 
 
-consumeProperty[prop:"outline-width", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"outline-width", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = parseSingleBorderWidth[prop, tokens[[pos]]];
 		If[FailureQ[value], 
@@ -3258,10 +3047,10 @@ consumeProperty[prop:"outline-width", inputTokens:{__?CSSTokenQ}] :=
 
 
 (* Shorthand for outline-width/style/color. 'outline' always sets all 4 edges to be the same. *)
-consumeProperty[prop:"outline", inputTokens:{__?CSSTokenQ}] := 
-	Block[
+consumeProperty[prop:"outline", tokens:{__?CSSTokenQ}] := 
+	Module[
 	{
-		pos = 1, l = Length[inputTokens], tokens = inputTokens, value, 
+		pos = 1, l = Length[tokens], value, 
 		values = <|
 			"c" -> initialValues[prop <> "-color"], 
 			"s" -> initialValues[prop <> "-style"], 
@@ -3288,7 +3077,7 @@ consumeProperty[prop:"outline", inputTokens:{__?CSSTokenQ}] :=
 				
 				True, unrecognizedValueFailure @ prop						
 			];
-			advancePosAndSkipWhitespace[];
+			advancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		Missing["Not supported."]
 	]
@@ -3302,8 +3091,8 @@ consumeProperty[prop:"outline", inputTokens:{__?CSSTokenQ}] :=
 	This would mostly be found with WL Pane expression as PaneBox supports scrollbars. 
 	Other boxes may support ImageSizeAction.
 *)
-consumeProperty[prop:"overflow", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens},
+consumeProperty[prop:"overflow", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[CSSTokenType @ tokens[[pos]],
 			"ident",
@@ -3329,9 +3118,9 @@ consumeProperty[prop:"overflow", inputTokens:{__?CSSTokenQ}] :=
 *)
 consumeProperty[
 	prop:"padding-top" | "padding-right" | "padding-bottom" | "padding-left", 
-	inputTokens:{__?CSSTokenQ}
+	tokens:{__?CSSTokenQ}
 ] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, wrapper, value},
+	Module[{pos = 1, l = Length[tokens], wrapper, value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSinglePadding[prop, tokens[[pos]]];
 		If[FailureQ[value], 
@@ -3342,12 +3131,12 @@ consumeProperty[
 		]
 	]
 		
-consumeProperty[prop:"padding", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, results = {}},
+consumeProperty[prop:"padding", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSinglePadding[prop, tokens[[pos]]];
 			If[FailureQ[value], Return @ value, AppendTo[results, value]]; 
-			advancePosAndSkipWhitespace[];
+			advancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		(* expand out results  to {{L,R},{B,T}} *)
 		results = 
@@ -3383,8 +3172,8 @@ parseSinglePadding[prop_String, token_?CSSTokenQ] := (*parseSinglePadding[prop, 
 	FE uses LinebreakAdjustments with a blackbox algorithm. 
 	AFAIK there's no way to directly prevent orphans/widows.
 *)
-consumeProperty[prop:"orphans" | "widows", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"orphans" | "widows", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3404,8 +3193,8 @@ consumeProperty[prop:"orphans" | "widows", inputTokens:{__?CSSTokenQ}] :=
 (*page-break-after/before*)
 
 
-consumeProperty[prop:("page-break-after" | "page-break-before"), inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:("page-break-after" | "page-break-before"), tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3432,8 +3221,8 @@ consumeProperty[prop:("page-break-after" | "page-break-before"), inputTokens:{__
 (*page-break-inside*)
 
 
-consumeProperty[prop:"page-break-inside", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"page-break-inside", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3464,8 +3253,8 @@ consumeProperty[prop:"page-break-inside", inputTokens:{__?CSSTokenQ}] :=
 	Moreover, attached cells aren't an option, but rather a cell.
 	Perhaps can use NotebookDynamicExpression -> Dynamic[..., TrackedSymbols -> {}] where "..." includes a list of attached cells.
 *)
-consumeProperty[prop:"position", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"position", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value =
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3483,8 +3272,8 @@ consumeProperty[prop:"position", inputTokens:{__?CSSTokenQ}] :=
 	]
 
 
-consumeProperty[prop:"left" | "right" | "top" | "bottom", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"left" | "right" | "top" | "bottom", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value =
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3524,8 +3313,8 @@ consumeProperty[prop:"left" | "right" | "top" | "bottom", inputTokens:{__?CSSTok
 
 
 (* WL Grid does not support an option to have a grid caption. *)
-consumeProperty[prop:"caption-side", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"caption-side", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3546,8 +3335,8 @@ consumeProperty[prop:"caption-side", inputTokens:{__?CSSTokenQ}] :=
 
 
 (* There is no WL equivalent because FE uses only 'border-collapse' in Grid.*)
-consumeProperty[prop:"empty-cells", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"empty-cells", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3568,8 +3357,8 @@ consumeProperty[prop:"empty-cells", inputTokens:{__?CSSTokenQ}] :=
 
 
 (* The FE does its own formatting passes depending on the column width settings and content. *)
-consumeProperty[prop:"table-layout", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"table-layout", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3593,8 +3382,8 @@ consumeProperty[prop:"table-layout", inputTokens:{__?CSSTokenQ}] :=
 (*direction*)
 
 
-consumeProperty[prop:"direction", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"direction", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3615,8 +3404,8 @@ consumeProperty[prop:"direction", inputTokens:{__?CSSTokenQ}] :=
 
 
 (* WL distinguishes between alignment and justification, but CSS does not *)
-consumeProperty[prop:"text-align", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens},
+consumeProperty[prop:"text-align", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[CSSTokenType @ tokens[[pos]],
 			"ident",
@@ -3636,8 +3425,8 @@ consumeProperty[prop:"text-align", inputTokens:{__?CSSTokenQ}] :=
 (*text-indent*)
 
 
-consumeProperty[prop:"text-indent", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"text-indent", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3659,8 +3448,8 @@ consumeProperty[prop:"text-indent", inputTokens:{__?CSSTokenQ}] :=
 
 
 (* WL distinguishes between alignment and justification, but CSS does not *)
-consumeProperty[prop:"text-decoration", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value, values = {}},
+consumeProperty[prop:"text-decoration", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value, values = {}},
 		While[pos <= l,
 			value =
 				Switch[CSSTokenType @ tokens[[pos]],
@@ -3676,7 +3465,7 @@ consumeProperty[prop:"text-decoration", inputTokens:{__?CSSTokenQ}] :=
 					_, unrecognizedValueFailure @ prop
 				];
 			If[FailureQ[value], Return @ value, AppendTo[values, value]];
-			advancePosAndSkipWhitespace[];
+			advancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		FontVariations -> values
 	]
@@ -3686,8 +3475,8 @@ consumeProperty[prop:"text-decoration", inputTokens:{__?CSSTokenQ}] :=
 (*text-transform*)
 
 
-consumeProperty[prop:"text-transform", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens},
+consumeProperty[prop:"text-transform", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[CSSTokenType @ tokens[[pos]],
 			"ident",
@@ -3712,8 +3501,8 @@ consumeProperty[prop:"text-transform", inputTokens:{__?CSSTokenQ}] :=
 	The FontTracking options gives some additional control, but appears to be mis-appropriated to CSS font-stretch.
 	Not to be confused with CSS font-stretch.
 *)
-consumeProperty[prop:"letter-spacing", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"letter-spacing", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3734,8 +3523,8 @@ consumeProperty[prop:"letter-spacing", inputTokens:{__?CSSTokenQ}] :=
 	Added back in Level 3. CSS Fonts Module Level 4 supports percentages as well.
 	Mathematica supports both level 3 and 4 features in FontTracking.
 *)
-consumeProperty[prop:"font-stretch", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"font-stretch", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3763,8 +3552,8 @@ consumeProperty[prop:"font-stretch", inputTokens:{__?CSSTokenQ}] :=
 (*unicode-bidi*)
 
 
-consumeProperty[prop:"unicode-bidi", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"unicode-bidi", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3789,8 +3578,8 @@ consumeProperty[prop:"unicode-bidi", inputTokens:{__?CSSTokenQ}] :=
 	General letter and word spacing is controlled by the Mathematica Front End. 
 	The CSS is still validated.
 *)
-consumeProperty[prop:"word-spacing", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"word-spacing", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3811,8 +3600,8 @@ consumeProperty[prop:"word-spacing", inputTokens:{__?CSSTokenQ}] :=
 
 
 (* Whitespace is controlled by the Mathematica Front End. The CSS is still validated. *)
-consumeProperty[prop:"white-space", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens},
+consumeProperty[prop:"white-space", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[CSSTokenType @ tokens[[pos]],
 			"ident",
@@ -3840,12 +3629,12 @@ consumeProperty[prop:"white-space", inputTokens:{__?CSSTokenQ}] :=
 	Percentages are relative to the font-size i.e. 100% is one line-height upward.
 	CellBaseline is limited and always aligns the top of the inline cell to the Bottom/Top/Etc of the parent
 *)
-consumeProperty[prop:"vertical-align", inputTokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"vertical-align", tokens:{__?CSSTokenQ}] := 
 	Module[{value1, value2},
-		If[Length[inputTokens] > 1, Return @ tooManyTokensFailure @ inputTokens];
-		value1 = parseBaseline[prop, First @ inputTokens];
+		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
+		value1 = parseBaseline[prop, First @ tokens];
 		If[FailureQ[value1], Return @ value1];
-		value2 = parseCellBaseline[prop, First @ inputTokens];
+		value2 = parseCellBaseline[prop, First @ tokens];
 		If[FailureQ[value2], Return @ value2];
 		{value1, value2}
 	]
@@ -3913,8 +3702,8 @@ parseCellBaseline[prop:"vertical-align", token_?CSSTokenQ] := parseCellBaseline[
 	WL option ShowContents is only applicable within a StyleBox.
 	Often this is implemented using the Invisible function.
 *)
-consumeProperty[prop:"visibility", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"visibility", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3939,8 +3728,8 @@ consumeProperty[prop:"visibility", inputTokens:{__?CSSTokenQ}] :=
 	The FE does its own depth ordering of boxes. 
 	Attached cells are ordered by their creation order.
 *)
-consumeProperty[prop:"z-index", inputTokens:{__?CSSTokenQ}] := 
-	Block[{pos = 1, l = Length[inputTokens], tokens = inputTokens, value},
+consumeProperty[prop:"z-index", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -3968,6 +3757,187 @@ consumeProperty[prop:"z-index", inputTokens:{__?CSSTokenQ}] :=
 consumeProperty[prop_String, {}] := noValueFailure @ prop
 
 consumeProperty[prop_String, _] := unsupportedValueFailure @ prop
+
+
+(* ::Subsection::Closed:: *)
+(*Merge Properties*)
+
+
+expectedMainKeys     = {"Selector", "Condition", "Block"};
+expectedMainKeysFull = {"Selector", "Specificity", "Targets", "Condition", "Block"};
+expectedBlockKeys    = {"Important", "Property", "Value", "Interpretation"};
+expectedBlockKeysRaw = {"Important", "Property", "Value"};
+
+validCSSDataRawQ[data:{__Association}] := 
+	And[
+		AllTrue[Keys /@ data, MatchQ[expectedMainKeys]],
+		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeysRaw]]]
+validCSSDataBareQ[data:{__Association}] := 
+	And[
+		AllTrue[Keys /@ data, MatchQ[expectedMainKeys]],
+		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeys]]]
+validCSSDataFullQ[data:{__Association}] := 
+	And[
+		AllTrue[Keys /@ data, MatchQ[expectedMainKeysFull]],
+		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeys]]]
+validCSSDataQ[data:{__Association}] := validCSSDataBareQ[data] || validCSSDataFullQ[data]
+validCSSDataQ[___] := False
+
+(* these include all inheritable options that make sense to pass on in a Notebook environment *)
+notebookLevelOptions = 
+	{
+		Background, BackgroundAppearance, BackgroundAppearanceOptions, 
+		FontColor, FontFamily, FontSize, FontSlant, FontTracking, FontVariations, FontWeight, 
+		LineIndent, LineSpacing, ParagraphIndent, ShowContents, TextAlignment};
+		
+(* these include all options (some not inheritable in the CSS sense) that make sense to set at the Cell level *)
+cellLevelOptions = 
+	{
+		Background, 
+		CellBaseline, CellDingbat, CellMargins, 
+		CellFrame, CellFrameColor, CellFrameLabelMargins, CellFrameLabels, CellFrameMargins, CellFrameStyle, 
+		CellLabel, CellLabelMargins, CellLabelPositioning, CellLabelStyle, 
+		CounterIncrements, CounterAssignments,
+		FontColor, FontFamily, FontSize, FontSlant, FontTracking, FontVariations, FontWeight, 
+		LineIndent, LineSpacing, ParagraphIndent, ShowContents, TextAlignment,
+		PageBreakBelow, PageBreakAbove, PageBreakWithin, GroupPageBreakWithin};
+		
+(* these are options that are expected to be Notebook or Cell specific *)
+optionsToAvoidAtBoxLevel = 
+	{
+		BackgroundAppearance, BackgroundAppearanceOptions, 
+		CellBaseline, CellDingbat, CellMargins, 
+		CellFrame, CellFrameColor, CellFrameLabelMargins, CellFrameLabels, CellFrameMargins, CellFrameStyle, 
+		CellLabel, CellLabelMargins, CellLabelPositioning, CellLabelStyle, 
+		ParagraphIndent};
+		
+validBoxes =
+	{
+		ActionMenuBox, AnimatorBox, ButtonBox, CheckboxBox, ColorSetterBox, 
+		DynamicBox, DynamicWrapperBox, FrameBox, Graphics3DBox, GraphicsBox, 
+		GridBox, InputFieldBox, InsetBox, ItemBox, LocatorBox, 
+		LocatorPaneBox, OpenerBox, OverlayBox, PaneBox, PanelBox, 
+		PaneSelectorBox, PopupMenuBox, ProgressIndicatorBox, RadioButtonBox,
+		SetterBox, Slider2DBox, SliderBox, TabViewBox, TogglerBox, TooltipBox};	
+validExpressions =
+	{
+		ActionMenu, Animator, Button, Checkbox, ColorSetter, 
+		Dynamic, DynamicWrapper, Frame, Graphics3D, Graphics, 
+		Grid, InputField, Inset, Item, Locator, 
+		LocatorPane, Opener, Overlay, Pane, Panel, 
+		PaneSelector, PopupMenu, ProgressIndicator, RadioButton,
+		Setter, Slider2D, Slider, TabView, Toggler, Tooltip};	
+validBoxOptions =
+	{
+		Alignment, Appearance, Background, Frame, FrameMargins, FrameStyle, 
+		FontTracking, ImageMargins, ImageSize, ImageSizeAction, Spacings, Scrollbars};
+validBoxesQ = MemberQ[Join[validBoxes, validExpressions], #]&;
+
+removeBoxOptions[allOptions_, boxes:{__?validBoxesQ}] :=
+	Module[{currentOpts, optNames = allOptions[[All, 1]]},
+		Join[
+			Cases[allOptions, Rule[Background, _] | Rule[FontTracking, _], {1}],
+			DeleteCases[allOptions, Alternatives @@ (Rule[#, _]& /@ validBoxOptions)],
+			DeleteCases[
+				Table[
+					currentOpts = Intersection[Options[i][[All, 1]], optNames];
+					Symbol[SymbolName[i] <> "Options"] -> Cases[allOptions, Alternatives @@ (Rule[#, _]& /@ currentOpts), {1}],
+					{i, boxes}],
+				_ -> {}, 
+				{1}]]	
+	]	
+
+
+(* ResolveCSSInterpretations:
+	1. Remove Missing and Failure interpretations.
+	2. Filter the options based on Notebook/Cell/Box levels.
+	3. Merge together Left/Right/Bottom/Top and Width/Height options.  *)
+ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_Dataset] :=
+	ResolveCSSInterpretations[type, Normal @ interpretationList]
+	
+ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_] := 
+	Module[{valid, initialSet},
+		valid = DeleteCases[Flatten @ interpretationList, _?FailureQ | _Missing, {1}];
+		valid = Select[valid, 
+			Switch[type, 
+				Cell,      MemberQ[cellLevelOptions, #[[1]]]&, 
+				Notebook,  MemberQ[notebookLevelOptions, #[[1]]]&,
+				Box,      !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&,
+				All,       True&]];
+		(* assemble options *)
+		initialSet = assemble[#, valid]& /@ Union[First /@ valid];
+		If[type === Box || type === All,
+			removeBoxOptions[initialSet, validBoxes]
+			,
+			initialSet]
+	]
+
+ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_Dataset] := ResolveCSSInterpretations[{box}, Normal @ interpretationList]
+ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_] := ResolveCSSInterpretations[{box}, interpretationList]	
+ResolveCSSInterpretations[boxes:{__?validBoxesQ}, interpretationList_] := 
+	Module[{valid, initialSet},
+		valid = DeleteCases[Flatten @ interpretationList, _?FailureQ | _Missing, {1}];
+		valid = Select[valid, !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&];
+		(* assemble options *)
+		initialSet = assemble[#, valid]& /@ Union[First /@ valid];
+		removeBoxOptions[initialSet, boxes /. Thread[validExpressions -> validBoxes]]				
+	]
+
+
+assembleLRBTDirectives[x_List] := 
+	Module[{xLocal = Flatten @ x, r = {{Automatic, Automatic}, {Automatic, Automatic}}},
+		With[{l = getSideFromLRBTDirective[Left,   xLocal]}, If[l =!= {}, r[[1, 1]] = setDirective @ l]]; 
+		With[{l = getSideFromLRBTDirective[Right,  xLocal]}, If[l =!= {}, r[[1, 2]] = setDirective @ l]]; 
+		With[{l = getSideFromLRBTDirective[Bottom, xLocal]}, If[l =!= {}, r[[2, 1]] = setDirective @ l]]; 
+		With[{l = getSideFromLRBTDirective[Top,    xLocal]}, If[l =!= {}, r[[2, 2]] = setDirective @ l]]; 
+		r
+	]
+	
+getSideFromLRBTDirective[side:Left | Right | Bottom | Top, list_] := Reverse @ DeleteDuplicatesBy[Reverse[Join @@ Cases[list, side[___], {1}]], Head]
+
+(* Directive does not always like Dynamic inside of it, so move it outside if it exists. *)
+setDirective[(side:Left | Right | Bottom | Top)[        a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[Dynamic[prop_]], b___] ] := setDirective[side[Dynamic[a, prop, b]]] 
+setDirective[(side:Left | Right | Bottom | Top)[Dynamic[a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[Dynamic[prop_]], b___]]] := setDirective[side[Dynamic[a, prop, b]]]
+setDirective[(side:Left | Right | Bottom | Top)[Dynamic[a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[        prop_ ], b___]]] := setDirective[side[Dynamic[a, prop, b]]]
+setDirective[(side:Left | Right | Bottom | Top)[        a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[        prop_ ], b___] ] := setDirective[side[        a, prop, b] ]
+
+setDirective[(side:Left | Right | Bottom | Top)[Dynamic[a___]]] := Dynamic[Directive[a]]
+setDirective[(side:Left | Right | Bottom | Top)[        a___] ] := Directive[a]
+	
+assembleLRBT[x_List] := 
+	Module[{r = {{Automatic, Automatic}, {Automatic, Automatic}}},
+		Map[
+			With[{value = First[#]}, 
+				Switch[Head[#], 
+					Bottom | CSSHeightMin, r[[2, 1]] = value,
+					Top    | CSSHeightMax, r[[2, 2]] = value,
+					Left   | CSSWidthMin,  r[[1, 1]] = value,
+					Right  | CSSWidthMax,  r[[1, 2]] = value]
+			]&,
+			Flatten[x]];
+		r]
+
+Clear[assemble]
+assemble[opt:(FrameStyle | CellFrameStyle), rules_List] := 
+	opt -> assembleLRBTDirectives @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
+
+assemble[opt:(FrameMargins | ImageMargins | CellMargins | CellFrameMargins), rules_List] := 
+	opt -> assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
+
+assemble[opt:ImageSize, rules_List] := 
+	opt -> Replace[assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], {x_, x_} :> x, {1}]
+	 
+assemble[opt:CellFrame, rules_List] := 
+	opt -> Replace[assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], CSSBorderWidth[x_] :> x, {2}]
+
+assemble[opt:FontVariations, rules_List] := 
+	opt -> DeleteDuplicatesBy[Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], First]
+
+(* not used much *)
+assemble[opt:CellFrameColor, rules_List] := opt -> Last @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
+
+(* fallthrough *)
+assemble[opt_, rules_List] := Last @ Cases[rules, HoldPattern[opt -> _], {1}]
 
 
 (* ::Section::Closed:: *)
@@ -4089,7 +4059,7 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 	Module[
 		{
 			currentDir, externalSSPositions, externalSSContent, internalSSPositions, internalSSContent, 
-			directStylePositions, directStyleContent, all, uniqueStyles},
+			directStylePositions, directStyleContent, all},
 			
 		currentDir = Directory[];
 		SetDirectory[If[OptionValue["RootDirectory"] === Automatic, Directory[], OptionValue["RootDirectory"]]]; 
@@ -4118,7 +4088,7 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 					"Specificity" -> {1, 0, 0, 0}, 
 					"Targets" -> {#1}, 
 					"Condition" -> None, 
-					"Block" -> processDeclarationBlock @ tokenizeDeclaration @ #2|>&, 
+					"Block" ->  consumeDeclarationBlock @ CSSTokenize @ #2|>&, 
 				{directStylePositions, directStyleContent}];
 		
 		(* combine all CSS sources based on position in XMLObject *)
@@ -4127,8 +4097,6 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 				Part[
 					Join[externalSSContent, internalSSContent, directStyleContent],
 					Ordering @ Join[externalSSPositions, internalSSPositions, directStylePositions]];
-		uniqueStyles = Union @ Flatten @ all[[All, "Block", All, "Property"]];
-		all = Fold[process[#2, #1]&, all, uniqueStyles];
 		SetDirectory[currentDir];
 		Dataset @ all		
 	]

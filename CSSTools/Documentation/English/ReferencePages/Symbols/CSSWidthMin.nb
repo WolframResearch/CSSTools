@@ -51,7 +51,7 @@ Cell["CSSTools`", "Categorization",
  CellLabel->"Context",
  CellID->468444828,ExpressionUUID->"67605ee3-9974-4f51-bd4f-a2aa8f06ad07"],
 
-Cell["CSSTools/ref/WidthMin", "Categorization",
+Cell["CSSTools/ref/CSSWidthMin", "Categorization",
  CellLabel->"URI",ExpressionUUID->"67af1f9f-7331-46be-a7d0-3ac191474219"]
 }, Closed]],
 
@@ -130,13 +130,13 @@ Cell["XXXX", "Details",
 
 Cell[CellGroupData[{
 
-Cell["WidthMin", "ObjectName",
+Cell["CSSWidthMin", "ObjectName",
  CellID->1224892054,ExpressionUUID->"aa990404-c865-4f9e-97ff-e26d4daa8d7a"],
 
 Cell[TextData[{
  Cell["   ", "ModInfo",ExpressionUUID->"fc9a98f0-8736-4598-ab47-030f68910632"],
  Cell[BoxData[
-  RowBox[{"WidthMin", "[", 
+  RowBox[{"CSSWidthMin", "[", 
    StyleBox["value", "TI"], "]"}]], "InlineFormula",ExpressionUUID->
   "cff0bf2c-f84b-495a-88a7-4551d1718e79"],
  " \[LineSeparator]indicates ",
@@ -149,9 +149,9 @@ Cell[TextData[{
  CellID->982511436,ExpressionUUID->"44ee6532-d243-404b-9d15-4f5ec05a093c"],
 
 Cell[TextData[{
- ButtonBox["WidthMin",
+ ButtonBox["CSSWidthMin",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/WidthMin"],
+  ButtonData->"paclet:CSSTools/ref/CSSWidthMin"],
  " serves no other purpose than to assist ",
  ButtonBox["ResolveCSSInterpretations",
   BaseStyle->"Link",
@@ -203,9 +203,9 @@ Cell["See Also", "SeeAlsoSection",
  CellID->1255426704,ExpressionUUID->"a38c2fee-591e-4739-8452-d9e04fabfd91"],
 
 Cell[TextData[{
- ButtonBox["WidthMax",
+ ButtonBox["CSSWidthMax",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/WidthMax"],
+  ButtonData->"paclet:CSSTools/ref/CSSWidthMax"],
  " \[EmptyVerySmallSquare] ",
  ButtonBox["ResolveCSSInterpretations",
   BaseStyle->"Link",
@@ -248,13 +248,13 @@ Cell[BoxData[
 
 Cell[TextData[{
  "If an imported CSS style contains ",
- ButtonBox["WidthMin",
+ ButtonBox["CSSWidthMin",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/WidthMin"],
+  ButtonData->"paclet:CSSTools/ref/CSSWidthMin"],
  " or ",
- ButtonBox["WidthMax",
+ ButtonBox["CSSWidthMax",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/WidthMax"],
+  ButtonData->"paclet:CSSTools/ref/CSSWidthMax"],
  ", then ",
  ButtonBox["ResolveCSSInterpretations",
   BaseStyle->"Link",
@@ -281,13 +281,13 @@ Cell[BoxData[
      RowBox[{"ImageSize", "\[Rule]", 
       RowBox[{"{", 
        RowBox[{
-        RowBox[{"HeightMin", "[", "24", "]"}], ",", 
-        RowBox[{"HeightMax", "[", "38", "]"}]}], "}"}]}], ",", 
+        RowBox[{"CSSHeightMin", "[", "24", "]"}], ",", 
+        RowBox[{"CSSHeightMax", "[", "38", "]"}]}], "}"}]}], ",", 
      RowBox[{"ImageSize", "\[Rule]", 
       RowBox[{"{", 
        RowBox[{
-        RowBox[{"WidthMin", "[", "40", "]"}], ",", 
-        RowBox[{"WidthMax", "[", "60", "]"}]}], "}"}]}]}], "}"}]}], 
+        RowBox[{"CSSWidthMin", "[", "40", "]"}], ",", 
+        RowBox[{"CSSWidthMax", "[", "60", "]"}]}], "}"}]}]}], "}"}]}], 
   "]"}]], "Input",
  CellChangeTimes->{{3.7616052330113087`*^9, 3.7616052794123416`*^9}, {
    3.761605577789516*^9, 3.761605577927934*^9}, {3.7616057160854735`*^9, 

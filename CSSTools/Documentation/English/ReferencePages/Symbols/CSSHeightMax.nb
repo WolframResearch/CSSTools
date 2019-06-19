@@ -51,7 +51,7 @@ Cell["CSSTools`", "Categorization",
  CellLabel->"Context",
  CellID->468444828,ExpressionUUID->"68c7b646-0ec9-4a99-b3f1-d6fec435a032"],
 
-Cell["CSSTools/ref/HeightMax", "Categorization",
+Cell["CSSTools/ref/CSSHeightMax", "Categorization",
  CellLabel->"URI",ExpressionUUID->"00830a64-d498-4fe5-a33d-535ebd9af81c"]
 }, Closed]],
 
@@ -130,14 +130,14 @@ Cell["XXXX", "Details",
 
 Cell[CellGroupData[{
 
-Cell["HeightMax", "ObjectName",
+Cell["CSSHeightMax", "ObjectName",
  CellChangeTimes->{{3.7621006999105296`*^9, 3.762100700006501*^9}},
  CellID->1224892054,ExpressionUUID->"efda4d6a-c04a-4968-aff8-dc073ba57a68"],
 
 Cell[TextData[{
  Cell["   ", "ModInfo",ExpressionUUID->"92cfdd28-c8fd-441b-a42f-c2ce9022aa32"],
  Cell[BoxData[
-  RowBox[{"HeightMax", "[", 
+  RowBox[{"CSSHeightMax", "[", 
    StyleBox["value", "TI"], 
    StyleBox["]", "TI"]}]], "InlineFormula",ExpressionUUID->
   "9ba8b959-e27c-4daf-ab44-a0448030c0b2"],
@@ -151,9 +151,9 @@ Cell[TextData[{
  CellID->982511436,ExpressionUUID->"57aa9da7-aba0-4fb6-9a60-61a1edd14368"],
 
 Cell[TextData[{
- ButtonBox["HeightMax",
+ ButtonBox["CSSHeightMax",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/HeightMax"],
+  ButtonData->"paclet:CSSTools/ref/CSSHeightMax"],
  " serves no other purpose than to assist ",
  ButtonBox["ResolveCSSInterpretations",
   BaseStyle->"Link",
@@ -202,9 +202,9 @@ Cell["See Also", "SeeAlsoSection",
  CellID->1255426704,ExpressionUUID->"f07757d4-df9b-4ae4-8200-54cee718dbff"],
 
 Cell[TextData[{
- ButtonBox["HeightMin",
+ ButtonBox["CSSHeightMin",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/HeightMin"],
+  ButtonData->"paclet:CSSTools/ref/CSSHeightMin"],
  " \[EmptyVerySmallSquare] ",
  ButtonBox["ResolveCSSInterpretations",
   BaseStyle->"Link",
@@ -247,13 +247,13 @@ Cell[BoxData[
 
 Cell[TextData[{
  "If an imported CSS style contains ",
- ButtonBox["HeightMin",
+ ButtonBox["CSSHeightMin",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/HeightMin"],
+  ButtonData->"paclet:CSSTools/ref/CSSHeightMin"],
  " or ",
- ButtonBox["HeightMax",
+ ButtonBox["CSSHeightMax",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/HeightMax"],
+  ButtonData->"paclet:CSSTools/ref/CSSHeightMax"],
  ", then ",
  ButtonBox["ResolveCSSInterpretations",
   BaseStyle->"Link",
@@ -279,13 +279,13 @@ Cell[BoxData[
      RowBox[{"ImageSize", "\[Rule]", 
       RowBox[{"{", 
        RowBox[{
-        RowBox[{"HeightMin", "[", "24", "]"}], ",", 
-        RowBox[{"HeightMax", "[", "38", "]"}]}], "}"}]}], ",", 
+        RowBox[{"CSSHeightMin", "[", "24", "]"}], ",", 
+        RowBox[{"CSSHeightMax", "[", "38", "]"}]}], "}"}]}], ",", 
      RowBox[{"ImageSize", "\[Rule]", 
       RowBox[{"{", 
        RowBox[{
-        RowBox[{"WidthMin", "[", "40", "]"}], ",", 
-        RowBox[{"WidthMax", "[", "60", "]"}]}], "}"}]}]}], "}"}]}], 
+        RowBox[{"CSSWidthMin", "[", "40", "]"}], ",", 
+        RowBox[{"CSSWidthMax", "[", "60", "]"}]}], "}"}]}]}], "}"}]}], 
   "]"}]], "Input",
  CellChangeTimes->{{3.7616052330113087`*^9, 3.7616052794123416`*^9}, {
   3.761605577789516*^9, 3.761605577927934*^9}, {3.7616057160854735`*^9, 
