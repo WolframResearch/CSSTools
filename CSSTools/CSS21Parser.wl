@@ -397,15 +397,13 @@ SetAttributes[{consumeAtRule, consumeRuleset}, HoldFirst];
 
 consumeAtRule[pos_, l_, tokens_] :=
 	Which[
-		(* @import not allowed so skip them *)
+		(* @import is not allowed after the top of the stylesheet, so skip them *)
 		tokenStringIs["import", pos, tokens], 
 			advancePosToNextSemicolon[pos, l, tokens]; 
 			advancePosAndSkipWhitespace[pos, l, tokens], 
 			
 		(* @page *)
-		tokenStringIs["page", pos, tokens], 
-			advancePosToNextSemicolonOrBlock[pos, l, tokens]; 
-			advancePosAndSkipWhitespace[pos, l, tokens];, 
+		tokenStringIs["page", pos, tokens], consumeAtPageRule[pos, tokens];,
 			
 		(* @media *)
 		tokenStringIs["media", pos, tokens], 
