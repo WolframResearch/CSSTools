@@ -509,11 +509,11 @@ SetAttributes[
 		AdvancePosToNextBlock}, 
 	HoldFirst];
 
-TokenTypeIs[s:(_String | Alternatives[__String]), pos_, tokens_] := StringMatchQ[CSSTokenType @ tokens[[pos]], s, IgnoreCase -> False]
-TokenTypeIsNot[s:(_String | Alternatives[__String]), pos_, tokens_] := Not @ TokenTypeIs[s, pos, tokens]
+TokenTypeIs[s_, pos_, tokens_] := StringMatchQ[CSSTokenType @ tokens[[pos]], s, IgnoreCase -> False]
+TokenTypeIsNot[s_, pos_, tokens_] := Not @ TokenTypeIs[s, pos, tokens]
 
-TokenStringIs[s_String, pos_, tokens_] := StringMatchQ[CSSTokenString @ tokens[[pos]], s, IgnoreCase -> True]
-TokenStringIsNot[s_String, pos_, tokens_] := Not @ TokenStringIs[s, pos, tokens]
+TokenStringIs[s_, pos_, tokens_] := StringMatchQ[CSSTokenString @ tokens[[pos]], s, IgnoreCase -> True]
+TokenStringIsNot[s_, pos_, tokens_] := Not @ TokenStringIs[s, pos, tokens]
 
 AdvancePosAndSkipWhitespace[pos_, l_, tokens_] := (pos++; While[pos < l && CSSTokenType @ tokens[[pos]] == " ", pos++])
 RetreatPosAndSkipWhitespace[pos_, l_, tokens_] := (pos--; While[pos > 1 && CSSTokenType @ tokens[[pos]] == " ", pos--])

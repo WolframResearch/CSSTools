@@ -329,7 +329,7 @@ consumeAtImportKeyword[pos_, l_, tokens_] :=
 		While[TokenTypeIsNot[";", pos, tokens],
 			mediaStart = pos;
 			AdvancePosToNextSemicolonOrComma[pos, l, tokens];
-			If[TrueQ @ $Debug, Echo[pos, "here"]];;
+			If[TrueQ @ $Debug, Echo[pos, "here"]];
 			If[pos == l, Echo["Media query has no closing. Reached EOF.", "@import error"]; Return @ {}];
 			AppendTo[mediums, CSSUntokenize @ tokens[[mediaStart ;; pos - 1]]];
 			If[TokenTypeIs[";", pos, tokens],

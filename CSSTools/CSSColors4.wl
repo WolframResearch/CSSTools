@@ -26,7 +26,6 @@ parseSingleColorKeyWord[prop_String, keyword_String] :=
 		"blanchedalmond", RGBColor[1, Rational[47, 51], Rational[41, 51]], 
 		"blue",           RGBColor[0, 0, 1], 
 		"blueviolet",     RGBColor[Rational[46, 85], Rational[43, 255], Rational[226, 255]], 
-		"brown",          RGBColor[Rational[11, 17], Rational[14, 85], Rational[14, 85]], 
 		"brown",          RGBColor[Rational[11, 17], Rational[14, 85], Rational[14, 85]],
 		"burlywood",      RGBColor[Rational[74, 85], Rational[184, 255], Rational[9, 17]],
 		"cadetblue",      RGBColor[Rational[19, 51], Rational[158, 255], Rational[32, 51]],

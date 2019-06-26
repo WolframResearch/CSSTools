@@ -132,13 +132,14 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}] :=
 				TokenTypeIs["ident", pos, tokens] && TokenStringIs[Alternatives @@ $ValidPageProperties, pos, tokens],
 					decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
 					dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
+					AppendTo[declarations, dec];
 					pos = decEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
 				,
 				(* unrecognized rules are skipped *)
 				True, AdvancePosToNextSemicolon[pos, l, tokens];
 			]
-			
-		]	
+		];
+		declarations
 	]
 	
 consumeAtPageMarginRule[pos_, l_, tokens_] := 
