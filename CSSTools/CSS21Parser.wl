@@ -239,34 +239,6 @@ Select[Flatten[table[[5, 1]]], StringEndsQ[#, "()"]&]
 
 
 (* ::Subsection::Closed:: *)
-(*Utilities*)
-
-
-(* The utilities are assumed to be used within "consume" functions where pos, l, and tokens are defined. *)
-SetAttributes[
-	{
-		advancePosAndSkipWhitespace, retreatPosAndSkipWhitespace, 
-		advancePosToNextSemicolon, advancePosToNextSemicolonOrBlock, advancePosToNextSemicolonOrComma,
-		advancePosToNextBlock}, 
-	HoldFirst];
-
-tokenTypeIs[s:(_String | Alternatives[__String]), pos_, tokens_] := StringMatchQ[CSSTokenType @ tokens[[pos]], s, IgnoreCase -> False]
-tokenTypeIsNot[s:(_String | Alternatives[__String]), pos_, tokens_] := Not @ tokenTypeIs[s, pos, tokens]
-
-tokenStringIs[s_String, pos_, tokens_] := StringMatchQ[CSSTokenString @ tokens[[pos]], s, IgnoreCase -> True]
-tokenStringIsNot[s_String, pos_, tokens_] := Not @ tokenStringIs[s, pos, tokens]
-
-advancePosAndSkipWhitespace[pos_, l_, tokens_] := (pos++; While[pos < l && CSSTokenType @ tokens[[pos]] == " ", pos++])
-retreatPosAndSkipWhitespace[pos_, l_, tokens_] := (pos--; While[pos > 1 && CSSTokenType @ tokens[[pos]] == " ", pos--])
-
-advancePosToNextSemicolon[pos_, l_, tokens_] := While[pos < l && CSSTokenType @ tokens[[pos]] != ";", pos++]
-advancePosToNextSemicolonOrBlock[pos_, l_, tokens_] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "{}" | ";"], pos++]
-advancePosToNextSemicolonOrComma[pos_, l_, tokens_] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "," | ";"], pos++]
-
-advancePosToNextBlock[pos_, l_, tokens_] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "{}"], pos++]
-
-
-(* ::Subsection::Closed:: *)
 (*Consume Style Sheet*)
 
 
@@ -276,15 +248,15 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 		If[TrueQ @ $Debug, Echo[l, "Token Length"]];
 		
 		(* skip any leading whitespace (there shouldn't be any if @charset exists) *)
-		If[tokenTypeIs[" ", pos, tokens], advancePosAndSkipWhitespace[pos, l, tokens]];
+		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]];
 		If[TrueQ @ $Debug, Echo[pos, "position"]];
 		
 		(* check for @charset rule *)
-		If[tokenTypeIs["at-keyword", pos, tokens] && tokenStringIs["charset", pos, tokens], consumeAtCharsetKeyword[pos, l, tokens]];
+		If[TokenTypeIs["at-keyword", pos, tokens] && TokenStringIs["charset", pos, tokens], consumeAtCharsetKeyword[pos, l, tokens]];
 		If[TrueQ @ $Debug, Echo[pos, "position after @charset check"]];
 		
 		(* check for @import rules *)
-		While[tokenTypeIs["at-keyword", pos, tokens] && tokenStringIs["import", pos, tokens], 
+		While[TokenTypeIs["at-keyword", pos, tokens] && TokenStringIs["import", pos, tokens], 
 			AppendTo[imports, consumeAtImportKeyword[pos, l, tokens]];
 			If[TrueQ @ $Debug, Echo[pos, "position after @import check"]];
 		];
@@ -296,10 +268,10 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 			If[TrueQ @ $Debug, Echo[pos, "position before rule"]];
 			Which[
 				(* any at-rule *)
-				tokenTypeIs["at-keyword", pos, tokens], (*TODO*)consumeAtRule[pos, l, tokens],
+				TokenTypeIs["at-keyword", pos, tokens], (*TODO*)consumeAtRule[pos, l, tokens],
 				
 				(* bad ruleset: missing a selector *)
-				tokenTypeIs["{}", pos, tokens], advancePosAndSkipWhitespace[pos, l, tokens], 
+				TokenTypeIs["{}", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens], 
 				
 				(* anything else treated as a ruleset *)
 				True, rulesets[[i]] = consumeRuleset[pos, l, tokens]; i++;
@@ -319,9 +291,9 @@ SetAttributes[{consumeAtCharsetKeyword, consumeAtImportKeyword}, HoldFirst];
 (* The character set is assumed UTF-8 and any charset is ignored. *)
 consumeAtCharsetKeyword[pos_, l_, tokens_] :=
 	Module[{},
-		If[tokenTypeIsNot["at-keyword", pos, tokens] || tokenStringIsNot["charset", pos, tokens],
+		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot["charset", pos, tokens],
 			Echo[Row[{"Expected @charset keyword. Had instead ", tokens[[pos]]}], "@charset error"];
-			advancePosToNextSemicolon[pos, l, tokens]; advancePosAndSkipWhitespace[pos, l, tokens]; 
+			AdvancePosToNextSemicolon[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
 			Return @ Null;
 		];
 		pos++;
@@ -329,46 +301,46 @@ consumeAtCharsetKeyword[pos_, l_, tokens_] :=
 			pos = pos + 3
 			,
 			(* invalid @charset *)
-			advancePosToNextSemicolon[pos, l, tokens];
+			AdvancePosToNextSemicolon[pos, l, tokens];
 		];
-		advancePosAndSkipWhitespace[pos, l, tokens];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
 	]; 
 
 
 consumeAtImportKeyword[pos_, l_, tokens_] :=  
 	Module[{path, mediums, mediaStart, data},
-		If[tokenTypeIsNot["at-keyword", pos, tokens] || tokenStringIsNot["import", pos, tokens],
+		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot["import", pos, tokens],
 			Echo[Row[{"Expected @import keyword. Had instead ", tokens[[pos]]}], "@import error"];
-			advancePosToNextSemicolon[pos, l, tokens]; advancePosAndSkipWhitespace[pos, l, tokens]; Return @ {};
+			AdvancePosToNextSemicolon[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; Return @ {};
 		];
-		advancePosAndSkipWhitespace[pos, l, tokens];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
 		(* next token must be URL or string path to file *)
-		If[tokenTypeIsNot["url" | "string", pos, tokens],
+		If[TokenTypeIsNot["url" | "string", pos, tokens],
 			Echo["Expected URL not found.", "@import error"];
-			advancePosToNextSemicolon[pos, l, tokens]; advancePosAndSkipWhitespace[pos, l, tokens]; Return @ {};
+			AdvancePosToNextSemicolon[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; Return @ {};
 		];
 		path = CSSTokenString @ tokens[[pos]];
-		advancePosAndSkipWhitespace[pos, l, tokens]; 	
+		AdvancePosAndSkipWhitespace[pos, l, tokens]; 	
 		If[TrueQ @ $Debug, Echo[pos, "position before @import media check"]];
 		
 		(* anything else is a comma-delimited set of media queries *)
 		(*TODO: implement proper media queries *)
 		mediums = {};
-		While[tokenTypeIsNot[";", pos, tokens],
+		While[TokenTypeIsNot[";", pos, tokens],
 			mediaStart = pos;
-			advancePosToNextSemicolonOrComma[pos, l, tokens];
+			AdvancePosToNextSemicolonOrComma[pos, l, tokens];
 			If[TrueQ @ $Debug, Echo[pos, "here"]];;
 			If[pos == l, Echo["Media query has no closing. Reached EOF.", "@import error"]; Return @ {}];
 			AppendTo[mediums, CSSUntokenize @ tokens[[mediaStart ;; pos - 1]]];
-			If[tokenTypeIs[";", pos, tokens],
+			If[TokenTypeIs[";", pos, tokens],
 				(* break out of media loop*)
 				Break[] 
 				, 
 				(* skip comma only *)
-				advancePosAndSkipWhitespace[pos, l, tokens] 
+				AdvancePosAndSkipWhitespace[pos, l, tokens] 
 			]
 		];
-		advancePosAndSkipWhitespace[pos, l, tokens]; (* skip semicolon *)
+		AdvancePosAndSkipWhitespace[pos, l, tokens]; (* skip semicolon *)
 				
 		(* import without interpretation *)
 		data = 
@@ -398,28 +370,28 @@ SetAttributes[{consumeAtRule, consumeRuleset}, HoldFirst];
 consumeAtRule[pos_, l_, tokens_] :=
 	Which[
 		(* @import is not allowed after the top of the stylesheet, so skip them *)
-		tokenStringIs["import", pos, tokens], 
-			advancePosToNextSemicolon[pos, l, tokens]; 
-			advancePosAndSkipWhitespace[pos, l, tokens], 
+		TokenStringIs["import", pos, tokens], 
+			AdvancePosToNextSemicolon[pos, l, tokens]; 
+			AdvancePosAndSkipWhitespace[pos, l, tokens], 
 			
 		(* @page *)
-		tokenStringIs["page", pos, tokens], consumeAtPageRule[pos, tokens];,
+		TokenStringIs["page", pos, tokens], consumeAtPageRule[pos, l, tokens];,
 			
 		(* @media *)
-		tokenStringIs["media", pos, tokens], 
-			advancePosToNextSemicolonOrBlock[pos, l, tokens]; 
-			advancePosAndSkipWhitespace[pos, l, tokens], 
+		TokenStringIs["media", pos, tokens], 
+			AdvancePosToNextSemicolonOrBlock[pos, l, tokens]; 
+			AdvancePosAndSkipWhitespace[pos, l, tokens], 
 			
 		(* unrecognized @rule *)
 		True, 
-			advancePosToNextSemicolonOrBlock[pos, l, tokens]; 
-			advancePosAndSkipWhitespace[pos, l, tokens]
+			AdvancePosToNextSemicolonOrBlock[pos, l, tokens]; 
+			AdvancePosAndSkipWhitespace[pos, l, tokens]
 	] 
 
 
 consumeRuleset[pos_, l_, tokens_] :=
 	Module[{selectorStartPos = pos, ruleset},
-		advancePosToNextBlock[pos, l, tokens];
+		AdvancePosToNextBlock[pos, l, tokens];
 		ruleset = 
 			<|
 				"Selector" -> StringTrim @ CSSUntokenize @ tokens[[selectorStartPos ;; pos - 1]], 
@@ -427,7 +399,7 @@ consumeRuleset[pos_, l_, tokens_] :=
 				(* The block token is already encapsulated {{}, CSSTokens...} *)
 				"Block" -> consumeDeclarationBlock @ If[Length[tokens[[pos]]] > 1, tokens[[pos, 2 ;; ]], {}]|>; 
 		(* return the formatted ruleset, but first make sure to skip the block *)
-		advancePosAndSkipWhitespace[pos, l, tokens];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
 		ruleset
 	]
 
@@ -436,7 +408,7 @@ consumeDeclarationBlock[{}] := {}
 consumeDeclarationBlock[blockTokens:{__?CSSTokenQ}] :=
 	Module[{blockPos = 1, blockLength = Length[blockTokens], lDeclarations, i = 1, decStart, dec, validDeclarations},
 		(* skip any initial whitespace *)
-		If[tokenTypeIs[" ", blockPos, blockTokens], advancePosAndSkipWhitespace[blockPos, blockLength, blockTokens]]; 
+		If[TokenTypeIs[" ", blockPos, blockTokens], AdvancePosAndSkipWhitespace[blockPos, blockLength, blockTokens]]; 
 		
 		(*
 			Each declaration is of the form 'property:value;'. The last declaration may leave off the semicolon.
@@ -445,11 +417,11 @@ consumeDeclarationBlock[blockTokens:{__?CSSTokenQ}] :=
 		lDeclarations = Count[blockTokens, ":"];
 		validDeclarations = ConstantArray[0, lDeclarations];
 		While[blockPos < blockLength && i <= lDeclarations,
-			decStart = blockPos; advancePosToNextSemicolon[blockPos, blockLength, blockTokens];
+			decStart = blockPos; AdvancePosToNextSemicolon[blockPos, blockLength, blockTokens];
 			dec = consumeDeclaration[blockTokens[[decStart ;; blockPos]]];
 			If[!FailureQ[dec], validDeclarations[[i++]] = dec];
 			(* skip over semi-colon *)
-			advancePosAndSkipWhitespace[blockPos, blockLength, blockTokens]
+			AdvancePosAndSkipWhitespace[blockPos, blockLength, blockTokens]
 		];					
 		(* remove possible excess declarations *)
 		DeleteCases[validDeclarations, 0, {1}]
@@ -459,27 +431,27 @@ consumeDeclarationBlock[blockTokens:{__?CSSTokenQ}] :=
 consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 	Module[{decPos = 1, decLength = Length[decTokens], propertyPosition, valuePosition, important = False, declaration},
 		(* check for bad property *)
-		If[tokenTypeIsNot["ident", decPos, decTokens], Return @ $Failed];
-		propertyPosition = decPos; advancePosAndSkipWhitespace[decPos, decLength, decTokens];
+		If[TokenTypeIsNot["ident", decPos, decTokens], Return @ $Failed];
+		propertyPosition = decPos; AdvancePosAndSkipWhitespace[decPos, decLength, decTokens];
 		
 		(* check for EOF or missing colon *)
-		If[decPos >= decLength || tokenTypeIsNot[":", decPos, decTokens], Return @ $Failed];
-		advancePosAndSkipWhitespace[decPos, decLength, decTokens]; 
+		If[decPos >= decLength || TokenTypeIsNot[":", decPos, decTokens], Return @ $Failed];
+		AdvancePosAndSkipWhitespace[decPos, decLength, decTokens]; 
 		valuePosition = decPos;
 		
 		(* remove trailing whitespace and possible trailing semi-colon*)
 		decPos = decLength;
-		If[tokenTypeIs[";", decPos, decTokens], 
-			retreatPosAndSkipWhitespace[decPos, decLength, decTokens]
+		If[TokenTypeIs[";", decPos, decTokens], 
+			RetreatPosAndSkipWhitespace[decPos, decLength, decTokens]
 			,
-			While[decPos > 1 && tokenTypeIs[" ", decPos, decTokens], decPos--];
-			If[tokenTypeIs[";", decPos, decTokens], retreatPosAndSkipWhitespace[decPos, decLength, decTokens]];
+			While[decPos > 1 && TokenTypeIs[" ", decPos, decTokens], decPos--];
+			If[TokenTypeIs[";", decPos, decTokens], RetreatPosAndSkipWhitespace[decPos, decLength, decTokens]];
 		];
 		
 		(* check for !important token sequence *)
-		If[tokenTypeIs["ident", decPos, decTokens] && tokenStringIs["important", decPos, decTokens], 
-			retreatPosAndSkipWhitespace[decPos, decLength, decTokens];
-			If[tokenTypeIs["!", decPos, decTokens], important = True; retreatPosAndSkipWhitespace[decPos, decLength, decTokens]]
+		If[TokenTypeIs["ident", decPos, decTokens] && TokenStringIs["important", decPos, decTokens], 
+			RetreatPosAndSkipWhitespace[decPos, decLength, decTokens];
+			If[TokenTypeIs["!", decPos, decTokens], important = True; RetreatPosAndSkipWhitespace[decPos, decLength, decTokens]]
 		];
 		
 		With[
@@ -1314,24 +1286,24 @@ parseAngle[token:{"dimension", n_String, val_, type:"integer"|"number", "turn"}]
 parseCounter[prop_String, tokens:{___?CSSTokenQ}] := (*parseCounter[prop, tokens] =*)
 	Module[{pos = 1, l = Length[tokens], style = "Item", listtype = "decimal"},
 		(* assumes that the function identifier and name have been skipped *)
-		If[pos <= l && tokenTypeIs[" ", pos, tokens], advancePosAndSkipWhitespace[pos, l, tokens]];
+		If[pos <= l && TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]];
 		
 		(* get custom identifier *)
-		If[pos <= l && tokenTypeIs["ident", pos, tokens], 
+		If[pos <= l && TokenTypeIs["ident", pos, tokens], 
 			style = CSSTokenString @ tokens[[pos]]
 			, 
 			Return @ invalidFunctionFailure @ CSSUntokenize @ tokens
 		];
-		advancePosAndSkipWhitespace[pos, l, tokens];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
 		If[pos > l, Return @ parseSingleListStyleType["list-style-type", {"ident", listtype}, style]];
 		
 		(* get optional counter style *)
-		If[pos <= l && tokenTypeIs["ident", pos, tokens],
+		If[pos <= l && TokenTypeIs["ident", pos, tokens],
 			listtype = CSSTokenString @ tokens[[pos]]
 			,
 			Return @ invalidFunctionFailure @ CSSUntokenize @ tokens
 		];
-		advancePosAndSkipWhitespace[pos, l, tokens];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
 		If[pos > l, Return @ parseSingleListStyleType["list-style-type", {"ident", listtype}, style]];
 		
 		tooManyTokensFailure @ tokens
@@ -1493,7 +1465,7 @@ initialValues[prop_String] :=
 *)
 consumeProperty[prop:"background", tokens:{__?CSSTokenQ}] := 
 	Module[{backgrounds, result},
-		backgrounds = DeleteCases[SplitBy[tokens, ","], {","}];
+		backgrounds = DeleteCases[SplitBy[tokens, MatchQ[","]], {","}];
 		backgrounds = parseSingleBG[prop, #]& /@ backgrounds; 
 		result = Cases[backgrounds, Except[_Failure], {1}];
 		If[result === {}, 
@@ -1517,7 +1489,7 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 		},
 		While[pos <= l, 
 			Which[
-				tokenTypeIs["function", pos, tokens], 
+				TokenTypeIs["function", pos, tokens], 
 					Switch[CSSTokenString @ tokens[[pos]],
 						(* color *)
 						"rgb" | "rgba" | "hsl" | "hsla", 
@@ -1556,7 +1528,7 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 					If[hasPosition, Return @ repeatedPropValueFailure @ "background-position"];
 					hasPosition = True; values["p"] = {value, Center};
 					(* check for a pair of position values; they must be sequential *)
-					start = pos; startToken = tokens[[pos]]; advancePosAndSkipWhitespace[pos, l, tokens];
+					start = pos; startToken = tokens[[pos]]; AdvancePosAndSkipWhitespace[pos, l, tokens];
 					If[!FailureQ[value = parseSingleBGPosition[prop, tokens[[pos]]]], 
 						values["p"] = {values["p"][[1]], value}
 						,
@@ -1566,7 +1538,7 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 								
 				True, unrecognizedValueFailure @ prop						
 			];
-			advancePosAndSkipWhitespace[pos, l, tokens]
+			AdvancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		(* 
 			attachment: not supported, 
@@ -1679,7 +1651,7 @@ consumeProperty[prop:"background-position", tokens:{__?CSSTokenQ}] :=
 		While[pos <= l,
 			value = parseSingleBGPosition[prop, tokens[[pos]]];
 			If[FailureQ[value], Return @ value, AppendTo[values, value]];
-			advancePosAndSkipWhitespace[pos, l, tokens]
+			AdvancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		value = parseSingleBGPositionPair[values, tokens];		
 		If[FailureQ[value], value, System`BackgroundAppearanceOptions -> value]
@@ -1828,7 +1800,7 @@ consumeProperty[prop:"border-color", tokens:{__?CSSTokenQ}] :=
 		While[pos <= l,
 			value = parseSingleColor[prop, tokens[[pos]]];
 			If[FailureQ[value], Return @ value, AppendTo[results, CSSBorderColor @ value]]; 
-			advancePosAndSkipWhitespace[pos, l, tokens];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		results =
 			Switch[Length[results],
@@ -1872,7 +1844,7 @@ consumeProperty[prop:"border-spacing", tokens:{__?CSSTokenQ}] :=
 					_,        unrecognizedValueFailure @ prop
 				];
 			If[FailureQ[value], Return @ value, AppendTo[results, value]];
-			advancePosAndSkipWhitespace[pos, l, tokens];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		Switch[Length[results],
 			1, Spacings -> {First @ results, First @ results}, (* if only one length, then it specifies both horizontal and vertical *)
@@ -1910,7 +1882,7 @@ consumeProperty[prop:"border-style", tokens:{__?CSSTokenQ}] :=
 		While[pos <= l,
 			value = parseSingleBorderStyle[prop, tokens[[pos]]];
 			If[FailureQ[value], Return @ value, AppendTo[results, CSSBorderStyle @ value]];
-			advancePosAndSkipWhitespace[pos, l, tokens]
+			AdvancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		Switch[Length[results],
 			1, # -> {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]}& /@ {FrameStyle, CellFrameStyle},
@@ -1965,7 +1937,7 @@ consumeProperty[prop:"border-width", tokens:{__?CSSTokenQ}] :=
 		While[pos <= l,
 			value = parseSingleBorderWidth[prop, tokens[[pos]]];
 			If[FailureQ[value], Return @ value, AppendTo[results, CSSBorderWidth @ value]];
-			advancePosAndSkipWhitespace[pos, l, tokens]
+			AdvancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		(* expand out results  to {{L,R},{B,T}} *)
 		results = 
@@ -2037,7 +2009,7 @@ consumeProperty[
 				
 				True, unrecognizedValueFailure @ prop						
 			];
-			advancePosAndSkipWhitespace[pos, l, tokens];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		
 		{
@@ -2122,7 +2094,7 @@ consumeProperty[prop:"content", tokens:{__?CSSTokenQ}] :=
 					_, unrecognizedValueFailure @ prop
 				];
 			AppendTo[parsedValues, value];
-			advancePosAndSkipWhitespace[pos, l, tokens];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		Which[
 			Count[parsedValues, None] > 1,   repeatedPropValueFailure @ "none",
@@ -2152,7 +2124,7 @@ consumeProperty[prop:"counter-increment", tokens:{__?CSSTokenQ}] :=
 						_,  
 							v = CSSTokenString @ tokens[[pos]];
 							(* check to see if identifier token is immediately followed by an integer; if so, consume the integer, too *)
-							cPos = pos; advancePosAndSkipWhitespace[pos, l, tokens];
+							cPos = pos; AdvancePosAndSkipWhitespace[pos, l, tokens];
 							If[pos <= l && CSSTokenType @ tokens[[pos]] == "number",
 								If[CSSTokenValueType @ tokens[[pos]] != "integer", Return @ Failure["BadNumber", <|"Message" -> "Expected integer type."|>]];
 								n = CSSTokenValue @ tokens[[pos]];
@@ -2167,7 +2139,7 @@ consumeProperty[prop:"counter-increment", tokens:{__?CSSTokenQ}] :=
 					],
 				_, Return @ unrecognizedValueFailure @ prop
 			];
-			advancePosAndSkipWhitespace[pos, l, tokens];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		CounterIncrements -> values
 	]
@@ -2192,7 +2164,7 @@ consumeProperty[prop:"counter-reset", tokens:{__?CSSTokenQ}] :=
 						_,        
 							v = CSSTokenString @ tokens[[pos]];
 							(* check to see if identifier token is immediately followed by an integer; if so, consume the integer, too *)
-							cPos = pos; advancePosAndSkipWhitespace[pos, l, tokens];
+							cPos = pos; AdvancePosAndSkipWhitespace[pos, l, tokens];
 							If[pos <= l && CSSTokenType @ tokens[[pos]] == "number",
 								If[CSSTokenValueType @ tokens[[pos]] != "integer", Return @ Failure["BadNumber", <|"Message" -> "Expected integer type."|>]];
 								AppendTo[values, {v, CSSTokenValue @ tokens[[pos]]}]
@@ -2202,7 +2174,7 @@ consumeProperty[prop:"counter-reset", tokens:{__?CSSTokenQ}] :=
 					],
 				_, Return @ unrecognizedValueFailure @ prop
 			];
-			advancePosAndSkipWhitespace[pos, l, tokens];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		CounterAssignments -> values
 	]
@@ -2323,7 +2295,7 @@ consumeProperty[prop:"list-style", tokens:{__?CSSTokenQ}] :=
 		While[pos <= l,
 			Which[
 				(* check for 'none' keyword *)
-				tokenStringIs["none", pos, tokens], noneCount++,					
+				TokenStringIs["none", pos, tokens], noneCount++,					
 				
 				(* check for list-style-image *)
 				!FailureQ[value = parseSingleListStyleImage[prop, tokens[[pos]]]],
@@ -2352,7 +2324,7 @@ consumeProperty[prop:"list-style", tokens:{__?CSSTokenQ}] :=
 				(* anything else is an error *)
 				True, Return @ unrecognizedValueFailure @ prop
 			];
-			advancePosAndSkipWhitespace[pos, l, tokens];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		Which[
 			hasImage && hasType && noneCount > 0, repeatedPropValueFailure @ "none",
@@ -2387,7 +2359,7 @@ consumeProperty[prop:"quotes", tokens:{__?CSSTokenQ}] :=
 						_, Return @ unrecognizedKeyWordFailure @ prop
 					],
 				"string",
-					v = CSSTokenString @ tokens[[pos]]; cPos = pos; advancePosAndSkipWhitespace[pos, l, tokens];
+					v = CSSTokenString @ tokens[[pos]]; cPos = pos; AdvancePosAndSkipWhitespace[pos, l, tokens];
 					If[pos <= l && CSSTokenType @ tokens[[pos]] == "string", 
 						AppendTo[values, {v, CSSTokenString @ tokens[[pos]]}];
 						,
@@ -2395,7 +2367,7 @@ consumeProperty[prop:"quotes", tokens:{__?CSSTokenQ}] :=
 					],
 				_, Return @ unrecognizedValueFailure @ prop
 			];
-			advancePosAndSkipWhitespace[pos, l, tokens]
+			AdvancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		Missing["Not supported."]
 	]
@@ -2536,7 +2508,7 @@ consumeProperty[prop:"font", tokens:{__?CSSTokenQ}] :=
 	Module[
 		{
 			pos = 1, l = Length[tokens], v, value, newValue = {}, temp,
-			hasFontFamily = False, hasFontSize = False, hasFontStyle = False, hasFontVariant = False, hasFontWeight = False, hasLineHeight = False	
+			hasFontStyle = False, hasFontVariant = False, hasFontWeight = False(*, hasFontFamily = False, hasFontSize = False, hasLineHeight = False*)	
 		},
 		(* reset font properties *)
 		value = {
@@ -2595,7 +2567,7 @@ consumeProperty[prop:"font", tokens:{__?CSSTokenQ}] :=
 					True, Return @ unrecognizedValueFailure @ prop
 				];
 			];
-			advancePosAndSkipWhitespace[pos, l, tokens];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		
 		(* 
@@ -2608,7 +2580,7 @@ consumeProperty[prop:"font", tokens:{__?CSSTokenQ}] :=
 		If[CSSTokenType @ tokens[[pos]] == "/",
 			pos++; 
 			temp = consumeProperty["line-height", {tokens[[pos]]}]; 
-			If[FailureQ[temp], Return @ temp, AppendTo[newValue, temp]; advancePosAndSkipWhitespace[pos, l, tokens]];
+			If[FailureQ[temp], Return @ temp, AppendTo[newValue, temp]; AdvancePosAndSkipWhitespace[pos, l, tokens]];
 		];
 		
 		(* everything else must be a font-family *)
@@ -2626,7 +2598,7 @@ consumeProperty[prop:"font", tokens:{__?CSSTokenQ}] :=
 
 consumeProperty[prop:"font-family", tokens:{__?CSSTokenQ}] :=
 	Module[{fontTokens, parsed, result},
-		fontTokens = DeleteCases[SplitBy[tokens, ","], {","}];
+		fontTokens = DeleteCases[SplitBy[tokens, MatchQ[","]], {","}];
 		parsed = parseSingleFontFamily /@ fontTokens;
 		result = FirstCase[parsed, _Failure, None]; (* FIXME: perhaps use FontSubstitutions here? *)
 		If[FailureQ[result], Return @ result];
@@ -2934,7 +2906,7 @@ consumeProperty[prop:"margin", tokens:{__?CSSTokenQ}] :=
 		While[pos <= l,
 			value = parseSingleMargin[prop, tokens[[pos]]];
 			If[FailureQ[value], Return @ value, AppendTo[results, value]]; 
-			advancePosAndSkipWhitespace[pos, l, tokens];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		(* expand out results  to {{L,R},{B,T}} *)
 		results = 
@@ -3075,7 +3047,7 @@ consumeProperty[prop:"outline", tokens:{__?CSSTokenQ}] :=
 				
 				True, unrecognizedValueFailure @ prop						
 			];
-			advancePosAndSkipWhitespace[pos, l, tokens];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		Missing["Not supported."]
 	]
@@ -3134,7 +3106,7 @@ consumeProperty[prop:"padding", tokens:{__?CSSTokenQ}] :=
 		While[pos <= l,
 			value = parseSinglePadding[prop, tokens[[pos]]];
 			If[FailureQ[value], Return @ value, AppendTo[results, value]]; 
-			advancePosAndSkipWhitespace[pos, l, tokens];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		(* expand out results  to {{L,R},{B,T}} *)
 		results = 
@@ -3463,7 +3435,7 @@ consumeProperty[prop:"text-decoration", tokens:{__?CSSTokenQ}] :=
 					_, unrecognizedValueFailure @ prop
 				];
 			If[FailureQ[value], Return @ value, AppendTo[values, value]];
-			advancePosAndSkipWhitespace[pos, l, tokens];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		FontVariations -> values
 	]

@@ -20,6 +20,19 @@ SetUsage[CSSTokenValue,       "CSSTokenValue[CSSToken$] returns the interpreted 
 SetUsage[CSSTokenValueType,   "CSSTokenValueType[CSSToken$] returns the type of the CSSToken$ value e.g. \"number\" or \"integer\"."];
 SetUsage[CSSDimensionUnit,    "CSSDimensionUnit[CSSToken$] returns the dimension of a dimension CSSToken$ e.g. \"em\" or \"px\"."];
 
+SetUsage[TokenTypeIs,      "TokenTypeIs[string$, pos$, {CSSToken$$}] gives True if the type of the CSS token at position pos$ matches string$."];
+SetUsage[TokenTypeIsNot,   "TokenTypeIsNot[string$, pos$, {CSSToken$$}] gives True if the type of the CSS token at position pos$ does not match string$."];
+SetUsage[TokenStringIs,    "TokenStringIs[string$, pos$, {CSSToken$$}] gives True if the string content of the CSS token at position pos$ matches string$; case is ignored."];
+SetUsage[TokenStringIsNot, "TokenStringIsNot[string$, pos$, {CSSToken$$}] gives True if the string content of the CSS token at position pos$ does not match string$; case is ignored."];
+
+SetUsage[AdvancePosAndSkipWhitespace,      "AdvancePosAndSkipWhitespace[pos$, l$, CSSTokens$] increments pos$, then increments pos$ further if any whitespace tokens are detected."];
+SetUsage[RetreatPosAndSkipWhitespace,      "RetreatPosAndSkipWhitespace[pos$, l$, CSSTokens$] decrements pos$, then decrements pos$ further if any whitespace tokens are detected."];
+SetUsage[AdvancePosToNextSemicolon,        "AdvancePosToNextSemicolon[pos$, l$, CSSTokens$] increments pos$ until a semicolon CSS token is reached."];
+SetUsage[AdvancePosToNextSemicolonOrBlock, "AdvancePosToNextSemicolonOrBlock[pos$, l$, CSSTokens$] increments pos$ until a semicolon or block CSS token is reached."];
+SetUsage[AdvancePosToNextSemicolonOrComma, "AdvancePosToNextSemicolonOrComma[pos$, l$, CSSTokens$] increments pos$ until a semicolon or comma CSS token is reached."];
+SetUsage[AdvancePosToNextBlock,            "AdvancePosToNextBlock[pos$, l$, CSSTokens$] increments pos$ until a block CSS token is reached."];
+
+
 Begin["`Private`"]
 
 (* ::Section::Closed:: *)
@@ -480,6 +493,36 @@ untokenize[{"unicode-range", start_?NumericQ, stop_?NumericQ}] :=
 			Length[l] > 0,                    "u+" <> StringReplacePart[startString, "?", l],
 			TrueQ[startString == stopString], "u+" <> startString,
 			True,                             "u+" <> startString <> "-" <> stopString]]
+
+
+(* ::Subsection::Closed:: *)
+(*Utilities*)
+
+
+(* 
+	The utilities are assumed to be used within "consume" functions where pos, l, and tokens are defined. 
+	They are expected to run quickly so do no type checking. *)
+SetAttributes[
+	{
+		AdvancePosAndSkipWhitespace, RetreatPosAndSkipWhitespace, 
+		AdvancePosToNextSemicolon, AdvancePosToNextSemicolonOrBlock, AdvancePosToNextSemicolonOrComma,
+		AdvancePosToNextBlock}, 
+	HoldFirst];
+
+TokenTypeIs[s:(_String | Alternatives[__String]), pos_, tokens_] := StringMatchQ[CSSTokenType @ tokens[[pos]], s, IgnoreCase -> False]
+TokenTypeIsNot[s:(_String | Alternatives[__String]), pos_, tokens_] := Not @ TokenTypeIs[s, pos, tokens]
+
+TokenStringIs[s_String, pos_, tokens_] := StringMatchQ[CSSTokenString @ tokens[[pos]], s, IgnoreCase -> True]
+TokenStringIsNot[s_String, pos_, tokens_] := Not @ TokenStringIs[s, pos, tokens]
+
+AdvancePosAndSkipWhitespace[pos_, l_, tokens_] := (pos++; While[pos < l && CSSTokenType @ tokens[[pos]] == " ", pos++])
+RetreatPosAndSkipWhitespace[pos_, l_, tokens_] := (pos--; While[pos > 1 && CSSTokenType @ tokens[[pos]] == " ", pos--])
+
+AdvancePosToNextSemicolon[pos_, l_, tokens_] := While[pos < l && CSSTokenType @ tokens[[pos]] != ";", pos++]
+AdvancePosToNextSemicolonOrBlock[pos_, l_, tokens_] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "{}" | ";"], pos++]
+AdvancePosToNextSemicolonOrComma[pos_, l_, tokens_] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "," | ";"], pos++]
+
+AdvancePosToNextBlock[pos_, l_, tokens_] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "{}"], pos++]
 
 
 (* ::Section:: *)
