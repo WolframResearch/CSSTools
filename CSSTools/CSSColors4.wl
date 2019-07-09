@@ -1,18 +1,21 @@
 (* Wolfram Language Package *)
 
-BeginPackage["CSS21Parser`"];
+BeginPackage["CSSTools`CSSColors4`", { "GeneralUtilities`"}];
 Needs["CSSTools`CSSTokenizer`"];
+
+SetUsage[parseSingleColor, "\
+parseSingleColor[prop$, CSSToken$] interprets the CSSToken$ as an RGBColor value."];
 
 Begin["`Private`"]; (* Begin Private Context *) 
 
 (* we assume that the colors have already been tokenized *)
 
 
+unrecognizedValueFailure[prop_String] := CSSTools`CSSPropertyInterpreter`Private`unrecognizedValueFailure[prop]
+
 (* keyword *)
 parseSingleColorKeyWord[prop_String, keyword_String] := 
 	Switch[ToLowerCase @ CSSNormalizeEscapes @ keyword,
-		"initial",        initialValues @ prop,
-		"inherit",        Inherited,
 		"currentcolor",   Dynamic @ CurrentValue[FontColor], 
 		"transparent",    None, (* interpreted as GrayLevel[0, 0] by Interpreter["Color"] *)
 		"aliceblue",      RGBColor[Rational[16, 17], Rational[248, 255], 1], 
@@ -214,7 +217,7 @@ hslaPattern :=
 		d:Repeated[",", {0, 1}], {"percentage", _String, s_, _String}, 
 		d:Repeated[",", {0, 1}], {"percentage", _String, l_, _String}, 
 		d:Repeated[",", {0, 1}], {"number",     _String, a_, _String}
-	} :> HSLtoHSB[If[type == "number", h, parseAngle[hAll]]/360, s/100, l/100, Clip[a, {0, 1}]]
+	} :> HSLtoHSB[If[type == "number", h, CSSTools`CSSPropertyInterpreter`Private`parseAngle[hAll]]/360, s/100, l/100, Clip[a, {0, 1}]]
 hslPattern := 
 	{
 		Alternatives[
@@ -222,7 +225,7 @@ hslPattern :=
 			hAll:{type:"number",    _String, h_, _String}], 
 		d:Repeated[",", {0, 1}], {"percentage", _String, s_, _String}, 
 		d:Repeated[",", {0, 1}], {"percentage", _String, l_, _String}
-	} :> HSLtoHSB[If[type == "number", h, parseAngle[hAll]]/360, s/100, l/100]
+	} :> HSLtoHSB[If[type == "number", h, CSSTools`CSSPropertyInterpreter`Private`parseAngle[hAll]]/360, s/100, l/100]
 
 
 parseSingleColorFunction[prop_String, token_?CSSTokenQ] :=

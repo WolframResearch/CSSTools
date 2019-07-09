@@ -1,13 +1,14 @@
 (* Wolfram Language Package *)
 
-BeginPackage["CSS21Parser`"];
-Needs["CSSTools`CSSTokenizer`"];
+BeginPackage["CSSTools`CSSPagedMedia3`"];
+Needs["CSSTools`CSSTokenizer`"];           (* keep tokenizer utilities hidden from $ContextPath *)
+(*Needs["CSSTools`CSSPropertyInterpreter`"]; (* keep property interpreters hidden from $ContextPath *)*)
 
 Begin["`Private`"]; (* Begin Private Context *) 
 
 (* we assume that the @page rule has already been tokenized *)
 
-$ValidPageProperties = {
+$ApplicableCSSPageProperties = {
 	(*bidi*)
 	"direction",
 	(*background*)
@@ -42,7 +43,7 @@ $ValidPageProperties = {
 	(*width*)
 	"width", "min-width", "max-width"};
 
-$ValidPageMarginProperties = {
+$ApplicableCSSPageMarginProperties = {
 	(*bidi properties*)
 	"direction", "unicode-bidi",
 	(*background properties*)
@@ -85,13 +86,49 @@ $ValidPageMarginProperties = {
 	(*z index*)
 	"z-index"};
 	
+$ValidPageMargins = {
+	"top-left-corner", "top-left", "top-center", "top-right", "top-right-corner", 
+	"bottom-left-corner", "bottom-left", "bottom-center", "bottom-right", "bottom-right-corner",
+	"left-top", "left-middle", "left-bottom", 
+	"right-top", "right-middle", "right-bottom"};
+
+
+(* new CSS properties *)
+AssociateTo[
+	CSSTools`CSSPropertyInterpreter`Private`CSSPropertyData, 
+	{
+		"page" -> <|
+			"Inherited" -> False,
+			"CSSInitialValue" -> "auto",
+			"InterpretedGlobalValues" -> <|
+				"inherit" -> {}, (* no equivalent FE option *)
+				"initial" -> Missing["Not supported."]|>|>,
+		"bleed" -> <|
+			"Inherited" -> False,
+			"CSSInitialValue" -> "auto",
+			"InterpretedGlobalValues" -> <|
+				"inherit" -> {}, (* no equivalent FE option *)
+				"initial" -> Missing["Not supported."]|>|>,
+		"marks" -> <|
+			"Inherited" -> False,
+			"CSSInitialValue" -> "auto",
+			"InterpretedGlobalValues" -> <|
+				"inherit" -> {}, (* no equivalent FE option *)
+				"initial" -> Missing["Not supported."]|>|>,
+		"size" -> <|
+			"Inherited" -> False,
+			"CSSInitialValue" -> "auto",
+			"InterpretedGlobalValues" -> <|
+				"inherit" -> {}, (* no equivalent FE option *)
+				"initial" -> Missing["Not supported."]|>|>}];
+		
 
 SetAttributes[{consumeAtPageRule}, HoldFirst];
 
 consumeAtPageRule[pos_, l_, tokens_] := 
 	Module[{selectorsStart, selectorsEnd, pageSelectors},
 		(* check for valid start of @page token sequence *)
-		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot["import", pos, tokens],
+		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot["page", pos, tokens],
 			Echo[Row[{"Expected @page keyword. Had instead ", tokens[[pos]]}], "@page error"];
 			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
 			Return @ {}
@@ -99,6 +136,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 			AdvancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		
+		Echo["Here"];
 		(* 
 			consume optional page selector list 
 			Following CSS selectors, if any of the comma-delimited selectors do not match, all are ignored. *)
@@ -114,6 +152,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 			,
 			pageSelectors = consumePageSelectorList[{}];
 		];
+		Echo[pageSelectors, "pageSelectors"];
 		
 		(* consume @page block *)
 		consumeAtPageBlock[tokens[[pos, 2 ;; ]]]	
@@ -124,30 +163,71 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}] :=
 	Module[{pos = 1, l = Length[tokens], atMarginStart, atMarginEnd, dec, decStart, decEnd, declarations = {}},
 		While[pos <= l,
 			Which[
-				TokenTypeIs["at-keyword", pos, tokens], 
+				(* page-margin at-rule *)
+				TokenTypeIs["at-keyword", pos, tokens] && TokenStringIs[Alternatives @@ $ValidPageMargins, pos, tokens], 
 					atMarginStart = atMarginEnd = pos; AdvancePosToNextBlock[atMarginEnd, l, tokens];
 					consumeAtPageMarginRule[tokens[[atMarginStart ;; atMarginEnd]]];
 					pos = atMarginEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
 				,
-				TokenTypeIs["ident", pos, tokens] && TokenStringIs[Alternatives @@ $ValidPageProperties, pos, tokens],
+				(* CSS 2.1 property*)
+				TokenTypeIs["ident", pos, tokens] && TokenStringIs[Alternatives @@ $ApplicableCSSPageProperties, pos, tokens],
 					decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
-					dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
+					dec = CSSImport`Private`consumeDeclaration[tokens[[decStart ;; decEnd]]];
+					If[TrueQ @ CSSImport`Private`$RawImport, 
+						KeyDropFrom[dec, "Interpretation"]
+						,
+						AssociateTo[dec, "Interpretation" -> CSSTools`CSSPropertyInterpreter`Private`consumeProperty[dec["Property"], dec["Interpretation"]]]
+					];
+					AppendTo[declarations, dec];
+					pos = decEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
+				,
+				(* Paged Media property: size, marks, bleed, and page *)
+				TokenTypeIs["ident", pos, tokens],
+					decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
+					dec = CSSImport`Private`consumeDeclaration[tokens[[decStart ;; decEnd]]];
+					If[TrueQ @ CSSImport`Private`$RawImport, 
+						KeyDropFrom[dec, "Interpretation"]
+						,
+						AssociateTo[dec, "Interpretation" -> consumeProperty[dec["Property"], dec["Interpretation"]]]
+					];
 					AppendTo[declarations, dec];
 					pos = decEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
 				,
 				(* unrecognized rules are skipped *)
-				True, AdvancePosToNextSemicolon[pos, l, tokens];
+				True, AdvancePosToNextSemicolon[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens];
 			]
 		];
 		declarations
 	]
 	
-consumeAtPageMarginRule[pos_, l_, tokens_] := 
-	Module[{},
-		Null
+consumeProprety[prop:"size", ]
+	
+	
+consumeAtPageMarginRule[tokens:{___?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens]},
+		(* check for valid start of margin at-rule token sequence *)
+		If[TokenTypeIsNot["at-keyword", pos, tokens],
+			Echo[Row[{"Expected a margin at-rule. Had instead ", tokens[[pos]]}], "@page error"];
+			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
+			Return @ {}
+		];
+		Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]], 
+			"top-left",      Null,
+			"top-center",    Null,
+			"top-right",     Null,
+			"bottom-left",   Null,
+			"bottom-center", Null,
+			"bottom-right",  Null,
+			Alternatives[
+				"top-left-corner", "top-right-corner", "bottom-left-corner", "bottom-right-corner", 
+				"left-top", "left-middle", "left-bottom", "right-top", "right-middle", "right-bottom"
+			],               Missing["Not supported."]
+		];
 	]
+	
+consumeAtPageMarginRuleTopLeft[] := {}
 
-consumePageSelectorList[tokens:{___?CSSTokenQ}] :=
+consumePageSelectorList[tokens:{__?CSSTokenQ}] :=
 	Module[{selectors},
 		selectors = DeleteCases[SplitBy[tokens, ","], {","}];
 		selectors = consumePageSelector /@ selectors;
@@ -155,11 +235,12 @@ consumePageSelectorList[tokens:{___?CSSTokenQ}] :=
 		If[AnyTrue[selectors, FailureQ], Return @ FirstCase[selectors, _?FailureQ]];
 		If[Length[selectors] > 1, Missing["Not supported."], First @ selectors]
 	]
+consumePageSelectorList[{}] := All
 	
 (* 
 	The FE does not allow for page selection beyond the first printed page. 
 	Even in the case of selecting for the first page, the FE only modifies the displayed headers and footers.
-	The FE does not distinguish between Left/Right pages except for displayed headers and footers.
+	The FE does not distinguish between Left/Right pages except for displayed headers and footers and left/right margins.
 	The FE does not treat blank pages any differently than pages with content. *)
 consumePageSelector[tokens:{___?CSSTokenQ}] :=
 	Module[{pos = 1, l = Length[tokens], scope = All, page},
