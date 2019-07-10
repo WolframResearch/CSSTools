@@ -14,11 +14,17 @@
 (*Package Header*)
 
 
-BeginPackage["CSSImport`", {"GeneralUtilities`", "Selectors3`"}];
-Needs["CSSTools`CSSTokenizer`"];           (* keep tokenizer utilities hidden from $ContextPath *)
-Needs["CSSTools`CSSPropertyInterpreter`"]; (* keep property interpreters hidden from $ContextPath *)
+BeginPackage["CSSImport`", {"GeneralUtilities`", "CSSTools`CSSPropertyInterpreter`", "Selectors3`"}];
 
-(* Selectors3` needed for Selector function *)
+(* Selectors3` 
+	---> needed for Selector function *)
+(* CSSPropertyInterpreter` 
+	---> needed for CSS wrappers like CSSHeightMin
+	---> defines private functions consumeProperty and CSSPropertyData *)
+
+Needs["CSSTools`CSSTokenizer`"];   (* keep tokenizer utilities hidden from $ContextPath *)
+Needs["CSSTools`CSSPagedMedia3`"]; (* extends importer's CSS property knowledge of @page *)
+Needs["CSSTools`CSSColors4`"];     (* extends importer's CSS proprety knowledge of color, modifies color CSSPropertyData entry *)
 
 SetUsage[ResolveCSSCascade, "\
 ResolveCSSCascade[type$, CSSData$, {selectors$, $$}] combines options that were interpreted from the CSS importer. \
@@ -264,11 +270,6 @@ consumeDeclarationBlock[blockTokens:{__?CSSTokenQ}] :=
 		While[blockPos < blockLength && i <= lDeclarations,
 			decStart = blockPos; AdvancePosToNextSemicolon[blockPos, blockLength, blockTokens];
 			dec = consumeDeclaration[blockTokens[[decStart ;; blockPos]]];
-			If[TrueQ @ $RawImport, 
-				KeyDropFrom[dec, "Interpretation"]
-				,
-				AssociateTo[dec, "Interpretation" -> CSSTools`CSSPropertyInterpreter`Private`consumeProperty[dec["Property"], dec["Interpretation"]]]
-			];
 			If[!FailureQ[dec], validDeclarations[[i++]] = dec];
 			(* skip over semi-colon *)
 			AdvancePosAndSkipWhitespace[blockPos, blockLength, blockTokens]
@@ -279,7 +280,7 @@ consumeDeclarationBlock[blockTokens:{__?CSSTokenQ}] :=
 	
 (* a declaration is "prop:val" or "prop:val !important" with optional semicolon if it is the last declaration *)
 consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
-	Module[{decPos = 1, decLength = Length[decTokens], propertyPosition, valuePosition, important = False},
+	Module[{decPos = 1, decLength = Length[decTokens], propertyPosition, valuePosition, important = False, declaration},
 		(* check for bad property *)
 		If[TokenTypeIsNot["ident", decPos, decTokens], Return @ $Failed];
 		propertyPosition = decPos; AdvancePosAndSkipWhitespace[decPos, decLength, decTokens];
@@ -304,17 +305,23 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 			If[TokenTypeIs["!", decPos, decTokens], important = True; RetreatPosAndSkipWhitespace[decPos, decLength, decTokens]]
 		];
 		
-		With[
-			{
-				prop = CSSNormalizeEscapes @ ToLowerCase @ CSSTokenString @ decTokens[[propertyPosition]],
-				(*check for empty property*)
-				valueTokens = If[decPos < valuePosition, {}, decTokens[[valuePosition ;; decPos]]]
-			},
-			<|
-				"Important" -> important,
-				"Property" -> prop, 
-				"Value" -> CSSUntokenize @ valueTokens,
-				"Interpretation" -> valueTokens				|>
+		declaration =
+			With[
+				{
+					prop = CSSNormalizeEscapes @ ToLowerCase @ CSSTokenString @ decTokens[[propertyPosition]],
+					(*check for empty property*)
+					valueTokens = If[decPos < valuePosition, {}, decTokens[[valuePosition ;; decPos]]]
+				},
+				<|
+					"Important" -> important,
+					"Property" -> prop, 
+					"Value" -> CSSUntokenize @ valueTokens,
+					"Interpretation" -> valueTokens				|>
+			];
+		If[TrueQ @ $RawImport, 
+			KeyDropFrom[declaration, "Interpretation"]
+			,
+			AssociateTo[declaration, "Interpretation" -> CSSTools`CSSPropertyInterpreter`Private`consumeProperty[declaration["Property"], declaration["Interpretation"]]]
 		]		
 	]
 

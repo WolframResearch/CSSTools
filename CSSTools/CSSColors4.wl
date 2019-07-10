@@ -1,17 +1,20 @@
 (* Wolfram Language Package *)
 
 BeginPackage["CSSTools`CSSColors4`", { "GeneralUtilities`"}];
+
 Needs["CSSTools`CSSTokenizer`"];
 
-SetUsage[parseSingleColor, "\
-parseSingleColor[prop$, CSSToken$] interprets the CSSToken$ as an RGBColor value."];
+(* Package Notes: implements https://drafts.csswg.org/css-color/
+	This package extends the CSS Tools to include CSS Color Module Level 4 (currently only a CSS working draft). 
+	It modifies the <color> CSS data type defined in CSSPropertyInterpreter.
+*)
 
 Begin["`Private`"]; (* Begin Private Context *) 
 
-(* we assume that the colors have already been tokenized *)
 
-
-unrecognizedValueFailure[prop_String] := CSSTools`CSSPropertyInterpreter`Private`unrecognizedValueFailure[prop]
+(* useful external definitions *)
+unrecognizedValueFailure[prop_] := CSSTools`CSSPropertyInterpreter`Private`unrecognizedValueFailure[prop]
+parseAngle[val_] := CSSTools`CSSPropertyInterpreter`Private`parseAngle[val]
 
 (* keyword *)
 parseSingleColorKeyWord[prop_String, keyword_String] := 
@@ -217,7 +220,7 @@ hslaPattern :=
 		d:Repeated[",", {0, 1}], {"percentage", _String, s_, _String}, 
 		d:Repeated[",", {0, 1}], {"percentage", _String, l_, _String}, 
 		d:Repeated[",", {0, 1}], {"number",     _String, a_, _String}
-	} :> HSLtoHSB[If[type == "number", h, CSSTools`CSSPropertyInterpreter`Private`parseAngle[hAll]]/360, s/100, l/100, Clip[a, {0, 1}]]
+	} :> HSLtoHSB[If[type == "number", h, parseAngle[hAll]]/360, s/100, l/100, Clip[a, {0, 1}]]
 hslPattern := 
 	{
 		Alternatives[
@@ -225,7 +228,7 @@ hslPattern :=
 			hAll:{type:"number",    _String, h_, _String}], 
 		d:Repeated[",", {0, 1}], {"percentage", _String, s_, _String}, 
 		d:Repeated[",", {0, 1}], {"percentage", _String, l_, _String}
-	} :> HSLtoHSB[If[type == "number", h, CSSTools`CSSPropertyInterpreter`Private`parseAngle[hAll]]/360, s/100, l/100]
+	} :> HSLtoHSB[If[type == "number", h, parseAngle[hAll]]/360, s/100, l/100]
 
 
 parseSingleColorFunction[prop_String, token_?CSSTokenQ] :=
@@ -258,6 +261,47 @@ parseSingleColor[prop_String, token_?CSSTokenQ] := parseSingleColor[prop, token]
 		_,          unrecognizedValueFailure @ prop]
 		
 parseSingleColor[prop_String, ___] := unrecognizedValueFailure @ prop
+
+
+(* ::Section:: *)
+(*New Properties*)
+
+
+BeginPackage["CSSTools`CSSPropertyInterpreter`"];
+
+Begin["`Private`"]
+
+
+(* modified CSS properties *)
+If[!AssociationQ[CSSPropertyData], CSSPropertyData = <||>];
+AssociateTo[CSSPropertyData, {
+	"color" -> <|
+		"Inherited" -> True,
+		"CSSInitialValue" -> "black", (* CSS 2.1 did not define this *)
+		"InterpretedGlobalValues" -> <|
+			"inherit" -> FontColor -> Inherited,
+			"initial" -> FontColor -> Black|>|>}]
+			
+			
+(* ::Subsection:: *)
+(*Color*)
+
+
+(* new interpreters *)
+(* This definition must match the one in CSSTools`CSSPropertyInterpreter` in order to override that definition *)
+parseSingleColor[prop_String, token_?CSSTokenQ] := CSSTools`CSSColors4`Private`parseSingleColor[prop, token]
+
+
+(* ::Subsection:: *)
+(*End additions to CSSTools`CSSPropertyInterpreter`*)
+
+
+End[];
+EndPackage[];
+
+
+(* ::Section:: *)
+(*Package Footer*)
 
 
 End[]; (* End Private Context *)

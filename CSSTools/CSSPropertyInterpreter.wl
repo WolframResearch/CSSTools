@@ -4,7 +4,6 @@ BeginPackage["CSSTools`CSSPropertyInterpreter`", { "GeneralUtilities`"}]
 (* Exported symbols added here with SymbolName::usage *)  
 
 Needs["CSSTools`CSSTokenizer`"]; (* keep tokenizer utilities hidden *)
-Needs["CSSTools`CSSColors4`"];   (* color interpreter parseSingleColor[prop, CSSToken] *)
 
 SetUsage[CSSHeightMin, "\
 CSSHeightMin[value$] indicates value$ is to be interpreted as a minimum height taken from a CSS property."];
@@ -213,8 +212,10 @@ unsupportedValueFailure[prop_String] :=    Failure["UnsupportedProp", <|"Propert
 	The 'unset' keyword takes on the 
 		'initial' value if "Inherited" -> False, or
 		'inherit' value if "Inherited" -> True.
+	AssociateTo is used such that other packages can extend this symbol regardless of load order.
 *)
-CSSPropertyData = <|
+If[!AssociationQ[CSSPropertyData], CSSPropertyData = <||>];
+AssociateTo[CSSPropertyData, {
 	"background" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "N/A",  (* shorthand property *)
@@ -946,7 +947,7 @@ CSSPropertyData = <|
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
 			"initial" -> Missing["Not supported."]|>|>
-	|>;
+}];
 
 
 (* ::Subsection::Closed:: *)
@@ -964,7 +965,79 @@ parseAngle[token:{"dimension", n_String, val_, type:"integer"|"number", "turn"}]
 (*<color>*)
 
 
-(* parseSingleColor is defined in CSSColors4.wl *)
+(* 
+	parseSingleColor is more extensively defined in CSSColors4.wl.
+	The following definitions only follow the CSS 2.1 specification. *)
+
+(* parse all color types *)
+parseSingleColor[prop_String, token_?CSSTokenQ] := parseSingleColor[prop, token] = 
+	Switch[CSSTokenType @ token,
+		"ident",    parseSingleColorKeyWord[prop, CSSTokenString @ token],
+		"hash",     parseSingleColorHex[prop, CSSTokenString @ token],
+		"function", parseSingleColorFunction[prop, token],
+		_,          unrecognizedValueFailure @ prop
+	]
+		
+parseSingleColor[prop_String, ___] := unrecognizedValueFailure @ prop
+
+parseSingleColorKeyWord[prop_String, keyword_String] := 
+	Switch[ToLowerCase @ CSSNormalizeEscapes @ keyword,
+		"aqua",    RGBColor[0, 1, 1], 
+		"black",   RGBColor[0, 0, 0], 
+		"blue",    RGBColor[0, 0, 1], 
+		"fuchsia", RGBColor[1, 0, 1],
+		"gray",    RGBColor[Rational[128, 255], Rational[128, 255], Rational[128, 255]],
+		"green",   RGBColor[0, Rational[128, 255], 0],
+		"lime",    RGBColor[0, 1, 0],
+		"maroon",  RGBColor[Rational[128, 255], 0, 0],
+		"navy",    RGBColor[0, 0, Rational[128, 255]],
+		"olive",   RGBColor[Rational[128, 255], Rational[128, 255], 0],
+		"orange",  RGBColor[1, Rational[11, 17], 0],
+		"purple",  RGBColor[Rational[128, 255], 0, Rational[128, 255]],
+		"red",     RGBColor[1, 0, 0],
+		"silver",  RGBColor[Rational[64, 85], Rational[64, 85], Rational[64, 85]],
+		"teal",    RGBColor[0, Rational[128, 255], Rational[128, 255]],
+		"white",   RGBColor[1, 1, 1],
+		"yellow",  RGBColor[1, 1, 0],
+		_,         unrecognizedValueFailure @ prop
+	]
+
+(* Hex *)
+$1XC = Repeated[RegularExpression[RE["hex digit"]], {1}];
+$2XC = Repeated[RegularExpression[RE["hex digit"]], {2}];
+fromhexdigits[s_] := FromDigits[s, 16]
+(* 3 digits *) hexPattern3 := StartOfString ~~ r:$1XC ~~ g:$1XC ~~ b:$1XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b} / 15);
+(* 6 digits *) hexPattern6 := StartOfString ~~ r:$2XC ~~ g:$2XC ~~ b:$2XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b} / 255);
+
+parseSingleColorHex[prop_String, hexString_String] :=
+	Which[
+		StringMatchQ[hexString, First @ hexPattern3], First[StringCases[hexString, hexPattern3], unrecognizedValueFailure @ prop],
+		StringMatchQ[hexString, First @ hexPattern6], First[StringCases[hexString, hexPattern6], unrecognizedValueFailure @ prop],
+		True, Failure["UnexpectedParse", <|"Message" -> "Unrecognized hex color " <> hexString <> "."|>]]
+
+(* RGB *)
+(* The patterns assume all whitespace has been removed. *)
+rgbPattern := 
+	{
+		{v1:"number"|"percentage", _String, r_, _String}, ",", 
+		{v1:"number"|"percentage", _String, g_, _String}, ",", 
+		{v1:"number"|"percentage", _String, b_, _String}
+	} :> Apply[RGBColor, {r, g, b}/If[v1 == "number", 255, 100.]]
+
+parseSingleColorFunction[prop_String, token_?CSSTokenQ] :=
+	Module[{relevantTokens, function = CSSTokenString @ token},
+		(* relevantTokens drops the token's type and string, and removes all whitespace tokens *)
+		relevantTokens = DeleteCases[token[[3 ;;]], " ", {1}];
+		If[StringMatchQ[function, RegularExpression[RE["R"] ~~ RE["G"] ~~ RE["B"]]],
+			If[MatchQ[relevantTokens, First @ rgbPattern], 
+				Replace[relevantTokens, rgbPattern]
+				, 
+				unrecognizedValueFailure @ prop
+			]
+			, 
+			Failure["UnexpectedParse", <|"Message" -> "Unrecognized color function " <> function <> "."|>]
+		]
+	]
 
 
 (* ::Subsection::Closed:: *)
@@ -1738,7 +1811,7 @@ consumeProperty[prop:"clip", tokens:{__?CSSTokenQ}] :=
 consumeProperty[prop:"color", tokens:{__?CSSTokenQ}] := 
 	With[{value = parseSingleColor[prop, First @ tokens]},
 		If[FailureQ[value], value, FontColor -> value]]
-
+		
 
 (* ::Subsection::Closed:: *)
 (*content, lists, and quotes*)
