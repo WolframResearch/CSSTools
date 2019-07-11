@@ -1,24 +1,21 @@
 (* Wolfram Language Package *)
 
-BeginPackage["CSSTools`CSSPropertyInterpreter`", { "GeneralUtilities`"}]
+BeginPackage["CSSTools`CSSPropertyInterpreter`"]
 (* Exported symbols added here with SymbolName::usage *)  
 
 Needs["CSSTools`CSSTokenizer`"]; (* keep tokenizer utilities hidden *)
 
-SetUsage[CSSHeightMin, "\
-CSSHeightMin[value$] indicates value$ is to be interpreted as a minimum height taken from a CSS property."];
-SetUsage[CSSHeightMax, "\
-CSSHeightMax[value$] indicates value$ is to be interpreted as a maximum height taken from a CSS property."];
-SetUsage[CSSWidthMin, "\
-CSSWidthMin[value$] indicates value$ is to be interpreted as a minimum width taken from a CSS property."];
-SetUsage[CSSWidthMax, "\
-CSSWidthMax[value$] indicates value$ is to be interpreted as a maximum width taken from a CSS property."];
-SetUsage[CSSBorderColor, "\
-CSSBorderColor[value$] indicates value$ is an interpreted CSS color."];
-SetUsage[CSSBorderStyle, "\
-CSSBorderStyle[value$] indicates value$ is an interpreted CSS border style."];
-SetUsage[CSSBorderWidth, "\
-CSSBorderWidth[value$] indicates value$ is an interpreted CSS border width."];
+(* functions to expose to outside packages via Needs *)
+CSSPropertyData;
+consumeProperty;
+tooManyTokensFailure;
+unrecognizedKeyWordFailure;
+unrecognizedValueFailure;
+parseAngle;
+parseCounter;
+parseLength;
+parseSingleColor;
+
 
 Begin["`Private`"] (* Begin Private Context *) 
 
@@ -1006,18 +1003,18 @@ parseSingleColorKeyWord[prop_String, keyword_String] :=
 $1XC = Repeated[RegularExpression[RE["hex digit"]], {1}];
 $2XC = Repeated[RegularExpression[RE["hex digit"]], {2}];
 fromhexdigits[s_] := FromDigits[s, 16]
-(* 3 digits *) hexPattern3 := StartOfString ~~ r:$1XC ~~ g:$1XC ~~ b:$1XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b} / 15);
-(* 6 digits *) hexPattern6 := StartOfString ~~ r:$2XC ~~ g:$2XC ~~ b:$2XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b} / 255);
+(* 3 digits *) hexPattern3[] := StartOfString ~~ r:$1XC ~~ g:$1XC ~~ b:$1XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b} / 15);
+(* 6 digits *) hexPattern6[] := StartOfString ~~ r:$2XC ~~ g:$2XC ~~ b:$2XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b} / 255);
 
 parseSingleColorHex[prop_String, hexString_String] :=
 	Which[
-		StringMatchQ[hexString, First @ hexPattern3], First[StringCases[hexString, hexPattern3], unrecognizedValueFailure @ prop],
-		StringMatchQ[hexString, First @ hexPattern6], First[StringCases[hexString, hexPattern6], unrecognizedValueFailure @ prop],
+		StringMatchQ[hexString, First @ hexPattern3[]], First[StringCases[hexString, hexPattern3[]], unrecognizedValueFailure @ prop],
+		StringMatchQ[hexString, First @ hexPattern6[]], First[StringCases[hexString, hexPattern6[]], unrecognizedValueFailure @ prop],
 		True, Failure["UnexpectedParse", <|"Message" -> "Unrecognized hex color " <> hexString <> "."|>]]
 
 (* RGB *)
 (* The patterns assume all whitespace has been removed. *)
-rgbPattern := 
+rgbPattern[] := 
 	{
 		{v1:"number"|"percentage", _String, r_, _String}, ",", 
 		{v1:"number"|"percentage", _String, g_, _String}, ",", 
@@ -1029,8 +1026,8 @@ parseSingleColorFunction[prop_String, token_?CSSTokenQ] :=
 		(* relevantTokens drops the token's type and string, and removes all whitespace tokens *)
 		relevantTokens = DeleteCases[token[[3 ;;]], " ", {1}];
 		If[StringMatchQ[function, RegularExpression[RE["R"] ~~ RE["G"] ~~ RE["B"]]],
-			If[MatchQ[relevantTokens, First @ rgbPattern], 
-				Replace[relevantTokens, rgbPattern]
+			If[MatchQ[relevantTokens, First @ rgbPattern[]], 
+				Replace[relevantTokens, rgbPattern[]]
 				, 
 				unrecognizedValueFailure @ prop
 			]

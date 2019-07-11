@@ -1,8 +1,16 @@
 (* Wolfram Language Package *)
 
-BeginPackage["CSSTools`CSSColors4`", { "GeneralUtilities`"}];
+BeginPackage["CSSTools`CSSColors4`"];
+
+(* CSSTokenizer`
+	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs, CSSTokenString
+	---> token position modifiers e.g. AdvancePosAndSkipWhitespace *)
+(* CSSPropertyInterpreter` 
+	---> defines CSS wrappers like CSSHeightMin
+	---> defines consumeProperty and CSSPropertyData *)
 
 Needs["CSSTools`CSSTokenizer`"];
+Needs["CSSTools`CSSPropertyInterpreter`"]
 
 (* Package Notes: implements https://drafts.csswg.org/css-color/
 	This package extends the CSS Tools to include CSS Color Module Level 4 (currently only a CSS working draft). 
@@ -11,10 +19,6 @@ Needs["CSSTools`CSSTokenizer`"];
 
 Begin["`Private`"]; (* Begin Private Context *) 
 
-
-(* useful external definitions *)
-unrecognizedValueFailure[prop_] := CSSTools`CSSPropertyInterpreter`Private`unrecognizedValueFailure[prop]
-parseAngle[val_] := CSSTools`CSSPropertyInterpreter`Private`parseAngle[val]
 
 (* keyword *)
 parseSingleColorKeyWord[prop_String, keyword_String] := 
@@ -177,30 +181,30 @@ parseSingleColorKeyWord[prop_String, keyword_String] :=
 $1XC = Repeated[RegularExpression[RE["hex digit"]], {1}];
 $2XC = Repeated[RegularExpression[RE["hex digit"]], {2}];
 fromhexdigits[s_] := FromDigits[s, 16]
-(* 3 digits *) hexPattern3 := StartOfString ~~ r:$1XC ~~ g:$1XC ~~ b:$1XC           ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b   } / 15);
-(* 4 digits *) hexPattern4 := StartOfString ~~ r:$1XC ~~ g:$1XC ~~ b:$1XC ~~ a:$1XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b, a} / 15);
-(* 6 digits *) hexPattern6 := StartOfString ~~ r:$2XC ~~ g:$2XC ~~ b:$2XC           ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b   } / 255);
-(* 8 digits *) hexPattern8 := StartOfString ~~ r:$2XC ~~ g:$2XC ~~ b:$2XC ~~ a:$2XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b, a} / 255);
+(* 3 digits *) hexPattern3[] := StartOfString ~~ r:$1XC ~~ g:$1XC ~~ b:$1XC           ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b   } / 15);
+(* 4 digits *) hexPattern4[] := StartOfString ~~ r:$1XC ~~ g:$1XC ~~ b:$1XC ~~ a:$1XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b, a} / 15);
+(* 6 digits *) hexPattern6[] := StartOfString ~~ r:$2XC ~~ g:$2XC ~~ b:$2XC           ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b   } / 255);
+(* 8 digits *) hexPattern8[] := StartOfString ~~ r:$2XC ~~ g:$2XC ~~ b:$2XC ~~ a:$2XC ~~ EndOfString :> RGBColor @@ (fromhexdigits /@ {r, g, b, a} / 255);
 
 parseSingleColorHex[prop_String, hexString_String] :=
 	Which[
-		StringMatchQ[hexString, First @ hexPattern3], First[StringCases[hexString, hexPattern3], unrecognizedValueFailure @ prop],
-		StringMatchQ[hexString, First @ hexPattern4], First[StringCases[hexString, hexPattern4], unrecognizedValueFailure @ prop],
-		StringMatchQ[hexString, First @ hexPattern6], First[StringCases[hexString, hexPattern6], unrecognizedValueFailure @ prop],
-		StringMatchQ[hexString, First @ hexPattern8], First[StringCases[hexString, hexPattern8], unrecognizedValueFailure @ prop],
+		StringMatchQ[hexString, First @ hexPattern3[]], First[StringCases[hexString, hexPattern3[]], unrecognizedValueFailure @ prop],
+		StringMatchQ[hexString, First @ hexPattern4[]], First[StringCases[hexString, hexPattern4[]], unrecognizedValueFailure @ prop],
+		StringMatchQ[hexString, First @ hexPattern6[]], First[StringCases[hexString, hexPattern6[]], unrecognizedValueFailure @ prop],
+		StringMatchQ[hexString, First @ hexPattern8[]], First[StringCases[hexString, hexPattern8[]], unrecognizedValueFailure @ prop],
 		True, Failure["UnexpectedParse", <|"Message" -> "Unrecognized hex color " <> hexString <> "."|>]]
 
 
 (* RGB *)
 (* The patterns assume all whitespace has been removed. *)
-rgbaPattern := 
+rgbaPattern[] := 
 	{
 		{v1:"number"|"percentage", _String, r_, _String}, d:Repeated[",", {0, 1}], 
 		{v1:"number"|"percentage", _String, g_, _String}, d:Repeated[",", {0, 1}], 
 		{v1:"number"|"percentage", _String, b_, _String}, d:Repeated[",", {0, 1}], 
 		{v2:"number"|"percentage", _String, a_, _String}
 	} :> Apply[RGBColor, Append[{r, g, b}/If[v1 == "number", 255, 100.], If[v2 == "number", Clip[a, {0, 1}], a/100.]]]
-rgbPattern := 
+rgbPattern[] := 
 	{
 		{v1:"number"|"percentage", _String, r_, _String}, d:Repeated[",", {0, 1}], 
 		{v1:"number"|"percentage", _String, g_, _String}, d:Repeated[",", {0, 1}], 
@@ -212,7 +216,7 @@ rgbPattern :=
 HSLtoHSB[h_, s_, l_, a___] := With[{b = (2 * l + s * (1 - Abs[2 * l - 1])) / 2}, If[b == 0, Hue[h, 0, 0, a], Hue[h, 2 * (b - l) / b, b, a]]]
 
 (* The patterns assume all whitespace has been removed. *)
-hslaPattern := 
+hslaPattern[] := 
 	{
 		Alternatives[
 			hAll:{type:"dimension", _String, h_, _String, "deg"|"grad"|"rad"|"turn"},
@@ -221,7 +225,7 @@ hslaPattern :=
 		d:Repeated[",", {0, 1}], {"percentage", _String, l_, _String}, 
 		d:Repeated[",", {0, 1}], {"number",     _String, a_, _String}
 	} :> HSLtoHSB[If[type == "number", h, parseAngle[hAll]]/360, s/100, l/100, Clip[a, {0, 1}]]
-hslPattern := 
+hslPattern[] := 
 	{
 		Alternatives[
 			hAll:{type:"dimension", _String, h_, _String, "deg"|"grad"|"rad"|"turn"},
@@ -239,37 +243,21 @@ parseSingleColorFunction[prop_String, token_?CSSTokenQ] :=
 			(* the "a" of rgb function heads is optional *)
 			StringMatchQ[function, RegularExpression[RE["R"] ~~ RE["G"] ~~ RE["B"] ~~ "(" ~~ RE["A"] ~~ "?)"]],
 				Which[
-					MatchQ[relevantTokens, First @ rgbaPattern], Replace[relevantTokens, rgbaPattern], 
-					MatchQ[relevantTokens, First @ rgbPattern],  Replace[relevantTokens, rgbPattern], 
+					MatchQ[relevantTokens, First @ rgbaPattern[]], Replace[relevantTokens, rgbaPattern[]], 
+					MatchQ[relevantTokens, First @ rgbPattern[]],  Replace[relevantTokens, rgbPattern[]], 
 					True,                                        unrecognizedValueFailure @ prop],
 			(* the "a" of hsl function heads is optional *)
 			StringMatchQ[function, RegularExpression[RE["H"] ~~ RE["S"] ~~ RE["L"] ~~ "(" ~~ RE["A"] ~~ "?)"]],
 				Which[
-					MatchQ[relevantTokens, First @ hslaPattern], Replace[relevantTokens, hslaPattern], 
-					MatchQ[relevantTokens, First @ hslPattern],  Replace[relevantTokens, hslPattern], 
+					MatchQ[relevantTokens, First @ hslaPattern[]], Replace[relevantTokens, hslaPattern[]], 
+					MatchQ[relevantTokens, First @ hslPattern[]],  Replace[relevantTokens, hslPattern[]], 
 					True,                                        unrecognizedValueFailure @ prop],
 			True, 
 				Failure["UnexpectedParse", <|"Message" -> "Unrecognized color function " <> function <> "."|>]]]
 
 
-(* parse all color types *)
-parseSingleColor[prop_String, token_?CSSTokenQ] := parseSingleColor[prop, token] = 
-	Switch[CSSTokenType @ token,
-		"ident",    parseSingleColorKeyWord[prop, CSSTokenString @ token],
-		"hash",     parseSingleColorHex[prop, CSSTokenString @ token],
-		"function", parseSingleColorFunction[prop, token],
-		_,          unrecognizedValueFailure @ prop]
-		
-parseSingleColor[prop_String, ___] := unrecognizedValueFailure @ prop
-
-
 (* ::Section:: *)
 (*New Properties*)
-
-
-BeginPackage["CSSTools`CSSPropertyInterpreter`"];
-
-Begin["`Private`"]
 
 
 (* modified CSS properties *)
@@ -288,16 +276,15 @@ AssociateTo[CSSPropertyData, {
 
 
 (* new interpreters *)
-(* This definition must match the one in CSSTools`CSSPropertyInterpreter` in order to override that definition *)
-parseSingleColor[prop_String, token_?CSSTokenQ] := CSSTools`CSSColors4`Private`parseSingleColor[prop, token]
-
-
-(* ::Subsection:: *)
-(*End additions to CSSTools`CSSPropertyInterpreter`*)
-
-
-End[];
-EndPackage[];
+(* parse all color types *)
+parseSingleColor[prop_String, token_?CSSTokenQ] := parseSingleColor[prop, token] = 
+	Switch[CSSTokenType @ token,
+		"ident",    parseSingleColorKeyWord[prop, CSSTokenString @ token],
+		"hash",     parseSingleColorHex[prop, CSSTokenString @ token],
+		"function", parseSingleColorFunction[prop, token],
+		_,          unrecognizedValueFailure @ prop]
+		
+parseSingleColor[prop_String, ___] := unrecognizedValueFailure @ prop
 
 
 (* ::Section:: *)

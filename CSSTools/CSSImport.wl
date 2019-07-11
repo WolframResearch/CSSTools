@@ -14,38 +14,25 @@
 (*Package Header*)
 
 
-BeginPackage["CSSImport`", {"GeneralUtilities`", "CSSTools`CSSPropertyInterpreter`", "Selectors3`"}];
+BeginPackage["CSSTools`CSSImport`", {"Selectors3`"}];
+
+consumeDeclaration;
 
 (* Selectors3` 
-	---> needed for Selector function *)
+	---> defines Selector function *)
+(* CSSTokenizer`
+	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs, CSSTokenString
+	---> token position modifiers e.g. AdvancePosAndSkipWhitespace *)
 (* CSSPropertyInterpreter` 
-	---> needed for CSS wrappers like CSSHeightMin
-	---> defines private functions consumeProperty and CSSPropertyData *)
+	---> defines CSS wrappers like CSSHeightMin
+	---> defines consumeProperty and CSSPropertyData *)
+(* CSSPageMedia3`
+	---> defines consumeAtPageRule *)
 
-Needs["CSSTools`CSSTokenizer`"];   (* keep tokenizer utilities hidden from $ContextPath *)
-Needs["CSSTools`CSSPagedMedia3`"]; (* extends importer's CSS property knowledge of @page *)
-Needs["CSSTools`CSSColors4`"];     (* extends importer's CSS proprety knowledge of color, modifies color CSSPropertyData entry *)
+Needs["CSSTools`CSSTokenizer`"];   
+Needs["CSSTools`CSSPropertyInterpreter`"];
+Needs["CSSTools`CSSPagedMedia3`"]; 
 
-SetUsage[ResolveCSSCascade, "\
-ResolveCSSCascade[type$, CSSData$, {selectors$, $$}] combines options that were interpreted from the CSS importer. \
-CSS styles are merged following the CSS cascade and the resulting options are filtered by type$."];
-
-SetUsage[ExtractCSSFromXML, "\
-ExtractCSSFromXML[XMLObject$] imports the CSS declarations within XMLObject$."];
-
-SetUsage[ApplyCSSToXML, "\
-ApplyCSSToXML[XMLObject$, CSSData$] applies the CSSData$ to the symbolic XML, \
-returning the CSSData$ with additional position and specificity information."];
-
-SetUsage[ResolveCSSInterpretations, "\
-ResolveCSSInterpretations[type$, CSSInterpretations$] combines options that were interpreted from the CSS importer. \
-Any Left/Right/Bottom/Top and Min/Max values are merged."];
-
-SetUsage[ResolveCSSInheritance, "\
-ResolveCSSInheritance[target$, CSSData$] calculates the properties of the element at target$ including any inherited CSS properties."];
-
-System`CellFrameStyle; (* needed in System` context *)
-System`Box;
 
 Begin["`Private`"];
 
@@ -321,7 +308,7 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 		If[TrueQ @ $RawImport, 
 			KeyDropFrom[declaration, "Interpretation"]
 			,
-			AssociateTo[declaration, "Interpretation" -> CSSTools`CSSPropertyInterpreter`Private`consumeProperty[declaration["Property"], declaration["Interpretation"]]]
+			AssociateTo[declaration, "Interpretation" -> consumeProperty[declaration["Property"], declaration["Interpretation"]]]
 		]		
 	]
 
