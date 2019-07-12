@@ -1,6 +1,6 @@
 (* Wolfram Language Package *)
 
-BeginPackage["CSSTools`CSSPropertyInterpreter`"]
+BeginPackage["CSSTools`CSSPropertyInterpreter`", {"CSSTools`"}]
 (* Exported symbols added here with SymbolName::usage *)  
 
 Needs["CSSTools`CSSTokenizer`"]; (* keep tokenizer utilities hidden *)
@@ -507,12 +507,8 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				CellDingbat -> Inherited,
-				CellLabel   -> Inherited},
-			"initial" -> {
-				CellDingbat -> None,
-				CellLabel   -> None}|>|>,    
+			"inherit" -> DisplayFunction -> Inherited,
+			"initial" -> DisplayFunction -> Function[Identity]|>|>,    
 	"counter-increment" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
@@ -1818,7 +1814,9 @@ consumeProperty[prop:"color", tokens:{__?CSSTokenQ}] :=
 (*content*)
 
 
-(* only used to add content before or after element, so let's restrict this to Cells' CellDingbat or CellLabel *)
+(* 
+	Used to add content before or after element, or add content to a page header/footer.
+	It's too restrictive to assign this to just Cells' CellDingbat or CellLabel. *)
 consumeProperty[prop:"content", tokens:{__?CSSTokenQ}] := 
 	Module[{pos = 1, l = Length[tokens], value, parsedValues = {}},
 		While[pos <= l,
@@ -1826,27 +1824,27 @@ consumeProperty[prop:"content", tokens:{__?CSSTokenQ}] :=
 				Switch[CSSTokenType @ tokens[[pos]],
 					"ident", 
 						Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]],
-							"normal",         CellDingbat -> "\[FilledCircle]",
-							"none",           CellDingbat -> None,
+							"normal",         Normal,
+							"none",           None,
 							"open-quote",     Missing["Not supported."],
 							"close-quote",    Missing["Not supported."],
 							"no-open-quote",  Missing["Not supported."],
 							"no-close-quote", Missing["Not supported."],
 							_,                unrecognizedKeyWordFailure @ prop
 						],
-					"string", CellLabel -> CSSTokenString @ tokens[[pos]], (* is this even doing this option justice? *)
+					"string", CSSTokenString @ tokens[[pos]],
 					"uri",    
 						With[{i = parseURI @ CSSTokenString @ tokens[[pos]]}, 
 							If[FailureQ[i] || MissingQ[i], 
 								notAnImageFailure @ CSSTokenString @ tokens[[pos]]
 								, 
-								CellDingbat -> i
+								ToBoxes @ i
 							]
 						],
 					"function", 
 						Switch[CSSTokenString @ tokens[[pos]],
-							"counter",  CellDingbat -> parseCounter[prop, tokens[[pos, 3;;]]],
-							"counters", CellDingbat -> parseCounters[prop, tokens[[pos, 3;;]]],
+							"counter",  parseCounter[prop, tokens[[pos, 3;;]]],
+							"counters", parseCounters[prop, tokens[[pos, 3;;]]],
 							"attr",     (*TODO*)parseAttr[prop, tokens[[pos, 3;;]]],
 							_,          unrecognizedValueFailure @ prop
 						],
@@ -1858,7 +1856,7 @@ consumeProperty[prop:"content", tokens:{__?CSSTokenQ}] :=
 		Which[
 			Count[parsedValues, None] > 1,   repeatedPropValueFailure @ "none",
 			Count[parsedValues, Normal] > 1, repeatedPropValueFailure @ "normal",
-			True,                            parsedValues
+			True,                            With[{p = parsedValues}, DisplayFunction -> Function[RowBox[p]]]
 		]
 	]
 
@@ -2015,17 +2013,17 @@ parseSingleListStyleType[prop_String, token_?CSSTokenQ, style_String:"Item"] :=
 				"disc",                 "\[FilledCircle]",
 				"circle",               "\[EmptyCircle]",
 				"square",               "\[FilledSquare]",
-				"decimal",              Cell[TextData[{CounterBox[style], "."}]],
-				"decimal-leading-zero", Cell[TextData[{CounterBox[style, CounterFunction :> (FEPrivate`If[FEPrivate`Greater[#, 9], #, FEPrivate`StringJoin["0", FEPrivate`ToString[#]]]&)], "."}]],
-				"lower-roman",          Cell[TextData[{CounterBox[style, CounterFunction :> FrontEnd`RomanNumeral], "."}]],
-				"upper-roman",          Cell[TextData[{CounterBox[style, CounterFunction :> FrontEnd`CapitalRomanNumeral], "."}]],
-				"lower-greek",          Cell[TextData[{CounterBox[style, CounterFunction :> (Part[CharacterRange["\[Alpha]", "\[Omega]"], #]&)], "."}]],
-				"lower-latin",          Cell[TextData[{CounterBox[style, CounterFunction :> (Part[CharacterRange["a", "z"], #]&)], "."}]],
-				"upper-latin",          Cell[TextData[{CounterBox[style, CounterFunction :> (Part[CharacterRange["A", "Z"], #]&)], "."}]],
-				"armenian",             Cell[TextData[{CounterBox[style, CounterFunction :> (Part[CharacterRange["\:0531", "\:0556"], #]&)], "."}]],
-				"georgian",             Cell[TextData[{CounterBox[style, CounterFunction :> (Part[CharacterRange["\:10d0", "\:10fa"], #]&)], "."}]],
-				"lower-alpha",          Cell[TextData[{CounterBox[style, CounterFunction :> (Part[CharacterRange["a", "z"], #]&)], "."}]],
-				"upper-alpha",          Cell[TextData[{CounterBox[style, CounterFunction :> (Part[CharacterRange["A", "Z"], #]&)], "."}]],
+				"decimal",              CounterBox[style],
+				"decimal-leading-zero", CounterBox[style, CounterFunction :> (FEPrivate`If[FEPrivate`Greater[#, 9], #, FEPrivate`StringJoin["0", FEPrivate`ToString[#]]]&)],
+				"lower-roman",          CounterBox[style, CounterFunction :> FrontEnd`RomanNumeral],
+				"upper-roman",          CounterBox[style, CounterFunction :> FrontEnd`CapitalRomanNumeral],
+				"lower-greek",          CounterBox[style, CounterFunction :> (Part[CharacterRange["\[Alpha]", "\[Omega]"], #]&)],
+				"lower-latin",          CounterBox[style, CounterFunction :> (Part[CharacterRange["a", "z"], #]&)],
+				"upper-latin",          CounterBox[style, CounterFunction :> (Part[CharacterRange["A", "Z"], #]&)],
+				"armenian",             CounterBox[style, CounterFunction :> (Part[CharacterRange["\:0531", "\:0556"], #]&)],
+				"georgian",             CounterBox[style, CounterFunction :> (Part[CharacterRange["\:10d0", "\:10fa"], #]&)],
+				"lower-alpha",          CounterBox[style, CounterFunction :> (Part[CharacterRange["a", "z"], #]&)],
+				"upper-alpha",          CounterBox[style, CounterFunction :> (Part[CharacterRange["A", "Z"], #]&)],
 				"none",                 None,
 				_,                      unrecognizedKeyWordFailure @ prop
 			],

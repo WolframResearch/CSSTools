@@ -2,6 +2,16 @@
 
 (* Created by the Wolfram Workbench Mar 5, 2019 *)
 
+(* ::Title:: *)
+(*CSS 2.1 Visual Style Importer*)
+
+
+(* ::Text:: *)
+(*Author: Kevin Daily*)
+(*Date: 20190321*)
+(*Version: 1*)
+
+
 BeginPackage["CSSTools`", { "GeneralUtilities`"}]
 (* Exported symbols added here with SymbolName::usage *) 
 
@@ -21,7 +31,7 @@ CSSBorderStyle[value$] indicates value$ is an interpreted CSS border style."];
 SetUsage[CSSBorderWidth, "\
 CSSBorderWidth[value$] indicates value$ is an interpreted CSS border width."];
 
-(* ==== CSSImport` ==== *)
+(* ==== CSSStyleSheetInterpreter` ==== *)
 SetUsage[ResolveCSSCascade, "\
 ResolveCSSCascade[type$, CSSData$, {selectors$, $$}] combines options that were interpreted from the CSS importer. \
 CSS styles are merged following the CSS cascade and the resulting options are filtered by type$."];
@@ -36,17 +46,30 @@ Any Left/Right/Bottom/Top and Min/Max values are merged."];
 SetUsage[ResolveCSSInheritance, "\
 ResolveCSSInheritance[target$, CSSData$] calculates the properties of the element at target$ including any inherited CSS properties."];
 
+(* ==== Selectors3` ==== *)
+SetUsage[Selector, "\
+Selector[selector$, XMLObject$] returns the CSS selector$ specificity and positions of XMLElement expressions in XMLObject$. 
+Position[XMLObject$, Selector[selector$]] returns only the positions of XMLElement expressions."];
+
 (* ==== required System` functions ==== *)
 System`CellFrameStyle; 
 System`Box;
 
-Needs["CSSTools`CSSPropertyInterpreter`"] (* needs to be loaded first to define basic CSS 2.1 properties *)
-Echo[Keys @ CSSPropertyData]
+Needs["CSSTools`CSSPropertyInterpreter`"]   (* needs to be loaded first to define basic CSS 2.1 properties *)
+Needs["CSSTools`CSSColors4`"];              (* redefines parseSingleColor first defined in CSSPropertyInterpreter *)
+Needs["CSSTools`CSSStyleSheetInterpreter`"] (* defines consumeDeclaration *)
 
-Needs["CSSTools`CSSColors4`"]; (* redefines parseSingleColor first defined in CSSPropertyInterpreter *)
-Echo[Keys @ CSSPropertyData]
-
-Needs["CSSTools`CSSImport`"]
+ImportExport`RegisterImport[
+	"CSS",
+	{
+		"Elements" :> (("Elements" -> {"RawData", "Interpreted", "Stylesheet"})&),
+		(* Interpreted is the same as default *)
+		"Interpreted" :> (("Interpreted" -> With[{d = CSSTools`CSSStyleSheetInterpreter`Private`InterpretedCSS[#]}, If[FailureQ[d], d, Dataset @ d]])&), 
+		"RawData" :> (("RawData" -> With[{d = CSSTools`CSSStyleSheetInterpreter`Private`RawCSS[#]}, If[FailureQ[d], d, Dataset @ d]])&),
+		"Stylesheet" :> ProcessToStylesheet,
+		((With[{d = CSSTools`CSSStyleSheetInterpreter`Private`InterpretedCSS[#]}, If[FailureQ[d], d, Dataset @ d]])&)},
+	{},
+	"AvailableElements" -> {"Elements", "RawData", "Interpreted", "Stylesheet"}]
 
 EndPackage[]
 

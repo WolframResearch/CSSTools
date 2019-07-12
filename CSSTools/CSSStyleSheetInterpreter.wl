@@ -1,30 +1,22 @@
 (* ::Package:: *)
 
-(* ::Title:: *)
-(*CSS 2.1 Visual Style Importer*)
-
-
-(* ::Text:: *)
-(*Author: Kevin Daily*)
-(*Date: 20190321*)
-(*Version: 1*)
-
 
 (* ::Section::Closed:: *)
 (*Package Header*)
 
 
-BeginPackage["CSSTools`CSSImport`", {"Selectors3`"}];
+BeginPackage["CSSTools`CSSStyleSheetInterpreter`", {"CSSTools`", "CSSTools`Selectors3`"}];
 
 consumeDeclaration;
 
+(* CSSTools`
+	---> defines wrappers like CSSHeightMax *)
 (* Selectors3` 
 	---> defines Selector function *)
 (* CSSTokenizer`
 	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs, CSSTokenString
 	---> token position modifiers e.g. AdvancePosAndSkipWhitespace *)
 (* CSSPropertyInterpreter` 
-	---> defines CSS wrappers like CSSHeightMin
 	---> defines consumeProperty and CSSPropertyData *)
 (* CSSPageMedia3`
 	---> defines consumeAtPageRule *)
@@ -80,7 +72,6 @@ Begin["`Private`"];
 (*Consume Style Sheet*)
 
 
-(* Block is used such that the private variables pos, l, and tokens are known by any token consumer. *)
 consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 	Module[{pos = 1, l = Length[tokens], imports = {}, i = 1, lRulesets, rulesets},
 		If[TrueQ @ $Debug, Echo[l, "Token Length"]];
@@ -374,7 +365,7 @@ validBoxes =
 		GridBox, InputFieldBox, InsetBox, ItemBox, LocatorBox, 
 		LocatorPaneBox, OpenerBox, OverlayBox, PaneBox, PanelBox, 
 		PaneSelectorBox, PopupMenuBox, ProgressIndicatorBox, RadioButtonBox,
-		SetterBox, Slider2DBox, SliderBox, TabViewBox, TogglerBox, TooltipBox};	
+		SetterBox, Slider2DBox, SliderBox, TabViewBox, TemplateBox, TogglerBox, TooltipBox};	
 validExpressions =
 	{
 		ActionMenu, Animator, Button, Checkbox, ColorSetter, 
@@ -385,7 +376,7 @@ validExpressions =
 		Setter, Slider2D, Slider, TabView, Toggler, Tooltip};	
 validBoxOptions =
 	{
-		Alignment, Appearance, Background, Frame, FrameMargins, FrameStyle, 
+		Alignment, Appearance, Background, DisplayFunction, Frame, FrameMargins, FrameStyle, 
 		FontTracking, ImageMargins, ImageSize, ImageSizeAction, Spacings, Scrollbars};
 validBoxesQ = MemberQ[Join[validBoxes, validExpressions], #]&;
 
@@ -555,7 +546,7 @@ ResolveCSSCascade[___] := Failure["BadCSSData", <||>]
 (*Read styles from XMLObject*)
 
 
-linkElementPattern :=
+linkElementPattern[] :=
 	XMLElement[
 		x_String | {_, x_String} /; StringMatchQ[x, "link", IgnoreCase -> True], 
 		Alternatives[
@@ -576,7 +567,7 @@ linkElementPattern :=
 		___
 	] :> loc
 
-styleElementPattern :=
+styleElementPattern[] :=
 	XMLElement[
 		x_String | {_, x_String} /; StringMatchQ[x, "style", IgnoreCase -> True], 
 		{
@@ -587,7 +578,7 @@ styleElementPattern :=
 		{css_String}
 	] :> css
 		
-styleAttributePattern :=
+styleAttributePattern[] :=
 	XMLElement[
 		_, 
 		{
@@ -621,8 +612,8 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 		SetDirectory[If[OptionValue["RootDirectory"] === Automatic, Directory[], OptionValue["RootDirectory"]]]; 
 		
 		(* process externally linked style sheets via <link> elements *)
-		externalSSPositions = Position[doc, First @ linkElementPattern];
-		externalSSContent = ExternalCSS /@ Cases[doc, linkElementPattern, Infinity];
+		externalSSPositions = Position[doc, First @ linkElementPattern[]];
+		externalSSContent = ExternalCSS /@ Cases[doc, linkElementPattern[], Infinity];
 		(* filter out files that weren't found *)
 		With[{bools =  # =!= $Failed& /@ externalSSContent},
 			externalSSPositions = Pick[externalSSPositions, bools];
@@ -630,13 +621,13 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 		externalSSContent = ApplyCSSToXML[doc, #, False]& /@ externalSSContent;
 				
 		(* process internal style sheets given by <style> elements *)
-		internalSSPositions = Position[doc, First @ styleElementPattern];
-		internalSSContent = InternalCSS /@ Cases[doc, styleElementPattern, Infinity];
+		internalSSPositions = Position[doc, First @ styleElementPattern[]];
+		internalSSContent = InternalCSS /@ Cases[doc, styleElementPattern[], Infinity];
 		internalSSContent = ApplyCSSToXML[doc, #, False]& /@ internalSSContent;
 		
 		(* process internal styles given by 'style' attributes *)
-		directStylePositions = Position[doc, First @ styleAttributePattern];
-		directStyleContent = Cases[doc, styleAttributePattern, Infinity];
+		directStylePositions = Position[doc, First @ styleAttributePattern[]];
+		directStyleContent = Cases[doc, styleAttributePattern[], Infinity];
 		directStyleContent = 
 			MapThread[
 				<|
@@ -660,7 +651,7 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 
 parents[x:{__Integer}] := Most @ Reverse @ NestWhileList[Drop[#, -2]&, x, Length[#] > 2&]
 
-inheritedProperties = Pick[Keys@ #, Values @ #]& @ CSSPropertyData[[All, "Inherited"]];
+inheritedProperties[] := Pick[Keys@ #, Values @ #]& @ CSSPropertyData[[All, "Inherited"]];
 
 ResolveCSSInheritance[position_Dataset, CSSData_] := ResolveCSSInheritance[Normal @ position, CSSData]
 ResolveCSSInheritance[position_, CSSData_Dataset] := ResolveCSSInheritance[position, Normal @ CSSData]
@@ -688,7 +679,7 @@ ResolveCSSInheritance[position:{___?IntegerQ}, CSSData_?validCSSDataFullQ] :=
 			a[[Key[i], "All"]] = With[{values = Join[temp2, temp]}, Reverse @ DeleteDuplicates @ Reverse @ values];
 			
 			(* pass on any inheritable properties, but reset their importance so they don't overwrite later important props *)
-			a[[Key[i], "Inherited"]] = Select[a[[Key[i], "All"]], MemberQ[inheritedProperties, #Property]&];
+			a[[Key[i], "Inherited"]] = Select[a[[Key[i], "All"]], MemberQ[inheritedProperties[], #Property]&];
 			With[{values = a[[Key[i], "Inherited", All, "Important"]]}, 
 				a[[Key[i], "Inherited", All, "Important"]] = ConstantArray[False, Length[values]]
 			];,
@@ -762,18 +753,6 @@ ProcessToStylesheet[filepath_String, opts___] :=
 					MapThread[Cell[StyleData[#1], Sequence @@ #2]&, {uniqueSelectors, allProcessed}], 
 					StyleDefinitions -> "PrivateStylesheetFormatting.nb"]
 	]
-
-ImportExport`RegisterImport[
-	"CSS",
-	{
-		"Elements" :> (("Elements" -> {"RawData", "Interpreted", "Stylesheet"})&),
-		(* Interpreted is the same as default *)
-		"Interpreted" :> (("Interpreted" -> With[{d = CSSImport`Private`InterpretedCSS[#]}, If[FailureQ[d], d, Dataset @ d]])&), 
-		"RawData" :> (("RawData" -> With[{d = CSSImport`Private`RawCSS[#]}, If[FailureQ[d], d, Dataset @ d]])&),
-		"Stylesheet" :> CSSImport`Private`ProcessToStylesheet,
-		((With[{d = CSSImport`Private`InterpretedCSS[#]}, If[FailureQ[d], d, Dataset @ d]])&)},
-	{},
-	"AvailableElements" -> {"Elements", "RawData", "Interpreted", "Stylesheet"}]
 
 
 (* ::Section::Closed:: *)

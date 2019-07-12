@@ -1,12 +1,11 @@
 (* Wolfram Language Package *)
 
-BeginPackage["CSSTools`CSSColors4`"];
+BeginPackage["CSSTools`CSSColors4`", {"CSSTools`"}];
 
 (* CSSTokenizer`
 	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs, CSSTokenString
 	---> token position modifiers e.g. AdvancePosAndSkipWhitespace *)
 (* CSSPropertyInterpreter` 
-	---> defines CSS wrappers like CSSHeightMin
 	---> defines consumeProperty and CSSPropertyData *)
 
 Needs["CSSTools`CSSTokenizer`"];

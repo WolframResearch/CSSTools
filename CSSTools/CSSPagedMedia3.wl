@@ -6,7 +6,7 @@
 
 (* Wolfram Language Package *)
 
-BeginPackage["CSSTools`CSSPagedMedia3`"];
+BeginPackage["CSSTools`CSSPagedMedia3`", {"CSSTools`"}];
 
 consumeAtPageRule;
 
@@ -14,15 +14,14 @@ consumeAtPageRule;
 	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs, CSSTokenString
 	---> token position modifiers e.g. AdvancePosAndSkipWhitespace *)
 (* CSSPropertyInterpreter` 
-	---> defines CSS wrappers like CSSHeightMin
 	---> defines consumeProperty and CSSPropertyData *)
-(* CSSImport`
+(* CSSStyleSheetInterpreter`
 	---> defines consumeDeclaration *)
 
 Needs["CSSTools`CSSTokenizer`"]; 
 Needs["CSSTools`CSSPropertyInterpreter`"];
-Needs["CSSTools`CSSImport`"]; 
-Needs["CSSTools`"]; (* ResolveCSSInterpretations *)
+Needs["CSSTools`CSSStyleSheetInterpreter`"]; 
+
 
 (* Package Notes: implements https://drafts.csswg.org/css-page-3
 	This package extends the CSS Tools to include CSS Paged Media Module Level 3 (currently only a CSS working draft). 
@@ -132,6 +131,263 @@ $ValidPageMargins = {
 
 
 (* ::Section:: *)
+(*@page token sequence consumer*)
+
+
+(* 
+	It is assumed that the string input has already been tokenized into CSS tokens.
+	The main token consumers have the HoldFirst attribute. 
+	This allows the position variable to be tracked continuously through each token consumer.
+	Some token consumers also advance the position.
+	
+	The tokenizer and token accessor functions are defined in CSSTools`CSSTokenizer:
+		CSSTokenType:      returns the type of token e.g. "ident", "number", "function"...
+		CSSTokenString:    returns the string of the token which may have been normalized (removed escapes, possibly lowercase)
+		CSSTokenValue:     returns the value of numeric tokens
+		CSSTokenValueType: returns the numeric type of numeric tokens e.g. "number" or "integer"
+		CSSDimensionUnit:  returns the units of dimension tokens e.g. "em", "px", "cm"...
+*)
+
+
+(* ::Subsection:: *)
+(*Main @page rule*)
+
+
+SetAttributes[{consumeAtPageRule}, HoldFirst];
+
+consumeAtPageRule[pos_, l_, tokens_] := 
+	Module[{selectorsStart, selectorsEnd, pageSelectors},
+		(* check for valid start of @page token sequence *)
+		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot["page", pos, tokens],
+			Echo[Row[{"Expected @page keyword. Had instead ", tokens[[pos]]}], "@page error"];
+			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
+			Return @ {}
+			,
+			AdvancePosAndSkipWhitespace[pos, l, tokens]
+		];
+		
+		(* 
+			consume optional page selector list 
+			Following CSS selectors, if any of the comma-delimited selectors do not match, all are ignored. *)
+		If[TokenTypeIsNot["{}", pos, tokens], 
+			selectorsStart = pos; AdvancePosToNextBlock[pos, l, tokens]; 
+			selectorsEnd = pos; RetreatPosAndSkipWhitespace[selectorsEnd, l, tokens];
+			pageSelectors = 
+				If[selectorsEnd < selectorsStart,
+					consumePageSelectorList[{}]
+					,
+					consumePageSelectorList[tokens[[selectorsStart ;; selectorsEnd]]]
+				];
+			,
+			pageSelectors = consumePageSelectorList[{}];
+		];
+		Echo[pageSelectors, "pageSelectors"];
+		
+		(* consume @page block *)
+		consumeAtPageBlock[Echo[tokens[[pos, 2 ;; ]], "block tokens"]]	
+	]
+
+
+(* The @page {...} block contains either additional page-margin at-rules or generic rules *)
+consumeAtPageBlock[tokens:{___?CSSTokenQ}] :=
+	Module[{pos = 1, l = Length[tokens], atMarginStart, atMarginEnd, dec, decStart, decEnd, declarations = {}},
+		Echo["In page block"];
+		(* skip any initial whitespace *)
+		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
+		
+		While[pos <= l,
+			Echo[tokens[[pos]], "token"];
+			Which[
+				(* page-margin at-rule *)
+				TokenTypeIs["at-keyword", pos, tokens] && TokenStringIs[Alternatives @@ $ValidPageMargins, pos, tokens], 
+					atMarginStart = atMarginEnd = pos; AdvancePosToNextBlock[atMarginEnd, l, tokens];
+					dec = consumeAtPageMarginRule[tokens[[atMarginStart ;; atMarginEnd]]];
+					Echo[dec];					
+					If[!FailureQ[dec], AppendTo[declarations, dec]];
+					pos = atMarginEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
+				,
+				(* CSS 2.1 property or new @Page properties size, marks, bleed, and page*)
+				TokenTypeIs["ident", pos, tokens] && TokenStringIs[Alternatives @@ Join[$ApplicableCSSPageProperties, {"size", "marks", "bleed", "page"}], pos, tokens],
+					decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
+					dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
+					If[!FailureQ[dec], 
+						Which[
+							TokenStringIs["margin" | "margin-top" | "margin-bottom" | "margin-left" | "margin-right", pos, tokens],
+								dec = convertMarginsToPrintingOptions[dec]
+							,
+							True, Null
+						];
+						AppendTo[declarations, dec]
+					];
+					pos = decEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
+				,
+				(* unrecognized rules are skipped *)
+				True, AdvancePosToNextSemicolon[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens];
+			]
+		];
+		declarations
+	]	
+	
+convertMarginsToPrintingOptions[declaration_?AssociationQ] :=
+	Module[{value},
+		If[!KeyExistsQ["Interpretation"] || FreeQ[declaration["Interpretation"], ImageMargins], Return @ declaration];
+		value = ImageMargins /. declaration["Interpretation"];
+		value = 
+			Replace[
+				value, 
+				{
+					(Left | Right)[Scaled[x_]] :> Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 1}]],
+					(Top | Bottom)[Scaled[x_]] :> Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 2}]]},
+				{2}
+			];
+		<|declaration, "Interpretation" -> PrintingOptions -> {"PrintingMargins" -> value}|>
+	]
+
+	
+
+(* ::Subsection:: *)
+(*Page-margin rules*)
+
+
+(*
+	FE page margins are not as flexible as in CSS, but we still get to decorate 
+	the top-left/center/right and bottom-left/center/right areas. However, the FE
+	implements these "margin areas" by overlaying three separate cells: 
+		Cell 1 [LEFT]:   has left margin 0 and FE forces TextAlignment->Left
+		Cell 2 [CENTER]: FE forces TextAlignment->Center
+		Cell 3 [RIGHT]:  has right margin 0 and FE forces TextAlignment->Right
+	Any specified TextAlignment option is ignored.
+	Since each cell spans the entire page width, they appear to be left/center/right.
+	But if you add CellFrame->True to any then you'll see that they indeed span the page width.
+	This behavior is unavoidable and breaks any attempt at using the CSS border property within page margins.
+	
+	The cells are vertically positioned at the baseline of the cell content
+	according to the value of PageHeaderMargins->{<<left page>>,<<right page>>} and
+	similarly for PageFooterMargins. If the option value is Automatic, the vertical position is
+	the cell content baseline anchored to the center of the margin area.	
+	
+	Per CSS, a page-margin box is generated if and only if the computed value of its content property is not 'none'.
+	The FE leaves the cell content blank so overlaying an empty cell has no visible effect.
+*)
+consumeAtPageMarginRule[tokens:{___?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], horizontal, vertical, declarations},
+		(* check for valid start of margin at-rule token sequence *)
+		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot[Alternatives @@ $ValidPageMargins, pos tokens],
+			Echo[Row[{"Expected a page-margin at-rule. Had instead ", tokens[[pos]]}], "@page error"];
+			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
+			Return @ {}
+		];
+		{horizontal, vertical} =
+			Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]],
+				"top-left",      {Left,   PageHeaders},
+				"top-center",    {Center, PageHeaders},
+				"top-right",     {Right,  PageHeaders},
+				"bottom-left",   {Left,   PageFooters},
+				"bottom-center", {Center, PageFooters},
+				"bottom-right",  {Right,  PageFooters},
+				_,               {None,   None}
+			];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		
+		(* check for valid block *)
+		If[TokenTypeIsNot["{}", pos, tokens], 
+			Echo[Row[{"Expected a page-margin block. Had instead ", tokens[[pos]]}], "@page-margin error"];
+			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
+			Return @ {}
+		];
+		declarations = consumeAtPageMarginBlock[tokens[[pos, 2 ;;]]];
+		vertical -> horizontal[declarations]
+	]
+
+
+(* 
+	An @page-margin {...} block contains only generic rules.
+	However, these rules must be converted into Cell[...] expressions, 
+	then passed on to the declaration format e.g.
+		<|..., Interpretation->PageHeaders->Left[Cell[...]]|> *)
+consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}] :=
+	Module[{pos = 1, l = Length[tokens], dec, decStart, decEnd, declarations = {}},
+		Echo["In page margin block"];
+		(* skip any initial whitespace *)
+		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
+		
+		While[pos <= l,
+			(* only a subset of CSS 2.1 properties are valid *)
+			If[TokenTypeIs["ident", pos, tokens] && TokenStringIs[Alternatives @@ $ApplicableCSSPageMarginProperties, pos, tokens],
+				decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
+				dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
+				If[!FailureQ[dec], AppendTo[declarations, dec]];
+				pos = decEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
+				,
+				AdvancePosToNextSemicolon[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens];
+			]
+		];
+		Echo[declarations, "Bfore resolve"];
+		ResolveCSSInterpretations[Cell, Flatten[Flatten[declarations][[All, "Interpretation"]]]]
+	]	
+
+
+(* ::Subsection:: *)
+(*Page selectors*)
+
+
+consumePageSelectorList[tokens:{__?CSSTokenQ}] :=
+	Module[{selectors},
+		selectors = DeleteCases[SplitBy[tokens, ","], {","}];
+		selectors = consumePageSelector /@ selectors;
+		If[AnyTrue[selectors, MissingQ], Return @ Missing["Not supported."]];
+		If[AnyTrue[selectors, FailureQ], Return @ FirstCase[selectors, _?FailureQ]];
+		If[Length[selectors] > 1, Missing["Not supported."], First @ selectors]
+	]
+consumePageSelectorList[{}] := All
+
+
+(* 
+	The FE does not allow for page selection beyond the first printed page. 
+	Even in the case of selecting for the first page, the FE only modifies the displayed headers and footers.
+	The FE does not distinguish between Left/Right pages except for displayed headers and footers and left/right margins.
+	The FE does not treat blank pages any differently than pages with content. *)
+consumePageSelector[tokens:{___?CSSTokenQ}] :=
+	Module[{pos = 1, l = Length[tokens], scope = All, page},
+		(* skip potential leading whitespace *)
+		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]];
+		
+		(* check for page identifier, which is not supported by FE *)
+		If[pos <= l && TokenTypeIs["ident", pos, tokens], 
+			page = CSSTokenString @ tokens[[pos]];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
+			(* until the FE supports this feature, bail out now as not supported *)
+			Return @ Missing["Not supported."]
+		];
+		
+		(* check for 0 or more pseudo-pages *)
+		While[pos <= l,
+			Switch[
+				CSSTokenType @ tokens[[pos]],
+				" ", Return @ Failure["UnexpectedParse", <|"Message" -> "@page pseudo-pages cannot contain whitespace."|>],
+				":",
+					pos++;
+					If[pos > l, Return @ Failure["UnexpectedParse", <|"Message" -> "Incomplete @page pseudo-page selector."|>]];
+					If[TokenTypeIs["ident", pos, tokens],
+						Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]],
+							"left",  scope = Left,
+							"right", scope = Right,
+							"first", scope = First,
+							"blank", Missing["Not supported."],
+							_,       Return @ Failure["UnexpectedParse", <|"Message" -> "Unrecognized @page pseudo-page " <> CSSTokenString @ tokens[[pos]] <> "."|>]
+						]
+						,
+						Return @ Failure["UnexpectedParse", <|"Message" -> "Invalid @page pseudo-page " <> CSSTokenString @ tokens[[pos]] <> "."|>]
+					],
+				_, Return @ Failure["UnexpectedParse", <|"Message" -> "Expected @page pseudo-page selector."|>]
+			];
+			pos++
+		];
+		scope
+	]
+
+
+(* ::Section:: *)
 (*New Properties*)
 
 
@@ -176,13 +432,13 @@ AssociateTo[CSSPropertyData,
 
 
 (* new interpreters *)
-(* Notes on page box size vs paper size
-	The page consists of the page sheet (medium on which the content is printed) which has its own size. 
+(* Notes on page box size vs paper box
+	The page consists of the paper box (medium on to which the content is printed) which has its own size. 
 		WL: PrintingOptions -> {"PaperSize" -> {<<width>>, <<height>>}} where size is in points (72 points per inch)		
-	The page box contains the page content and margins; its size can be separately specified. 
+	The page box sits within the paper box and contains the page content and margins; its size can be separately specified. 
 		WL: PrintingOptions -> {"PageSize" -> {<<width>>, <<height>>}} where size is in points (72 points per inch)		
 	Normally these two are the same size, but they don't have to be. 
-	AFAICT the CSS does not control the size of the page box, only the paper size. *)
+	AFAICT the CSS does not control the size of the page box, only the paper box. *)
 consumeProperty[prop:"size", tokens:{__?CSSTokenQ}] := 
 	Module[{pos = 1, l = Length[tokens], paperSizes, paperOrientations, value1 = {}, value2 = {}},
 		paperSizes = {"a5", "a4", "a3", "b5", "b4", "jis-b5", "jis-b4", "letter", "legal", "ledger"};
@@ -357,224 +613,6 @@ consumeProperty[prop:"page", tokens:{__?CSSTokenQ}] :=
 				_, unrecognizedValueFailure @ prop
 			];
 		If[FailureQ[value], value, Missing["Not supported."]]
-	]
-
-
-(* ::Section:: *)
-(*@page token sequence consumer*)
-
-
-(* ::Subsection:: *)
-(*Main @page rule*)
-
-
-SetAttributes[{consumeAtPageRule}, HoldFirst];
-
-consumeAtPageRule[pos_, l_, tokens_] := 
-	Module[{selectorsStart, selectorsEnd, pageSelectors},
-		(* check for valid start of @page token sequence *)
-		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot["page", pos, tokens],
-			Echo[Row[{"Expected @page keyword. Had instead ", tokens[[pos]]}], "@page error"];
-			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
-			Return @ {}
-			,
-			AdvancePosAndSkipWhitespace[pos, l, tokens]
-		];
-		
-		(* 
-			consume optional page selector list 
-			Following CSS selectors, if any of the comma-delimited selectors do not match, all are ignored. *)
-		If[TokenTypeIsNot["{}", pos, tokens], 
-			selectorsStart = pos; AdvancePosToNextBlock[pos, l, tokens]; 
-			selectorsEnd = pos; RetreatPosAndSkipWhitespace[selectorsEnd, l, tokens];
-			pageSelectors = 
-				If[selectorsEnd < selectorsStart,
-					consumePageSelectorList[{}]
-					,
-					consumePageSelectorList[tokens[[selectorsStart ;; selectorsEnd]]]
-				];
-			,
-			pageSelectors = consumePageSelectorList[{}];
-		];
-		Echo[pageSelectors, "pageSelectors"];
-		
-		(* consume @page block *)
-		consumeAtPageBlock[Echo[tokens[[pos, 2 ;; ]], "block tokens"]]	
-	]
-
-
-(* The @page {...} block contains either additional page-margin at-rules or generic rules *)
-consumeAtPageBlock[tokens:{___?CSSTokenQ}] :=
-	Module[{pos = 1, l = Length[tokens], atMarginStart, atMarginEnd, dec, decStart, decEnd, declarations = {}},
-		Echo["In page block"];
-		(* skip any initial whitespace *)
-		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
-		
-		While[pos <= l,
-			Echo[tokens[[pos]], "token"];
-			Which[
-				(* page-margin at-rule *)
-				TokenTypeIs["at-keyword", pos, tokens] && TokenStringIs[Alternatives @@ $ValidPageMargins, pos, tokens], 
-					atMarginStart = atMarginEnd = pos; AdvancePosToNextBlock[atMarginEnd, l, tokens];
-					dec = consumeAtPageMarginRule[tokens[[atMarginStart ;; atMarginEnd]]];
-					Echo[dec];					
-					If[!FailureQ[dec], AppendTo[declarations, dec]];
-					pos = atMarginEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
-				,
-				(* CSS 2.1 property or new @Page properties size, marks, bleed, and page*)
-				TokenTypeIs["ident", pos, tokens] && TokenStringIs[Alternatives @@ Join[$ApplicableCSSPageProperties, {"size", "marks", "bleed", "page"}], pos, tokens],
-					decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
-					dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
-					If[!FailureQ[dec], AppendTo[declarations, dec]];
-					pos = decEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
-				,
-				(* unrecognized rules are skipped *)
-				True, AdvancePosToNextSemicolon[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens];
-			]
-		];
-		declarations
-	]	
-	
-
-(* ::Subsection:: *)
-(*Page-margin rules*)
-
-
-(*
-	FE page margins are not as flexible as in CSS, but we still get to decorate 
-	the top-left/center/right and bottom-left/center/right areas. However, the FE
-	implements these "margin areas" by overlaying three separate cells: 
-		Cell 1 [LEFT]:   has left margin 0 and FE forces TextAlignment->Left
-		Cell 2 [CENTER]: FE forces TextAlignment->Center
-		Cell 3 [RIGHT]:  has right margin 0 and FE forces TextAlignment->Right
-	Any specified TextAlignment option is ignored.
-	Since each cell spans the entire page width, they appear to be left/center/right.
-	But if you add CellFrame->True to any then you'll see that they indeed span the page width.
-	This behavior is unavoidable and breaks any attempt at using the CSS border property within page margins.
-	
-	The cells are vertically positioned at the baseline of the cell content
-	according to the value of PageHeaderMargins->{<<left page>>,<<right page>>} and
-	similarly for PageFooterMargins. If the option value is Automatic, the vertical position is
-	the cell content baseline anchored to the center of the margin area.	
-	
-	Per CSS, a page-margin box is generated if and only if the computed value of its content property is not 'none'.
-	The FE leaves the cell content blank so overlaying an empty cell has no visible effect.
-*)
-consumeAtPageMarginRule[tokens:{___?CSSTokenQ}] := 
-	Module[{pos = 1, l = Length[tokens], horizontal, vertical, declarations},
-		(* check for valid start of margin at-rule token sequence *)
-		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot[Alternatives @@ $ValidPageMargins, pos tokens],
-			Echo[Row[{"Expected a page-margin at-rule. Had instead ", tokens[[pos]]}], "@page error"];
-			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
-			Return @ {}
-		];
-		{horizontal, vertical} =
-			Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]],
-				"top-left",      {Left,   PageHeaders},
-				"top-center",    {Center, PageHeaders},
-				"top-right",     {Right,  PageHeaders},
-				"bottom-left",   {Left,   PageFooters},
-				"bottom-center", {Center, PageFooters},
-				"bottom-right",  {Right,  PageFooters},
-				_,               {None,   None}
-			];
-		AdvancePosAndSkipWhitespace[pos, l, tokens];
-		
-		(* check for valid block *)
-		If[TokenTypeIsNot["{}", pos, tokens], 
-			Echo[Row[{"Expected a page-margin block. Had instead ", tokens[[pos]]}], "@page-margin error"];
-			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
-			Return @ {}
-		];
-		declarations = consumeAtPageMarginBlock[tokens[[pos, 2 ;;]]];
-		vertical -> horizontal[declarations]
-	]
-
-
-(* 
-	An @page-margin {...} block contains only generic rules.
-	However, these rules must be converted into Cell[...] expressions, 
-	then passed on to the declaration format e.g.
-		<|..., Interpretation->PageHeaders->Left[Cell[...]]|> *)
-consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}] :=
-	Module[{pos = 1, l = Length[tokens], dec, decStart, decEnd, declarations = {}},
-		Echo["In page margin block"];
-		(* skip any initial whitespace *)
-		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
-		
-		While[pos <= l,
-			(* only a subset of CSS 2.1 properties are valid *)
-			If[TokenTypeIs["ident", pos, tokens] && TokenStringIs[Alternatives @@ $ApplicableCSSPageMarginProperties, pos, tokens],
-				decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
-				dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
-				If[!FailureQ[dec], AppendTo[declarations, dec]];
-				pos = decEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
-				,
-				AdvancePosToNextSemicolon[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens];
-			]
-		];
-		Echo[declarations, "Bfore resolve"];
-		ResolveCSSInterpretations[Cell, Flatten[Flatten[declarations][[All, "Interpretation"]]]]
-	]	
-
-
-(* ::Subsection:: *)
-(*Page selectors*)
-
-
-consumePageSelectorList[tokens:{__?CSSTokenQ}] :=
-	Module[{selectors},
-		selectors = DeleteCases[SplitBy[tokens, ","], {","}];
-		selectors = consumePageSelector /@ selectors;
-		If[AnyTrue[selectors, MissingQ], Return @ Missing["Not supported."]];
-		If[AnyTrue[selectors, FailureQ], Return @ FirstCase[selectors, _?FailureQ]];
-		If[Length[selectors] > 1, Missing["Not supported."], First @ selectors]
-	]
-consumePageSelectorList[{}] := All
-
-
-(* 
-	The FE does not allow for page selection beyond the first printed page. 
-	Even in the case of selecting for the first page, the FE only modifies the displayed headers and footers.
-	The FE does not distinguish between Left/Right pages except for displayed headers and footers and left/right margins.
-	The FE does not treat blank pages any differently than pages with content. *)
-consumePageSelector[tokens:{___?CSSTokenQ}] :=
-	Module[{pos = 1, l = Length[tokens], scope = All, page},
-		(* skip potential leading whitespace *)
-		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]];
-		
-		(* check for page identifier, which is not supported by FE *)
-		If[pos <= l && TokenTypeIs["ident", pos, tokens], 
-			page = CSSTokenString @ tokens[[pos]];
-			AdvancePosAndSkipWhitespace[pos, l, tokens];
-			(* until the FE supports this feature, bail out now as not supported *)
-			Return @ Missing["Not supported."]
-		];
-		
-		(* check for 0 or more pseudo-pages *)
-		While[pos <= l,
-			Switch[
-				CSSTokenType @ tokens[[pos]],
-				" ", Return @ Failure["UnexpectedParse", <|"Message" -> "@page pseudo-pages cannot contain whitespace."|>],
-				":",
-					pos++;
-					If[pos > l, Return @ Failure["UnexpectedParse", <|"Message" -> "Incomplete @page pseudo-page selector."|>]];
-					If[TokenTypeIs["ident", pos, tokens],
-						Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]],
-							"left",  scope = Left,
-							"right", scope = Right,
-							"first", scope = First,
-							"blank", Missing["Not supported."],
-							_,       Return @ Failure["UnexpectedParse", <|"Message" -> "Unrecognized @page pseudo-page " <> CSSTokenString @ tokens[[pos]] <> "."|>]
-						]
-						,
-						Return @ Failure["UnexpectedParse", <|"Message" -> "Invalid @page pseudo-page " <> CSSTokenString @ tokens[[pos]] <> "."|>]
-					],
-				_, Return @ Failure["UnexpectedParse", <|"Message" -> "Expected @page pseudo-page selector."|>]
-			];
-			pos++
-		];
-		scope
 	]
 
 

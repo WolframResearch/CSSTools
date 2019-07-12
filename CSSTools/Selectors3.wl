@@ -4,11 +4,7 @@
 (*Package Header*)
 
 
-BeginPackage["Selectors3`", {"GeneralUtilities`"}];
-
-SetUsage[Selector, "\
-Selector[selector$, XMLObject$] returns the CSS selector$ specificity and positions of XMLElement expressions in XMLObject$. 
-Position[XMLObject$, Selector[selector$]] returns only the positions of XMLElement expressions."];
+BeginPackage["CSSTools`Selectors3`", {"CSSTools`"}];
 
 Begin["`Private`"];
 
