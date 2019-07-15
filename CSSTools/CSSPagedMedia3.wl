@@ -176,20 +176,20 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 				If[selectorsEnd < selectorsStart,
 					consumePageSelectorList[{}]
 					,
-					consumePageSelectorList[tokens[[selectorsStart ;; selectorsEnd]]]
+					consumePageSelectorList[Echo @ tokens[[selectorsStart ;; selectorsEnd]]]
 				];
 			,
 			pageSelectors = consumePageSelectorList[{}];
 		];
-		Echo[pageSelectors, "pageSelectors"];
+		Echo[pageSelectors, "page selectors"];
 		
 		(* consume @page block *)
-		consumeAtPageBlock[Echo[tokens[[pos, 2 ;; ]], "block tokens"]]	
+		consumeAtPageBlock[tokens[[pos, 2 ;; ]], pageSelectors]	
 	]
 
 
 (* The @page {...} block contains either additional page-margin at-rules or generic rules *)
-consumeAtPageBlock[tokens:{___?CSSTokenQ}] :=
+consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 	Module[{pos = 1, l = Length[tokens], atMarginStart, atMarginEnd, dec, decStart, decEnd, declarations = {}},
 		Echo["In page block"];
 		(* skip any initial whitespace *)
@@ -201,8 +201,7 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}] :=
 				(* page-margin at-rule *)
 				TokenTypeIs["at-keyword", pos, tokens] && TokenStringIs[Alternatives @@ $ValidPageMargins, pos, tokens], 
 					atMarginStart = atMarginEnd = pos; AdvancePosToNextBlock[atMarginEnd, l, tokens];
-					dec = consumeAtPageMarginRule[tokens[[atMarginStart ;; atMarginEnd]]];
-					Echo[dec];					
+					dec = consumeAtPageMarginRule[tokens[[atMarginStart ;; atMarginEnd]], scope];
 					If[!FailureQ[dec], AppendTo[declarations, dec]];
 					pos = atMarginEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
 				,
@@ -213,7 +212,8 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}] :=
 					If[!FailureQ[dec], 
 						Which[
 							TokenStringIs["margin" | "margin-top" | "margin-bottom" | "margin-left" | "margin-right", pos, tokens],
-								dec = convertMarginsToPrintingOptions[dec]
+								dec = convertMarginsToPrintingOptions[dec, scope];
+								dec = dec /. head:((Left | Right | Bottom | Top)[_]) :> scope[head]
 							,
 							True, Null
 						];
@@ -228,19 +228,31 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}] :=
 		declarations
 	]	
 	
-convertMarginsToPrintingOptions[declaration_?AssociationQ] :=
+convertMarginsToPrintingOptions[declaration_?AssociationQ, scope_] :=
 	Module[{value},
 		If[!KeyExistsQ["Interpretation"] || FreeQ[declaration["Interpretation"], ImageMargins], Return @ declaration];
-		value = ImageMargins /. declaration["Interpretation"];
+		value = Flatten[{ImageMargins /. declaration["Interpretation"]}];
 		value = 
 			Replace[
 				value, 
 				{
-					(Left | Right)[Scaled[x_]] :> Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 1}]],
-					(Top | Bottom)[Scaled[x_]] :> Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 2}]]},
-				{2}
+					(h:Left | Right)[Scaled[x_]] :> h @ Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 1}]],
+					(h:Top | Bottom)[Scaled[x_]] :> h @ Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 2}]]},
+				{1}
 			];
-		<|declaration, "Interpretation" -> PrintingOptions -> {"PrintingMargins" -> value}|>
+		Echo[value, "value"];
+		<|
+			declaration, 
+			"Interpretation" -> 
+				PrintingOptions -> {
+					Which[
+						MatchQ[scope, Left | Right],  
+							"InnerOuterMargins" -> {
+								FirstCase[value, x:Left[_] :> x, Nothing],
+								FirstCase[value, x:Right[_] :> x, Nothing]},
+						MatchQ[scope, First], Missing["Not supported."],
+						True, "PrintingMargins" -> value
+					]}|>
 	]
 
 	
@@ -269,8 +281,8 @@ convertMarginsToPrintingOptions[declaration_?AssociationQ] :=
 	Per CSS, a page-margin box is generated if and only if the computed value of its content property is not 'none'.
 	The FE leaves the cell content blank so overlaying an empty cell has no visible effect.
 *)
-consumeAtPageMarginRule[tokens:{___?CSSTokenQ}] := 
-	Module[{pos = 1, l = Length[tokens], horizontal, vertical, declarations},
+consumeAtPageMarginRule[tokens:{___?CSSTokenQ}, scope_] := 
+	Module[{pos = 1, l = Length[tokens], horizontal, vertical, location},
 		(* check for valid start of margin at-rule token sequence *)
 		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot[Alternatives @@ $ValidPageMargins, pos tokens],
 			Echo[Row[{"Expected a page-margin at-rule. Had instead ", tokens[[pos]]}], "@page error"];
@@ -278,7 +290,7 @@ consumeAtPageMarginRule[tokens:{___?CSSTokenQ}] :=
 			Return @ {}
 		];
 		{horizontal, vertical} =
-			Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]],
+			Switch[location = ToLowerCase @ CSSTokenString @ tokens[[pos]],
 				"top-left",      {Left,   PageHeaders},
 				"top-center",    {Center, PageHeaders},
 				"top-right",     {Right,  PageHeaders},
@@ -295,8 +307,7 @@ consumeAtPageMarginRule[tokens:{___?CSSTokenQ}] :=
 			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
 			Return @ {}
 		];
-		declarations = consumeAtPageMarginBlock[tokens[[pos, 2 ;;]]];
-		vertical -> horizontal[declarations]
+		consumeAtPageMarginBlock[tokens[[pos, 2 ;;]], scope, "@" <> location, horizontal, vertical]
 	]
 
 
@@ -305,9 +316,8 @@ consumeAtPageMarginRule[tokens:{___?CSSTokenQ}] :=
 	However, these rules must be converted into Cell[...] expressions, 
 	then passed on to the declaration format e.g.
 		<|..., Interpretation->PageHeaders->Left[Cell[...]]|> *)
-consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}] :=
-	Module[{pos = 1, l = Length[tokens], dec, decStart, decEnd, declarations = {}},
-		Echo["In page margin block"];
+consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}, scope_, location_String, horizontal_, vertical_] :=
+	Module[{pos = 1, l = Length[tokens], dec, decStart, decEnd, declarations = {}, interpretation},
 		(* skip any initial whitespace *)
 		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
 		
@@ -322,8 +332,24 @@ consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}] :=
 				AdvancePosToNextSemicolon[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens];
 			]
 		];
-		Echo[declarations, "Bfore resolve"];
-		ResolveCSSInterpretations[Cell, Flatten[Flatten[declarations][[All, "Interpretation"]]]]
+		interpretation =
+			With[{res = ResolveCSSInterpretations[Cell, Flatten[Flatten[declarations][[All, "Interpretation"]]]]},
+				Cell[
+					TextData[Apply[Identity, DisplayFunction /. res]], 
+					If[StringContainsQ[location, "top"], "Header", "Footer"],
+					Sequence @@ DeleteCases[res, _[DisplayFunction, _]]
+				]
+			];
+		<|
+			"Important" -> False,
+			"Property" -> location,
+			"Value" -> Dataset @ declarations,
+			"Interpretation" -> 
+				Which[
+					MatchQ[scope, Left | Right], vertical -> scope @ horizontal @ interpretation,
+					MatchQ[scope, First],        Missing["Not supported."],
+					True,                        vertical -> {Left @ horizontal @ interpretation, Right @ horizontal @ interpretation}
+				]|>
 	]	
 
 
@@ -333,7 +359,7 @@ consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}] :=
 
 consumePageSelectorList[tokens:{__?CSSTokenQ}] :=
 	Module[{selectors},
-		selectors = DeleteCases[SplitBy[tokens, ","], {","}];
+		selectors = DeleteCases[SplitBy[tokens, MatchQ[","]], {","}];
 		selectors = consumePageSelector /@ selectors;
 		If[AnyTrue[selectors, MissingQ], Return @ Missing["Not supported."]];
 		If[AnyTrue[selectors, FailureQ], Return @ FirstCase[selectors, _?FailureQ]];
@@ -470,7 +496,8 @@ consumeProperty[prop:"size", tokens:{__?CSSTokenQ}] :=
 					Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]],
 						"auto", {"PageSize" -> {Automatic, Automatic}, "PaperSize" -> {Automatic, Automatic}},
 						_,      unrecognizedKeyWordFailure @ prop
-					]
+					];
+				AdvancePosAndSkipWhitespace[pos, l, tokens];
 			,
 			(* case of lengths *)
 			TokenTypeIs["dimension", pos, tokens],
@@ -491,6 +518,7 @@ consumeProperty[prop:"size", tokens:{__?CSSTokenQ}] :=
 			(* fallthrough *)
 			True, value1 = unrecognizedValueFailure @ prop
 		];
+		If[pos <= l, Return @ tooManyTokensFailure @ tokens];
 		If[FailureQ[value1], Return @ value1];
 		If[FailureQ[value2], Return @ value2];
 		"PrintingOptions" -> Join[value1, value2]

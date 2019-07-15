@@ -55,9 +55,9 @@ Position[XMLObject$, Selector[selector$]] returns only the positions of XMLEleme
 System`CellFrameStyle; 
 System`Box;
 
-Needs["CSSTools`CSSPropertyInterpreter`"]   (* needs to be loaded first to define basic CSS 2.1 properties *)
-Needs["CSSTools`CSSColors4`"];              (* redefines parseSingleColor first defined in CSSPropertyInterpreter *)
-Needs["CSSTools`CSSStyleSheetInterpreter`"] (* defines consumeDeclaration *)
+Get["CSSTools`CSSPropertyInterpreter`"]   (* needs to be loaded first to define basic CSS 2.1 properties *)
+Get["CSSTools`CSSColors4`"];              (* redefines parseSingleColor first defined in CSSPropertyInterpreter *)
+Get["CSSTools`CSSStyleSheetInterpreter`"] (* defines consumeDeclaration *)
 
 ImportExport`RegisterImport[
 	"CSS",

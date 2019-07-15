@@ -344,7 +344,7 @@ cellLevelOptions =
 		CellBaseline, CellDingbat, CellMargins, 
 		CellFrame, CellFrameColor, CellFrameLabelMargins, CellFrameLabels, CellFrameMargins, CellFrameStyle, 
 		CellLabel, CellLabelMargins, CellLabelPositioning, CellLabelStyle, 
-		CounterIncrements, CounterAssignments,
+		CounterIncrements, CounterAssignments, DisplayFunction, (* used to hold cell content *)
 		FontColor, FontFamily, FontSize, FontSlant, FontTracking, FontVariations, FontWeight, 
 		LineIndent, LineSpacing, ParagraphIndent, ShowContents, TextAlignment,
 		PageBreakBelow, PageBreakAbove, PageBreakWithin, GroupPageBreakWithin};
