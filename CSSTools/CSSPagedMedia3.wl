@@ -16,7 +16,9 @@ consumeAtPageRule;
 (* CSSPropertyInterpreter` 
 	---> defines consumeProperty and CSSPropertyData *)
 (* CSSStyleSheetInterpreter`
-	---> defines consumeDeclaration *)
+	---> defines consumeDeclaration
+	---> defines notebookLevelOptions
+	---> defines consumeAtPageRule, consumeAtPageBlock, convertMarginsToPrintingOptions *)
 
 Needs["CSSTools`CSSTokenizer`"]; 
 Needs["CSSTools`CSSPropertyInterpreter`"];
@@ -31,7 +33,7 @@ Needs["CSSTools`CSSStyleSheetInterpreter`"];
 		bleed: set whether page box content extends outside of the page box margins and into the page sheet [FE not supported]
 		marks: set whether to show crop marks if the page box size is smaller than the page sheet size [FE partial support]
 	TODO: It also modifies how the CSS page properties merge while resolving the CSS cascade. 
-	All CSS @page options fall under the FE option "PrintingOptions" so must be carefully merged.
+	All CSS @page options fall under the FE option PrintingOptions so must be carefully merged.
 *)
 
 Begin["`Private`"]; (* Begin Private Context *) 
@@ -169,19 +171,14 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 		(* 
 			consume optional page selector list 
 			Following CSS selectors, if any of the comma-delimited selectors do not match, all are ignored. *)
-		If[TokenTypeIsNot["{}", pos, tokens], 
-			selectorsStart = pos; AdvancePosToNextBlock[pos, l, tokens]; 
-			selectorsEnd = pos; RetreatPosAndSkipWhitespace[selectorsEnd, l, tokens];
-			pageSelectors = 
-				If[selectorsEnd < selectorsStart,
-					consumePageSelectorList[{}]
-					,
-					consumePageSelectorList[Echo @ tokens[[selectorsStart ;; selectorsEnd]]]
-				];
-			,
-			pageSelectors = consumePageSelectorList[{}];
-		];
-		Echo[pageSelectors, "page selectors"];
+		pageSelectors = 
+			If[TokenTypeIsNot["{}", pos, tokens], 
+				selectorsStart = pos; AdvancePosToNextBlock[pos, l, tokens]; 
+				selectorsEnd = pos; RetreatPosAndSkipWhitespace[selectorsEnd, l, tokens];
+				consumePageSelectorList[If[selectorsEnd < selectorsStart, {}, tokens[[selectorsStart ;; selectorsEnd]]]]
+				,
+				consumePageSelectorList[{}];
+			];
 		
 		(* consume @page block *)
 		consumeAtPageBlock[tokens[[pos, 2 ;; ]], pageSelectors]	
@@ -191,12 +188,10 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 (* The @page {...} block contains either additional page-margin at-rules or generic rules *)
 consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 	Module[{pos = 1, l = Length[tokens], atMarginStart, atMarginEnd, dec, decStart, decEnd, declarations = {}},
-		Echo["In page block"];
 		(* skip any initial whitespace *)
 		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
 		
 		While[pos <= l,
-			Echo[tokens[[pos]], "token"];
 			Which[
 				(* page-margin at-rule *)
 				TokenTypeIs["at-keyword", pos, tokens] && TokenStringIs[Alternatives @@ $ValidPageMargins, pos, tokens], 
@@ -240,7 +235,6 @@ convertMarginsToPrintingOptions[declaration_?AssociationQ, scope_] :=
 					(h:Top | Bottom)[Scaled[x_]] :> h @ Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 2}]]},
 				{1}
 			];
-		Echo[value, "value"];
 		<|
 			declaration, 
 			"Interpretation" -> 
@@ -334,10 +328,15 @@ consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}, scope_, location_String, horizo
 		];
 		interpretation =
 			With[{res = ResolveCSSInterpretations[Cell, Flatten[Flatten[declarations][[All, "Interpretation"]]]]},
-				Cell[
-					TextData[Apply[Identity, DisplayFunction /. res]], 
-					If[StringContainsQ[location, "top"], "Header", "Footer"],
-					Sequence @@ DeleteCases[res, _[DisplayFunction, _]]
+				With[{v = DisplayFunction /. res},
+					If[MatchQ[v, Normal | None],
+						None
+						,
+						Cell[
+							TextData[Apply[Identity, v]], 
+							If[StringContainsQ[location, "top"], "Header", "Footer"],
+							Sequence @@ DeleteCases[res, _[DisplayFunction, _]]]
+					]
 				]
 			];
 		<|
@@ -451,6 +450,54 @@ AssociateTo[CSSPropertyData,
 					PrintingOptions -> {
 						"PageSize"  -> {Automatic, Automatic},
 						"PaperSize" -> {Automatic, Automatic}}|>|>}];
+						
+Map[
+	If[FreeQ[notebookLevelOptions, #], AppendTo[notebookLevelOptions, #]]&,
+	{PrintingOptions, PageHeaders, PageFooters}];
+
+
+assemble[opt:(PageHeaders | PageFooters), rules_] := 
+	Module[{orderedRules = Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x]},
+		opt -> {
+			(* left page *)
+			{
+				FirstCase[orderedRules, Left[Left[x_]] :> x,   None, {1}],
+				FirstCase[orderedRules, Left[Center[x_]] :> x, None, {1}],
+				FirstCase[orderedRules, Left[Right[x_]] :> x,  None, {1}]},
+			(* right page *)
+			{
+				FirstCase[orderedRules, Right[Left[x_]] :> x,   None, {1}],
+				FirstCase[orderedRules, Right[Center[x_]] :> x, None, {1}],
+				FirstCase[orderedRules, Right[Right[x_]] :> x,  None, {1}]}}
+	]
+
+(* PrintingOptions is a list of suboptions. These suboptions need to be assembled.*)
+assemble[opt:PrintingOptions, rules_List] := 
+	Module[{subOptions},
+		subOptions = Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x];
+		assemble[#, subOptions]& /@ Union[First /@ subOptions]
+	]
+
+(* PrintingOptions suboption assembly *)
+assemble[opt:("PageSize" | "PaperSize"), rules_] := opt -> Last @ Cases[rules, HoldPattern[opt -> x_] :> x]
+
+assemble[opt:"InnerOuterMargins", rules_] := 
+	Module[{pageSide, orderedRules = Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x]},
+		(* InnerOuterMargins only appears if a Left/Right page was detected *)
+		(* get page side *)
+		pageSide = getSideFromLRBTDirective[orderedRules, Left];
+		If[pageSide === {}, pageSide = getSideFromLRBTDirective[orderedRules, Right]];
+		{Last @ getSideFromLRBTDirective[pageSide, Left], Last @ getSideFromLRBTDirective[pageSide, Right]}
+	]
+	
+assemble[opt:"PrintingMargins", rules_] := 
+	Module[{orderedRules = Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x]},
+		opt -> {
+			(* left/right *)
+			{FirstCase[orderedRules, All[Left[x_]] :> x, Automatic], FirstCase[orderedRules, All[Right[x_]] :> x, Automatic]},
+			(* bottom/top *)
+			{FirstCase[orderedRules, All[Bottom[x_]] :> x, Automatic], FirstCase[orderedRules, All[Top[x_]] :> x, Automatic]}}
+	]
 
 
 (* ::Subsection:: *)
@@ -521,7 +568,7 @@ consumeProperty[prop:"size", tokens:{__?CSSTokenQ}] :=
 		If[pos <= l, Return @ tooManyTokensFailure @ tokens];
 		If[FailureQ[value1], Return @ value1];
 		If[FailureQ[value2], Return @ value2];
-		"PrintingOptions" -> Join[value1, value2]
+		PrintingOptions -> Join[value1, value2]
 	]
 	
 parseSinglePaperSize[prop_String, token_?CSSTokenQ] :=

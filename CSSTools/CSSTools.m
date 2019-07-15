@@ -56,8 +56,9 @@ System`CellFrameStyle;
 System`Box;
 
 Get["CSSTools`CSSPropertyInterpreter`"]   (* needs to be loaded first to define basic CSS 2.1 properties *)
-Get["CSSTools`CSSColors4`"];              (* redefines parseSingleColor first defined in CSSPropertyInterpreter *)
-Get["CSSTools`CSSStyleSheetInterpreter`"] (* defines consumeDeclaration *)
+Get["CSSTools`CSSStyleSheetInterpreter`"] (* defines basic stylesheet token consumers and CSS cascade *)
+Get["CSSTools`CSSColors4`"];              (* redefines parseSingleColor (first defined in CSSPropertyInterpreter) *)
+Get["CSSTools`CSSPagedMedia3`"]           (* redefines @page token consumer (first defined in CSSStyleSheetInterpreter) *)
 
 ImportExport`RegisterImport[
 	"CSS",

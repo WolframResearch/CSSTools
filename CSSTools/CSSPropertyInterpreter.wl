@@ -653,51 +653,61 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "N/A", 
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> {
-				ImageMargins -> Through[{Left, Right, Bottom, Top}[Inherited]],
-				CellMargins  -> Through[{Left, Right, Bottom, Top}[Inherited]]},
+				ImageMargins    -> Through[{Left, Right, Bottom, Top}[Inherited]],
+				CellMargins     -> Through[{Left, Right, Bottom, Top}[Inherited]],
+				PrintingOptions -> {"PrintingMargins" -> Through[{Left, Right, Bottom, Top}[Inherited]]}},
 			"initial" -> {
-				ImageMargins -> Through[{Left, Right, Bottom, Top}[0]],
-				CellMargins  -> Through[{Left, Right, Bottom, Top}[0]]}|>|>, 
+				ImageMargins    -> Through[{Left, Right, Bottom, Top}[0]],
+				CellMargins     -> Through[{Left, Right, Bottom, Top}[0]],
+				PrintingOptions -> {"PrintingMargins" -> Through[{Left, Right, Bottom, Top}[0]]}}|>|>, 
 	"margin-top" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> {
-				ImageMargins -> Top @ Inherited,
-				CellMargins  -> Top @ Inherited},
+				ImageMargins    -> Top @ Inherited,
+				CellMargins     -> Top @ Inherited,
+				PrintingOptions -> {"PrintingMargins" -> Top @ Inherited}},
 			"initial" -> {
-				ImageMargins -> Top @ 0,
-				CellMargins  -> Top @ 0}|>|>,
+				ImageMargins    -> Top @ 0,
+				CellMargins     -> Top @ 0,
+				PrintingOptions -> {"PrintingMargins" -> Top @ 0}}|>|>,
 	"margin-right" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> {
-				ImageMargins -> Right @ Inherited,
-				CellMargins  -> Right @ Inherited},
+				ImageMargins    -> Right @ Inherited,
+				CellMargins     -> Right @ Inherited,
+				PrintingOptions -> {"PrintingMargins" -> Right @ Inherited}},
 			"initial" -> {
-				ImageMargins -> Right @ 0,
-				CellMargins  -> Right @ 0}|>|>,
+				ImageMargins    -> Right @ 0,
+				CellMargins     -> Right @ 0,
+				PrintingOptions -> {"PrintingMargins" -> Right @ 0}}|>|>,
 	"margin-bottom" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> {
-				ImageMargins -> Bottom @ Inherited,
-				CellMargins  -> Bottom @ Inherited},
+				ImageMargins    -> Bottom @ Inherited,
+				CellMargins     -> Bottom @ Inherited,
+				PrintingOptions -> {"PrintingMargins" -> Bottom @ Inherited}},
 			"initial" -> {
-				ImageMargins -> Bottom @ 0,
-				CellMargins  -> Bottom @ 0}|>|>,
+				ImageMargins    -> Bottom @ 0,
+				CellMargins     -> Bottom @ 0,
+				PrintingOptions -> {"PrintingMargins" -> Bottom @ 0}}|>|>,
 	"margin-left" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> {
-				ImageMargins -> Left @ Inherited,
-				CellMargins  -> Left @ Inherited},
+				ImageMargins    -> Left @ Inherited,
+				CellMargins     -> Left @ Inherited,
+				PrintingOptions -> {"PrintingMargins" -> Left @ Inherited}},
 			"initial" -> {
-				ImageMargins -> Left @ 0,
-				CellMargins  -> Left @ 0}|>|>,
+				ImageMargins    -> Left @ 0,
+				CellMargins     -> Left @ 0,
+				PrintingOptions -> {"PrintingMargins" -> Left @ 0}}|>|>,
 	"max-height" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
@@ -1824,8 +1834,8 @@ consumeProperty[prop:"content", tokens:{__?CSSTokenQ}] :=
 				Switch[CSSTokenType @ tokens[[pos]],
 					"ident", 
 						Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]],
-							"normal",         Normal,
-							"none",           None,
+							"normal",         If[pos > 1, Return @ tooManyTokensFailure @ tokens, Normal],
+							"none",           If[pos > 1, Return @ tooManyTokensFailure @ tokens, None],
 							"open-quote",     Missing["Not supported."],
 							"close-quote",    Missing["Not supported."],
 							"no-open-quote",  Missing["Not supported."],
@@ -1853,11 +1863,7 @@ consumeProperty[prop:"content", tokens:{__?CSSTokenQ}] :=
 			AppendTo[parsedValues, value];
 			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
-		Which[
-			Count[parsedValues, None] > 1,   repeatedPropValueFailure @ "none",
-			Count[parsedValues, Normal] > 1, repeatedPropValueFailure @ "normal",
-			True,                            With[{p = parsedValues}, DisplayFunction -> Function[RowBox[p]]]
-		]
+		With[{p = parsedValues}, DisplayFunction -> If[MatchQ[p, {Normal | None}], First @ p, Function[RowBox[p]]]]
 	]
 
 
@@ -2654,7 +2660,7 @@ consumeProperty[prop:"margin-top" | "margin-right" | "margin-bottom" | "margin-l
 			value
 			, 
 			wrapper = Switch[prop, "margin-left", Left, "margin-right", Right, "margin-bottom", Bottom, "margin-top", Top];
-			{ImageMargins -> wrapper[value], CellMargins -> wrapper[value]}
+			{ImageMargins -> wrapper[value], CellMargins -> wrapper[value], PrintingOptions -> {"PrintingMargins" -> wrapper[value]}}
 		]
 	]
 		
@@ -2674,7 +2680,7 @@ consumeProperty[prop:"margin", tokens:{__?CSSTokenQ}] :=
 				4, {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
 				_, Return @ tooManyTokensFailure @ tokens
 			];
-		{ImageMargins -> results, CellMargins -> results}
+		{ImageMargins -> results, CellMargins -> results, PrintingOptions -> {"PrintingMargins" -> results}}
 	]
 
 parseSingleMargin[prop_String, token_?CSSTokenQ] := parseSingleMargin[prop, token] = 

@@ -8,6 +8,12 @@
 BeginPackage["CSSTools`CSSStyleSheetInterpreter`", {"CSSTools`", "CSSTools`Selectors3`"}];
 
 consumeDeclaration;
+consumeAtPageRule;
+consumeAtPageBlock;
+convertMarginsToPrintingOptions;
+notebookLevelOptions;
+assemble;
+getSideFromLRBTDirective;
 
 (* CSSTools`
 	---> defines wrappers like CSSHeightMax *)
@@ -18,12 +24,9 @@ consumeDeclaration;
 	---> token position modifiers e.g. AdvancePosAndSkipWhitespace *)
 (* CSSPropertyInterpreter` 
 	---> defines consumeProperty and CSSPropertyData *)
-(* CSSPageMedia3`
-	---> defines consumeAtPageRule *)
 
 Needs["CSSTools`CSSTokenizer`"];   
 Needs["CSSTools`CSSPropertyInterpreter`"];
-Needs["CSSTools`CSSPagedMedia3`"]; 
 
 
 Begin["`Private`"];
@@ -194,7 +197,7 @@ consumeAtImportKeyword[pos_, l_, tokens_] :=
 (*Consume Style Sheet Body (@rule, ruleset)*)
 
 
-SetAttributes[{consumeAtRule, consumeRuleset}, HoldFirst];
+SetAttributes[{consumeAtRule, consumeRuleset, consumeAtPageRule}, HoldFirst];
 
 consumeAtRule[pos_, l_, tokens_] :=
 	Which[
@@ -216,6 +219,108 @@ consumeAtRule[pos_, l_, tokens_] :=
 			AdvancePosToNextSemicolonOrBlock[pos, l, tokens]; 
 			AdvancePosAndSkipWhitespace[pos, l, tokens]
 	] 
+
+
+(* ::Subsubsection::Closed:: *)
+(*@page*)
+
+
+consumeAtPageRule[pos_, l_, tokens_] := 
+	Module[{pageSelectors},
+		(* check for valid start of @page token sequence *)
+		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot["page", pos, tokens],
+			Echo[Row[{"Expected @page keyword instead of ", tokens[[pos]]}], "@page error"];
+			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
+			Return @ {}
+			,
+			AdvancePosAndSkipWhitespace[pos, l, tokens]
+		];
+		
+		(* consume optional page selector :left, :right, or :first *)
+		pageSelectors =
+			If[TokenTypeIsNot["{}", pos, tokens], 
+				If[TokenTypeIsNot[":", pos, tokens], 
+					Echo[Row[{"Expected @page pseudopage instead of ", tokens[[pos]]}], "@page error"];
+					AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens];
+					Return @ {}
+				];
+				pos++;
+				If[TokenTypeIs["ident", pos, tokens],
+					Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]],
+						"left",  Left,
+						"right", Right,
+						"first", Missing["Not supported."],
+						_,       Echo[Row[{"Expected @page pseudopage instead of ", tokens[[pos]]}], "@page error"]; $Failed
+					] 
+				];
+				,
+				All
+			];
+		If[FailureQ[pageSelectors] || MissingQ[pageSelectors], Return @ {}];
+		If[TokenTypeIsNot["{}", pos, tokens], 
+			Echo[Row[{"Expected @page block instead of ", tokens[[pos]]}], "@page error"];
+			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
+			Return @ {}
+		];
+		
+		(* consume @page block *)
+		consumeAtPageBlock[tokens[[pos, 2 ;; ]], pageSelectors]	
+	]
+	
+	
+(* The @page {...} block contains only margin rules; CSS 2.1 does not allow specifying page size *)
+consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
+	Module[{pos = 1, l = Length[tokens], dec, decStart, decEnd, declarations = {}},
+		(* skip any initial whitespace *)
+		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
+		
+		While[pos <= l,
+			If[TokenTypeIs["ident", pos, tokens] && TokenStringIs["margin" | "margin-top" | "margin-bottom" | "margin-left" | "margin-right", pos, tokens],
+				decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
+				dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
+				If[!FailureQ[dec], 
+					dec = convertMarginsToPrintingOptions[dec, scope];
+					dec = dec /. head:((Left | Right | Bottom | Top)[_]) :> scope[head];
+					AppendTo[declarations, dec]
+				];
+				pos = decEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
+				,
+				(* unrecognized rules are skipped *)
+				AdvancePosToNextSemicolonOrBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens];
+			]
+		];
+		declarations
+	]
+	
+	
+convertMarginsToPrintingOptions[declaration_?AssociationQ, scope_] :=
+	Module[{value},
+		If[!KeyExistsQ["Interpretation"] || FreeQ[declaration["Interpretation"], ImageMargins], Return @ declaration];
+		value = Flatten[{"PrintingMargins" /. PrintingOptions /. declaration["Interpretation"]}];
+		(* CSS 2.1 does not allow ex or em lengths *)
+		If[!FreeQ[value, FontSize | "FontXHeight"], Return @ Failure["BadLength", <|"Message" -> "Page margins cannot us 'em' or 'ex' units."|>];];
+		value = 
+			Replace[
+				value, 
+				{
+					(h:Left | Right)[Scaled[x_]] :> h @ Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 1}]],
+					(h:Top | Bottom)[Scaled[x_]] :> h @ Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 2}]]},
+				{1}
+			];
+		<|
+			declaration, 
+			"Interpretation" -> 
+				PrintingOptions -> {
+					Which[
+						MatchQ[scope, Left | Right], "InnerOuterMargins" -> {FirstCase[value, x:Left[_] :> x, Nothing], FirstCase[value, x:Right[_] :> x, Nothing]},
+						MatchQ[scope, First],        Missing["Not supported."],
+						True,                        "PrintingMargins" -> value
+					]}|>
+	]
+	
+
+(* ::Subsubsection::Closed:: *)
+(*ruleset*)
 
 
 consumeRuleset[pos_, l_, tokens_] :=
@@ -335,7 +440,7 @@ notebookLevelOptions =
 	{
 		Background, BackgroundAppearance, BackgroundAppearanceOptions, 
 		FontColor, FontFamily, FontSize, FontSlant, FontTracking, FontVariations, FontWeight, 
-		LineIndent, LineSpacing, ParagraphIndent, ShowContents, TextAlignment};
+		LineIndent, LineSpacing, ParagraphIndent, PrintingOptions, ShowContents, TextAlignment};
 		
 (* these include all options (some not inheritable in the CSS sense) that make sense to set at the Cell level *)
 cellLevelOptions = 
@@ -464,7 +569,6 @@ assembleLRBT[x_List] :=
 			Flatten[x]];
 		r]
 
-Clear[assemble]
 assemble[opt:(FrameStyle | CellFrameStyle), rules_List] := 
 	opt -> assembleLRBTDirectives @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
 
@@ -482,6 +586,31 @@ assemble[opt:FontVariations, rules_List] :=
 
 (* not used much *)
 assemble[opt:CellFrameColor, rules_List] := opt -> Last @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
+
+(* PrintingOptions is a list of suboptions. These suboptions need to be assembled.*)
+assemble[opt:PrintingOptions, rules_List] := 
+	Module[{subOptions},
+		subOptions = Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x];
+		assemble[#, subOptions]& /@ Union[First /@ subOptions]
+	]
+
+assemble[subOption:"InnerOuterMargins", rules_] := 
+	Module[{pageSide, orderedRules = Flatten @ Cases[rules, HoldPattern[subOption -> x_] :> x]},
+		(* InnerOuterMargins only appears if a Left/Right page was detected *)
+		(* get page side *)
+		pageSide = getSideFromLRBTDirective[orderedRules, Left];
+		If[pageSide === {}, pageSide = getSideFromLRBTDirective[orderedRules, Right]];
+		{Last @ getSideFromLRBTDirective[pageSide, Left], Last @ getSideFromLRBTDirective[pageSide, Right]}
+	]
+	
+assemble[subOption:"PrintingMargins", rules_] := 
+	Module[{orderedRules = Flatten @ Cases[rules, HoldPattern[subOption -> x_] :> x]},
+		subOption -> {
+			(* left/right *)
+			{FirstCase[orderedRules, All[Left[x_]] :> x, Automatic], FirstCase[orderedRules, All[Right[x_]] :> x, Automatic]},
+			(* bottom/top *)
+			{FirstCase[orderedRules, All[Bottom[x_]] :> x, Automatic], FirstCase[orderedRules, All[Top[x_]] :> x, Automatic]}}
+	]
 
 (* fallthrough *)
 assemble[opt_, rules_List] := Last @ Cases[rules, HoldPattern[opt -> _], {1}]
