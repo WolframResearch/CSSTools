@@ -177,20 +177,14 @@ CSSNormalizeEscapes[x_String] :=
 (*CSSTokenize, CSSTokenQ*)
 
 
-CSSTokenQ[x_] := 
-	MatchQ[x, 
+CSSToken /: CSSTokenQ[t:CSSToken[_?AssociationQ]] := 
+	MatchQ[CSSTokenType @ t,  
 		Alternatives[
-			_?StringQ,
-			{"string"|"ident"|"at-keyword", _?StringQ},
-			{"function", _?StringQ, ___?CSSTokenQ},
-			{"number"|"percentage", _?StringQ, _?NumericQ, "number"|"integer"},
-			{"dimension", _?StringQ, _?NumericQ, "number"|"integer", _?StringQ},
-			{"hash", _?StringQ, "id"|"unrestricted"},
-			{"{}"|"()"|"[]", ___?CSSTokenQ},
-			{"unicode-range", _?NumericQ, _?NumericQ},
-			{"url", _?StringQ},
-			{"newline", "\n" | "\r\n" | "\r" | "\f"},
-			{"error", _}]] 
+			"string", "ident", "at-keyword", "hash", 
+			"number" , "percentage", "dimension",
+			"function", "{}", "()", "[]",
+			"unicode-range", "url", "newline", "error"]] 
+CSSTokenQ[___] := False
 
 CSSTokenize[x_String] := nestTokens @ tokenizeFlat @ x
 
@@ -199,8 +193,8 @@ CSSTokenize[x_String] := nestTokens @ tokenizeFlat @ x
 (*Token access*)
 
 
-CSSToken /: CSSTokenType[     CSSToken[a_?AssociationQ]] := a["Type"]
-CSSToken /: CSSTokenString[   CSSToken[a_?AssociationQ]] := a["String"]
+CSSToken /: CSSTokenType[     CSSToken[a_?AssociationQ]] := If[KeyExistsQ[a, "Type"],      a["Type"],      None]
+CSSToken /: CSSTokenString[   CSSToken[a_?AssociationQ]] := If[KeyExistsQ[a, "String"],    a["String"],    None]
 CSSToken /: CSSTokenValue[    CSSToken[a_?AssociationQ]] := If[KeyExistsQ[a, "Value"],     a["Value"],     None]
 CSSToken /: CSSTokenValueType[CSSToken[a_?AssociationQ]] := If[KeyExistsQ[a, "ValueType"], a["ValueType"], None]
 CSSToken /: CSSTokenUnit[     CSSToken[a_?AssociationQ]] := If[KeyExistsQ[a, "Unit"],      a["Unit"],      None]
@@ -324,7 +318,7 @@ tokenizeFlat[x_String] :=
 				(* not technically a token, but useful for finding blocks *)
 				s:RegularExpression @ RE["newline"] :> CSSToken[<|"Type" -> "newline", "String" -> s|>],
 				
-				s:Whitespace :> CSSToken[<|"Type" -> " ", "String" -> " "|>],
+				s:Whitespace :> CSSToken[<|"Type" -> "whitespace", "String" -> " "|>],
 				s_ :> CSSToken[<|"Type" -> "delim", "String" -> s|>]
 				
 				
@@ -335,13 +329,11 @@ tokenizeFlat[x_String] :=
 		{1}]
 
 
-tokenizePercentage[x_String] := StringSplit[x, num:RegularExpression[RE["num"]] ~~ unit:"%" :> tokenizeNumber @ num]
+tokenizePercentage[x_String] := Flatten @ StringCases[x, num:RegularExpression[RE["num"]] ~~ unit:"%" :> tokenizeNumber @ num]
 
-tokenizeDimension[x_String] := 
-	StringSplit[x, 
-		num:RegularExpression[RE["num"]] ~~ unit___ :> 
-			Flatten @ {tokenizeNumber @ num, CSSNormalizeEscapes @ ToLowerCase @ unit}]
+tokenizeDimension[x_String] := Flatten @ StringCases[x, num:RegularExpression[RE["num"]] ~~ unit___ :> {tokenizeNumber @ num, CSSNormalizeEscapes @ ToLowerCase @ unit}]
 
+Clear[tokenizeNumber]
 tokenizeNumber[x_String] := (* cache the Interpreter calls *)
 	tokenizeNumber[x] = 
 		If[StringMatchQ[x, RegularExpression["[+\\-]?[0-9]+"]], 
@@ -352,7 +344,7 @@ tokenizeNumber[x_String] := (* cache the Interpreter calls *)
 idHash[x_String] := 
 	If[StringMatchQ[x, RegularExpression[RE["ident-token"]]] && !StringMatchQ[x, RegularExpression["[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6,6}|[0-9a-fA-F]{8,8}"]], 
 		{CSSNormalizeEscapes @ x, "id"}
-		, 
+		,
 		{CSSNormalizeEscapes @ x, "unrestricted"}]
 
 calculateUnicodeRange[x_String] :=
