@@ -80,7 +80,7 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 		If[TrueQ @ $Debug, Echo[l, "Token Length"]];
 		
 		(* skip any leading whitespace (there shouldn't be any if @charset exists) *)
-		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]];
+		If[TokenTypeIs["whitespace", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]];
 		If[TrueQ @ $Debug, Echo[pos, "position"]];
 		
 		(* check for @charset rule *)
@@ -94,7 +94,7 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 		];
 		imports = Join @@ imports;
 				
-		lRulesets = Count[tokens, {"{}", ___}, {1}]; (* upper bound of possible rulesets *)
+		lRulesets = Count[tokens, CSSToken[KeyValuePattern["Type" -> "{}"]], {1}]; (* upper bound of possible rulesets *)
 		rulesets = ConstantArray[0, lRulesets]; (* container for processed rulesets *)
 		While[pos < l,
 			If[TrueQ @ $Debug, Echo[pos, "position before rule"]];
@@ -129,12 +129,19 @@ consumeAtCharsetKeyword[pos_, l_, tokens_] :=
 			Return @ Null;
 		];
 		pos++;
-		If[MatchQ[tokens[[pos ;; pos + 2]], {" ", {"string", _}, ";"}],
-			pos = pos + 3
+		If[TokenTypeIsNot["whitespace", pos, tokens], 
+			AdvancePosToNextSemicolon[pos, l, tokens]
 			,
-			(* invalid @charset *)
-			AdvancePosToNextSemicolon[pos, l, tokens];
-		];
+			pos++;
+			If[TokenTypeIsNot["string", pos, tokens], 
+				AdvancePosToNextSemicolon[pos, l, tokens]
+				,
+				pos++;
+				If[TokenTypeIsNot["semicolon",  pos, tokens], 
+					AdvancePosToNextSemicolon[pos, l, tokens]
+					,
+					pos++]]];
+			
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
 	]; 
 
@@ -158,13 +165,13 @@ consumeAtImportKeyword[pos_, l_, tokens_] :=
 		(* anything else is a comma-delimited set of media queries *)
 		(*TODO: implement proper media queries *)
 		mediums = {};
-		While[TokenTypeIsNot[";", pos, tokens],
+		While[TokenTypeIsNot["semicolon", pos, tokens],
 			mediaStart = pos;
 			AdvancePosToNextSemicolonOrComma[pos, l, tokens];
 			If[TrueQ @ $Debug, Echo[pos, "here"]];
 			If[pos == l, Echo["Media query has no closing. Reached EOF.", "@import error"]; Return @ {}];
 			AppendTo[mediums, CSSUntokenize @ tokens[[mediaStart ;; pos - 1]]];
-			If[TokenTypeIs[";", pos, tokens],
+			If[TokenTypeIs["semicolon", pos, tokens],
 				(* break out of media loop*)
 				Break[] 
 				, 
@@ -239,7 +246,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 		(* consume optional page selector :left, :right, or :first *)
 		pageSelectors =
 			If[TokenTypeIsNot["{}", pos, tokens], 
-				If[TokenTypeIsNot[":", pos, tokens], 
+				If[TokenTypeIsNot["colon", pos, tokens], 
 					Echo[Row[{"Expected @page pseudopage instead of ", tokens[[pos]]}], "@page error"];
 					AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens];
 					Return @ {}
@@ -272,7 +279,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 	Module[{pos = 1, l = Length[tokens], dec, decStart, decEnd, declarations = {}},
 		(* skip any initial whitespace *)
-		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
+		If[TokenTypeIs["whitespace", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
 		
 		While[pos <= l,
 			If[TokenTypeIs["ident", pos, tokens] && TokenStringIs["margin" | "margin-top" | "margin-bottom" | "margin-left" | "margin-right", pos, tokens],
@@ -342,13 +349,13 @@ consumeDeclarationBlock[{}] := {}
 consumeDeclarationBlock[blockTokens:{__?CSSTokenQ}] :=
 	Module[{blockPos = 1, blockLength = Length[blockTokens], lDeclarations, i = 1, decStart, dec, validDeclarations},
 		(* skip any initial whitespace *)
-		If[TokenTypeIs[" ", blockPos, blockTokens], AdvancePosAndSkipWhitespace[blockPos, blockLength, blockTokens]]; 
+		If[TokenTypeIs["whitespace", blockPos, blockTokens], AdvancePosAndSkipWhitespace[blockPos, blockLength, blockTokens]]; 
 		
 		(*
 			Each declaration is of the form 'property:value;'. The last declaration may leave off the semicolon.
 			Like we did with parsing blocks, we count the number of colons as the upper limit of the number of declarations.
 		*)
-		lDeclarations = Count[blockTokens, ":"];
+		lDeclarations = Count[blockTokens, CSSToken[KeyValuePattern["Type" -> "colon"]]];
 		validDeclarations = ConstantArray[0, lDeclarations];
 		While[blockPos < blockLength && i <= lDeclarations,
 			decStart = blockPos; AdvancePosToNextSemicolon[blockPos, blockLength, blockTokens];
@@ -369,17 +376,17 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 		propertyPosition = decPos; AdvancePosAndSkipWhitespace[decPos, decLength, decTokens];
 		
 		(* check for EOF or missing colon *)
-		If[decPos >= decLength || TokenTypeIsNot[":", decPos, decTokens], Return @ $Failed];
+		If[decPos >= decLength || TokenTypeIsNot["colon", decPos, decTokens], Return @ $Failed];
 		AdvancePosAndSkipWhitespace[decPos, decLength, decTokens]; 
 		valuePosition = decPos;
 		
 		(* remove trailing whitespace and possible trailing semi-colon*)
 		decPos = decLength;
-		If[TokenTypeIs[";", decPos, decTokens], 
+		If[TokenTypeIs["semicolon", decPos, decTokens], 
 			RetreatPosAndSkipWhitespace[decPos, decLength, decTokens]
 			,
-			While[decPos > 1 && TokenTypeIs[" ", decPos, decTokens], decPos--];
-			If[TokenTypeIs[";", decPos, decTokens], RetreatPosAndSkipWhitespace[decPos, decLength, decTokens]];
+			While[decPos > 1 && TokenTypeIs["whitespace", decPos, decTokens], decPos--];
+			If[TokenTypeIs["semicolon", decPos, decTokens], RetreatPosAndSkipWhitespace[decPos, decLength, decTokens]];
 		];
 		
 		(* check for !important token sequence *)

@@ -958,10 +958,10 @@ AssociateTo[CSSPropertyData, {
 
 
 (* mostly used for HSLA color function; non-degree units are converted to degrees *)
-parseAngle[token:{"dimension", n_String, val_, type:"integer"|"number", "deg"}] := val 
-parseAngle[token:{"dimension", n_String, val_, type:"integer"|"number", "grad"}] := val*360/400
-parseAngle[token:{"dimension", n_String, val_, type:"integer"|"number", "rad"}] := val*360/2/Pi
-parseAngle[token:{"dimension", n_String, val_, type:"integer"|"number", "turn"}] := val*360
+parseAngle[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_, "Unit" -> "deg"}]]]  := val
+parseAngle[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_, "Unit" -> "grad"}]]] := val*360/400
+parseAngle[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_, "Unit" -> "rad"}]]]  := val*360/2/Pi
+parseAngle[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_, "Unit" -> "turn"}]]] := val*360
 
 
 (* ::Subsection::Closed:: *)
@@ -1022,15 +1022,17 @@ parseSingleColorHex[prop_String, hexString_String] :=
 (* The patterns assume all whitespace has been removed. *)
 rgbPattern[] := 
 	{
-		{v1:"number"|"percentage", _String, r_, _String}, ",", 
-		{v1:"number"|"percentage", _String, g_, _String}, ",", 
-		{v1:"number"|"percentage", _String, b_, _String}
+		CSSToken[KeyValuePattern[{"Type" -> v1:"number"|"percentage", "Value" -> r_}]],
+		d:Repeated[CSSToken[KeyValuePattern["Type" -> "comma"]], {0, 1}], 
+		CSSToken[KeyValuePattern[{"Type" -> v1:"number"|"percentage", "Value" -> g_}]],
+		d:Repeated[CSSToken[KeyValuePattern["Type" -> "comma"]], {0, 1}], 
+		CSSToken[KeyValuePattern[{"Type" -> v1:"number"|"percentage", "Value" -> b_}]]
 	} :> Apply[RGBColor, {r, g, b}/If[v1 == "number", 255, 100.]]
 
 parseSingleColorFunction[prop_String, token_?CSSTokenQ] :=
 	Module[{relevantTokens, function = CSSTokenString @ token},
 		(* relevantTokens drops the token's type and string, and removes all whitespace tokens *)
-		relevantTokens = DeleteCases[token[[3 ;;]], " ", {1}];
+		relevantTokens = DeleteCases[CSSTokenChildren @ token, CSSToken[KeyValuePattern["Type" -> "whitespace"]], {1}];
 		If[StringMatchQ[function, RegularExpression[RE["R"] ~~ RE["G"] ~~ RE["B"]]],
 			If[MatchQ[relevantTokens, First @ rgbPattern[]], 
 				Replace[relevantTokens, rgbPattern[]]
@@ -1051,7 +1053,7 @@ parseSingleColorFunction[prop_String, token_?CSSTokenQ] :=
 parseCounter[prop_String, tokens:{___?CSSTokenQ}] := (*parseCounter[prop, tokens] =*)
 	Module[{pos = 1, l = Length[tokens], style = "Item", listtype = "decimal"},
 		(* assumes that the function identifier and name have been skipped *)
-		If[pos <= l && TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]];
+		If[pos <= l && TokenTypeIs["whitespace", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]];
 		
 		(* get custom identifier *)
 		If[pos <= l && TokenTypeIs["ident", pos, tokens], 
@@ -1082,17 +1084,19 @@ parseCounters[prop_String, tokens:{___?CSSTokenQ}] := Missing["Not supported."]
 (*<integer> and <number>*)
 
 
-parseNumber[token:{"number", n_String, val_, type:"integer"|"number"}] := val
-parseZero[token:{"number", n_String, val_, type:"integer"|"number"}] := 
+parseNumber[CSSToken[KeyValuePattern[{"Type" -> "number", "Value" -> val_}]]] := val
+parseNumber[___] := Failure["UnexpectedParse", <|"Message" -> "Expected CSS token of number type."|>]
+
+parseZero[CSSToken[KeyValuePattern[{"Type" -> "number", "Value" -> val_}]]] := 
 	If[TrueQ[val == 0], 0, Failure["UnexpectedParse", <|"Message" -> "Non-zero length has missing units."|>]]
+parseZero[___] := Failure["UnexpectedParse", <|"Message" -> "Expected CSS token of number type."|>]
 
 
 (* ::Subsection::Closed:: *)
 (*<length>*)
 
 
-	
-parseLength[token:{"dimension", n_String, val_, type:"integer"|"number", unit_String}, inFontSize_:False] := 
+parseLength[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_, "Unit" -> unit_}]], inFontSize_:False] := 
 	Module[{dpi = "Resolution" /. First[SystemInformation["Devices", "ScreenInformation"], "Resolution" -> 72]},
 		If[TrueQ[val == 0], Return @ 0];
 		(* parse units 
@@ -1112,10 +1116,12 @@ parseLength[token:{"dimension", n_String, val_, type:"integer"|"number", unit_St
 			_,    Failure["UnexpectedParse", <|"Message" -> "Unrecognized length unit."|>]
 		]
 	]
+parseZero[___] := Failure["UnexpectedParse", <|"Message" -> "Expected CSS token of dimension type."|>]
 
-parseLengthNonRelative[token:{"dimension", n_String, val_, type:"integer"|"number", "em"}] := val 
-parseLengthNonRelative[token:{"dimension", n_String, val_, type:"integer"|"number", "ex"}] := val/2
-(*parseLengthNonRelative[token:{"dimension", n_String, val_, type:"integer"|"number", _}] := parseLength[token]*)
+
+parseLengthNonRelative[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_, "Unit" -> "em"}]]] := val 
+parseLengthNonRelative[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_, "Unit" -> "ex"}]]] := val/2
+parseLengthNonRelative[___] := Failure["UnexpectedParse", <|"Message" -> "Expected CSS token of dimension type \"em\" or \"ex\"."|>]
 
 
 negativeQ[n_, prop_String, default_] :=
@@ -1130,14 +1136,17 @@ negativeQ[n_, prop_String, default_] :=
 (*<percentage>*)
 
 
-parsePercentage[token:{"percentage", n_String, val_, type:"integer"|"number"}] := Scaled[val/100]
+parsePercentage[CSSToken[KeyValuePattern[{"Type" -> "percentage", "Value" -> val_}]]] := Scaled[val/100]
+parsePercentage[___] := Failure["UnexpectedParse", <|"Message" -> "Expected CSS token of percentage type."|>]
 
 
 (* ::Subsection::Closed:: *)
 (*<uri>*)
 
 
-(* URI token is of the form {"url", location} where location is a string without the url() wrapper and string characters *)
+(* 
+	URI token is of the form CSSToken[<|"Type" -> "url", "String" -> location|>] 
+	where location is a string without the url() wrapper and string characters *)
 parseURI[uri_String] := 
 	Module[{p, start, rest},
 		If[StringStartsQ[uri, "data:", IgnoreCase -> True],
@@ -1185,13 +1194,13 @@ parseURI[uri_String] :=
 
 
 (* global values *)
-consumeProperty[prop_String, {{"ident", x_?StringQ /; StringMatchQ[x, "inherit", IgnoreCase -> True]}}] := 
+consumeProperty[prop_String, {CSSToken[KeyValuePattern[{"Type" -> "ident", "String" -> x_?StringQ /; StringMatchQ[x, "inherit", IgnoreCase -> True]}]]}] := 
 	CSSPropertyData[prop, "InterpretedGlobalValues", "inherit"]
 	
-consumeProperty[prop_String, {{"ident", x_?StringQ /; StringMatchQ[x, "initial", IgnoreCase -> True]}}] := 
+consumeProperty[prop_String, {CSSToken[KeyValuePattern[{"Type" -> "ident", "String" -> x_?StringQ /; StringMatchQ[x, "initial", IgnoreCase -> True]}]]}] := 
 	CSSPropertyData[prop, "InterpretedGlobalValues", "initial"]
 	
-consumeProperty[prop_String, {{"ident", x_?StringQ /; StringMatchQ[x, "unset", IgnoreCase -> True]}}] := 
+consumeProperty[prop_String, {CSSToken[KeyValuePattern[{"Type" -> "ident", "String" -> x_?StringQ /; StringMatchQ[x, "unset", IgnoreCase -> True]}]]}] := 
 	If[CSSPropertyData[prop, "Inherited"], 
 		CSSPropertyData[prop, "InterpretedGlobalValues", "inherit"]
 		, 
@@ -1230,7 +1239,7 @@ initialValues[prop_String] :=
 *)
 consumeProperty[prop:"background", tokens:{__?CSSTokenQ}] := 
 	Module[{backgrounds, result},
-		backgrounds = DeleteCases[SplitBy[tokens, MatchQ[","]], {","}];
+		backgrounds = DeleteCases[SplitBy[tokens, MatchQ[CSSToken[KeyValuePattern["Type" -> "comma"]]]], {CSSToken[KeyValuePattern["Type" -> "comma"]]}];
 		backgrounds = parseSingleBG[prop, #]& /@ backgrounds; 
 		result = Cases[backgrounds, Except[_Failure], {1}];
 		If[result === {}, 
@@ -2361,7 +2370,7 @@ consumeProperty[prop:"font", tokens:{__?CSSTokenQ}] :=
 
 consumeProperty[prop:"font-family", tokens:{__?CSSTokenQ}] :=
 	Module[{fontTokens, parsed, result},
-		fontTokens = DeleteCases[SplitBy[tokens, MatchQ[","]], {","}];
+		fontTokens = DeleteCases[SplitBy[tokens, MatchQ[CSSToken[KeyValuePattern["Type" -> "comma"]]]], {CSSToken[KeyValuePattern["Type" -> "comma"]]}];
 		parsed = parseSingleFontFamily /@ fontTokens;
 		result = FirstCase[parsed, _Failure, None]; (* FIXME: perhaps use FontSubstitutions here? *)
 		If[FailureQ[result], Return @ result];
@@ -2375,7 +2384,7 @@ parseSingleFontFamily[tokens:{__?CSSTokenQ}] := parseSingleFontFamily[tokens] =
 		generic = {"serif", "sans-serif", "monospace", "fantasy", "cursive"},
 		fail = Failure["UnexpectedParse", <|"Message" -> "Font family syntax error."|>]
 	},
-		tokensNoWS = DeleteCases[tokens, " ", {1}];
+		tokensNoWS = DeleteCases[tokens, CSSToken[KeyValuePattern["Type" -> "whitespace"]], {1}];
 		l = Length[tokensNoWS];
 		value =
 			Switch[CSSTokenType @ tokensNoWS[[pos]],

@@ -8,8 +8,6 @@
 
 BeginPackage["CSSTools`CSSPagedMedia3`", {"CSSTools`"}];
 
-consumeAtPageRule;
-
 (* CSSTokenizer`
 	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs, CSSTokenString
 	---> token position modifiers e.g. AdvancePosAndSkipWhitespace *)
@@ -189,7 +187,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 	Module[{pos = 1, l = Length[tokens], atMarginStart, atMarginEnd, dec, decStart, decEnd, declarations = {}},
 		(* skip any initial whitespace *)
-		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
+		If[TokenTypeIs["whitespace", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
 		
 		While[pos <= l,
 			Which[
@@ -313,7 +311,7 @@ consumeAtPageMarginRule[tokens:{___?CSSTokenQ}, scope_] :=
 consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}, scope_, location_String, horizontal_, vertical_] :=
 	Module[{pos = 1, l = Length[tokens], dec, decStart, decEnd, declarations = {}, interpretation},
 		(* skip any initial whitespace *)
-		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
+		If[TokenTypeIs["whitespace", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
 		
 		While[pos <= l,
 			(* only a subset of CSS 2.1 properties are valid *)
@@ -358,7 +356,7 @@ consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}, scope_, location_String, horizo
 
 consumePageSelectorList[tokens:{__?CSSTokenQ}] :=
 	Module[{selectors},
-		selectors = DeleteCases[SplitBy[tokens, MatchQ[","]], {","}];
+		selectors = DeleteCases[SplitBy[tokens, MatchQ[CSSToken[KeyValuePattern["Type" -> "comma"]]]], {CSSToken[KeyValuePattern["Type" -> "comma"]]}];
 		selectors = consumePageSelector /@ selectors;
 		If[AnyTrue[selectors, MissingQ], Return @ Missing["Not supported."]];
 		If[AnyTrue[selectors, FailureQ], Return @ FirstCase[selectors, _?FailureQ]];
@@ -375,7 +373,7 @@ consumePageSelectorList[{}] := All
 consumePageSelector[tokens:{___?CSSTokenQ}] :=
 	Module[{pos = 1, l = Length[tokens], scope = All, page},
 		(* skip potential leading whitespace *)
-		If[TokenTypeIs[" ", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]];
+		If[TokenTypeIs["whitespace", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]];
 		
 		(* check for page identifier, which is not supported by FE *)
 		If[pos <= l && TokenTypeIs["ident", pos, tokens], 
@@ -389,8 +387,8 @@ consumePageSelector[tokens:{___?CSSTokenQ}] :=
 		While[pos <= l,
 			Switch[
 				CSSTokenType @ tokens[[pos]],
-				" ", Return @ Failure["UnexpectedParse", <|"Message" -> "@page pseudo-pages cannot contain whitespace."|>],
-				":",
+				"whitespace", Return @ Failure["UnexpectedParse", <|"Message" -> "@page pseudo-pages cannot contain whitespace."|>],
+				"colon",
 					pos++;
 					If[pos > l, Return @ Failure["UnexpectedParse", <|"Message" -> "Incomplete @page pseudo-page selector."|>]];
 					If[TokenTypeIs["ident", pos, tokens],
@@ -590,7 +588,7 @@ parseSinglePaperOrientation[prop_String, token_?CSSTokenQ] :=
 	Switch[ToLowerCase @ CSSTokenString @ token,
 		"portrait",  {"PaperOrientation" -> "Portrait"},
 		"landscape", {"PaperOrientation" -> "Landscape"},
-		_            unrecognizedKeyWordFailure @ prop
+		_,           unrecognizedKeyWordFailure @ prop
 	]
 	
 convertDPItoPrintersPoints[val_] := 

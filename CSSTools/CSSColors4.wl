@@ -198,16 +198,21 @@ parseSingleColorHex[prop_String, hexString_String] :=
 (* The patterns assume all whitespace has been removed. *)
 rgbaPattern[] := 
 	{
-		{v1:"number"|"percentage", _String, r_, _String}, d:Repeated[",", {0, 1}], 
-		{v1:"number"|"percentage", _String, g_, _String}, d:Repeated[",", {0, 1}], 
-		{v1:"number"|"percentage", _String, b_, _String}, d:Repeated[",", {0, 1}], 
-		{v2:"number"|"percentage", _String, a_, _String}
+		CSSToken[KeyValuePattern[{"Type" -> v1:"number"|"percentage", "Value" -> r_}]],
+		d:Repeated[CSSToken[KeyValuePattern["Type" -> "comma"]], {0, 1}], 
+		CSSToken[KeyValuePattern[{"Type" -> v1:"number"|"percentage", "Value" -> g_}]],
+		d:Repeated[CSSToken[KeyValuePattern["Type" -> "comma"]], {0, 1}], 
+		CSSToken[KeyValuePattern[{"Type" -> v1:"number"|"percentage", "Value" -> b_}]],
+		d:Repeated[CSSToken[KeyValuePattern["Type" -> "comma"]], {0, 1}], 
+		CSSToken[KeyValuePattern[{"Type" -> v2:"number"|"percentage", "Value" -> a_}]]
 	} :> Apply[RGBColor, Append[{r, g, b}/If[v1 == "number", 255, 100.], If[v2 == "number", Clip[a, {0, 1}], a/100.]]]
 rgbPattern[] := 
 	{
-		{v1:"number"|"percentage", _String, r_, _String}, d:Repeated[",", {0, 1}], 
-		{v1:"number"|"percentage", _String, g_, _String}, d:Repeated[",", {0, 1}], 
-		{v1:"number"|"percentage", _String, b_, _String}
+		CSSToken[KeyValuePattern[{"Type" -> v1:"number"|"percentage", "Value" -> r_}]],
+		d:Repeated[CSSToken[KeyValuePattern["Type" -> "comma"]], {0, 1}], 
+		CSSToken[KeyValuePattern[{"Type" -> v1:"number"|"percentage", "Value" -> g_}]],
+		d:Repeated[CSSToken[KeyValuePattern["Type" -> "comma"]], {0, 1}], 
+		CSSToken[KeyValuePattern[{"Type" -> v1:"number"|"percentage", "Value" -> b_}]]
 	} :> Apply[RGBColor, {r, g, b}/If[v1 == "number", 255, 100.]]
 
 
@@ -218,26 +223,31 @@ HSLtoHSB[h_, s_, l_, a___] := With[{b = (2 * l + s * (1 - Abs[2 * l - 1])) / 2},
 hslaPattern[] := 
 	{
 		Alternatives[
-			hAll:{type:"dimension", _String, h_, _String, "deg"|"grad"|"rad"|"turn"},
-			hAll:{type:"number",    _String, h_, _String}], 
-		d:Repeated[",", {0, 1}], {"percentage", _String, s_, _String}, 
-		d:Repeated[",", {0, 1}], {"percentage", _String, l_, _String}, 
-		d:Repeated[",", {0, 1}], {"number",     _String, a_, _String}
+			hAll:CSSToken[KeyValuePattern[{"Type" -> type:"dimension", "Value" -> h_, "Unit" -> "deg"|"grad"|"rad"|"turn"}]],
+			hAll:CSSToken[KeyValuePattern[{"Type" -> type:"number", "Value" -> h_}]]], 
+		d:Repeated[CSSToken[KeyValuePattern["Type" -> "comma"]], {0, 1}], 
+		CSSToken[KeyValuePattern[{"Type" -> "percentage", "Value" -> s_}]], 
+		d:Repeated[CSSToken[KeyValuePattern["Type" -> "comma"]], {0, 1}], 
+		CSSToken[KeyValuePattern[{"Type" -> "percentage", "Value" -> l_}]], 
+		d:Repeated[CSSToken[KeyValuePattern["Type" -> "comma"]], {0, 1}], 
+		CSSToken[KeyValuePattern[{"Type" -> "number", "Value" -> a_}]]
 	} :> HSLtoHSB[If[type == "number", h, parseAngle[hAll]]/360, s/100, l/100, Clip[a, {0, 1}]]
 hslPattern[] := 
 	{
 		Alternatives[
-			hAll:{type:"dimension", _String, h_, _String, "deg"|"grad"|"rad"|"turn"},
-			hAll:{type:"number",    _String, h_, _String}], 
-		d:Repeated[",", {0, 1}], {"percentage", _String, s_, _String}, 
-		d:Repeated[",", {0, 1}], {"percentage", _String, l_, _String}
+			hAll:CSSToken[KeyValuePattern[{"Type" -> type:"dimension", "Value" -> h_, "Unit" -> "deg"|"grad"|"rad"|"turn"}]],
+			hAll:CSSToken[KeyValuePattern[{"Type" -> type:"number", "Value" -> h_}]]], 
+		d:Repeated[CSSToken[KeyValuePattern["Type" -> "comma"]], {0, 1}], 
+		CSSToken[KeyValuePattern[{"Type" -> "percentage", "Value" -> s_}]], 
+		d:Repeated[CSSToken[KeyValuePattern["Type" -> "comma"]], {0, 1}], 
+		CSSToken[KeyValuePattern[{"Type" -> "percentage", "Value" -> l_}]] 
 	} :> HSLtoHSB[If[type == "number", h, parseAngle[hAll]]/360, s/100, l/100]
 
 
 parseSingleColorFunction[prop_String, token_?CSSTokenQ] :=
 	Module[{relevantTokens, function = CSSTokenString @ token},
 		(* relevantTokens drops the token's type and string, and removes all whitespace tokens *)
-		relevantTokens = DeleteCases[token[[3 ;;]], " ", {1}];
+		relevantTokens = DeleteCases[CSSTokenChildren @ token, CSSToken[KeyValuePattern["Type" -> "whitespace"]], {1}];
 		Which[
 			(* the "a" of rgb function heads is optional *)
 			StringMatchQ[function, RegularExpression[RE["R"] ~~ RE["G"] ~~ RE["B"] ~~ "(" ~~ RE["A"] ~~ "?)"]],

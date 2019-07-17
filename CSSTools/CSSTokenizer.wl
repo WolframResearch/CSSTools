@@ -182,13 +182,18 @@ CSSToken /: CSSTokenQ[t:CSSToken[_?AssociationQ]] :=
 		Alternatives[
 			"string", "ident", "at-keyword", "hash", 
 			"number" , "percentage", "dimension",
+			"{", "}", "(", ")", "[", "]", 
 			"function", "{}", "()", "[]",
-			"unicode-range", "url", "newline", "error"]] 
+			"comma", "colon", "semicolon",
+			"unicode-range", "url", "urlhead", "newline", "error",
+			"whitespace", "delim",
+			"CDC", "CDO", "column",
+			"dash-match", "prefix-match", "include-match", "suffix-match", "substring-match"]] 
 CSSTokenQ[___] := False
 
 CSSTokenize[x_String] := nestTokens @ tokenizeFlat @ x
-
-
+ 
+ 
 (* ::Subsection::Closed:: *)
 (*Token access*)
 
@@ -209,7 +214,7 @@ tokenizeFlat[x_String] :=
 	Replace[
 		StringSplit[x, 
 			{
-				s:RegularExpression @ RE["comment"] :> Nothing(*{"comment", s}*),
+				s:RegularExpression @ RE["comment"] :> Nothing(*CSSToken[<|"Type" -> "comment", "String" -> s|>]*),
 				s:RegularExpression @ RE["at-keyword-token"] :> 
 					CSSToken[<|
 						"Type"   -> "at-keyword", 
@@ -237,14 +242,14 @@ tokenizeFlat[x_String] :=
 							"String" -> First @ v,
 							"Flag"   -> Last @ v|>]],
 				s:RegularExpression @ RE["unicode-range-token"] :> 
-					With[{range = calculateUnicodeRange @ s},
+					With[{range = First @ calculateUnicodeRange @ s},
 						CSSToken[<|
 							"Type" -> "unicode-range", 
 							"Start" -> First @ range,
 							"Stop"  -> Last @ range|>]],
 							
 				(* because of CSS Variables we need to catch this CDC token before parsing idents *)
-				"-->" :> CSSToken[<|"Type" -> "CDC", "String " -> "-->"|>], 
+				"-->" :> CSSToken[<|"Type" -> "CDC", "String" -> "-->"|>], 
 				
 				s:RegularExpression @ RE["ident-token"] :> 
 					CSSToken[<|
@@ -324,7 +329,7 @@ tokenizeFlat[x_String] :=
 				
 			}],
 		{
-			{"ident", "\\"} :> "\\",
+			CSSToken[KeyValuePattern[{"Type" -> "ident", "String" -> "\\"}]] :> CSSToken[<|"Type" -> "delim", "String" -> "\\"|>],
 			"" :> Nothing},
 		{1}]
 
@@ -375,6 +380,8 @@ stripURL[x_String] :=
 	else it is a match and 
 		1. group all tokens into a "block" token with appropriate label at the open bracket position;
 		2. mark tokens for removal that are not at the open bracket positions since they are now in the block token
+	The tokens are marked for removal as opposed to immediate removal because we must maintain the same
+	length of tokens.
 	This algorithm scans the token list only once.
 	
 	:: URLs ::
@@ -400,7 +407,15 @@ nestTokens[inputTokens:{__?CSSTokenQ}] :=
 			inBadURL = False, inBadString = False, inWS = False
 		},
 		(* The upper limit of nestings is the number of open brackets and quotation marks *)
-		brackets = ConstantArray[0, Count[tokens, "{" | "[" | "(" | "\"" | "'" | {"function", _} | {"urlhead", _}]];
+		brackets = 
+			ConstantArray[
+				{0, 0}, 
+				Count[
+					tokens, 
+					CSSToken[
+						Alternatives[
+							KeyValuePattern[{"Type" -> "delim", "String" -> "\"" | "'"}], 
+							KeyValuePattern[{"Type" -> "function" | "urlhead" | "{" | "[" | "("}]]]]];
 		
 		While[pos <= l,
 			Switch[CSSTokenType @ tokens[[pos]],
@@ -408,73 +423,85 @@ nestTokens[inputTokens:{__?CSSTokenQ}] :=
 					If[!inBadString && !inBadURL, depth++; brackets[[depth]] = {tokens[[pos]], pos}];
 					inWS = False,
 				"urlhead",  
-					If[!inBadString && !inBadURL, depth++; brackets[[depth]] = {tokens[[pos, 1]], pos}; inBadURL = True];
+					If[!inBadString && !inBadURL, depth++; brackets[[depth]] = {tokens[[pos]], pos}; inBadURL = True];
 					inWS = False,
 				"function", 
-					If[!inBadString && !inBadURL, depth++; brackets[[depth]] = {tokens[[pos, 1]], pos}];
+					If[!inBadString && !inBadURL, depth++; brackets[[depth]] = {tokens[[pos]], pos}];
 					inWS = False,
-				"\"" | "'",      
-					If[!inBadString, inBadString = True];
-					depth++; brackets[[depth]] = {tokens[[pos]], pos};
-					inWS = False,
+				"delim",
+					If[TokenStringIs["\"" | "'", pos, tokens],      
+						If[!inBadString, inBadString = True];
+						depth++; brackets[[depth]] = {tokens[[pos]], pos};
+						inWS = False],
 				"newline", 
 					If[inBadString, 
 						inBadString = False;
-						tokens[[brackets[[depth, 2]]]] = {"error", "bad-string"};
-						Do[tokens[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
-						brackets[[depth]] = 0;
+						tokens[[brackets[[depth, 2]]]] = CSSToken[<|"Type" -> "error", "String" -> "bad-string", "Children" -> tokens[[brackets[[depth, 2]] + 1 ;; pos]]|>];
+						Do[tokens[[i]] = CSSToken[<|"Type" -> "error", "String" -> "REMOVE"|>], {i, brackets[[depth, 2]] + 1, pos, 1}];
+						brackets[[depth]] = {0, 0};
 						depth--];
-					If[inWS, tokens[[pos]] = {"error", "extra-ws"}, inWS = True],
-				" ", If[inWS, tokens[[pos]] = {"error", "extra-ws"}, inWS = True],
+					If[inWS, tokens[[pos]] = CSSToken[<|"Type" -> "error", "String" -> "extra-ws"|>], inWS = True],
+				"whitespace", 
+					If[inWS, tokens[[pos]] = CSSToken[<|"Type" -> "error", "String" -> "extra-ws"|>], inWS = True],
 				"}",
 					If[inBadString || inBadURL, 
 						Null
 						,
-						If[depth == 0 || brackets[[depth, 1]] != "{",
-							tokens[[pos]] = {"error", tokens[[pos]]}
+						If[depth == 0 || TokenTypeIsNot["{", depth, brackets[[All, 1]]],
+							tokens[[pos]] = CSSToken[<|"Type" -> "error", "String" -> CSSTokenString @ tokens[[pos]]|>]
 							,
-							tokens[[brackets[[depth, 2]]]] = Prepend[tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]], "{}"];
-							Do[tokens[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
-							brackets[[depth]] = 0;
+							tokens[[brackets[[depth, 2]]]] = CSSToken[<|"Type" -> "{}", "Children" -> tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]]|>];
+							Do[tokens[[i]] = CSSToken[<|"Type" -> "error", "String" -> "REMOVE"|>], {i, brackets[[depth, 2]] + 1, pos, 1}];
+							brackets[[depth]] = {0, 0};
 							depth--]];
 					inWS = False,
 				")", 
 					If[inBadURL, 
 						(* the closing of a bad URL also closes a bad string *)
-						If[inBadString, inBadString = False; brackets[[depth]] = 0; depth--];
+						If[inBadString, 
+							inBadString = False; 
+							tokens[[brackets[[depth, 2]]]] = CSSToken[<|"Type" -> "error", "String" -> "bad-string", "Children" -> tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]]|>];
+							Do[tokens[[i]] = CSSToken[<|"Type" -> "error", "String" -> "REMOVE"|>], {i, brackets[[depth, 2]] + 1, pos, 1}];
+							brackets[[depth]] = {0, 0}; depth--];
 						inBadURL = False;
-						tokens[[brackets[[depth, 2]]]] = {"error", "bad-url"};
-						Do[tokens[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
-						brackets[[depth]] = 0;
+						tokens[[brackets[[depth, 2]]]] = CSSToken[<|"Type" -> "error", "String" -> "bad-url", "Children" -> tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]]|>];
+						Do[tokens[[i]] = CSSToken[<|"Type" -> "error", "String" -> "REMOVE"|>], {i, brackets[[depth, 2]] + 1, pos, 1}];
+						brackets[[depth]] = {0, 0};
 						depth--
 						,
 						If[inBadString,
 							Null
 							,
-							If[depth == 0 || !MatchQ[brackets[[depth, 1]], "function"|"("], 
-								tokens[[pos]] = {"error", tokens[[pos]]}
+							If[depth == 0 || TokenTypeIsNot["function" | "(", depth, brackets[[All, 1]]], 
+								tokens[[pos]] = CSSToken[<|"Type" -> "error", "String" -> CSSTokenString @ tokens[[pos]]|>]
 								,
-								tokens[[brackets[[depth, 2]]]] = 
-									Join[
-										If[brackets[[depth, 1]] == "(", 
-											{"()"}
-											,
-											tokens[[brackets[[depth, 2]]]]],
-										tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]]];
-								Do[tokens[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
-								brackets[[depth]] = 0;
+								tokens[[brackets[[depth, 2]]]] =
+									If[TokenTypeIs["(", depth, brackets[[All, 1]]], 
+										CSSToken[<|
+											"Type"     -> "()", 
+											"Children" -> tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]]|>]
+										,
+										CSSToken[<|
+											"Type"     -> "function",
+											"String"   -> CSSTokenString @ brackets[[depth, 1]],  
+											"Children" -> tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]]|>]];
+								Do[tokens[[i]] = CSSToken[<|"Type" -> "error", "String" -> "REMOVE"|>], {i, brackets[[depth, 2]] + 1, pos, 1}];
+								brackets[[depth]] = {0, 0};
 								depth--]]];
 					inWS = False, 
 				"]",  
 					If[inBadString || inBadURL,
 						Null
 						,
-						If[depth == 0 || brackets[[depth, 1]] != "[", 
-							tokens[[pos]] = {"error", tokens[[pos]]}
+						If[depth == 0 || TokenTypeIsNot["[", depth, brackets[[All, 1]]], 
+							tokens[[pos]] = CSSToken[<|"Type" -> "error", "String" -> CSSTokenString @ tokens[[pos]]|>]
 							, 
-							tokens[[brackets[[depth, 2]]]] = Prepend[tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]], "[]"];
-							Do[tokens[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
-							brackets[[depth]] = 0;
+							tokens[[brackets[[depth, 2]]]] = 
+								CSSToken[<|
+									"Type"     -> "[]",
+									"Children" -> tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]]|>]; 
+							Do[tokens[[i]] = CSSToken[<|"Type" -> "error", "String" -> "REMOVE"|>], {i, brackets[[depth, 2]] + 1, pos, 1}];
+							brackets[[depth]] = {0, 0};
 							depth--]];
 					inWS = False, 
 				_, inWS = False];
@@ -491,37 +518,38 @@ nestTokens[inputTokens:{__?CSSTokenQ}] :=
 					With[{
 						try = 
 							StringJoin[
-								tokens[[brackets[[depth, 2]]]], 
-								untokenize /@ tokens[[brackets[[depth, 2]] + 1 ;; ]], 
-								tokens[[brackets[[depth, 2]]]]]}, 
+								CSSUntokenize @ tokens[[brackets[[depth, 2]]]], 
+								CSSUntokenize @ tokens[[brackets[[depth, 2]] + 1 ;; ]], 
+								CSSUntokenize @ tokens[[brackets[[depth, 2]]]]]}, 
 						tokens[[brackets[[depth, 2]]]] = 
 							If[StringMatchQ[try, RegularExpression[RE["string-token"]]], 
-								{"string", StringTake[try, {2, -2}]}
+								CSSToken[<|"Type" -> "string", "String" -> StringTake[try, {2, -2}]|>]
 								,
-								{"error", "bad-string"}]],
+								CSSToken[<|"Type" -> "error", "String" -> "bad-string", "Children" -> tokens[[brackets[[depth, 2]] + 1 ;; ]]|>]]],
 				inBadURL, 
 					inBadURL = False; 
-					With[{try = StringJoin["url(", untokenize /@ tokens[[brackets[[depth, 2]] + 1 ;; ]], ")"]}, 
+					With[{try = StringJoin["url(", CSSUntokenize @ tokens[[brackets[[depth, 2]] + 1 ;; ]], ")"]}, 
 						tokens[[brackets[[depth, 2]]]] = 
 							If[StringMatchQ[try, RegularExpression[RE["url-token"]]], 
-								{"url", stripURL @ try}
+								CSSToken[<|"Type" -> "url", "String" -> stripURL @ try|>]
 								,
-								{"error", "bad-url"}]],
+								CSSToken[<|"Type" -> "error", "String" -> "bad-url", "Children" -> tokens[[brackets[[depth, 2]] + 1 ;; ]]|>]]],
 				True,
 					tokens[[brackets[[depth, 2]]]] = 
-						Join[
-							Switch[brackets[[depth, 1]], 
-								"{", {"{}"}, 
-								"(", {"()"}, 
-								"function", tokens[[brackets[[depth, 2]]]],
-								"[", {"[]"}],
-							tokens[[brackets[[depth, 2]] + 1 ;; ]]]];
-			Do[tokens[[i]] = {"error", "REMOVE"}, {i, brackets[[depth, 2]] + 1, pos, 1}];
-			brackets[[depth]] = 0;
+						Switch[CSSTokenType @ brackets[[depth, 1]], 
+							"{",        CSSToken[<|"Type" -> "{}",       "Children" -> tokens[[brackets[[depth, 2]] + 1 ;; ]]|>], 
+							"(",        CSSToken[<|"Type" -> "()",       "Children" -> tokens[[brackets[[depth, 2]] + 1 ;; ]]|>], 
+							"function", CSSToken[<|"Type" -> "function", "Children" -> tokens[[brackets[[depth, 2]] + 1 ;; ]]|>],
+							"[",        CSSToken[<|"Type" -> "[]",       "Children" -> tokens[[brackets[[depth, 2]] + 1 ;; ]]|>]]];
+			Do[tokens[[i]] = CSSToken[<|"Type" -> "error", "String" -> "REMOVE"|>], {i, brackets[[depth, 2]] + 1, pos, 1}];
+			brackets[[depth]] = {0, 0};
 			depth--];
 		
 		(* remove all tokens that were marked for removal *)	
-		DeleteCases[tokens /. {"newline", _} -> " ", {"error", "REMOVE" | "extra-ws"}, Infinity]
+		DeleteCases[
+			tokens /. CSSToken[KeyValuePattern["Type" -> "newline"]] -> CSSToken[<|"Type" -> "whitespace", "String" -> " "|>], 
+			CSSToken[KeyValuePattern[{"Type" -> "error", "String" -> "REMOVE" | "extra-ws"}]], 
+			Infinity]
 	]
 nestTokens[{}] := {}
 
@@ -537,7 +565,11 @@ nestTokens[{}] := {}
 		+ whitespace is normalized to a single space 
 		+ originally unclosed quotes and blocks have closings *)
 
-CSSUntokenize[tokens:{___?CSSTokenQ}] := StringJoin[untokenize /@ tokens]
+CSSUntokenize[{}] := ""
+CSSUntokenize[tokens:{___?CSSTokenQ}] := StringJoin[Table[untokenize[tokens[[i]], tokens[[i+1]]], {i, Length[tokens] - 1}], untokenize @ tokens[[-1]]]
+CSSUntokenize[token_?CSSTokenQ] := untokenize @ token
+
+untokenize[___] := Failure["BadToken", <|"Message" -> "Unrecognized CSS token."|>]
 
 CSSToken /: untokenize[token:CSSToken[a_?AssociationQ]] := 
 	With[
@@ -546,26 +578,94 @@ CSSToken /: untokenize[token:CSSToken[a_?AssociationQ]] :=
 			u = CSSTokenUnit @ token, c = CSSTokenChildren @ token
 		},
 		Switch[t,
-			"string",     If[StringStartsQ[s, "'"], "\"" <> s <> "\"", "'" <> s <> "'"],
-			"function",   s <> "(" <> If[c === {}, "", untokenize /@ c] <> ")",
-			"at-keyword", "@" <> s,
-			"number",     s,
-			"percentage", s <> "%",
-			"dimension",  s <> u,
-			"hash",       "#" <> s,
-			"ident",      s,
-			"newline",    s,
-			"{}",         "{" <> If[c === {}, "", untokenize /@ c] <> "}",
-			"()",         "(" <> If[c === {}, "", untokenize /@ c] <> ")",
-			"[]",         "[" <> If[c === {}, "", untokenize /@ c] <> "]",
-			"url",        "url(" <> s <> ")",
-			"error",      Switch[s, "REMOVE" | "bad-string", "", s],
-			"unicode-range", untokenizeUR[a["Start"], a["Stop"]],
-			_,            s				
+			"string",        If[StringContainsQ[s, "'"], "\"" <> s <> "\"", "'" <> s <> "'"],
+			"function",      s <> "(" <> If[c === {}, "", CSSUntokenize @ c] <> ")",
+			"at-keyword",    "@" <> s,
+			"percentage",    s <> "%",
+			"dimension",     s <> u,
+			"hash",          "#" <> s,
+			"{}",            "{" <> If[c === {}, "", CSSUntokenize @ c] <> "}",
+			"()",            "(" <> If[c === {}, "", CSSUntokenize @ c] <> ")",
+			"[]",            "[" <> If[c === {}, "", CSSUntokenize @ c] <> "]",
+			"url",           "url(" <> s <> ")",
+			"error",         Switch[s, "REMOVE", "", "bad-string" | "bad-url", CSSUntokenize @ c, _, s],
+			"unicode-range", untokenizeUnicodeRange[a["Start"], a["Stop"]],
+			_,               s (* number, ident, newline, delim, colon, semicolon, {, }, (, ), [, ]*)
 		]
 	]
+	
 
-untokenizeUR[start_?NumericQ, stop_?NumericQ] :=
+untokenize[first_?CSSTokenQ, second_?CSSTokenQ] :=
+	Switch[CSSTokenType @ first,
+		"ident",      
+			If[
+				Or[
+					TokenTypeIs["ident" | "function" | "url" | "number" | "percentage" | "dimension" | "CDC" | "()", second],
+					TokenTypeIs["delim", second] && TokenStringIs["-", second]],
+				{untokenize @ first, "/**/"}
+				,
+				untokenize @ first],
+		"at-keyword" | "hash" | "dimension", 
+			If[
+				Or[
+					TokenTypeIs["ident" | "function" | "url" | "number" | "percentage" | "dimension" | "CDC", second],
+					TokenTypeIs["delim", second] && TokenStringIs["-", second]],
+				{untokenize @ first, "/**/"}
+				,
+				untokenize @ first],
+		"number",
+			If[
+				Or[
+					TokenTypeIs["ident" | "function" | "url" | "number" | "percentage" | "dimension", second],
+					TokenTypeIs["delim", second] && TokenStringIs["%", second]],
+				{untokenize @ first, "/**/"}
+				,
+				untokenize @ first],
+		"delim",
+			Switch[CSSTokenString @ first,
+				"#" | "-", 
+					If[
+						Or[
+							TokenTypeIs["ident" | "function" | "url" | "number" | "percentage" | "dimension", second],
+							TokenTypeIs["delim", second] && TokenStringIs["-", second]],
+						{untokenize @ first, "/**/"}
+						,
+						untokenize @ first],
+				"@", 
+					If[
+						Or[
+							TokenTypeIs["ident" | "function" | "url", second],
+							TokenTypeIs["delim", second] && TokenStringIs["-", second]],
+						{untokenize @ first, "/**/"}
+						,
+						untokenize @ first],
+				"^" | "~" | "$" | "*", 
+					If[TokenTypeIs["delim", second] && TokenStringIs["=", second], 
+						{untokenize @ first, "/**/"}
+						,
+						untokenize @ first],
+				"|", 
+					If[TokenTypeIs["delim", second] && TokenStringIs["=" | "|", second], 
+						{untokenize @ first, "/**/"}
+						,
+						untokenize @ first],
+				"." | "+", 
+					If[TokenTypeIs["number" | "percentage" | "dimension", second], 
+						{untokenize @ first, "/**/"}
+						, 
+						untokenize @ first],
+				"/",
+					If[TokenTypeIs["delim", second] && TokenStringIs["*", second], 
+						{untokenize @ first, "/**/"}
+						, 
+						untokenize @ first],
+				_, untokenize @ first
+			],
+		_, untokenize @ first	
+	]
+
+
+untokenizeUnicodeRange[start_?NumericQ, stop_?NumericQ] :=
 	Module[{t, startString, stopString, l},
 		t = IntegerString[#, 16]& /@ {start, stop};
 		{startString, stopString} = StringPadLeft[#, Max[StringLength /@ t], "0"] & /@ t;
@@ -590,18 +690,24 @@ SetAttributes[
 		AdvancePosToNextBlock}, 
 	HoldFirst];
 
+TokenTypeIs[s_,    CSSToken[KeyValuePattern["Type" -> t_?StringQ]]] :=  StringMatchQ[t, s, IgnoreCase -> False]
+TokenTypeIsNot[s_, CSSToken[KeyValuePattern["Type" -> t_?StringQ]]] := !StringMatchQ[t, s, IgnoreCase -> False]
+
 TokenTypeIs[s_, pos_, tokens_] := StringMatchQ[CSSTokenType @ tokens[[pos]], s, IgnoreCase -> False]
 TokenTypeIsNot[s_, pos_, tokens_] := Not @ TokenTypeIs[s, pos, tokens]
+
+TokenStringIs[s_,    CSSToken[KeyValuePattern["String" -> t_?StringQ]]] :=  StringMatchQ[t, s, IgnoreCase -> True]
+TokenStringIsNot[s_, CSSToken[KeyValuePattern["String" -> t_?StringQ]]] := !StringMatchQ[t, s, IgnoreCase -> True]
 
 TokenStringIs[s_, pos_, tokens_] := StringMatchQ[CSSTokenString @ tokens[[pos]], s, IgnoreCase -> True]
 TokenStringIsNot[s_, pos_, tokens_] := Not @ TokenStringIs[s, pos, tokens]
 
-AdvancePosAndSkipWhitespace[pos_, l_, tokens_] := (pos++; While[pos < l && CSSTokenType @ tokens[[pos]] == " ", pos++])
-RetreatPosAndSkipWhitespace[pos_, l_, tokens_] := (pos--; While[pos > 1 && CSSTokenType @ tokens[[pos]] == " ", pos--])
+AdvancePosAndSkipWhitespace[pos_, l_, tokens_] := (pos++; While[pos < l && TokenTypeIs["whitespace", tokens[[pos]]], pos++])
+RetreatPosAndSkipWhitespace[pos_, l_, tokens_] := (pos--; While[pos > 1 && TokenTypeIs["whitespace", tokens[[pos]]], pos--])
 
-AdvancePosToNextSemicolon[pos_, l_, tokens_] := While[pos < l && CSSTokenType @ tokens[[pos]] != ";", pos++]
-AdvancePosToNextSemicolonOrBlock[pos_, l_, tokens_] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "{}" | ";"], pos++]
-AdvancePosToNextSemicolonOrComma[pos_, l_, tokens_] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "," | ";"], pos++]
+AdvancePosToNextSemicolon[pos_, l_, tokens_] :=        While[pos < l && TokenTypeIsNot["semicolon",           tokens[[pos]]], pos++]
+AdvancePosToNextSemicolonOrBlock[pos_, l_, tokens_] := While[pos < l && TokenTypeIsNot["{}" | "semicolon",    tokens[[pos]]], pos++]
+AdvancePosToNextSemicolonOrComma[pos_, l_, tokens_] := While[pos < l && TokenTypeIsNot["comma" | "semicolon", tokens[[pos]]], pos++]
 
 AdvancePosToNextBlock[pos_, l_, tokens_] := While[pos < l && !MatchQ[CSSTokenType @ tokens[[pos]], "{}"], pos++]
 
