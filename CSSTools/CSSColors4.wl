@@ -245,9 +245,9 @@ hslPattern[] :=
 
 
 parseSingleColorFunction[prop_String, token_?CSSTokenQ] :=
-	Module[{relevantTokens, function = CSSTokenString @ token},
+	Module[{relevantTokens, function = token["String"]},
 		(* relevantTokens drops the token's type and string, and removes all whitespace tokens *)
-		relevantTokens = DeleteCases[CSSTokenChildren @ token, CSSToken[KeyValuePattern["Type" -> "whitespace"]], {1}];
+		relevantTokens = DeleteCases[token["Children"], CSSToken[KeyValuePattern["Type" -> "whitespace"]], {1}];
 		Which[
 			(* the "a" of rgb function heads is optional *)
 			StringMatchQ[function, RegularExpression[RE["R"] ~~ RE["G"] ~~ RE["B"] ~~ "(" ~~ RE["A"] ~~ "?)"]],
@@ -287,9 +287,9 @@ AssociateTo[CSSPropertyData, {
 (* new interpreters *)
 (* parse all color types *)
 parseSingleColor[prop_String, token_?CSSTokenQ] := parseSingleColor[prop, token] = 
-	Switch[CSSTokenType @ token,
-		"ident",    parseSingleColorKeyWord[prop, CSSTokenString @ token],
-		"hash",     parseSingleColorHex[prop, CSSTokenString @ token],
+	Switch[token["Type"],
+		"ident",    parseSingleColorKeyWord[prop, token["String"]],
+		"hash",     parseSingleColorHex[prop, token["String"]],
 		"function", parseSingleColorFunction[prop, token],
 		_,          unrecognizedValueFailure @ prop]
 		

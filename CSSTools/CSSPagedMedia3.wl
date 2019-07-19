@@ -158,7 +158,7 @@ SetAttributes[{consumeAtPageRule}, HoldFirst];
 consumeAtPageRule[pos_, l_, tokens_] := 
 	Module[{selectorsStart, selectorsEnd, pageSelectors},
 		(* check for valid start of @page token sequence *)
-		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot["page", pos, tokens],
+		If[TokenTypeIsNot["at-keyword", tokens[[pos]]] || TokenStringIsNot["page", tokens[[pos]]],
 			Echo[Row[{"Expected @page keyword. Had instead ", tokens[[pos]]}], "@page error"];
 			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
 			Return @ {}
@@ -170,7 +170,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 			consume optional page selector list 
 			Following CSS selectors, if any of the comma-delimited selectors do not match, all are ignored. *)
 		pageSelectors = 
-			If[TokenTypeIsNot["{}", pos, tokens], 
+			If[TokenTypeIsNot["{}", tokens[[pos]]], 
 				selectorsStart = pos; AdvancePosToNextBlock[pos, l, tokens]; 
 				selectorsEnd = pos; RetreatPosAndSkipWhitespace[selectorsEnd, l, tokens];
 				consumePageSelectorList[If[selectorsEnd < selectorsStart, {}, tokens[[selectorsStart ;; selectorsEnd]]]]
@@ -187,24 +187,24 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 	Module[{pos = 1, l = Length[tokens], atMarginStart, atMarginEnd, dec, decStart, decEnd, declarations = {}},
 		(* skip any initial whitespace *)
-		If[TokenTypeIs["whitespace", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
+		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
 		
 		While[pos <= l,
 			Which[
 				(* page-margin at-rule *)
-				TokenTypeIs["at-keyword", pos, tokens] && TokenStringIs[Alternatives @@ $ValidPageMargins, pos, tokens], 
+				TokenTypeIs["at-keyword", tokens[[pos]]] && TokenStringIs[Alternatives @@ $ValidPageMargins, tokens[[pos]]], 
 					atMarginStart = atMarginEnd = pos; AdvancePosToNextBlock[atMarginEnd, l, tokens];
 					dec = consumeAtPageMarginRule[tokens[[atMarginStart ;; atMarginEnd]], scope];
 					If[!FailureQ[dec], AppendTo[declarations, dec]];
 					pos = atMarginEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
 				,
 				(* CSS 2.1 property or new @Page properties size, marks, bleed, and page*)
-				TokenTypeIs["ident", pos, tokens] && TokenStringIs[Alternatives @@ Join[$ApplicableCSSPageProperties, {"size", "marks", "bleed", "page"}], pos, tokens],
+				TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs[Alternatives @@ Join[$ApplicableCSSPageProperties, {"size", "marks", "bleed", "page"}], tokens[[pos]]],
 					decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
 					dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
 					If[!FailureQ[dec], 
 						Which[
-							TokenStringIs["margin" | "margin-top" | "margin-bottom" | "margin-left" | "margin-right", pos, tokens],
+							TokenStringIs["margin" | "margin-top" | "margin-bottom" | "margin-left" | "margin-right", tokens[[pos]]],
 								dec = convertMarginsToPrintingOptions[dec, scope];
 								dec = dec /. head:((Left | Right | Bottom | Top)[_]) :> scope[head]
 							,
@@ -276,13 +276,13 @@ convertMarginsToPrintingOptions[declaration_?AssociationQ, scope_] :=
 consumeAtPageMarginRule[tokens:{___?CSSTokenQ}, scope_] := 
 	Module[{pos = 1, l = Length[tokens], horizontal, vertical, location},
 		(* check for valid start of margin at-rule token sequence *)
-		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot[Alternatives @@ $ValidPageMargins, pos tokens],
+		If[TokenTypeIsNot["at-keyword", tokens[[pos]]] || TokenStringIsNot[Alternatives @@ $ValidPageMargins, tokens[[pos]]],
 			Echo[Row[{"Expected a page-margin at-rule. Had instead ", tokens[[pos]]}], "@page error"];
 			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
 			Return @ {}
 		];
 		{horizontal, vertical} =
-			Switch[location = ToLowerCase @ CSSTokenString @ tokens[[pos]],
+			Switch[location = ToLowerCase @ tokens[[pos]]["String"],
 				"top-left",      {Left,   PageHeaders},
 				"top-center",    {Center, PageHeaders},
 				"top-right",     {Right,  PageHeaders},
@@ -294,7 +294,7 @@ consumeAtPageMarginRule[tokens:{___?CSSTokenQ}, scope_] :=
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
 		
 		(* check for valid block *)
-		If[TokenTypeIsNot["{}", pos, tokens], 
+		If[TokenTypeIsNot["{}", tokens[[pos]]], 
 			Echo[Row[{"Expected a page-margin block. Had instead ", tokens[[pos]]}], "@page-margin error"];
 			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
 			Return @ {}
@@ -311,11 +311,11 @@ consumeAtPageMarginRule[tokens:{___?CSSTokenQ}, scope_] :=
 consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}, scope_, location_String, horizontal_, vertical_] :=
 	Module[{pos = 1, l = Length[tokens], dec, decStart, decEnd, declarations = {}, interpretation},
 		(* skip any initial whitespace *)
-		If[TokenTypeIs["whitespace", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
+		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
 		
 		While[pos <= l,
 			(* only a subset of CSS 2.1 properties are valid *)
-			If[TokenTypeIs["ident", pos, tokens] && TokenStringIs[Alternatives @@ $ApplicableCSSPageMarginProperties, pos, tokens],
+			If[TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs[Alternatives @@ $ApplicableCSSPageMarginProperties, tokens[[pos]]],
 				decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
 				dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
 				If[!FailureQ[dec], AppendTo[declarations, dec]];
@@ -373,11 +373,11 @@ consumePageSelectorList[{}] := All
 consumePageSelector[tokens:{___?CSSTokenQ}] :=
 	Module[{pos = 1, l = Length[tokens], scope = All, page},
 		(* skip potential leading whitespace *)
-		If[TokenTypeIs["whitespace", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]];
+		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
 		
 		(* check for page identifier, which is not supported by FE *)
-		If[pos <= l && TokenTypeIs["ident", pos, tokens], 
-			page = CSSTokenString @ tokens[[pos]];
+		If[pos <= l && TokenTypeIs["ident", tokens[[pos]]], 
+			page = tokens[[pos]]["String"];
 			AdvancePosAndSkipWhitespace[pos, l, tokens];
 			(* until the FE supports this feature, bail out now as not supported *)
 			Return @ Missing["Not supported."]
@@ -386,21 +386,21 @@ consumePageSelector[tokens:{___?CSSTokenQ}] :=
 		(* check for 0 or more pseudo-pages *)
 		While[pos <= l,
 			Switch[
-				CSSTokenType @ tokens[[pos]],
+				tokens[[pos]]["Type"],
 				"whitespace", Return @ Failure["UnexpectedParse", <|"Message" -> "@page pseudo-pages cannot contain whitespace."|>],
 				"colon",
 					pos++;
 					If[pos > l, Return @ Failure["UnexpectedParse", <|"Message" -> "Incomplete @page pseudo-page selector."|>]];
-					If[TokenTypeIs["ident", pos, tokens],
-						Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]],
+					If[TokenTypeIs["ident", tokens[[pos]]],
+						Switch[ToLowerCase @ tokens[[pos]]["String"],
 							"left",  scope = Left,
 							"right", scope = Right,
 							"first", scope = First,
 							"blank", Missing["Not supported."],
-							_,       Return @ Failure["UnexpectedParse", <|"Message" -> "Unrecognized @page pseudo-page " <> CSSTokenString @ tokens[[pos]] <> "."|>]
+							_,       Return @ Failure["UnexpectedParse", <|"Message" -> "Unrecognized @page pseudo-page " <> tokens[[pos]]["String"] <> "."|>]
 						]
 						,
-						Return @ Failure["UnexpectedParse", <|"Message" -> "Invalid @page pseudo-page " <> CSSTokenString @ tokens[[pos]] <> "."|>]
+						Return @ Failure["UnexpectedParse", <|"Message" -> "Invalid @page pseudo-page " <> tokens[[pos]]["String"] <> "."|>]
 					],
 				_, Return @ Failure["UnexpectedParse", <|"Message" -> "Expected @page pseudo-page selector."|>]
 			];
@@ -516,17 +516,17 @@ consumeProperty[prop:"size", tokens:{__?CSSTokenQ}] :=
 		paperOrientations = {"landscape", "portrait"};
 		Which[
 			(* case of page size possibly followed by orientation *)
-			TokenTypeIs["ident", pos, tokens] && TokenStringIs[Alternatives @@ paperSizes, pos, tokens],
+			TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs[Alternatives @@ paperSizes, tokens[[pos]]],
 				value1 = parseSinglePaperSize[prop, tokens[[pos]]];
 				AdvancePosAndSkipWhitespace[pos, l, tokens];
 				(* check for orientation *)
-				If[pos <= l && TokenTypeIs["ident", pos, tokens],
+				If[pos <= l && TokenTypeIs["ident", tokens[[pos]]],
 					value2 = parseSinglePaperOrientation[prop, tokens[[pos]]];
 					AdvancePosAndSkipWhitespace[pos, l, tokens];
 				];
 			,
 			(* case of orientation possibly followed by page size *)
-			TokenTypeIs["ident", pos, tokens] && TokenStringIs[Alternatives @@ paperOrientations, pos, tokens],
+			TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs[Alternatives @@ paperOrientations, tokens[[pos]]],
 				value1 = parseSinglePaperOrientation[prop, tokens[[pos]]];
 				AdvancePosAndSkipWhitespace[pos, l, tokens];
 				(* check for paper size *)
@@ -536,22 +536,22 @@ consumeProperty[prop:"size", tokens:{__?CSSTokenQ}] :=
 				];
 			,
 			(* case of single keyword *)
-			TokenTypeIs["ident", pos, tokens],
+			TokenTypeIs["ident", tokens[[pos]]],
 				value1 = 
-					Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]],
+					Switch[ToLowerCase @ tokens[[pos]]["String"],
 						"auto", {"PageSize" -> {Automatic, Automatic}, "PaperSize" -> {Automatic, Automatic}},
 						_,      unrecognizedKeyWordFailure @ prop
 					];
 				AdvancePosAndSkipWhitespace[pos, l, tokens];
 			,
 			(* case of lengths *)
-			TokenTypeIs["dimension", pos, tokens],
-				value1 = If[CSSTokenValue @ tokens[[pos]] < 0, negativeLengthFailure @ prop, convertDPItoPrintersPoints @ parseLength @ tokens[[pos]]];
+			TokenTypeIs["dimension", tokens[[pos]]],
+				value1 = If[tokens[[pos]]["Value"] < 0, negativeLengthFailure @ prop, convertDPItoPrintersPoints @ parseLength @ tokens[[pos]]];
 				AdvancePosAndSkipWhitespace[pos, l, tokens];
 				If[FailureQ[value1], Return @ value1, value1 = {value1}];
 				(* check for separate height value *)
-				If[pos <= l && TokenTypeIs["dimension", pos, tokens],
-					value2 = If[CSSTokenValue @ tokens[[pos]] < 0, negativeLengthFailure @ prop, convertDPItoPrintersPoints @ parseLength @ tokens[[pos]]];
+				If[pos <= l && TokenTypeIs["dimension", tokens[[pos]]],
+					value2 = If[tokens[[pos]]["Value"] < 0, negativeLengthFailure @ prop, convertDPItoPrintersPoints @ parseLength @ tokens[[pos]]];
 					AdvancePosAndSkipWhitespace[pos, l, tokens];
 					If[FailureQ[value2], Return @ value2, value2 = {value2}];
 					,
@@ -570,7 +570,7 @@ consumeProperty[prop:"size", tokens:{__?CSSTokenQ}] :=
 	]
 	
 parseSinglePaperSize[prop_String, token_?CSSTokenQ] :=
-	Switch[ToLowerCase @ CSSTokenString @ token,
+	Switch[ToLowerCase @ token["String"],
 		"a5",     {"PageSize" -> {419.528, 595.276}, "PaperSize" -> {419.528, 595.276}},
 		"a4",     {"PageSize" -> {595.276, 841.89},  "PaperSize" -> {595.276, 841.89}},
 		"a3",     {"PageSize" -> {841.89,  1190.55}, "PaperSize" -> {841.89,  1190.55}},
@@ -585,7 +585,7 @@ parseSinglePaperSize[prop_String, token_?CSSTokenQ] :=
 	]
 	
 parseSinglePaperOrientation[prop_String, token_?CSSTokenQ] :=
-	Switch[ToLowerCase @ CSSTokenString @ token,
+	Switch[ToLowerCase @ token["String"],
 		"portrait",  {"PaperOrientation" -> "Portrait"},
 		"landscape", {"PaperOrientation" -> "Landscape"},
 		_,           unrecognizedKeyWordFailure @ prop
@@ -608,16 +608,16 @@ convertDPItoPrintersPoints[Dynamic[val_]] := Dynamic[val]
 	Because cross and crop can be specified together, ignore the cross value unless there is a parsing error.*)
 consumeProperty[prop:"marks", tokens:{__?CSSTokenQ}] := 
 	Module[{pos = 1, l = Length[tokens], value},
-		Switch[CSSTokenType @ tokens[[pos]],
+		Switch[tokens[[pos]]["Type"],
 			"ident",
-				Switch[CSSTokenString @ tokens[[pos]],
+				Switch[tokens[[pos]]["String"],
 					"none",  value = {"PrintRegistrationMarks" -> False},
 					"crop",  
 						value = {"PrintRegistrationMarks" -> True};
 						(* check for 'cross' value*)
 						AdvancePosAndSkipWhitespace[pos, l, tokens];
-						If[pos <= l && TokenTypeIs["ident", pos, tokens],
-							If[TokenStringIsNot["cross", pos, tokens], value = unrecognizedKeyWordFailure @ prop]
+						If[pos <= l && TokenTypeIs["ident", tokens[[pos]]],
+							If[TokenStringIsNot["cross", tokens[[pos]]], value = unrecognizedKeyWordFailure @ prop]
 							,
 							value = unrecognizedValueFailure @ prop
 						]
@@ -626,8 +626,8 @@ consumeProperty[prop:"marks", tokens:{__?CSSTokenQ}] :=
 						value = Missing["Not supported."];
 						(* check for 'crop' value*)
 						AdvancePosAndSkipWhitespace[pos, l, tokens];
-						If[pos <= l && TokenTypeIs["ident", pos, tokens],
-							If[TokenStringIsNot["crop", pos, tokens], value = {"PrintRegistrationMarks" -> True}]
+						If[pos <= l && TokenTypeIs["ident", tokens[[pos]]],
+							If[TokenStringIsNot["crop", tokens[[pos]]], value = {"PrintRegistrationMarks" -> True}]
 							,
 							value = unrecognizedValueFailure @ prop
 						],
@@ -649,9 +649,9 @@ consumeProperty[prop:"bleed", tokens:{__?CSSTokenQ}] :=
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
-			Switch[CSSTokenType @ tokens[[pos]],
+			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]],
+					Switch[ToLowerCase @ tokens[[pos]]["String"],
 						"auto", Missing["Not supported."], (* Computes to 6pt if marks has crop and to zero otherwise. *)
 						_,      unrecognizedKeyWordFailure @ prop
 					],
@@ -673,12 +673,12 @@ consumeProperty[prop:"page", tokens:{__?CSSTokenQ}] :=
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
-			Switch[CSSTokenType @ tokens[[pos]],
+			Switch[tokens[[pos]]["Type"],
 				"ident", 
 					(* 
 						If 'auto', the used value is the value specified on its nearest ancestor with a non-auto value. 
 						When specified on the root element, the used value for auto is the empty string. *)
-					If[StringMatchQ[CSSTokenString @ tokens[[pos]], "auto", IgnoreCase -> True], 
+					If[StringMatchQ[tokens[[pos]]["String"], "auto", IgnoreCase -> True], 
 						Missing["Not supported."]
 						,
 						Missing["Not supported."]

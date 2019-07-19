@@ -80,15 +80,15 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 		If[TrueQ @ $Debug, Echo[l, "Token Length"]];
 		
 		(* skip any leading whitespace (there shouldn't be any if @charset exists) *)
-		If[TokenTypeIs["whitespace", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]];
+		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
 		If[TrueQ @ $Debug, Echo[pos, "position"]];
 		
 		(* check for @charset rule *)
-		If[TokenTypeIs["at-keyword", pos, tokens] && TokenStringIs["charset", pos, tokens], consumeAtCharsetKeyword[pos, l, tokens]];
+		If[TokenTypeIs["at-keyword", tokens[[pos]]] && TokenStringIs["charset", tokens[[pos]]], consumeAtCharsetKeyword[pos, l, tokens]];
 		If[TrueQ @ $Debug, Echo[pos, "position after @charset check"]];
 		
 		(* check for @import rules *)
-		While[TokenTypeIs["at-keyword", pos, tokens] && TokenStringIs["import", pos, tokens], 
+		While[TokenTypeIs["at-keyword", tokens[[pos]]] && TokenStringIs["import", tokens[[pos]]], 
 			AppendTo[imports, consumeAtImportKeyword[pos, l, tokens]];
 			If[TrueQ @ $Debug, Echo[pos, "position after @import check"]];
 		];
@@ -100,10 +100,10 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 			If[TrueQ @ $Debug, Echo[pos, "position before rule"]];
 			Which[
 				(* any at-rule *)
-				TokenTypeIs["at-keyword", pos, tokens], (*TODO*)consumeAtRule[pos, l, tokens],
+				TokenTypeIs["at-keyword", tokens[[pos]]], (*TODO*)consumeAtRule[pos, l, tokens],
 				
 				(* bad ruleset: missing a selector *)
-				TokenTypeIs["{}", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens], 
+				TokenTypeIs["{}", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens], 
 				
 				(* anything else treated as a ruleset *)
 				True, rulesets[[i]] = consumeRuleset[pos, l, tokens]; i++;
@@ -123,17 +123,17 @@ SetAttributes[{consumeAtCharsetKeyword, consumeAtImportKeyword}, HoldFirst];
 (* The character set is assumed UTF-8 and any charset is ignored. *)
 consumeAtCharsetKeyword[pos_, l_, tokens_] :=
 	Module[{},
-		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot["charset", pos, tokens],
+		If[TokenTypeIsNot["at-keyword", tokens[[pos]]] || TokenStringIsNot["charset", tokens[[pos]]],
 			Echo[Row[{"Expected @charset keyword. Had instead ", tokens[[pos]]}], "@charset error"];
 			AdvancePosToNextSemicolon[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
 			Return @ Null;
 		];
 		pos++;
-		If[TokenTypeIsNot["whitespace", pos, tokens], 
+		If[TokenTypeIsNot["whitespace", tokens[[pos]]], 
 			AdvancePosToNextSemicolon[pos, l, tokens]
 			,
 			pos++;
-			If[TokenTypeIsNot["string", pos, tokens], 
+			If[TokenTypeIsNot["string", tokens[[pos]]], 
 				AdvancePosToNextSemicolon[pos, l, tokens]
 				,
 				pos++;
@@ -148,30 +148,30 @@ consumeAtCharsetKeyword[pos_, l_, tokens_] :=
 
 consumeAtImportKeyword[pos_, l_, tokens_] :=  
 	Module[{path, mediums, mediaStart, data},
-		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot["import", pos, tokens],
+		If[TokenTypeIsNot["at-keyword", tokens[[pos]]] || TokenStringIsNot["import", tokens[[pos]]],
 			Echo[Row[{"Expected @import keyword. Had instead ", tokens[[pos]]}], "@import error"];
 			AdvancePosToNextSemicolon[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; Return @ {};
 		];
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
 		(* next token must be URL or string path to file *)
-		If[TokenTypeIsNot["url" | "string", pos, tokens],
+		If[TokenTypeIsNot["url" | "string", tokens[[pos]]],
 			Echo["Expected URL not found.", "@import error"];
 			AdvancePosToNextSemicolon[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; Return @ {};
 		];
-		path = CSSTokenString @ tokens[[pos]];
+		path = tokens[[pos]]["String"];
 		AdvancePosAndSkipWhitespace[pos, l, tokens]; 	
 		If[TrueQ @ $Debug, Echo[pos, "position before @import media check"]];
 		
 		(* anything else is a comma-delimited set of media queries *)
 		(*TODO: implement proper media queries *)
 		mediums = {};
-		While[TokenTypeIsNot["semicolon", pos, tokens],
+		While[TokenTypeIsNot["semicolon", tokens[[pos]]],
 			mediaStart = pos;
 			AdvancePosToNextSemicolonOrComma[pos, l, tokens];
 			If[TrueQ @ $Debug, Echo[pos, "here"]];
 			If[pos == l, Echo["Media query has no closing. Reached EOF.", "@import error"]; Return @ {}];
 			AppendTo[mediums, CSSUntokenize @ tokens[[mediaStart ;; pos - 1]]];
-			If[TokenTypeIs["semicolon", pos, tokens],
+			If[TokenTypeIs["semicolon", tokens[[pos]]],
 				(* break out of media loop*)
 				Break[] 
 				, 
@@ -209,15 +209,15 @@ SetAttributes[{consumeAtRule, consumeRuleset, consumeAtPageRule}, HoldFirst];
 consumeAtRule[pos_, l_, tokens_] :=
 	Which[
 		(* @import is not allowed after the top of the stylesheet, so skip them *)
-		TokenStringIs["import", pos, tokens], 
+		TokenStringIs["import", tokens[[pos]]], 
 			AdvancePosToNextSemicolon[pos, l, tokens]; 
 			AdvancePosAndSkipWhitespace[pos, l, tokens], 
 			
 		(* @page *)
-		TokenStringIs["page", pos, tokens], consumeAtPageRule[pos, l, tokens];,
+		TokenStringIs["page", tokens[[pos]]], consumeAtPageRule[pos, l, tokens];,
 			
 		(* @media *)
-		TokenStringIs["media", pos, tokens], 
+		TokenStringIs["media", tokens[[pos]]], 
 			AdvancePosToNextSemicolonOrBlock[pos, l, tokens]; 
 			AdvancePosAndSkipWhitespace[pos, l, tokens], 
 			
@@ -235,7 +235,7 @@ consumeAtRule[pos_, l_, tokens_] :=
 consumeAtPageRule[pos_, l_, tokens_] := 
 	Module[{pageSelectors},
 		(* check for valid start of @page token sequence *)
-		If[TokenTypeIsNot["at-keyword", pos, tokens] || TokenStringIsNot["page", pos, tokens],
+		If[TokenTypeIsNot["at-keyword", tokens[[pos]]] || TokenStringIsNot["page", tokens[[pos]]],
 			Echo[Row[{"Expected @page keyword instead of ", tokens[[pos]]}], "@page error"];
 			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
 			Return @ {}
@@ -245,15 +245,15 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 		
 		(* consume optional page selector :left, :right, or :first *)
 		pageSelectors =
-			If[TokenTypeIsNot["{}", pos, tokens], 
-				If[TokenTypeIsNot["colon", pos, tokens], 
+			If[TokenTypeIsNot["{}", tokens[[pos]]], 
+				If[TokenTypeIsNot["colon", tokens[[pos]]], 
 					Echo[Row[{"Expected @page pseudopage instead of ", tokens[[pos]]}], "@page error"];
 					AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens];
 					Return @ {}
 				];
 				pos++;
-				If[TokenTypeIs["ident", pos, tokens],
-					Switch[ToLowerCase @ CSSTokenString @ tokens[[pos]],
+				If[TokenTypeIs["ident", tokens[[pos]]],
+					Switch[ToLowerCase @ tokens[[pos]]["String"],
 						"left",  Left,
 						"right", Right,
 						"first", Missing["Not supported."],
@@ -264,7 +264,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 				All
 			];
 		If[FailureQ[pageSelectors] || MissingQ[pageSelectors], Return @ {}];
-		If[TokenTypeIsNot["{}", pos, tokens], 
+		If[TokenTypeIsNot["{}", tokens[[pos]]], 
 			Echo[Row[{"Expected @page block instead of ", tokens[[pos]]}], "@page error"];
 			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
 			Return @ {}
@@ -279,10 +279,10 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 	Module[{pos = 1, l = Length[tokens], dec, decStart, decEnd, declarations = {}},
 		(* skip any initial whitespace *)
-		If[TokenTypeIs["whitespace", pos, tokens], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
+		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
 		
 		While[pos <= l,
-			If[TokenTypeIs["ident", pos, tokens] && TokenStringIs["margin" | "margin-top" | "margin-bottom" | "margin-left" | "margin-right", pos, tokens],
+			If[TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs["margin" | "margin-top" | "margin-bottom" | "margin-left" | "margin-right", tokens[[pos]]],
 				decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
 				dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
 				If[!FailureQ[dec], 
@@ -398,7 +398,7 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 		declaration =
 			With[
 				{
-					prop = CSSNormalizeEscapes @ ToLowerCase @ CSSTokenString @ decTokens[[propertyPosition]],
+					prop = CSSNormalizeEscapes @ ToLowerCase @ decTokens[[propertyPosition]]["String"],
 					(*check for empty property*)
 					valueTokens = If[decPos < valuePosition, {}, decTokens[[valuePosition ;; decPos]]]
 				},
