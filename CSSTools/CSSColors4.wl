@@ -3,7 +3,7 @@
 BeginPackage["CSSTools`CSSColors4`", {"CSSTools`"}];
 
 (* CSSTokenizer`
-	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs, CSSTokenString
+	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs
 	---> token position modifiers e.g. AdvancePosAndSkipWhitespace *)
 (* CSSPropertyInterpreter` 
 	---> defines consumeProperty and CSSPropertyData *)
@@ -21,7 +21,7 @@ Begin["`Private`"]; (* Begin Private Context *)
 
 (* keyword *)
 parseSingleColorKeyWord[prop_String, keyword_String] := 
-	Switch[ToLowerCase @ CSSNormalizeEscapes @ keyword,
+	Switch[keyword,
 		"currentcolor",   Dynamic @ CurrentValue[FontColor], 
 		"transparent",    None, (* interpreted as GrayLevel[0, 0] by Interpreter["Color"] *)
 		"aliceblue",      RGBColor[Rational[16, 17], Rational[248, 255], 1], 
@@ -245,7 +245,7 @@ hslPattern[] :=
 
 
 parseSingleColorFunction[prop_String, token_?CSSTokenQ] :=
-	Module[{relevantTokens, function = token["String"]},
+	Module[{relevantTokens, function = token["RawString"]},
 		(* relevantTokens drops the token's type and string, and removes all whitespace tokens *)
 		relevantTokens = DeleteCases[token["Children"], CSSToken[KeyValuePattern["Type" -> "whitespace"]], {1}];
 		Which[

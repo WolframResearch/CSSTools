@@ -15,13 +15,7 @@ SetUsage[CSSToken,            "CSSToken[<|$$|>] represents a CSS token."];
 SetUsage[CSSTokenQ,           "Returns True$ if the expression is a valid CSS token."];
 SetUsage[CSSTokenize,         "CSSTokenize[string$] converts string$ into a list of CSS tokens."];
 SetUsage[CSSUntokenize,       "CSSUntokenize[{CSSToken$...}] serializes CSS tokens into a string."];
-(*SetUsage[CSSTokenType,        "CSSTokenType[CSSToken$] returns the type of CSSToken$."];
-SetUsage[CSSTokenString,      "CSSTokenString[CSSToken$] returns the main string of the CSSToken$."];
-SetUsage[CSSTokenValue,       "CSSTokenValue[CSSToken$] returns the interpreted numeric value of the numeric CSSToken$."];
-SetUsage[CSSTokenValueType,   "CSSTokenValueType[CSSToken$] returns the type of the CSSToken$ value e.g. \"number\" or \"integer\"."];
-SetUsage[CSSTokenUnit,        "CSSTokenUnit[CSSToken$] returns the dimension of a dimension CSSToken$ e.g. \"em\" or \"px\"."];
-SetUsage[CSSTokenChildren,    "CSSTokenChildren[CSSToken$] returns the CSS tokens nested within CSSToken$."];
-*)
+
 SetUsage[TokenTypeIs,      "TokenTypeIs[string$, CSSToken$] gives True if the type of the CSS token matches string$."];
 SetUsage[TokenTypeIsNot,   "TokenTypeIsNot[string$, CSSToken$] gives True if the type of the CSS token does not match string$."];
 SetUsage[TokenStringIs,    "TokenStringIs[string$, CSSToken$] gives True if the string content of the CSS token matches string$; case is ignored and escape sequences normalized."];
@@ -87,7 +81,7 @@ RE["X"] = "(x|X|\\\\0{0,4}(58|78)(\r\n|[ \t\r\n\f])?|\\\\x|\\\\X)";
 RE["Y"] = "(y|Y|\\\\0{0,4}(59|79)(\r\n|[ \t\r\n\f])?|\\\\y|\\\\Y)";
 RE["Z"] = "(z|Z|\\\\0{0,4}(5a|7a|5A|7A)(\r\n|[ \t\r\n\f])?|\\\\z|\\\\Z)";
 
-RE["identStart"]  = "((--)|(-?(([_a-zA-Z]|[^[:ascii:]])|" ~~ RE["escape"] ~~ ")))";    (* -- is from CSS Variables module *)
+RE["identStart"]  = "((--)|(-?(([_a-zA-Z]|[^[:ascii:]])|" ~~ RE["escape"] ~~ ")))";    (* -- is from CSS Variables Module 1 *)
 RE["identBody"]   = "((([_a-zA-Z0-9\\-]|[^[:ascii:]])|" ~~ RE["escape"] ~~ ")*)";  
 RE["integerSCI"]  = "([+\\-]?[0-9]+[Ee][+\\-]?[0-9]+)"; 
 RE["numberSCI"]   = "([+\\-]?[0-9]*\\.[0-9]+[Ee][+\\-]?[0-9]+)";
@@ -200,22 +194,7 @@ CSSTokenize[x_String] := nestTokens @ tokenizeFlat @ x
 (*Token access*)
 
 
-CSSToken /: CSSTokenType[     CSSToken[KeyValuePattern["Type"      -> v_]]] := v
-CSSToken /: CSSTokenString[   CSSToken[KeyValuePattern["String"    -> v_]]] := v
-CSSToken /: CSSTokenValue[    CSSToken[KeyValuePattern["Value"     -> v_]]] := v
-CSSToken /: CSSTokenValueType[CSSToken[KeyValuePattern["ValueType" -> v_]]] := v
-CSSToken /: CSSTokenUnit[     CSSToken[KeyValuePattern["Unit"      -> v_]]] := v
-CSSToken /: CSSTokenChildren[ CSSToken[KeyValuePattern["Children"  -> v_]]] := v
-CSSToken /: CSSTokenType[     CSSToken[KeyValuePattern[_ -> _]]] := None
-CSSToken /: CSSTokenString[   CSSToken[KeyValuePattern[_ -> _]]] := None
-CSSToken /: CSSTokenValue[    CSSToken[KeyValuePattern[_ -> _]]] := None
-CSSToken /: CSSTokenValueType[CSSToken[KeyValuePattern[_ -> _]]] := None
-CSSToken /: CSSTokenUnit[     CSSToken[KeyValuePattern[_ -> _]]] := None
-CSSToken /: CSSTokenChildren[ CSSToken[KeyValuePattern[_ -> _]]] := None
-
-
-CSSToken[KeyValuePattern[t_ -> v_]][t_?StringQ] := v
-CSSToken[KeyValuePattern[_  -> _ ]][t_?StringQ] := None
+CSSToken[a_?AssociationQ][key_] := a[key] 
 
 
 (* ::Subsection::Closed:: *)
@@ -229,14 +208,16 @@ tokenizeFlat[x_String] :=
 				s:RegularExpression @ RE["comment"] :> Nothing(*CSSToken[<|"Type" -> "comment", "String" -> s|>]*),
 				s:RegularExpression @ RE["at-keyword-token"] :> 
 					CSSToken[<|
-						"Type"   -> "at-keyword", 
-						"String" -> (*CSSNormalizeEscapes @ *)StringDrop[s, 1]|>],
+						"Type"      -> "at-keyword", 
+						"String"    -> CSSNormalizeEscapes @ ToLowerCase @ StringDrop[s, 1],
+						"RawString" -> StringDrop[s, 1]|>],
 				s:RegularExpression @ RE["url-token"] :> 
 					With[{v = stripURL @ s},
 						CSSToken[<|
-							"Type"   -> "url", 
-							"String" -> First @ v,
-							"Quotes" -> Last @ v|>]],
+							"Type"      -> "url", 
+							"String"    -> If[Last @ v === None, CSSNormalizeEscapes @ First @ v, First @ v], (* only normalize escapes if the URL was unquoted *)
+							"RawString" -> First @ v,
+							"Quotes"    -> Last @ v|>]],
 				s:RegularExpression @ RE["urlhead"] :> 
 					CSSToken[<|
 						"Type"   -> "urlhead", 
@@ -248,14 +229,16 @@ tokenizeFlat[x_String] :=
 						"Quotes" -> StringTake[s, 1]|>],
 				s:RegularExpression @ RE["function-token"] :> 
 					CSSToken[<|
-						"Type"   -> "function", 
-						"String" -> (*CSSNormalizeEscapes @ ToLowerCase @ *)StringDrop[s, -1]|>],
+						"Type"      -> "function", 
+						"RawString" -> StringDrop[s, -1],
+						"String"    -> CSSNormalizeEscapes @ ToLowerCase @ StringDrop[s, -1]|>],
 				s:RegularExpression @ RE["hash-token"] :> 
 					With[{v = idHash @ StringDrop[s, 1]},
 						CSSToken[<|
-							"Type"   -> "hash",
-							"String" -> First @ v,
-							"Flag"   -> Last @ v|>]],
+							"Type"      -> "hash",
+							"String"    -> CSSNormalizeEscapes @ First @ v, (* no ToLowerCase because HTML id tags are case-sensitive *)
+							"RawString" -> First @ v,
+							"Flag"      -> Last @ v|>]],
 				s:RegularExpression @ RE["unicode-range-token"] :> 
 					With[{range = First @ calculateUnicodeRange @ s},
 						CSSToken[<|
@@ -268,30 +251,35 @@ tokenizeFlat[x_String] :=
 				
 				s:RegularExpression @ RE["ident-token"] :> 
 					CSSToken[<|
-						"Type"   -> "ident", 
-						"String" -> If[s == "\\", s, (*CSSNormalizeEscapes @ *)s]|>],
+						"Type"      -> "ident", 
+						"String"    -> If[s == "\\", s, CSSNormalizeEscapes @ s],
+						"RawString" -> s|>],
 				
 				(* scientific notation is tricky; it can look like a dimension but can also be part of a dimension *)
 				num:RegularExpression[RE["numSCI"]] ~~ "%" :> 
 					With[{n = tokenizeNumber @ num},
 						CSSToken[<|
 							"Type"      -> "percentage", 
-							"String"    -> n[[1]],
+							"String"    -> CSSNormalizeEscapes @ ToLowerCase @ n[[1]],
+							"RawString" -> n[[1]],
 							"Value"     -> n[[2]],
 							"ValueType" -> n[[3]]|>]],
 				num:RegularExpression[RE["numSCI"]] ~~ unit:RegularExpression[RE["ident-token"]] :>	
 					With[{n = tokenizeNumber @ num},
 						CSSToken[<|
 							"Type"      -> "dimension", 
-							"String"    -> n[[1]],
+							"String"    -> CSSNormalizeEscapes @ ToLowerCase @ n[[1]],
+							"RawString" -> n[[1]],
 							"Value"     -> n[[2]],
 							"ValueType" -> n[[3]],
-							"Unit"      -> (*CSSNormalizeEscapes @ ToLowerCase @ *)unit|>]],
+							"Unit"      -> CSSNormalizeEscapes @ ToLowerCase @ unit,
+							"RawUnit"   -> unit|>]],
 				num:RegularExpression[RE["numSCI"]] :> 
 					With[{n = tokenizeNumber @ num},
 						CSSToken[<|
 							"Type"      -> "number", 
-							"String"    -> n[[1]],
+							"String"    -> CSSNormalizeEscapes @ ToLowerCase @ n[[1]],
+							"RawString" -> n[[1]],
 							"Value"     -> n[[2]],
 							"ValueType" -> n[[3]]|>]],
 								
@@ -299,22 +287,26 @@ tokenizeFlat[x_String] :=
 					With[{p = tokenizePercentage @ s},
 						CSSToken[<|
 							"Type"      -> "percentage", 
-							"String"    -> p[[1]],
+							"String"    -> CSSNormalizeEscapes @ ToLowerCase @ p[[1]],
+							"RawString" -> p[[1]],
 							"Value"     -> p[[2]],
 							"ValueType" -> p[[3]]|>]],
 				s:RegularExpression @ RE["dimension-token"] :> 
 					With[{d = tokenizeDimension @ s},
 						CSSToken[<|
 							"Type"      -> "dimension", 
-							"String"    -> d[[1]],
+							"String"    -> CSSNormalizeEscapes @ ToLowerCase @ d[[1]],
+							"RawString" -> d[[1]],
 							"Value"     -> d[[2]],
 							"ValueType" -> d[[3]],
-							"Unit"      -> d[[4]]|>]],
+							"Unit"      -> CSSNormalizeEscapes @ ToLowerCase @ d[[4]],
+							"RawUnit"   -> d[[4]]|>]],
 				s:RegularExpression @ RE["num"] :> 
 					With[{n = tokenizeNumber@ s},
 						CSSToken[<|
 							"Type"      -> "number", 
-							"String"    -> n[[1]],
+							"String"    -> CSSNormalizeEscapes @ ToLowerCase @ n[[1]],
+							"RawString" -> n[[1]],
 							"Value"     -> n[[2]],
 							"ValueType" -> n[[3]]|>]],
 				
@@ -351,7 +343,7 @@ tokenizeFlat[x_String] :=
 
 tokenizePercentage[x_String] := Flatten @ StringCases[x, num:RegularExpression[RE["num"]] ~~ unit:"%" :> tokenizeNumber @ num]
 
-tokenizeDimension[x_String] := Flatten @ StringCases[x, num:RegularExpression[RE["num"]] ~~ unit___ :> {tokenizeNumber @ num, (*CSSNormalizeEscapes @ ToLowerCase @ *)unit}]
+tokenizeDimension[x_String] := Flatten @ StringCases[x, num:RegularExpression[RE["num"]] ~~ unit___ :> {tokenizeNumber @ num, unit}]
 
 Clear[tokenizeNumber]
 tokenizeNumber[x_String] := (* cache the Interpreter calls *)
@@ -363,9 +355,9 @@ tokenizeNumber[x_String] := (* cache the Interpreter calls *)
 		
 idHash[x_String] := 
 	If[StringMatchQ[x, RegularExpression[RE["ident-token"]]] && !StringMatchQ[x, RegularExpression["[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6,6}|[0-9a-fA-F]{8,8}"]], 
-		{(*CSSNormalizeEscapes @ *)x, "id"}
+		{x, "id"}
 		,
-		{(*CSSNormalizeEscapes @ *)x, "unrestricted"}]
+		{x, "unrestricted"}]
 
 calculateUnicodeRange[x_String] :=
 	StringCases[x,
@@ -379,8 +371,7 @@ stripURL[x_String] :=
 		If[StringMatchQ[noURL, RegularExpression[RE["string-token"]]], 
 			{StringTake[noURL, {2, -2}], StringTake[noURL, 1]}
 			, 
-			(* only normalize escapes if the URL was unquoted *)
-			{(*CSSNormalizeEscapes @ *)noURL, None}]] 
+			{noURL, None}]] 
 
 
 (* ::Subsection::Closed:: *)
@@ -472,7 +463,7 @@ nestTokens[inputTokens:{__?CSSTokenQ}] :=
 					If[inBadString || inBadURL, 
 						Null
 						,
-						If[depth == 0 || TokenTypeIsNot["{", depth, brackets[[All, 1]]],
+						If[depth == 0 || TokenTypeIsNot["{", brackets[[depth, 1]]],
 							tokens[[pos]] = CSSToken[<|"Type" -> "error", "String" -> tokens[[pos]]["String"]|>]
 							,
 							tokens[[brackets[[depth, 2]]]] = CSSToken[<|"Type" -> "{}", "Children" -> tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]]|>];
@@ -487,35 +478,36 @@ nestTokens[inputTokens:{__?CSSTokenQ}] :=
 							inBadString = False; 
 							tokens[[brackets[[depth, 2]]]] = 
 								CSSToken[<|
-									"Type" -> "error", 
-									"String" -> "bad-string", 
+									"Type"     -> "error", 
+									"String"   -> "bad-string", 
 									"Children" -> tokens[[brackets[[depth, 2]] ;; pos]]|>];
 							Do[tokens[[i]] = CSSToken[<|"Type" -> "error", "String" -> "REMOVE"|>], {i, brackets[[depth, 2]] + 1, pos, 1}];
 							brackets[[depth]] = {0, 0}; depth--];
 						inBadURL = False;
 						tokens[[brackets[[depth, 2]]]] = 
 							CSSToken[<|
-								"Type" -> "error", 
-								"String" -> "bad-url", 
+								"Type"     -> "error", 
+								"String"   -> "bad-url", 
 								"Children" -> tokens[[brackets[[depth, 2]] ;; pos]]|>];
 						Do[tokens[[i]] = CSSToken[<|"Type" -> "error", "String" -> "REMOVE"|>], {i, brackets[[depth, 2]] + 1, pos, 1}];
 						brackets[[depth]] = {0, 0};
 						depth--
 						,
 						If[!inBadString,
-							If[depth == 0 || TokenTypeIsNot["function" | "(", depth, brackets[[All, 1]]], 
+							If[depth == 0 || TokenTypeIsNot["function" | "(", brackets[[depth, 1]]], 
 								tokens[[pos]] = CSSToken[<|"Type" -> "error", "String" -> tokens[[pos]]["String"]|>]
 								,
 								tokens[[brackets[[depth, 2]]]] =
-									If[TokenTypeIs["(", depth, brackets[[All, 1]]], 
+									If[TokenTypeIs["(", brackets[[depth, 1]]], 
 										CSSToken[<|
 											"Type"     -> "()", 
 											"Children" -> tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]]|>]
 										,
 										CSSToken[<|
-											"Type"     -> "function",
-											"String"   -> brackets[[depth, 1]]["String"],  
-											"Children" -> tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]]|>]];
+											"Type"      -> "function",
+											"String"    -> CSSNormalizeEscapes @ ToLowerCase @ brackets[[depth, 1]]["String"],  
+											"RawString" -> brackets[[depth, 1]]["String"],  
+											"Children"  -> tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]]|>]];
 								Do[tokens[[i]] = CSSToken[<|"Type" -> "error", "String" -> "REMOVE"|>], {i, brackets[[depth, 2]] + 1, pos, 1}];
 								brackets[[depth]] = {0, 0};
 								depth--]]];
@@ -524,7 +516,7 @@ nestTokens[inputTokens:{__?CSSTokenQ}] :=
 					If[inBadString || inBadURL,
 						Null
 						,
-						If[depth == 0 || TokenTypeIsNot["[", depth, brackets[[All, 1]]], 
+						If[depth == 0 || TokenTypeIsNot["[", brackets[[depth, 1]]], 
 							tokens[[pos]] = CSSToken[<|"Type" -> "error", "String" -> tokens[[pos]]["String"]|>]
 							, 
 							tokens[[brackets[[depth, 2]]]] = 
@@ -549,17 +541,31 @@ nestTokens[inputTokens:{__?CSSTokenQ}] :=
 					With[{try = StringJoin[CSSUntokenize @ tokens[[brackets[[depth, 2]] ;; ]], CSSUntokenize @ tokens[[brackets[[depth, 2]]]]]}, 
 						tokens[[brackets[[depth, 2]]]] = 
 							If[StringMatchQ[try, RegularExpression[RE["string-token"]]], 
-								CSSToken[<|"Type" -> "string", "String" -> StringTake[try, {2, -2}], "Quotes" -> StringTake[try, 1]|>]
+								CSSToken[<|
+									"Type"   -> "string", 
+									"String" -> StringTake[try, {2, -2}], 
+									"Quotes" -> StringTake[try, 1]|>]
 								,
-								CSSToken[<|"Type" -> "error", "String" -> "bad-string", "Children" -> tokens[[brackets[[depth, 2]] ;; ]]|>]]],
+								CSSToken[<|
+									"Type"     -> "error", 
+									"String"   -> "bad-string", 
+									"Children" -> tokens[[brackets[[depth, 2]] ;; ]]|>]]],
 				inBadURL, 
 					inBadURL = False; 
 					With[{try = StringJoin[CSSUntokenize @ tokens[[brackets[[depth, 2]] ;; ]], ")"]}, 
 						tokens[[brackets[[depth, 2]]]] = 
 							If[StringMatchQ[try, RegularExpression[RE["url-token"]]], 
-								With[{s = stripURL @ try}, CSSToken[<|"Type" -> "url", "String" -> First @ s, "Quotes" -> Last @ s|>]]
+								With[{s = stripURL @ try}, 
+									CSSToken[<|
+										"Type"      -> "url", 
+										"String"    -> If[Last @ s === None, CSSNormalizeEscapes @ First @ s, First @ s], (* only normalize escapes if the URL was unquoted *)
+										"RawString" -> First @ s,
+										"Quotes"    -> Last @ s|>]]
 								,
-								CSSToken[<|"Type" -> "error", "String" -> "bad-url", "Children" -> tokens[[brackets[[depth, 2]] ;; ]]|>]]],
+								CSSToken[<|
+									"Type"     -> "error", 
+									"String"   -> "bad-url", 
+									"Children" -> tokens[[brackets[[depth, 2]] ;; ]]|>]]],
 				True,
 					tokens[[brackets[[depth, 2]]]] = 
 						Switch[brackets[[depth, 1]]["Type"], 
@@ -568,9 +574,10 @@ nestTokens[inputTokens:{__?CSSTokenQ}] :=
 							"[", CSSToken[<|"Type" -> "[]", "Children" -> tokens[[brackets[[depth, 2]] + 1 ;; ]]|>],
 							"function", 
 								CSSToken[<|
-									"Type"     -> "function", 
-									"String"   -> tokens[[brackets[[depth, 2]]]]["String"], 
-									"Children" -> tokens[[brackets[[depth, 2]] + 1 ;; ]]|>]]];
+									"Type"      -> "function", 
+									"String"    -> CSSNormalizeEscapes @ ToLowerCase @ tokens[[brackets[[depth, 2]]]]["String"], 
+									"RawString" -> tokens[[brackets[[depth, 2]]]]["String"], 
+									"Children"  -> tokens[[brackets[[depth, 2]] + 1 ;; ]]|>]]];
 			Do[tokens[[i]] = CSSToken[<|"Type" -> "error", "String" -> "REMOVE"|>], {i, brackets[[depth, 2]] + 1, pos, 1}];
 			brackets[[depth]] = {0, 0};
 			depth--];
@@ -604,27 +611,28 @@ untokenize[___] := Failure["BadToken", <|"Message" -> "Unrecognized CSS token."|
 CSSToken /: untokenize[token:CSSToken[a_?AssociationQ]] := 
 	With[
 		{
-			t = token["Type"], s = token["String"], 
-			u = token["Unit"], c = token["Children"]
+			t = token["Type"], rs = token["RawString"], s = token["String"],
+			ru = token["RawUnit"], c = token["Children"]
 		},
 		Switch[t,
 			"string",        With[{q = token["Quotes"]}, q <> s <> q],
-			"function",      s <> "(" <> Which[c === None, "", c === {}, ")", True, StringJoin[CSSUntokenize @ c, ")"]],
-			"at-keyword",    "@" <> s,
-			"percentage",    s <> "%",
-			"dimension",     s <> u,
-			"hash",          "#" <> s,
+			"function",      rs <> "(" <> Which[MissingQ[c], "", c === {}, ")", True, StringJoin[CSSUntokenize @ c, ")"]],
+			"at-keyword",    "@" <> rs,
+			"percentage",    rs <> "%",
+			"dimension",     rs <> ru,
+			"hash",          "#" <> rs,
 			"{}",            "{" <> If[c === {}, "", CSSUntokenize @ c] <> "}",
 			"()",            "(" <> If[c === {}, "", CSSUntokenize @ c] <> ")",
 			"[]",            "[" <> If[c === {}, "", CSSUntokenize @ c] <> "]",
-			"url",           With[{q = token["Quotes"]}, If[q === None, "url(" <> s <> ")", "url(" <> q <> s <> q <> ")"]],
+			"url",           With[{q = token["Quotes"]}, If[q === None, "url(" <> rs <> ")", "url(" <> q <> s <> q <> ")"]],
 			"error",         Switch[s, "REMOVE", "", "bad-string" | "bad-url", CSSUntokenize @ c, _, s],
 			"unicode-range", untokenizeUnicodeRange[a["Start"], a["Stop"]],
-			_,               s (* number, ident, newline, delim, colon, semicolon, {, }, (, ), [, ]*)
+			_,               If[MissingQ[rs], s, rs] (* number, ident, newline, delim, colon, semicolon, {, }, (, ), [, ]*)
 		]
 	]
 	
 
+(* Some sequences of tokens must serialize with empty comments in between in order to unambiguate the result. *)
 untokenize[first_?CSSTokenQ, second_?CSSTokenQ] :=
 	Switch[first["Type"],
 		"ident",      
@@ -719,13 +727,13 @@ TokenTypeIsNot[s_, CSSToken[KeyValuePattern["Type" -> t_?StringQ]]] := !StringMa
 TokenTypeIs[___] := False
 TokenTypeIsNot[___] := False
 
-TokenStringIs[s_,    CSSToken[KeyValuePattern["String" -> t_?StringQ]]] :=  StringMatchQ[CSSNormalizeEscapes @ t, s, IgnoreCase -> True]
-TokenStringIsNot[s_, CSSToken[KeyValuePattern["String" -> t_?StringQ]]] := !StringMatchQ[CSSNormalizeEscapes @ t, s, IgnoreCase -> True]
+TokenStringIs[s_,    CSSToken[KeyValuePattern["String" -> t_?StringQ]]] :=  StringMatchQ[t, s, IgnoreCase -> True]
+TokenStringIsNot[s_, CSSToken[KeyValuePattern["String" -> t_?StringQ]]] := !StringMatchQ[t, s, IgnoreCase -> True]
 TokenStringIs[___] := False
 TokenStringIsNot[___] := False
 
-TokenUnitIs[s_,    CSSToken[KeyValuePattern["Unit" -> t_?StringQ]]] :=  StringMatchQ[CSSNormalizeEscapes @ t, s, IgnoreCase -> True]
-TokenUnitIsNot[s_, CSSToken[KeyValuePattern["Unit" -> t_?StringQ]]] := !StringMatchQ[CSSNormalizeEscapes @ t, s, IgnoreCase -> True]
+TokenUnitIs[s_,    CSSToken[KeyValuePattern["Unit" -> t_?StringQ]]] :=  StringMatchQ[t, s, IgnoreCase -> True]
+TokenUnitIsNot[s_, CSSToken[KeyValuePattern["Unit" -> t_?StringQ]]] := !StringMatchQ[t, s, IgnoreCase -> True]
 TokenUnitIs[___] := False
 TokenUnitIsNot[___] := False
 

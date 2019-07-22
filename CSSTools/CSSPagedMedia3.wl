@@ -9,7 +9,7 @@
 BeginPackage["CSSTools`CSSPagedMedia3`", {"CSSTools`"}];
 
 (* CSSTokenizer`
-	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs, CSSTokenString
+	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs
 	---> token position modifiers e.g. AdvancePosAndSkipWhitespace *)
 (* CSSPropertyInterpreter` 
 	---> defines consumeProperty and CSSPropertyData *)
@@ -140,12 +140,15 @@ $ValidPageMargins = {
 	This allows the position variable to be tracked continuously through each token consumer.
 	Some token consumers also advance the position.
 	
-	The tokenizer and token accessor functions are defined in CSSTools`CSSTokenizer:
-		CSSTokenType:      returns the type of token e.g. "ident", "number", "function"...
-		CSSTokenString:    returns the string of the token which may have been normalized (removed escapes, possibly lowercase)
-		CSSTokenValue:     returns the value of numeric tokens
-		CSSTokenValueType: returns the numeric type of numeric tokens e.g. "number" or "integer"
-		CSSDimensionUnit:  returns the units of dimension tokens e.g. "em", "px", "cm"...
+	The tokenizer and token accessor functions are defined in CSSTools`CSSTokenizer.
+	<<token>>["Type"]       canonical token type e.g. "ident", "dimension", etc.
+	<<token>>["String"]     canonical string i.e. lower case and escape sequences are translated e.g. "\30 Red" --> "0red"
+	<<token>>["RawString"]  original unaltered string
+	<<token>>["Value"]      dimension value (already an interpreted number)
+	<<token>>["Unit"]       canonical dimension unit i.e. lower case and escape sequences are translated e.g. "px"
+	
+	Function TokenTypeIs does not ignore case as the token types should already be canonicalized.
+	Function TokenStringIs uses the canonical string for comparison and ignores case.
 *)
 
 
@@ -171,7 +174,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 			Following CSS selectors, if any of the comma-delimited selectors do not match, all are ignored. *)
 		pageSelectors = 
 			If[TokenTypeIsNot["{}", tokens[[pos]]], 
-				selectorsStart = pos; AdvancePosToNextBlock[pos, l, tokens]; 
+				selectorsStart = pos; AdvancePosToNextBlock[pos, l, tokens]; (* pos is now at block's position *)
 				selectorsEnd = pos; RetreatPosAndSkipWhitespace[selectorsEnd, l, tokens];
 				consumePageSelectorList[If[selectorsEnd < selectorsStart, {}, tokens[[selectorsStart ;; selectorsEnd]]]]
 				,
@@ -179,7 +182,10 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 			];
 		
 		(* consume @page block *)
-		consumeAtPageBlock[tokens[[pos, 2 ;; ]], pageSelectors]	
+		<|
+			"Selector"  -> "@page" <> If[NumericQ[selectorsStart], " " <> CSSUntokenize @ tokens[[selectorsStart ;; selectorsEnd]], ""],
+			"Condition" -> ScreenStyleEnvironment -> "Printout",
+			"Block"     -> consumeAtPageBlock[tokens[[pos]]["Children"], pageSelectors]|>	
 	]
 
 
@@ -188,7 +194,6 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 	Module[{pos = 1, l = Length[tokens], atMarginStart, atMarginEnd, dec, decStart, decEnd, declarations = {}},
 		(* skip any initial whitespace *)
 		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
-		
 		While[pos <= l,
 			Which[
 				(* page-margin at-rule *)
@@ -202,6 +207,7 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 				TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs[Alternatives @@ Join[$ApplicableCSSPageProperties, {"size", "marks", "bleed", "page"}], tokens[[pos]]],
 					decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
 					dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
+					If[TrueQ @ $Debug, Echo[dec, "@page delcaration"]];
 					If[!FailureQ[dec], 
 						Which[
 							TokenStringIs["margin" | "margin-top" | "margin-bottom" | "margin-left" | "margin-right", tokens[[pos]]],
@@ -218,6 +224,7 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 				True, AdvancePosToNextSemicolon[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens];
 			]
 		];
+		If[TrueQ @ $Debug, Echo[declarations, "@page declarations"]];
 		declarations
 	]	
 	
@@ -282,7 +289,7 @@ consumeAtPageMarginRule[tokens:{___?CSSTokenQ}, scope_] :=
 			Return @ {}
 		];
 		{horizontal, vertical} =
-			Switch[location = ToLowerCase @ tokens[[pos]]["String"],
+			Switch[location = tokens[[pos]]["String"],
 				"top-left",      {Left,   PageHeaders},
 				"top-center",    {Center, PageHeaders},
 				"top-right",     {Right,  PageHeaders},
@@ -299,7 +306,7 @@ consumeAtPageMarginRule[tokens:{___?CSSTokenQ}, scope_] :=
 			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
 			Return @ {}
 		];
-		consumeAtPageMarginBlock[tokens[[pos, 2 ;;]], scope, "@" <> location, horizontal, vertical]
+		consumeAtPageMarginBlock[tokens[[pos]]["Children"], scope, "@" <> location, horizontal, vertical]
 	]
 
 
@@ -392,7 +399,7 @@ consumePageSelector[tokens:{___?CSSTokenQ}] :=
 					pos++;
 					If[pos > l, Return @ Failure["UnexpectedParse", <|"Message" -> "Incomplete @page pseudo-page selector."|>]];
 					If[TokenTypeIs["ident", tokens[[pos]]],
-						Switch[ToLowerCase @ tokens[[pos]]["String"],
+						Switch[tokens[[pos]]["String"],
 							"left",  scope = Left,
 							"right", scope = Right,
 							"first", scope = First,
@@ -530,7 +537,7 @@ consumeProperty[prop:"size", tokens:{__?CSSTokenQ}] :=
 				value1 = parseSinglePaperOrientation[prop, tokens[[pos]]];
 				AdvancePosAndSkipWhitespace[pos, l, tokens];
 				(* check for paper size *)
-				If[pos <= l && TokenTypeIs["ident", pos, l],
+				If[pos <= l && TokenTypeIs["ident", tokens[[pos]]],
 					value2 = parseSinglePaperSize[prop, tokens[[pos]]];
 					AdvancePosAndSkipWhitespace[pos, l, tokens];
 				];
@@ -538,7 +545,7 @@ consumeProperty[prop:"size", tokens:{__?CSSTokenQ}] :=
 			(* case of single keyword *)
 			TokenTypeIs["ident", tokens[[pos]]],
 				value1 = 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"auto", {"PageSize" -> {Automatic, Automatic}, "PaperSize" -> {Automatic, Automatic}},
 						_,      unrecognizedKeyWordFailure @ prop
 					];
@@ -570,7 +577,7 @@ consumeProperty[prop:"size", tokens:{__?CSSTokenQ}] :=
 	]
 	
 parseSinglePaperSize[prop_String, token_?CSSTokenQ] :=
-	Switch[ToLowerCase @ token["String"],
+	Switch[token["String"],
 		"a5",     {"PageSize" -> {419.528, 595.276}, "PaperSize" -> {419.528, 595.276}},
 		"a4",     {"PageSize" -> {595.276, 841.89},  "PaperSize" -> {595.276, 841.89}},
 		"a3",     {"PageSize" -> {841.89,  1190.55}, "PaperSize" -> {841.89,  1190.55}},
@@ -585,7 +592,7 @@ parseSinglePaperSize[prop_String, token_?CSSTokenQ] :=
 	]
 	
 parseSinglePaperOrientation[prop_String, token_?CSSTokenQ] :=
-	Switch[ToLowerCase @ token["String"],
+	Switch[token["String"],
 		"portrait",  {"PaperOrientation" -> "Portrait"},
 		"landscape", {"PaperOrientation" -> "Landscape"},
 		_,           unrecognizedKeyWordFailure @ prop
@@ -651,7 +658,7 @@ consumeProperty[prop:"bleed", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"auto", Missing["Not supported."], (* Computes to 6pt if marks has crop and to zero otherwise. *)
 						_,      unrecognizedKeyWordFailure @ prop
 					],

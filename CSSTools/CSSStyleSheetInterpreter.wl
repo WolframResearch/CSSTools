@@ -14,13 +14,14 @@ convertMarginsToPrintingOptions;
 notebookLevelOptions;
 assemble;
 getSideFromLRBTDirective;
+$Debug;
 
 (* CSSTools`
 	---> defines wrappers like CSSHeightMax *)
 (* Selectors3` 
 	---> defines Selector function *)
 (* CSSTokenizer`
-	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs, CSSTokenString
+	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs
 	---> token position modifiers e.g. AdvancePosAndSkipWhitespace *)
 (* CSSPropertyInterpreter` 
 	---> defines consumeProperty and CSSPropertyData *)
@@ -62,12 +63,15 @@ Begin["`Private`"];
 	This allows the position variable to be tracked continuously through each token consumer.
 	Some token consumers also advance the position.
 	
-	The tokenizer and token accessor functions are defined in CSSTools`CSSTokenizer:
-		CSSTokenType:      returns the type of token e.g. "ident", "number", "function"...
-		CSSTokenString:    returns the string of the token which may have been normalized (removed escapes, possibly lowercase)
-		CSSTokenValue:     returns the value of numeric tokens
-		CSSTokenValueType: returns the numeric type of numeric tokens e.g. "number" or "integer"
-		CSSDimensionUnit:  returns the units of dimension tokens e.g. "em", "px", "cm"...
+	The tokenizer and token accessor functions are defined in CSSTools`CSSTokenizer.
+	<<token>>["Type"]       canonical token type e.g. "ident", "dimension", etc.
+	<<token>>["String"]     canonical string i.e. lower case and escape sequences are translated e.g. "\30 Red" --> "0red"
+	<<token>>["RawString"]  original unaltered string
+	<<token>>["Value"]      dimension value (already an interpreted number)
+	<<token>>["Unit"]       canonical dimension unit i.e. lower case and escape sequences are translated e.g. "px"
+	
+	Function TokenTypeIs does not ignore case as the token types should already be canonicalized.
+	Function TokenStringIs uses the canonical string for comparison and ignores case.
 *)
 
 
@@ -100,7 +104,9 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 			If[TrueQ @ $Debug, Echo[pos, "position before rule"]];
 			Which[
 				(* any at-rule *)
-				TokenTypeIs["at-keyword", tokens[[pos]]], (*TODO*)consumeAtRule[pos, l, tokens],
+				TokenTypeIs["at-keyword", tokens[[pos]]], 
+					If[TrueQ @ $Debug, Echo[tokens[[pos]], "consuming at rule"]]; 
+					(*TODO*)rulesets[[i]] = consumeAtRule[pos, l, tokens],
 				
 				(* bad ruleset: missing a selector *)
 				TokenTypeIs["{}", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens], 
@@ -137,7 +143,7 @@ consumeAtCharsetKeyword[pos_, l_, tokens_] :=
 				AdvancePosToNextSemicolon[pos, l, tokens]
 				,
 				pos++;
-				If[TokenTypeIsNot["semicolon",  pos, tokens], 
+				If[TokenTypeIsNot["semicolon", tokens[[pos]]], 
 					AdvancePosToNextSemicolon[pos, l, tokens]
 					,
 					pos++]]];
@@ -211,20 +217,23 @@ consumeAtRule[pos_, l_, tokens_] :=
 		(* @import is not allowed after the top of the stylesheet, so skip them *)
 		TokenStringIs["import", tokens[[pos]]], 
 			AdvancePosToNextSemicolon[pos, l, tokens]; 
-			AdvancePosAndSkipWhitespace[pos, l, tokens], 
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
+			{}, 
 			
 		(* @page *)
-		TokenStringIs["page", tokens[[pos]]], consumeAtPageRule[pos, l, tokens];,
+		TokenStringIs["page", tokens[[pos]]], consumeAtPageRule[pos, l, tokens],
 			
 		(* @media *)
 		TokenStringIs["media", tokens[[pos]]], 
 			AdvancePosToNextSemicolonOrBlock[pos, l, tokens]; 
-			AdvancePosAndSkipWhitespace[pos, l, tokens], 
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
+			{}, 
 			
 		(* unrecognized @rule *)
 		True, 
 			AdvancePosToNextSemicolonOrBlock[pos, l, tokens]; 
-			AdvancePosAndSkipWhitespace[pos, l, tokens]
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
+			{}
 	] 
 
 
@@ -235,6 +244,7 @@ consumeAtRule[pos_, l_, tokens_] :=
 consumeAtPageRule[pos_, l_, tokens_] := 
 	Module[{pageSelectors},
 		(* check for valid start of @page token sequence *)
+		If[TrueQ @ $Debug, Echo["HERE?"]];
 		If[TokenTypeIsNot["at-keyword", tokens[[pos]]] || TokenStringIsNot["page", tokens[[pos]]],
 			Echo[Row[{"Expected @page keyword instead of ", tokens[[pos]]}], "@page error"];
 			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
@@ -253,7 +263,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 				];
 				pos++;
 				If[TokenTypeIs["ident", tokens[[pos]]],
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"left",  Left,
 						"right", Right,
 						"first", Missing["Not supported."],
@@ -271,7 +281,10 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 		];
 		
 		(* consume @page block *)
-		consumeAtPageBlock[tokens[[pos, 2 ;; ]], pageSelectors]	
+		<|
+			"Selector"  -> "@page",
+			"Condition" -> ScreenStyleEnvironment -> "Printout",
+			"Block"     -> consumeAtPageBlock[tokens[[pos]]["Children"], pageSelectors]|>
 	]
 	
 	
@@ -333,12 +346,13 @@ convertMarginsToPrintingOptions[declaration_?AssociationQ, scope_] :=
 consumeRuleset[pos_, l_, tokens_] :=
 	Module[{selectorStartPos = pos, ruleset},
 		AdvancePosToNextBlock[pos, l, tokens];
+		If[TrueQ @ $Debug, Echo[{pos, tokens}, "pos + tokens"]];
 		ruleset = 
 			<|
 				"Selector" -> StringTrim @ CSSUntokenize @ tokens[[selectorStartPos ;; pos - 1]], 
 				"Condition" -> None,
-				(* The block token is already encapsulated {{}, CSSTokens...} *)
-				"Block" -> consumeDeclarationBlock @ If[Length[tokens[[pos]]] > 1, tokens[[pos, 2 ;; ]], {}]|>; 
+				(* The block token is already encapsulated CSSToken[<|"Type" -> {}, "Children" -> {CSSTokens...}|>] *)
+				"Block" -> consumeDeclarationBlock @ If[Length[tokens[[pos]]["Children"]] > 1, tokens[[pos]]["Children"], {}]|>; 
 		(* return the formatted ruleset, but first make sure to skip the block *)
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
 		ruleset
@@ -349,7 +363,7 @@ consumeDeclarationBlock[{}] := {}
 consumeDeclarationBlock[blockTokens:{__?CSSTokenQ}] :=
 	Module[{blockPos = 1, blockLength = Length[blockTokens], lDeclarations, i = 1, decStart, dec, validDeclarations},
 		(* skip any initial whitespace *)
-		If[TokenTypeIs["whitespace", blockPos, blockTokens], AdvancePosAndSkipWhitespace[blockPos, blockLength, blockTokens]]; 
+		If[TokenTypeIs["whitespace", blockTokens[[blockPos]]], AdvancePosAndSkipWhitespace[blockPos, blockLength, blockTokens]]; 
 		
 		(*
 			Each declaration is of the form 'property:value;'. The last declaration may leave off the semicolon.
@@ -372,33 +386,36 @@ consumeDeclarationBlock[blockTokens:{__?CSSTokenQ}] :=
 consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 	Module[{decPos = 1, decLength = Length[decTokens], propertyPosition, valuePosition, important = False, declaration},
 		(* check for bad property *)
-		If[TokenTypeIsNot["ident", decPos, decTokens], Return @ $Failed];
+		If[TokenTypeIsNot["ident", decTokens[[decPos]]], Return @ $Failed];
 		propertyPosition = decPos; AdvancePosAndSkipWhitespace[decPos, decLength, decTokens];
 		
 		(* check for EOF or missing colon *)
-		If[decPos >= decLength || TokenTypeIsNot["colon", decPos, decTokens], Return @ $Failed];
+		If[decPos >= decLength || TokenTypeIsNot["colon", decTokens[[decPos]]], Return @ $Failed];
 		AdvancePosAndSkipWhitespace[decPos, decLength, decTokens]; 
 		valuePosition = decPos;
 		
 		(* remove trailing whitespace and possible trailing semi-colon*)
 		decPos = decLength;
-		If[TokenTypeIs["semicolon", decPos, decTokens], 
+		If[TrueQ @ $Debug, Echo[decTokens // Column, "dec tokens"]; Echo[decPos, "pos"]];
+		If[TokenTypeIs["semicolon", decTokens[[decPos]]], 
 			RetreatPosAndSkipWhitespace[decPos, decLength, decTokens]
 			,
-			While[decPos > 1 && TokenTypeIs["whitespace", decPos, decTokens], decPos--];
-			If[TokenTypeIs["semicolon", decPos, decTokens], RetreatPosAndSkipWhitespace[decPos, decLength, decTokens]];
+			While[decPos > 1 && TokenTypeIs["whitespace", decTokens[[decPos]]], decPos--];
+			If[TokenTypeIs["semicolon", decTokens[[decPos]]], RetreatPosAndSkipWhitespace[decPos, decLength, decTokens]];
 		];
 		
 		(* check for !important token sequence *)
-		If[TokenTypeIs["ident", decPos, decTokens] && TokenStringIs["important", decPos, decTokens], 
+		If[TokenTypeIs["ident", decTokens[[decPos]]] && TokenStringIs["important", decTokens[[decPos]]], 
 			RetreatPosAndSkipWhitespace[decPos, decLength, decTokens];
-			If[TokenTypeIs["!", decPos, decTokens], important = True; RetreatPosAndSkipWhitespace[decPos, decLength, decTokens]]
+			If[TokenTypeIs["delim", decTokens[[decPos]]] && TokenStringIs["!", decTokens[[decPos]]], 
+				important = True; RetreatPosAndSkipWhitespace[decPos, decLength, decTokens]
+			]
 		];
 		
 		declaration =
 			With[
 				{
-					prop = CSSNormalizeEscapes @ ToLowerCase @ decTokens[[propertyPosition]]["String"],
+					prop = decTokens[[propertyPosition]]["String"],
 					(*check for empty property*)
 					valueTokens = If[decPos < valuePosition, {}, decTokens[[valuePosition ;; decPos]]]
 				},
@@ -485,7 +502,7 @@ validExpressions =
 		Grid, InputField, Inset, Item, Locator, 
 		LocatorPane, Opener, Overlay, Pane, Panel, 
 		PaneSelector, PopupMenu, ProgressIndicator, RadioButton,
-		Setter, Slider2D, Slider, TabView, Toggler, Tooltip};	
+		Setter, Slider2D, Slider, TabView, TemplateBox, Toggler, Tooltip};	
 validBoxOptions =
 	{
 		Alignment, Appearance, Background, DisplayFunction, Frame, FrameMargins, FrameStyle, 

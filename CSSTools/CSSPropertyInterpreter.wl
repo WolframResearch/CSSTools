@@ -984,7 +984,7 @@ parseSingleColor[prop_String, token_?CSSTokenQ] := parseSingleColor[prop, token]
 parseSingleColor[prop_String, ___] := unrecognizedValueFailure @ prop
 
 parseSingleColorKeyWord[prop_String, keyword_String] := 
-	Switch[ToLowerCase @ CSSNormalizeEscapes @ keyword,
+	Switch[keyword,
 		"aqua",    RGBColor[0, 1, 1], 
 		"black",   RGBColor[0, 0, 0], 
 		"blue",    RGBColor[0, 0, 1], 
@@ -1033,7 +1033,7 @@ parseSingleColorFunction[prop_String, token_?CSSTokenQ] :=
 	Module[{relevantTokens},
 		(* relevantTokens removes all whitespace tokens *)
 		relevantTokens = DeleteCases[token["Children"], CSSToken[KeyValuePattern["Type" -> "whitespace"]], {1}];
-		If[StringMatchQ[token["String"], RegularExpression[RE["R"] ~~ RE["G"] ~~ RE["B"]]],
+		If[StringMatchQ[token["RawString"], RegularExpression[RE["R"] ~~ RE["G"] ~~ RE["B"]]],
 			If[MatchQ[relevantTokens, First @ rgbPattern[]], 
 				Replace[relevantTokens, rgbPattern[]]
 				, 
@@ -1062,7 +1062,7 @@ parseCounter[prop_String, tokens:{___?CSSTokenQ}] := (*parseCounter[prop, tokens
 			Return @ invalidFunctionFailure @ CSSUntokenize @ tokens
 		];
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
-		If[pos > l, Return @ parseSingleListStyleType["list-style-type", {"ident", listtype}, style]];
+		If[pos > l, Return @ parseSingleListStyleType["list-style-type", CSSToken[<|"Type" -> "ident", "String" -> listtype|>], style]];
 		
 		(* get optional counter style *)
 		If[pos <= l && TokenTypeIs["ident", tokens[[pos]]],
@@ -1071,7 +1071,7 @@ parseCounter[prop_String, tokens:{___?CSSTokenQ}] := (*parseCounter[prop, tokens
 			Return @ invalidFunctionFailure @ CSSUntokenize @ tokens
 		];
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
-		If[pos > l, Return @ parseSingleListStyleType["list-style-type", {"ident", listtype}, style]];
+		If[pos > l, Return @ parseSingleListStyleType["list-style-type", CSSToken[<|"Type" -> "ident", "String" -> listtype|>], style]];
 		
 		tooManyTokensFailure @ tokens
 	]
@@ -1104,7 +1104,7 @@ parseLength[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?Num
 			'em' and 'ex' are relative values. If within the 'font-size' property, then first inherit from the parent.
 			If an 'em' or 'ex' length is given outside the 'font-size' property, then it's a function of the current FontSize.
 		*)
-		Switch[CSSNormalizeEscapes @ ToLowerCase @ unit, 
+		Switch[unit, 
 			"em", If[inFontSize, val*Inherited,     With[{v = val}, Dynamic[v*CurrentValue[FontSize]]]],
 			"ex", If[inFontSize, val*0.5*Inherited, With[{v = val}, Dynamic[v*CurrentValue["FontXHeight"]]]],
 			"in", val*dpi,
@@ -1264,7 +1264,7 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 		While[pos <= l, 
 			Which[
 				TokenTypeIs["function", tokens[[pos]]], 
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						(* color *)
 						"rgb" | "rgba" | "hsl" | "hsla", 
 							If[hasColor, Return @ repeatedPropValueFailure @ "background-color"]; 
@@ -1355,7 +1355,7 @@ consumeProperty[prop:"background-attachment", tokens:{__?CSSTokenQ}] :=
 parseSingleBGAttachment[prop_String, token_?CSSTokenQ] := 
 	Switch[token["Type"],
 		"ident", 
-			Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
+			Switch[token["String"],
 				"scroll", Missing["Not supported."],
 				"fixed",  Automatic, (* FE follows this mode, but there's no FE option for it *)
 				_,        unrecognizedKeyWordFailure @ prop
@@ -1395,12 +1395,12 @@ consumeProperty[prop:"background-image", tokens:{__?CSSTokenQ}] :=
 parseSingleBGImage[prop_String, token_?CSSTokenQ] := 
 	Switch[token["Type"],
 		"ident", 
-			Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
+			Switch[token["String"],
 				"none", None,
 				_,      unrecognizedKeyWordFailure @ prop
 			],
 		"function", 
-			Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
+			Switch[token["String"],
 				Alternatives[
 					"linear-gradient", "repeating-linear-gradient",
 					"radial-gradient", "repeating-radial-gradient", "conic-gradient"
@@ -1434,7 +1434,7 @@ consumeProperty[prop:"background-position", tokens:{__?CSSTokenQ}] :=
 parseSingleBGPosition[prop_String, token_?CSSTokenQ] :=
 	Switch[token["Type"],
 		"ident", 
-			Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
+			Switch[token["String"],
 				"left",    Left,
 				"center",  Center,
 				"right",   Right,
@@ -1487,7 +1487,7 @@ consumeProperty[prop:"background-repeat", tokens:{__?CSSTokenQ}] :=
 parseSingleBGRepeat[prop_String, token_?CSSTokenQ] :=
 	Switch[token["Type"],
 		"ident", 
-			Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
+			Switch[token["String"],
 				"no-repeat", "NoRepeat",
 				"repeat-x",  "RepeatX",
 				"repeat-y",  "RepeatY",
@@ -1530,7 +1530,7 @@ consumeProperty[prop:"border-collapse", tokens:{__?CSSTokenQ}] :=
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		Switch[tokens[[pos]]["Type"],
 			"ident", 
-				Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+				Switch[tokens[[pos]]["String"],
 					"separate", Missing["Not supported."],
 					"collapse", {}, (* this is all Mathematica supports *)
 					_,          unrecognizedKeyWordFailure @ prop
@@ -1609,7 +1609,7 @@ consumeProperty[prop:"border-spacing", tokens:{__?CSSTokenQ}] :=
 						If[tokens[[pos]]["Value"] < 0,
 							negativeLengthFailure @ prop
 							,
-							Switch[CSSDimensionUnit @ tokens[[pos]],
+							Switch[tokens[[pos]]["Unit"],
 								"em"|"ex", (parseLengthNonRelative @ tokens[[pos]])/2,
 								_,         With[{n = parseLength @ tokens[[pos]]}, Dynamic[n/CurrentValue[FontSize]]]
 							]
@@ -1670,7 +1670,7 @@ consumeProperty[prop:"border-style", tokens:{__?CSSTokenQ}] :=
 parseSingleBorderStyle[prop_String, token_?CSSTokenQ] :=
 	Switch[token["Type"],
 		"ident",
-			Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
+			Switch[token["String"],
 				"none",    None, 
 				"hidden",  None, (* 'hidden' is technically different from 'none', but I don't think the difference matters in WL *)
 				"dotted",  Dotted,
@@ -1729,7 +1729,7 @@ consumeProperty[prop:"border-width", tokens:{__?CSSTokenQ}] :=
 parseSingleBorderWidth[prop_String, token_?CSSTokenQ] :=
 	Switch[token["Type"],
 		"ident", 
-			Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
+			Switch[token["String"],
 				"thin",   Thickness[Small],
 				"medium", Thickness[Medium],
 				"thick",  Thickness[Large],
@@ -1787,9 +1787,9 @@ consumeProperty[
 		];
 		
 		{
-			FrameStyle -> wrapper[values["c"], values["s"], values["w"]], 
+			FrameStyle     -> wrapper[values["c"], values["s"], values["w"]], 
 			CellFrameStyle -> wrapper[values["c"], values["s"]], 
-			CellFrame -> wrapper[values["w"]]}
+			CellFrame      -> wrapper[values["w"]]}
 	]
 
 
@@ -1804,7 +1804,7 @@ consumeProperty[prop:"clip", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"auto", Missing["Not supported."],
 						_,      unrecognizedKeyWordFailure @ prop
 					],
@@ -1842,7 +1842,7 @@ consumeProperty[prop:"content", tokens:{__?CSSTokenQ}] :=
 			value = 
 				Switch[tokens[[pos]]["Type"],
 					"ident", 
-						Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+						Switch[tokens[[pos]]["String"],
 							"normal",         If[pos > 1, Return @ tooManyTokensFailure @ tokens, Normal],
 							"none",           If[pos > 1, Return @ tooManyTokensFailure @ tokens, None],
 							"open-quote",     Missing["Not supported."],
@@ -1861,10 +1861,10 @@ consumeProperty[prop:"content", tokens:{__?CSSTokenQ}] :=
 							]
 						],
 					"function", 
-						Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
-							"counter",  parseCounter[prop, tokens[[pos, 3;;]]],
-							"counters", parseCounters[prop, tokens[[pos, 3;;]]],
-							"attr",     (*TODO*)parseAttr[prop, tokens[[pos, 3;;]]],
+						Switch[tokens[[pos]]["String"],
+							"counter",  parseCounter[prop, tokens[[pos]]["Children"]],
+							"counters", parseCounters[prop, tokens[[pos]]["Children"]],
+							"attr",     (*TODO*)parseAttr[prop, tokens[[pos]]["Children"]],
 							_,          unrecognizedValueFailure @ prop
 						],
 					_, unrecognizedValueFailure @ prop
@@ -1886,7 +1886,7 @@ consumeProperty[prop:"counter-increment", tokens:{__?CSSTokenQ}] :=
 		While[pos <= l,
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"none", 
 							If[l > 1,  (* none must be the only identifier if it is used *)
 								Return @ illegalIdentifierFailure @ tokens[[pos]]["String"]
@@ -1926,7 +1926,7 @@ consumeProperty[prop:"counter-reset", tokens:{__?CSSTokenQ}] :=
 		While[pos <= l,
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"none", 
 							If[l > 1, 
 								Return @ illegalIdentifierFailure @ tokens[[pos]]["String"]
@@ -1966,7 +1966,7 @@ consumeProperty[prop:"list-style-image", tokens:{__?CSSTokenQ}] :=
 parseSingleListStyleImage[prop_String, token_?CSSTokenQ] := 
 	Switch[token["Type"],
 		"ident",
-			Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
+			Switch[token["String"],
 				"none", None,
 				_,      unrecognizedKeyWordFailure @ prop
 			],
@@ -2001,7 +2001,7 @@ consumeProperty[prop:"list-style-position", tokens:{__?CSSTokenQ}] :=
 parseSingleListStylePosition[prop_String, token_?CSSTokenQ] := 
 	Switch[token["Type"],
 		"ident",
-			Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
+			Switch[token["String"],
 				"inside",  Missing["Not supported."],
 				"outside", Automatic,
 				_,         unrecognizedKeyWordFailure @ prop
@@ -2024,7 +2024,7 @@ consumeProperty[prop:"list-style-type", tokens:{__?CSSTokenQ}] :=
 parseSingleListStyleType[prop_String, token_?CSSTokenQ, style_String:"Item"] := 
 	Switch[token["Type"],
 		"ident",
-			Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
+			Switch[token["String"],
 				"disc",                 "\[FilledCircle]",
 				"circle",               "\[EmptyCircle]",
 				"square",               "\[FilledSquare]",
@@ -2121,7 +2121,7 @@ consumeProperty[prop:"quotes", tokens:{__?CSSTokenQ}] :=
 		While[pos <= l,
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"none", 
 							If[l > 1, 
 								Return @ illegalIdentifierFailure @ tokens[[pos]]["String"]
@@ -2156,7 +2156,7 @@ consumeProperty[prop:"cursor", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"auto",          Automatic,
 						"copy",          "DragAndDrop",
 						"crosshair",     "Crosshair",
@@ -2195,7 +2195,7 @@ consumeProperty[prop:"display", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"inline",             Automatic, (* wrap in Cell[]? *)
 						"block",              Automatic,
 						"list-item",          Automatic,
@@ -2232,7 +2232,7 @@ consumeProperty[prop:"float", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"left",  Automatic,
 						"right", Automatic,
 						"none",  Automatic,
@@ -2250,7 +2250,7 @@ consumeProperty[prop:"clear", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"left",    Automatic,
 						"right",   Automatic,
 						"both",    Automatic,
@@ -2294,7 +2294,7 @@ consumeProperty[prop:"font", tokens:{__?CSSTokenQ}] :=
 		(* parse and assign new font values *)
 		If[l == 1, (* if only one token is present, then it should be a keyword that represents a system font (or font style?) *)
 			newValue = 
-				Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+				Switch[tokens[[pos]]["String"],
 					"caption" | "icon" | "menu" | "small-caption", 
 						{FontFamily :> CurrentValue["ControlsFontFamily"], FontSize :> CurrentValue["ControlsFontSize"]},
 					"message-box" | "status-bar", 
@@ -2313,7 +2313,7 @@ consumeProperty[prop:"font", tokens:{__?CSSTokenQ}] :=
 		*)
 		(* FIXME: could check that property is not duplicated like we do in e.g. border-top *)
 		While[pos <= l && FailureQ[temp = consumeProperty["font-size", {tokens[[pos]]}]],
-			If[!MatchQ[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"], "normal"],
+			If[!MatchQ[tokens[[pos]]["String"], "normal"],
 				Which[
 					(* font-style *)
 					!FailureQ[v = consumeProperty["font-style", {tokens[[pos]]}]], 
@@ -2390,8 +2390,10 @@ parseSingleFontFamily[tokens:{__?CSSTokenQ}] := parseSingleFontFamily[tokens] =
 			Switch[tokensNoWS[[pos]]["Type"],
 				"ident", (* if first token is an identifier, then all other tokens must be as well; there could only be a single 'ident' *)
 					Which[
-						!AllTrue[Through[tokensNoWS["Type"]], StringMatchQ["ident"]], fail,
-						l == 1 && MemberQ[generic, ToLowerCase @ tokensNoWS[[pos]]["String"]], parseFontFamilySingleIdent @ tokensNoWS[[pos]]["String"],
+						!AllTrue[Through[tokensNoWS["Type"]], StringMatchQ["ident"]], 
+							fail,
+						l == 1 && MemberQ[generic, tokensNoWS[[pos]]["String"]], 
+							parseFontFamilySingleIdent @ tokensNoWS[[pos]]["String"],
 						True, 
 							font = StringJoin @ Riffle[Through[tokensNoWS["String"]], " "];
 							First[Pick[$FontFamilies, StringMatchQ[$FontFamilies, font, IgnoreCase -> True]], Missing["FontAbsent", font]]
@@ -2447,7 +2449,7 @@ consumeProperty[prop:"font-size", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"larger",   Larger,
 						"smaller",  Smaller,
 						"xx-small", Tiny (*6*),
@@ -2478,7 +2480,7 @@ consumeProperty[prop:"font-style", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"normal",  Plain,
 						"italic",  Italic,
 						"oblique", "Oblique",
@@ -2500,7 +2502,7 @@ consumeProperty[prop:"font-variant", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"normal",     "Normal",
 						"small-caps", "SmallCaps",
 						_,            unrecognizedKeyWordFailure @ prop
@@ -2525,7 +2527,7 @@ consumeProperty[prop:"font-weight", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"normal"|"book"|"plain"|"regular"|"roman", Plain,
 						"bold", Bold,
 						"medium", "Medium",
@@ -2571,7 +2573,7 @@ consumeProperty[prop:"font-weight", tokens:{__?CSSTokenQ}] :=
 parseSingleSize[prop_String, token_?CSSTokenQ] := parseSingleSize[prop, token] =
 	Switch[token["Type"],
 		"ident", 
-			Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
+			Switch[token["String"],
 				"auto", Automatic, (* let Mathematica decide what to do *)
 				"none", If[!StringMatchQ[prop, "max-height" | "max-width"], unrecognizedKeyWordFailure @ prop, Infinity],
 				_,      unrecognizedKeyWordFailure @ prop
@@ -2632,7 +2634,7 @@ consumeProperty[prop:"line-height", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"normal", {1.2, 0},
 						_,        unrecognizedKeyWordFailure @ prop
 					],
@@ -2640,7 +2642,7 @@ consumeProperty[prop:"line-height", tokens:{__?CSSTokenQ}] :=
 					If[tokens[[pos]]["Value"] < 0, 
 						negativeLengthFailure @ prop
 						,
-						Switch[CSSDimensionUnit @ tokens[[pos]],
+						Switch[tokens[[pos]]["Unit"],
 							"em"|"ex", {parseLengthNonRelative @ tokens[[pos]], 0},
 							_,         {parseLength @ tokens[[pos]], 0}
 						]
@@ -2695,7 +2697,7 @@ consumeProperty[prop:"margin", tokens:{__?CSSTokenQ}] :=
 parseSingleMargin[prop_String, token_?CSSTokenQ] := parseSingleMargin[prop, token] = 
 	Switch[token["Type"],
 		"ident", 
-			Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
+			Switch[token["String"],
 				"auto", Automatic, (* let FE decide what to do *)
 				_,      unrecognizedKeyWordFailure @ prop
 			],
@@ -2730,12 +2732,12 @@ consumeProperty[prop:"outline-color", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"invert", CellFrameColor -> Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]],
 						_,        unrecognizedKeyWordFailure @ prop
 					],
 				"function",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"rgb" | "rgba" | "hsl" | "hsla", parseSingleColor[prop, tokens[[pos]]],
 						_,                               invalidFunctionFailure @ tokens[[pos]]["String"]
 					],
@@ -2754,7 +2756,7 @@ consumeProperty[prop:"outline-style", tokens:{__?CSSTokenQ}] :=
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value =
-			If[TokenTypeIs["ident", tokens[[pos]]] && tokens[[pos]]["String"] == "hidden",
+			If[TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs["hidden", tokens[[pos]]],
 				unrecognizedKeyWordFailure @ prop
 			,
 				parseSingleBorderStyle[prop, tokens[[pos]]]
@@ -2838,7 +2840,7 @@ consumeProperty[prop:"overflow", tokens:{__?CSSTokenQ}] :=
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos]]["Type"],
 			"ident",
-				Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+				Switch[tokens[[pos]]["String"],
 					"visible", Missing["Not supported."],
 					"hidden",  {ImageSizeAction -> "Clip", Scrollbars -> False},
 					"scroll",  {ImageSizeAction -> "Clip", Scrollbars -> True},
@@ -2941,7 +2943,7 @@ consumeProperty[prop:("page-break-after" | "page-break-before"), tokens:{__?CSST
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"auto",   Automatic,
 						"always", True,
 						"avoid",  False,
@@ -2969,7 +2971,7 @@ consumeProperty[prop:"page-break-inside", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"auto",  Automatic, 
 						"avoid", False,
 						_,       unrecognizedKeyWordFailure @ prop
@@ -3001,7 +3003,7 @@ consumeProperty[prop:"position", tokens:{__?CSSTokenQ}] :=
 		value =
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"static",   Automatic, (* normal layout, ignoring any left/right/top/bottom offsets *)
 						"relative", Automatic, (* normal layout, offset relative to normal position and floats above "siblings" *)
 						"absolute", Automatic, (* non-normal layout, attached cell attached to a parent box with absolute offset *)
@@ -3020,7 +3022,7 @@ consumeProperty[prop:"left" | "right" | "top" | "bottom", tokens:{__?CSSTokenQ}]
 		value =
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"auto", Automatic,
 						_,      unrecognizedKeyWordFailure @ prop
 					],
@@ -3061,7 +3063,7 @@ consumeProperty[prop:"caption-side", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"top",    Automatic,
 						"bottom", Automatic,
 						_,        unrecognizedKeyWordFailure @ prop
@@ -3083,7 +3085,7 @@ consumeProperty[prop:"empty-cells", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"show", Automatic,
 						"hide", Automatic,
 						_,      unrecognizedKeyWordFailure @ prop
@@ -3105,7 +3107,7 @@ consumeProperty[prop:"table-layout", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"auto",  Automatic,
 						"fixed", Automatic,
 						_,       unrecognizedKeyWordFailure @ prop
@@ -3130,7 +3132,7 @@ consumeProperty[prop:"direction", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"ltr", Automatic,
 						"rtl", Missing["Not supported."],
 						_,     unrecognizedKeyWordFailure @ prop
@@ -3151,7 +3153,7 @@ consumeProperty[prop:"text-align", tokens:{__?CSSTokenQ}] :=
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos]]["Type"],
 			"ident",
-				Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+				Switch[tokens[[pos]]["String"],
 					"left",    TextAlignment -> Left,
 					"right",   TextAlignment -> Right,
 					"center",  TextAlignment -> Center,
@@ -3173,7 +3175,7 @@ consumeProperty[prop:"text-indent", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"dimension",
-					Switch[CSSDimensionUnit @ tokens[[pos]],
+					Switch[tokens[[pos]]["Unit"],
 						"em"|"ex", parseLengthNonRelative @ tokens[[pos]],
 						_,         parseLength @ tokens[[pos]]
 					],
@@ -3196,7 +3198,7 @@ consumeProperty[prop:"text-decoration", tokens:{__?CSSTokenQ}] :=
 			value =
 				Switch[tokens[[pos]]["Type"],
 					"ident",
-						Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+						Switch[tokens[[pos]]["String"],
 							"none",         If[pos > 1, tooManyTokensFailure @ "none", Nothing],
 							"underline",    "Underline" -> True,
 							"overline",     "Overline" -> Missing["Not supported."], (* OverBar is a function, not an option in WL *)
@@ -3222,7 +3224,7 @@ consumeProperty[prop:"text-transform", tokens:{__?CSSTokenQ}] :=
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos]]["Type"],
 			"ident",
-				Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+				Switch[tokens[[pos]]["String"],
 					"capitalize", Missing["Not supported."], (* Not by the FE at least, but see WL Capitalize[..., "AllWords"] *)
 					"uppercase",  FontVariations -> {"CapsType" -> "AllCaps"},
 					"lowercase",  FontVariations -> {"CapsType" -> "AllLower"},
@@ -3249,7 +3251,7 @@ consumeProperty[prop:"letter-spacing", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"normal", "Plain",
 						_,        unrecognizedKeyWordFailure @ prop
 					],
@@ -3271,7 +3273,7 @@ consumeProperty[prop:"font-stretch", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"ultra-condensed", "Narrow",        (* CSSFM4 50% *)
 						"extra-condensed", "Narrow",        (* CSSFM4 62.5% *)
 						"condensed",       "Condensed",     (* CSSFM4 75% *)
@@ -3300,7 +3302,7 @@ consumeProperty[prop:"unicode-bidi", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"normal",        Automatic,
 						"embed",         Missing["Not supported."],
 						"bidi-override", Missing["Not supported."],
@@ -3326,9 +3328,9 @@ consumeProperty[prop:"word-spacing", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
-						"normal",  "Plain",
-						_,         unrecognizedKeyWordFailure @ prop
+					Switch[tokens[[pos]]["String"],
+						"normal", "Plain",
+						_,        unrecognizedKeyWordFailure @ prop
 					],
 				"dimension", parseLength @ tokens[[pos]],
 				_,           unrecognizedValueFailure @ prop
@@ -3347,7 +3349,7 @@ consumeProperty[prop:"white-space", tokens:{__?CSSTokenQ}] :=
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos]]["Type"],
 			"ident",
-				Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+				Switch[tokens[[pos]]["String"],
 					"normal",   Missing["Not supported."],
 					"pre",      Missing["Not supported."],
 					"nowrap",   Missing["Not supported."],
@@ -3388,7 +3390,7 @@ parseBaseline[prop:"vertical-align", token_?CSSTokenQ] := parseBaseline[prop, to
 		value = 
 			Switch[token["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
+					Switch[token["String"],
 						"baseline",    Baseline -> Baseline,
 						"sub",         Baseline -> Bottom,
 						"super",       Baseline -> Axis, (* maybe not the best approximation *)
@@ -3400,7 +3402,7 @@ parseBaseline[prop:"vertical-align", token_?CSSTokenQ] := parseBaseline[prop, to
 						_,             unrecognizedKeyWordFailure @ prop
 					],
 				"dimension",
-					Switch[CSSDimensionUnit @ token,
+					Switch[token["Unit"],
 						"em"|"ex", Baseline -> Scaled[parseLengthNonRelative @ token],
 						_,         Baseline -> With[{v = parseLength @ token}, Scaled @ Dynamic[v/CurrentValue[FontSize]]]
 					],
@@ -3416,7 +3418,7 @@ parseCellBaseline[prop:"vertical-align", token_?CSSTokenQ] := parseCellBaseline[
 		value = 
 			Switch[token["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
+					Switch[token["String"],
 						"baseline",               Center,
 						"middle",                 Baseline,
 						"super" | "sub",          Missing["Not supported."],
@@ -3425,7 +3427,7 @@ parseCellBaseline[prop:"vertical-align", token_?CSSTokenQ] := parseCellBaseline[
 						_,                        unrecognizedKeyWordFailure @ prop
 					],
 				"dimension", 
-					Switch[CSSDimensionUnit @ token,
+					Switch[token["Unit"],
 						"em"|"ex", Missing["Not supported."],
 						_,         parseLength @ token (* w.r.t. the top of the in-line cell *)
 					],
@@ -3450,7 +3452,7 @@ consumeProperty[prop:"visibility", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"visible",  True,
 						"hidden",   False,
 						"collapse", False,
@@ -3476,7 +3478,7 @@ consumeProperty[prop:"z-index", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+					Switch[tokens[[pos]]["String"],
 						"auto", Automatic,
 						_,      unrecognizedKeyWordFailure @ prop
 					],
