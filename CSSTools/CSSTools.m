@@ -47,8 +47,8 @@ SetUsage[ResolveCSSInheritance, "\
 ResolveCSSInheritance[target$, CSSData$] calculates the properties of the element at target$ including any inherited CSS properties."];
 
 (* ==== Selectors3` ==== *)
-SetUsage[Selector, "\
-Selector[selector$, XMLObject$] returns the CSS selector$ specificity and positions of XMLElement expressions in XMLObject$. 
+SetUsage[CSSSelector, "\
+CSSSelector[selector$, XMLObject$] returns the CSS selector$ specificity and positions of XMLElement expressions in XMLObject$. 
 Position[XMLObject$, Selector[selector$]] returns only the positions of XMLElement expressions."];
 
 (* ==== required System` functions ==== *)
@@ -59,6 +59,8 @@ Get["CSSTools`CSSPropertyInterpreter`"]   (* needs to be loaded first to define 
 Get["CSSTools`CSSStyleSheetInterpreter`"] (* defines basic stylesheet token consumers and CSS cascade *)
 Get["CSSTools`CSSColors4`"];              (* redefines parseSingleColor (first defined in CSSPropertyInterpreter) *)
 Get["CSSTools`CSSPagedMedia3`"]           (* redefines @page token consumer (first defined in CSSStyleSheetInterpreter) *)
+
+Get["CSSTools`CSSSelectors3`"]               (* defines CSSSelector object *)
 
 ImportExport`RegisterImport[
 	"CSS",

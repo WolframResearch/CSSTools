@@ -5,7 +5,7 @@
 (*Package Header*)
 
 
-BeginPackage["CSSTools`CSSStyleSheetInterpreter`", {"CSSTools`", "CSSTools`Selectors3`"}];
+BeginPackage["CSSTools`CSSStyleSheetInterpreter`", {"CSSTools`"}];
 
 consumeDeclaration;
 consumeAtPageRule;
@@ -19,7 +19,7 @@ $Debug;
 (* CSSTools`
 	---> defines wrappers like CSSHeightMax *)
 (* Selectors3` 
-	---> defines Selector function *)
+	---> defines CSSSelector function, consumeCSSSelector *)
 (* CSSTokenizer`
 	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs
 	---> token position modifiers e.g. AdvancePosAndSkipWhitespace *)
@@ -80,7 +80,7 @@ Begin["`Private`"];
 
 
 consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
-	Module[{pos = 1, l = Length[tokens], imports = {}, i = 1, lRulesets, rulesets},
+	Module[{pos = 1, l = Length[tokens], imports = {}, namespaces = {}, i = 1, lRulesets, rulesets},
 		If[TrueQ @ $Debug, Echo[l, "Token Length"]];
 		
 		(* skip any leading whitespace (there shouldn't be any if @charset exists) *)
@@ -97,6 +97,16 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 			If[TrueQ @ $Debug, Echo[pos, "position after @import check"]];
 		];
 		imports = Join @@ imports;
+		
+		(* check for @namespace rules *)
+		(* These must appear after the @charset and @import rules and before rule sets *)
+		While[TokenTypeIs["at-keyword"] && TokenStringIs["namespace"], 
+			AppendTo[namespaces, consumeAtNamespaceKeyword[pos, l, tokens]]
+		];
+		If[AnyTrue[namespaces, FailureQ], Return @ FirstCase[namespaces, _Failure, Failure["BadNamespace", <||>]]];
+		(* Having duplicate default namespaces or dupliate prefixes is nonconforming, but not an error. Remove them. *)
+		namespaces = Reverse @ DeleteDuplicatesBy[Reverse @ namespaces, #Default&];
+		namespaces = Reverse @ DeleteDuplicatesBy[Reverse @ namespaces, #Prefix&];
 				
 		lRulesets = Count[tokens, CSSToken[KeyValuePattern["Type" -> "{}"]], {1}]; (* upper bound of possible rulesets *)
 		rulesets = ConstantArray[0, lRulesets]; (* container for processed rulesets *)
@@ -112,7 +122,7 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 				TokenTypeIs["{}", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens], 
 				
 				(* anything else treated as a ruleset *)
-				True, rulesets[[i]] = consumeRuleset[pos, l, tokens]; i++;
+				True, rulesets[[i]] = consumeRuleset[pos, l, tokens, namespaces]; i++;
 			];
 		];
 		Join[imports, DeleteCases[rulesets, 0, {1}]]
@@ -123,7 +133,7 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 (*Consume Style Sheet Preambles (charset, import)*)
 
 
-SetAttributes[{consumeAtCharsetKeyword, consumeAtImportKeyword}, HoldFirst];
+SetAttributes[{consumeAtCharsetKeyword, consumeAtImportKeyword, consumeAtNamespaceKeyword}, HoldFirst];
 
 
 (* The character set is assumed UTF-8 and any charset is ignored. *)
@@ -204,6 +214,35 @@ consumeAtImportKeyword[pos_, l_, tokens_] :=
 			Return @ data
 		]
 	]	
+	
+
+consumeAtNamespaceKeyword[pos_, l_, tokens_] :=
+	Module[{prefix, namespace, default = False},
+		If[TokenTypeIsNot["at-keyword", tokens[[pos]]] || TokenStringIsNot["namespace", tokens[[pos]]],
+			Return @ Failure["BadNamespace", <|"Message" -> "Expected @namespace keyword. Had instead " <> tokens[[pos]]|>]; (* bad stylesheet *)
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		(* ident token after @namespace is optional. If missing, the declared namespace is the default namespace. *)
+		If[TokenTypeIs["ident", tokens[[pos]]], 
+			prefix = tokens[[pos]]["RawString"]; (* case-sensitive *)
+			AdvancePosAndSkipWhitespace[pos, l, tokens]
+			,
+			prefix = None; default = True;
+		];
+		(* next token must be a string or URI*)
+		Switch[tokens[[pos]]["Type"],
+			"string", namespace = tokens[[pos]]["String"],
+			"url",    namespace = tokens[[pos]]["String"],
+			_,        Return @ Failure["BadNamespace", <|"Message" -> "Namespace declaration " <> tokens[[pos]]["String"] <> " is an incorrect format."|>]; (* bad stylesheet *)
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		(* token sequence must close with a semi-colon *)
+		If[TokenTypeIsNot["delim", tokens[[pos]]] || TokenStringIsNot[";", tokens[[pos]]], 
+			Return @ Failure["BadNamespace", <|"Message" -> "Namespace declaration has missing semicolon."|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		<|"Prefix" -> prefix, "Namespace" -> namespace, "Default" -> default|>
+	]; 
 
 
 (* ::Subsection::Closed:: *)
@@ -343,13 +382,13 @@ convertMarginsToPrintingOptions[declaration_?AssociationQ, scope_] :=
 (*ruleset*)
 
 
-consumeRuleset[pos_, l_, tokens_] :=
+consumeRuleset[pos_, l_, tokens_, namespaces_] :=
 	Module[{selectorStartPos = pos, ruleset},
 		AdvancePosToNextBlock[pos, l, tokens];
 		If[TrueQ @ $Debug, Echo[{pos, tokens}, "pos + tokens"]];
 		ruleset = 
 			<|
-				"Selector" -> StringTrim @ CSSUntokenize @ tokens[[selectorStartPos ;; pos - 1]], 
+				"Selector" -> consumeCSSSelector[tokens[[selectorStartPos ;; pos - 1]], namespaces], 
 				"Condition" -> None,
 				(* The block token is already encapsulated CSSToken[<|"Type" -> {}, "Children" -> {CSSTokens...}|>] *)
 				"Block" -> consumeDeclarationBlock @ If[Length[tokens[[pos]]["Children"]] > 1, tokens[[pos]]["Children"], {}]|>; 
@@ -666,6 +705,7 @@ ResolveCSSCascade[type:(Cell|Notebook|Box|All), CSSData_Dataset, selectorList:{_
 ResolveCSSCascade[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; validCSSDataQ[CSSData], selectorList:{__String}, opts:OptionsPattern[]] :=
 	Module[{interpretationList, specificities},
 		(* start by filtering the data by the given list of selectors; ordering is maintained *)
+		(*FIXME: if selectors are objects and not simple strings, need to update how to select a subset of them*)
 		interpretationList = Select[CSSData, MatchQ[#Selector, Alternatives @@ selectorList]&];
 		
 		If[TrueQ @ OptionValue["IgnoreSpecificity"],
@@ -673,6 +713,7 @@ ResolveCSSCascade[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; valid
 			interpretationList = Flatten @ interpretationList[[All, "Block"]]
 			,
 			(* otherwise sort based on specificity but maintain order of duplicates; this is what should happen based on the CSS specification *)
+			(*FIXME: if selectors are objects, need to redo how properties are accessed *)
 			specificities = Selector["", #][["Specificity"]]& /@ interpretationList[[All, "Selector"]];
 			interpretationList = Flatten @ interpretationList[[Ordering[specificities]]][[All, "Block"]];
 		];
@@ -745,6 +786,7 @@ styleAttributePattern[] :=
 ApplyCSSToXML[doc:XMLObject["Document"][___], CSSData_Dataset, wrapInDataset_:True] := ApplyCSSToXML[doc, Normal @ CSSData, wrapInDataset]
 ApplyCSSToXML[doc:XMLObject["Document"][___], CSSData_?validCSSDataQ, wrapInDataset_:True] :=
 	If[TrueQ @ wrapInDataset, Dataset, Identity][
+		(*FIXME: with selectors as objects, need to update how they are modified *)
 		With[{t = Selector[doc, #Selector]}, 
 			<|"Selector" -> #Selector, "Specificity" -> t[["Specificity"]], "Targets" -> t[["Elements"]], "Condition" -> #Condition, "Block" -> #Block|>
 		]& /@ CSSData]
@@ -784,7 +826,7 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 		directStyleContent = 
 			MapThread[
 				<|
-					"Selector" -> None, 
+					"Selector" -> None, (*FIXME: with selectors as objects, we can represent in-line CSS with an appropriate selector object*)
 					"Specificity" -> {1, 0, 0, 0}, 
 					"Targets" -> {#1}, 
 					"Condition" -> None, 
