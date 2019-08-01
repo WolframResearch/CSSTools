@@ -252,24 +252,81 @@ P["universal"] = "(" ~~ P["namespace_prefix"] ~~ "?\\*)";
 
 
 isNamespace[pos_, l_, tokens_] :=
-	Module[{posCheck = pos + 1},
+	Module[{posCheck = pos},
+		If[
+			Or[
+				TokenTypeIs["delim", tokens[[posCheck]]] && TokenStringIs["*", tokens[[posCheck]]], 
+				TokenTypeIs["ident", tokens[[posCheck]]]]
+			,
+			posCheck++
+			,
+			Return @ False
+		];
 		If[posCheck <= l && TokenTypeIs["delim", tokens[[posCheck]]] && TokenStringIs["|", tokens[[posCheck]]],
-			posCheck++;
-			If[posCheck <= l,
-				Or[
-					TokenTypeIs["delim", tokens[[posCheck]]] && TokenStringIs["*", tokens[[posCheck]]], 
-					TokenTypeIs["ident", tokens[[posCheck]]]]
-				,
-				False
-			];
+			posCheck++
+			,
+			Return @ False
+		];
+		If[posCheck <= l,
+			Or[
+				TokenTypeIs["delim", tokens[[posCheck]]] && TokenStringIs["*", tokens[[posCheck]]], 
+				TokenTypeIs["ident", tokens[[posCheck]]]]
 			,
 			False
 		]
 	]
+	
+
+SetAttributes[{consumeNamespace, consumeDefaultNamespace, consumeTypeOrUniversalSelector}, HoldFirst];
+consumeNamespace[pos_, l_, tokens_, namespaces_] := 
+	Module[{ns},
+		(* get case-sensitive namespace from declared namespaces *)
+		With[{s = tokens[[pos]]["RawString"]}, 
+			ns = FirstCase[namespaces, _?Function[#Prefix === s]];
+			If[MissingQ[ns], Return @ Failure["BadNamespace", <|"Message" -> s <> " is not a declared namespace."|>]];							
+		];
+		pos++; 
+		pos++; (* skip "|" delim token *)
+		ns
+	]
+	
+consumeDefaultNamespace[pos_, l_, tokens_, namespaces_] :=
+	Module[{ns},
+		ns = FirstCase[namespaces, _?Function[#Default === True]];
+		If[MissingQ[ns], ns, ns["Namespace"]]; (* could be Missing if not declared, which is an ambiguous state *)
+	]
+	
+	
+consumeTypeOrUniversalSelector[pos_, l_, tokens_, namespace_, Hold[specificity_]] :=
+	Module[{value},
+		value = 
+			Which[
+				TokenTypeIs["delim", tokens[[pos]]] && TokenStringIs["*", tokens[[pos]]], 
+					<|
+						"Type"      -> "Universal", 
+						"Namespace" -> namespace["Namespace"]|>,
+				TokenTypeIs["ident", tokens[[pos]]], 
+					specificity["c"]++;
+					<|
+						"Type"      -> "Type", 
+						"Namespace" -> namespace["Namespace"],
+						"String"    -> tokens[[pos]]["RawString"]|>, (* doc language determines case, so leave this alone *)
+				True, 
+					Failure["BadSelector", <|"Message" -> "Expected Type or Universal simple selector."|>]
+			];
+		pos++;
+		value		
+	]
+	
+	
+consumeCSSCombinator[pos_, l_, tokens_] :=
+	Module[{},
+		Null (*TODO*)
+	]
 
 
 consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
-	Module[{pos = 1, l = Length[tokens], posCheck, ns, specificity = <|"a" -> 0, "b" -> 0, "c" -> 0|>, objects= {}},
+	Module[{pos = 1, l = Length[tokens], ns, value, specificity = <|"a" -> 0, "b" -> 0, "c" -> 0|>, objects= {}},
 		(* skip any initial whitespace *)
 		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
 		
@@ -277,109 +334,42 @@ consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 			Switch[tokens[[pos]]["Type"],
 				"ident",
 					(* check whether ident is a namespace *)
-					posCheck = pos + 1;
-					If[TokenTypeIs["delim", tokens[[posCheck]]] && TokenStringIs["|", tokens[[posCheck]]],
-						With[{s = tokens[[pos]]["RawString"]}, 
-							ns = FirstCase[namespaces, _?(#Prefix === s&)];
-							If[MissingQ[ns], Return @ Failure["BadNamespace", <|"Message" -> s <> " is not a declared namespace."|>]];							
+					ns = 
+						If[isNamespace[pos, l, tokens], 
+							consumeNamespace[pos, l, tokens, namespaces]
+							,
+							consumeDefaultNamespace[pos, l, tokens, namespaces]
 						];
-						posCheck++;
-						Which[
-							TokenTypeIs["delim", tokens[[posCheck]]] && TokenStringIs["*", tokens[[posCheck]]], 
-								AppendTo[objects, <|
-									"Type"      -> "Universal", 
-									"Namespace" -> ns["Namespace"]|>],
-							TokenTypeIs["ident", tokens[[posCheck]]], 
-								specificity["c"]++;
-								AppendTo[objects, <|
-									"Type"      -> "Type", 
-									"Namespace" -> ns["Namespace"],
-									"String"    -> tokens[[posCheck]]["RawString"]|>], (* doc language determines case, so leave this alone *)
-							True, 
-								Return @ Failure["BadSelector", <|"Message" -> "\"" <> CSSUntokenize @ tokens[[pos ;; posCheck]] <> "\" is not a recognized selector syntax."|>]
-						];
-						pos = posCheck; pos++;
-						,
-						(* Else the selector is a simple Type selector. Check for a default namespace. *)
-						AppendTo[objects, <|
-							"Type"      -> "Type", 
-							"Namespace" -> (
-								ns = FirstCase[namespaces, _?(#Default === True&)];
-								If[MissingQ[ns], ns, ns["Namespace"]]), (* could be Missing if not declared, which is an ambiguous state *)
-							"String"    -> tokens[[posCheck]]["RawString"]|>]; (* doc language determines case, so leave this alone *)
-						pos++
-					],
+					If[FailureQ[ns], Return @ ns]; (* a selector with an undeclared namespace prefix is invalid *)
+					value = consumeTypeOrUniversalSelector[pos, l, tokens, ns, Hold[specificity]];
+					If[FailureQ[value], Return @ value, AppendTo[objects, value]],
 				"delim",
 					Switch[tokens[[pos]]["String"],
 						"*", 
 							(* check whether universal selector is the namespace *)
-							posCheck = pos + 1;
-							If[TokenTypeIs["delim", tokens[[posCheck]]] && TokenStringIs["|", tokens[[posCheck]]],
-								posCheck++;
-								Which[
-									TokenTypeIs["delim", tokens[[posCheck]]] && TokenStringIs["*", tokens[[posCheck]]], 
-										AppendTo[objects, <|
-											"Type"      -> "Universal", 
-											"Namespace" -> All|>],
-									TokenTypeIs["ident", tokens[[posCheck]]], 
-										specificity["c"]++;
-										AppendTo[objects, <|
-											"Type"      -> "Type", 
-											"Namespace" -> All,
-											"String"    -> tokens[[posCheck]]["RawString"]|>], (* doc language determines case, so leave this alone *)
-									True, 
-										Return @ Failure["BadSelector", <|"Message" -> "\"" <> CSSUntokenize @ tokens[[pos ;; posCheck]] <> "\" is not a recognized selector syntax."|>]
+							ns = 
+								If[isNamespace[pos, l, tokens], 
+									All
+									,
+									consumeDefaultNamespace[pos, l, tokens, namespaces]
 								];
-								pos = posCheck; pos++;
-								,
-								(* Else the selector is a simple Universal selector. *)
-								AppendTo[objects, <|
-									"Type"      -> "Universal", 
-									"Namespace" -> (
-										ns = FirstCase[namespaces, _?(#Default === True&)];
-										If[MissingQ[ns], ns, ns["Namespace"]]), (* could be Missing if not declared, which is an ambiguous state *)
-									"String"    -> "*"|>]; 
-								pos++
-							],
+							value = consumeTypeOrUniversalSelector[pos, l, tokens, ns, Hold[specificity]];
+							If[FailureQ[value], Return @ value, AppendTo[objects, value]],
 						"|", 
 							(* check whether the namespace declaration is followed by a Type or Universal selector *)
-							posCheck = pos + 1;
-							Which[
-								TokenTypeIs["delim", tokens[[posCheck]]] && TokenStringIs["*", tokens[[posCheck]]], 
-									AppendTo[objects, <|
-										"Type"      -> "Universal", 
-										"Namespace" -> None|>],
-								TokenTypeIs["ident", tokens[[posCheck]]], 
-									specificity["c"]++;
-									AppendTo[objects, <|
-										"Type"      -> "Type", 
-										"Namespace" -> None,
-										"String"    -> tokens[[posCheck]]["RawString"]|>], (* doc language determines case, so leave this alone *)
-								True, 
-									Return @ Failure["BadSelector", <|"Message" -> "\"" <> CSSUntokenize @ tokens[[pos ;; posCheck]] <> "\" is not a recognized selector syntax."|>]
-							];
-							pos = posCheck; pos++;,
-						"+" | "~" | ">", AppendTo[objects, (*TODO*)consumeCSSCombinator[pos, l, tokens]],
-						_, Null
+							value = consumeTypeOrUniversalSelector[pos, l, tokens, ns, Hold[specificity]];
+							If[FailureQ[value], Return @ value, AppendTo[objects, value]],
+						"+" | "~" | ">", 
+							AppendTo[objects, (*TODO*)consumeCSSCombinator[pos, l, tokens]],
+						_, 
+							Null
 					],
 				_, Null				
 			]
 			
 			(*Which[
-				(*ident with possible namespace*)
-				
-				
-				Or[
-					TokenTypeIs["ident", tokens[[pos]]],
-					TokenTypeIs["delim", tokens[[pos]]] && TokenStringIs["*" | "|", tokens[[pos]]]
-				],
-					consumeTypeOrUniversalSelector[pos, l, tokens],
 				TokenTypeIs["[]", tokens[[pos]]], 
 					consumeAttributeSelector[tokens[[pos]]],
-				Or[
-					TokenTypeIs["whitespace", tokens[[pos]]],
-					TokenTypeIs["delim", tokens[[pos]]] && TokenStringIs[">" | "~" | "+", tokens[[pos]]]
-				],
 					consumeCombinator[pos, l, tokens],
 				TokenTypeIs["delim", tokens[[pos]]] && TokenStringIs[".", tokens[[pos]]],
 					consumeClassSelector[pos, l, tokens],
