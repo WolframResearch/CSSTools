@@ -277,12 +277,17 @@ isNamespace[pos_, l_, tokens_] :=
 	]
 	
 
-SetAttributes[{consumeNamespace, consumeDefaultNamespace, consumeTypeOrUniversalSelector}, HoldFirst];
+SetAttributes[
+	{
+		consumeNamespace, consumeDefaultNamespace, consumeTypeOrUniversalSelector, 
+		consumeCSSCombinator, consumeIDSelector, consumeClassSelector, 
+		consumePseudoElementSelector, consumePseudoClassSelector}, 
+	HoldFirst];
 consumeNamespace[pos_, l_, tokens_, namespaces_] := 
 	Module[{ns},
 		(* get case-sensitive namespace from declared namespaces *)
 		With[{s = tokens[[pos]]["RawString"]}, 
-			ns = FirstCase[namespaces, _?Function[#Prefix === s]];
+			ns = FirstCase[namespaces, _?(Function[#Prefix === s])];
 			If[MissingQ[ns], Return @ Failure["BadNamespace", <|"Message" -> s <> " is not a declared namespace."|>]];							
 		];
 		pos++; 
@@ -292,8 +297,8 @@ consumeNamespace[pos_, l_, tokens_, namespaces_] :=
 	
 consumeDefaultNamespace[pos_, l_, tokens_, namespaces_] :=
 	Module[{ns},
-		ns = FirstCase[namespaces, _?Function[#Default === True]];
-		If[MissingQ[ns], ns, ns["Namespace"]]; (* could be Missing if not declared, which is an ambiguous state *)
+		ns = FirstCase[namespaces, _?(Function[#Default === True])];
+		If[MissingQ[ns], ns, ns["Namespace"]] (* could be Missing if not declared, which is an ambiguous state *)
 	]
 	
 	
@@ -302,15 +307,15 @@ consumeTypeOrUniversalSelector[pos_, l_, tokens_, namespace_, Hold[specificity_]
 		value = 
 			Which[
 				TokenTypeIs["delim", tokens[[pos]]] && TokenStringIs["*", tokens[[pos]]], 
-					<|
+					"SimpleSelector" -> <|
 						"Type"      -> "Universal", 
-						"Namespace" -> namespace["Namespace"]|>,
+						"Namespace" -> namespace|>,
 				TokenTypeIs["ident", tokens[[pos]]], 
 					specificity["c"]++;
-					<|
+					"SimpleSelector" -> <|
 						"Type"      -> "Type", 
-						"Namespace" -> namespace["Namespace"],
-						"String"    -> tokens[[pos]]["RawString"]|>, (* doc language determines case, so leave this alone *)
+						"Namespace" -> namespace,
+						"Value"     -> tokens[[pos]]["RawString"]|>, (* doc language determines case, so leave this alone *)
 				True, 
 					Failure["BadSelector", <|"Message" -> "Expected Type or Universal simple selector."|>]
 			];
@@ -320,17 +325,243 @@ consumeTypeOrUniversalSelector[pos_, l_, tokens_, namespace_, Hold[specificity_]
 	
 	
 consumeCSSCombinator[pos_, l_, tokens_] :=
-	Module[{},
-		Null (*TODO*)
+	Module[{value},
+		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
+		If[TokenTypeIs["delim", tokens[[pos]]],
+			value = 
+				Switch[tokens[[pos]]["String"],
+					"+", "Combinator" -> <|"Type" -> "NextSibling"|>,
+					"~", "Combinator" -> <|"Type" -> "SubsequentSibling"|>,
+					">", "Combinator" -> <|"Type" -> "Child"|>,
+					_,   Failure["BadCombinator", <|"Message" -> "Unrecognized combinator."|>]
+				];
+			If[FailureQ[value], 
+				value = "Combinator" -> <|"Type" -> "Descendant"|>;
+				,
+				AdvancePosAndSkipWhitespace[pos, l, tokens]
+			]
+			,
+			value = "Combinator" -> <|"Type" -> "Descendant"|>
+		];
+		value
+	]
+	
+	
+consumeAttributeSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
+	Module[{pos = 1, l = Length[tokens], ns, attrib, match, value},
+		(* skip any initial whitespace *)
+		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
+		(* consume initial ident with possible namespace *)
+		If[pos <= l, 
+			ns = 
+				If[isNamespace[pos, l, tokens], 
+					consumeNamespace[pos, l, tokens, namespaces]
+					,
+					(* default namespaces do not apply to attribute selectors *)
+					None
+				];
+			If[FailureQ[ns], Return @ ns]; (* a selector with an undeclared namespace prefix is invalid *)
+		];
+		If[pos <= l,
+			attrib = 
+				If[TokenTypeIs["ident", tokens[[pos]]], 
+					tokens[[pos]]["RawString"] (* case depends on document language, so keep this as the raw string *)
+					,
+					Return @ Failure["BadSimpleSelector", <|"Message" -> "Attribute selector should start with an ident token."|>]
+				];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
+		];
+		If[pos > l,
+			(* if no more tokens exist, then exit as is*)
+			"SimpleSelector" -> <|
+				"Type"      -> "Attribute",
+				"Namespace" -> ns,
+				"Match"     -> "All",
+				"Value"     -> Missing[]|>
+			, (*ELSE*)
+			(* consume match operator *)
+			If[pos <= l,
+				match = 
+					Which[
+						TokenTypeIs["delim", tokens[[pos]]] && TokenStringIs["=", tokens[[pos]]], "Exact",
+						TokenTypeIs["dash-match",      tokens[[pos]]], "Dash",
+						TokenTypeIs["prefix-match",    tokens[[pos]]], "Prefix",
+						TokenTypeIs["include-match",   tokens[[pos]]], "Include",
+						TokenTypeIs["suffix-match",    tokens[[pos]]], "Suffix",
+						TokenTypeIs["substring-match", tokens[[pos]]], "Substring",
+						True, Return @ Failure["BadSimpleSelector", <|"Message" -> "Attribute selector has unknown match operator."|>]
+					];
+				,
+				Return @ Failure["BadSimpleSelector", <|"Message" -> "Attribute selector missing match operator."|>]
+			];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
+			(* consume attribute value *)
+			If[pos <= l,
+				value =
+					Switch[tokens[[pos]]["Type"], (* case depends on document language, so keep this as the raw string *)
+						"ident",  tokens[[pos]]["RawString"],
+						"string", tokens[[pos]]["String"],
+						_,        Return @ Failure["BadSimpleSelector", <|"Message" -> "Attribute selector value should be a string or ident token."|>]	
+					];
+				,
+				Return @ Failure["BadSimpleSelector", <|"Message" -> "Attribute selector value missing."|>]
+			];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
+			(* check for non-whitespace at the end *)
+			If[pos < l, 
+				Failure["BadSimpleSelector", <|"Message" -> "Attribute selector has too many tokens."|>]
+				,
+				"SimpleSelector" -> <|
+					"Type"      -> "Attribute",
+					"Namespace" -> ns,
+					"Match"     -> match,
+					"Value"     -> value|>
+			]
+		]		
+	]
+	
+
+isClassSelector[pos_, l_, tokens_] :=
+	Module[{posCheck = pos},
+		If[TokenTypeIs["delim", tokens[[posCheck]]] && TokenStringIs[".", tokens[[posCheck]]],
+			posCheck++
+			,
+			Return @ False
+		];
+		posCheck <= l && TokenTypeIs["ident", tokens[[posCheck]]]
 	]
 
+
+consumeClassSelector[pos_, l_, tokens_] :=
+	Module[{value},
+		pos++;
+		value = 
+			"SimpleSelector" -> <|
+				"Type"      -> "Class",
+				"Namespace" -> Missing["Indeterminate"],
+				"Value"     -> tokens[[pos]]["RawString"]|>; (* case-sensitivity outside the scope of CSS *)
+		pos++;
+		value
+	]
+
+
+consumeIDSelector[pos_, l_, tokens_] :=
+	Module[{value},
+		If[tokens[[pos]]["Flag"] =!= "id", Return @ Failure["BadID", <|"Message" -> "Not a valid ID selector."|>]];
+		value = 
+			"SimpleSelector" -> <|
+				"Type"  -> "ID",
+				"Value" -> tokens[[pos]]["RawString"]|>; (* case-sensitivity outside the scope of CSS *)
+		pos++;
+		value
+	]
+	
+	
+isPseudoElement[pos_, l_, tokens_] :=
+	Module[{posCheck = pos},
+		If[TokenTypeIs["colon", tokens[[posCheck]]], posCheck++, Return @ False];
+		If[posCheck <= l,
+			If[TokenTypeIs["colon", tokens[[posCheck]]], 
+				posCheck++; 
+				posCheck <= l && TokenTypeIs["ident", tokens[[posCheck]]]
+				,
+				And[
+					TokenTypeIs["ident", tokens[[posCheck]]],
+					TokenStringIs["first-line"|"first-letter"|"before"|"after", tokens[[posCheck]]]]
+			]
+			,
+			False
+		]
+	]
+	
+	
+consumePseudoElementSelector[pos_, l_, tokens_] :=
+	Module[{value},
+		If[TokenTypeIs["colon", tokens[[pos]]], pos++];
+		If[TokenTypeIs["colon", tokens[[pos]]], pos++];
+		value = 
+			"SimpleSelector" -> <|
+				"Type"  -> "PseudoElement",
+				"Value" -> tokens[[pos]]["String"]
+			|>;
+		pos++;
+		value
+	]
+	
+	
+consumePseudoClassSelector[pos_, l_, tokens_, namespaces_, Hold[specificity_]] :=
+	Module[{value},
+		If[TokenTypeIs["colon", tokens[[pos]]], pos++];
+		value =
+			Switch[tokens[[pos]]["Type"],
+				"ident",    
+					Switch[tokens[[pos]]["String"],
+						Alternatives[
+							"link", "visited", "hover", "active", "focus", "target",
+							"enabled", "disabled", "checked", "indeterminate", "root",
+							"first-child", "last-child", "first-of-type", "last-of-type",
+							"only-child", "only-of-type", "empty"
+						],
+							specificity["b"]++;
+							"SimpleSelector" -> <|"Type" -> "PseudoClass", "Value" -> tokens[[pos]]["String"]|>,
+						_, Return @ Failure["BadSimpleSelector", <|"Message" -> "Unrecognized pseudo class selector " <> tokens[[pos]]["String"] <> "."|>]
+					],
+				"function", 
+					Switch[tokens[[pos]]["String"],
+						"lang", 
+							specificity["b"]++;
+							"SimpleSelector" -> <|"Type" -> "PseudoClass", "Value" -> CSSUntokenize @ tokens[[pos]]["Children"]|>,
+						Alternatives[
+							"nth-child", "nth-last-child", 
+							"nth-of-type", "nth-last-of-type"
+						],
+							specificity["b"]++;
+							"SimpleSelector" -> <|
+								"Type"  -> "PseudoClass", 
+								"Value" -> tokens[[pos]]["String"], 
+								"ANB"   -> consumeANB[tokens[[pos]]["Children"]]|>,
+						"not",
+							consumeNegationPseudoClass[tokens[[pos]]["Children"], namespaces, Hold[specificity]],
+						_, 
+							Return @ Failure["BadSimpleSelector", <|"Message" -> "Unrecognized pseudo class selector " <> tokens[[pos]]["String"] <> "."|>]
+					]
+					,
+				_, Return @ Failure["BadSimpleSelector", <|"Message" -> "Pseudo class selector should be a function or ident token."|>]
+			];
+		pos++;
+		value
+	]
+	
+	
+consumeANB[tokens:{__?CSSTokenQ}] := Catch[parseANB @ CSSUntokenize @ tokens]
+
+
+consumeNegationPseudoClass[tokens:{__?CSSTokenQ}, namespaces_, Hold[specificity_]] :=
+	Module[{localSelectorSequence, selectors},
+		localSelectorSequence = consumeCSSSelector[tokens, namespaces];
+		If[FailureQ[localSelectorSequence], 
+			Return @ Failure["BadSimpleSelector", <|"Message" -> "Negation pseudo class selector argument should be a simple selector."|>];
+		];
+		selectors = localSelectorSequence["Selector"];
+		
+		If[selectors === {}, Return @ Failure["BadSimpleSelector", <|"Message" -> "Negation pseudo class selector has no arguments."|>]];
+		If[Length[selectors] > 1, Return @ Failure["BadSimpleSelector", <|"Message" -> "Negation pseudo class selector argument should be a simple selector."|>]];
+		If[MatchQ[localSelectorSequence["Selector"], {"SimpleSelector" -> _?AssociationQ}],
+			specificity += localSelectorSequence["Specificity"];
+			"SimpleSelector" -> <|
+				"Type"     -> "PseudoClass",
+				"Value"    -> "not",
+				"Children" -> localSelectorSequence["Selector"][[1, -1]]|>
+		]
+	]
+		
 
 consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 	Module[{pos = 1, l = Length[tokens], ns, value, specificity = <|"a" -> 0, "b" -> 0, "c" -> 0|>, objects= {}},
 		(* skip any initial whitespace *)
 		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
 		
-		While[pos < l,
+		While[pos <= l,
 			Switch[tokens[[pos]]["Type"],
 				"ident",
 					(* check whether ident is a namespace *)
@@ -349,7 +580,7 @@ consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 							(* check whether universal selector is the namespace *)
 							ns = 
 								If[isNamespace[pos, l, tokens], 
-									All
+									pos++; pos++; All
 									,
 									consumeDefaultNamespace[pos, l, tokens, namespaces]
 								];
@@ -360,28 +591,33 @@ consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 							value = consumeTypeOrUniversalSelector[pos, l, tokens, ns, Hold[specificity]];
 							If[FailureQ[value], Return @ value, AppendTo[objects, value]],
 						"+" | "~" | ">", 
-							AppendTo[objects, (*TODO*)consumeCSSCombinator[pos, l, tokens]],
+							AppendTo[objects, consumeCSSCombinator[pos, l, tokens]],
+						".",
+							specificity["b"]++;
+							AppendTo[objects, consumeClassSelector[pos, l, tokens]],
 						_, 
 							Null
 					],
-				_, Null				
+				"whitespace",
+					AppendTo[objects, consumeCSSCombinator[pos, l, tokens]],
+				"[]", 
+					specificity["b"]++;
+					AppendTo[objects, consumeAttributeSelector[tokens[[pos]]["Children"], namespaces]];
+					pos++,
+				"hash", 
+					specificity["a"]++;
+					AppendTo[objects, consumeIDSelector[pos, l, tokens]],
+				"colon",
+					If[isPseudoElement[pos, l, tokens],
+						specificity["c"]++;
+						AppendTo[objects, consumePseudoElementSelector[pos, l, tokens]];
+						,
+						AppendTo[objects, consumePseudoClassSelector[pos, l, tokens, namespaces, Hold[specificity]]];
+					],
+				_, Return @ Failure["BadSelector", <|"Message" -> "Unrecognized simple selector or combinator."|>]				
 			]
-			
-			(*Which[
-				TokenTypeIs["[]", tokens[[pos]]], 
-					consumeAttributeSelector[tokens[[pos]]],
-					consumeCombinator[pos, l, tokens],
-				TokenTypeIs["delim", tokens[[pos]]] && TokenStringIs[".", tokens[[pos]]],
-					consumeClassSelector[pos, l, tokens],
-				TokenTypeIs["hash", tokens[[pos]]],
-					consumeIDSelector[pos, l, tokens],
-				TokenTypeIs["delim", tokens[[pos]]] && TokenStringIs[":", tokens[[pos]]],
-					consumePseudoSelector[pos, l, tokens],
-				True,
-					CSSSelector[<||>]
-			]*);
-			pos++
-		]
+		];
+		<|"Selector" -> objects, "Specificity" -> specificity|>
 	]
 
 
