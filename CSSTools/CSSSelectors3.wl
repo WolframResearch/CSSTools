@@ -251,6 +251,10 @@ P["universal"] = "(" ~~ P["namespace_prefix"] ~~ "?\\*)";
 (*Consume CSS tokens*)
 
 
+(* ::Subsection::Closed:: *)
+(*Namespace*)
+
+
 isNamespace[pos_, l_, tokens_] :=
 	Module[{posCheck = pos},
 		If[
@@ -276,13 +280,7 @@ isNamespace[pos_, l_, tokens_] :=
 		]
 	]
 	
-
-SetAttributes[
-	{
-		consumeNamespace, consumeDefaultNamespace, consumeTypeOrUniversalSelector, 
-		consumeCSSCombinator, consumeIDSelector, consumeClassSelector, 
-		consumePseudoElementSelector, consumePseudoClassSelector}, 
-	HoldFirst];
+SetAttributes[{consumeNamespace, consumeDefaultNamespace}, HoldFirst]
 consumeNamespace[pos_, l_, tokens_, namespaces_] := 
 	Module[{ns},
 		(* get case-sensitive namespace from declared namespaces *)
@@ -300,8 +298,13 @@ consumeDefaultNamespace[pos_, l_, tokens_, namespaces_] :=
 		ns = FirstCase[namespaces, _?(Function[#Default === True])];
 		If[MissingQ[ns], ns, ns["Namespace"]] (* could be Missing if not declared, which is an ambiguous state *)
 	]
-	
-	
+
+
+(* ::Subsection::Closed:: *)
+(*Type or Universal*)
+
+
+SetAttributes[{consumeTypeOrUniversalSelector},	HoldFirst]
 consumeTypeOrUniversalSelector[pos_, l_, tokens_, namespace_, Hold[specificity_]] :=
 	Module[{value},
 		value = 
@@ -323,7 +326,31 @@ consumeTypeOrUniversalSelector[pos_, l_, tokens_, namespace_, Hold[specificity_]
 		value		
 	]
 	
+selectUniversal[content:{{_Integer..}...}, namespace_] :=
+	If[namespace === All, 
+		content
+		,
+		Pick[content, StringMatchQ[getNamespaceOfDocumentElement /@ content, namespace]]
+	]
 	
+selectType[content:{{_Integer..}...}, name_, namespace_] :=
+	If[namespace === All, 
+		Pick[content, validTypeQ[name] /@ content]
+		,
+		Pick[
+			content, 
+			Thread[
+				And[
+					StringMatchQ[getNamespaceOfDocumentElement /@ content, namespace], 
+					validTypeQ[name] /@ content]]]
+	]
+	
+	
+(* ::Subsection::Closed:: *)
+(*Combinator*)
+
+
+SetAttributes[{consumeCSSCombinator}, HoldFirst]
 consumeCSSCombinator[pos_, l_, tokens_] :=
 	Module[{value},
 		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
@@ -347,6 +374,10 @@ consumeCSSCombinator[pos_, l_, tokens_] :=
 	]
 	
 	
+(* ::Subsection::Closed:: *)
+(*Attribute*)
+
+
 consumeAttributeSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 	Module[{pos = 1, l = Length[tokens], ns, attrib, match, value},
 		(* skip any initial whitespace *)
@@ -421,6 +452,10 @@ consumeAttributeSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 	]
 	
 
+(* ::Subsection::Closed:: *)
+(*Class*)
+
+
 isClassSelector[pos_, l_, tokens_] :=
 	Module[{posCheck = pos},
 		If[TokenTypeIs["delim", tokens[[posCheck]]] && TokenStringIs[".", tokens[[posCheck]]],
@@ -432,6 +467,7 @@ isClassSelector[pos_, l_, tokens_] :=
 	]
 
 
+SetAttributes[{consumeClassSelector}, HoldFirst]
 consumeClassSelector[pos_, l_, tokens_] :=
 	Module[{value},
 		pos++;
@@ -445,6 +481,11 @@ consumeClassSelector[pos_, l_, tokens_] :=
 	]
 
 
+(* ::Subsection::Closed:: *)
+(*ID*)
+
+
+SetAttributes[{consumeIDSelector}, HoldFirst]
 consumeIDSelector[pos_, l_, tokens_] :=
 	Module[{value},
 		If[tokens[[pos]]["Flag"] =!= "id", Return @ Failure["BadID", <|"Message" -> "Not a valid ID selector."|>]];
@@ -457,6 +498,10 @@ consumeIDSelector[pos_, l_, tokens_] :=
 	]
 	
 	
+(* ::Subsection::Closed:: *)
+(*Pseudo Element*)
+
+
 isPseudoElement[pos_, l_, tokens_] :=
 	Module[{posCheck = pos},
 		If[TokenTypeIs["colon", tokens[[posCheck]]], posCheck++, Return @ False];
@@ -475,6 +520,7 @@ isPseudoElement[pos_, l_, tokens_] :=
 	]
 	
 	
+SetAttributes[{consumePseudoElementSelector}, HoldFirst]
 consumePseudoElementSelector[pos_, l_, tokens_] :=
 	Module[{value},
 		If[TokenTypeIs["colon", tokens[[pos]]], pos++];
@@ -489,6 +535,11 @@ consumePseudoElementSelector[pos_, l_, tokens_] :=
 	]
 	
 	
+(* ::Subsection::Closed:: *)
+(*Pseudo Class*)
+
+
+SetAttributes[{consumePseudoClassSelector}, HoldFirst]
 consumePseudoClassSelector[pos_, l_, tokens_, namespaces_, Hold[specificity_]] :=
 	Module[{value},
 		If[TokenTypeIs["colon", tokens[[pos]]], pos++];
@@ -532,10 +583,26 @@ consumePseudoClassSelector[pos_, l_, tokens_, namespaces_, Hold[specificity_]] :
 		value
 	]
 	
-	
-consumeANB[tokens:{__?CSSTokenQ}] := Catch[parseANB @ CSSUntokenize @ tokens]
+consumeANB[tokens:{__?CSSTokenQ}] := parseANB @ StringReplace[CSSUntokenize @ tokens, "/**/" -> ""]
 
+(* The An+B argument is its own micro-grammar, but we can reuse some of the regexs from the tokenizer. *)
+parseANB[s_String] :=
+	Module[{x = StringTrim @ s},
+		Which[
+			StringMatchQ[x, RegularExpression[RE["O"] ~~ RE["D"] ~~ RE["D"]]],            {2, 1},
+			StringMatchQ[x, RegularExpression[RE["E"] ~~ RE["V"] ~~ RE["E"] ~~ RE["N"]]], {2, 0}, 
+			StringMatchQ[x, RegularExpression[RE["integer"]]],                            {0, Interpreter["Integer"][x]}, 
+			StringMatchQ[x, RegularExpression["[+\\-]?([0-9]+)?" ~~ RE["N"] ~~ "(" ~~ RE["ws*"] ~~ "[+\\-]" ~~ RE["ws*"] ~~ "([0-9]+))?"]], 
+				First @ StringCases[x, 
+					(a:RegularExpression["[+\\-]?([0-9]+)?"]) ~~ RegularExpression[RE["N"]] ~~ rest___ :> 
+					{
+						Switch[a, "+"|"", 1, "-", -1, _, Interpreter["Integer"][a]], 
+						With[{str = StringReplace[rest, Whitespace -> ""]}, If[str == "", 0, Interpreter["Integer"][str]]]}], 
+			True, Failure["SelectorParse", <|"MessageTemplate" -> "Bad ANB pseudo class argument.", "Input" -> s|>]
+		]		
+	]
 
+(* The 'not' itself does not contribute to the specificity, but the body of not(...) does. *)
 consumeNegationPseudoClass[tokens:{__?CSSTokenQ}, namespaces_, Hold[specificity_]] :=
 	Module[{localSelectorSequence, selectors},
 		localSelectorSequence = consumeCSSSelector[tokens, namespaces];
@@ -555,6 +622,10 @@ consumeNegationPseudoClass[tokens:{__?CSSTokenQ}, namespaces_, Hold[specificity_
 		]
 	]
 		
+
+(* ::Subsection::Closed:: *)
+(*Single Selector*)
+
 
 consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 	Module[{pos = 1, l = Length[tokens], ns, value, specificity = <|"a" -> 0, "b" -> 0, "c" -> 0|>, objects= {}},
@@ -596,7 +667,7 @@ consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 							specificity["b"]++;
 							AppendTo[objects, consumeClassSelector[pos, l, tokens]],
 						_, 
-							Null
+							Return @ Failure["BadSelector", <|"Message" -> "Unrecognized delimiter."|>]
 					],
 				"whitespace",
 					AppendTo[objects, consumeCSSCombinator[pos, l, tokens]],
@@ -617,7 +688,7 @@ consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 				_, Return @ Failure["BadSelector", <|"Message" -> "Unrecognized simple selector or combinator."|>]				
 			]
 		];
-		<|"Selector" -> objects, "Specificity" -> specificity|>
+		CSSSelector[<|"Sequence" -> objects, "Specificity" -> specificity|>]
 	]
 
 
@@ -758,22 +829,6 @@ parsePseudo[s_String] :=
 		]
 	]
 
-parseANB[s_String] :=
-	Module[{x = StringTrim @ s},
-		Which[
-			StringMatchQ[x, RegularExpression[RE["O"] ~~ RE["D"] ~~ RE["D"]]],            {2, 1},
-			StringMatchQ[x, RegularExpression[RE["E"] ~~ RE["V"] ~~ RE["E"] ~~ RE["N"]]], {2, 0}, 
-			StringMatchQ[x, RegularExpression["[+\\-]?"] ~~ RegularExpression["[0-9]+"]], {0, Interpreter["Integer"][x]}, 
-			StringMatchQ[x, RegularExpression["[+\\-]?([0-9]+)?" ~~ RE["N"] ~~ "(" ~~ RE["w"] ~~ "[+\\-]" ~~ RE["w"] ~~ "([0-9]+))?"]], 
-				First @ StringCases[x, 
-					(a:RegularExpression["[+\\-]?([0-9]+)?"]) ~~ RegularExpression[RE["N"]] ~~ rest___ :> 
-					{
-						Switch[a, "+"|"", 1, "-", -1, _, Interpreter["Integer"][a]], 
-						With[{str = StringReplace[rest, Whitespace -> ""]}, If[str == "", 0, Interpreter["Integer"][str]]]}], 
-			True, Throw[Failure["SelectorParse", <|"MessageTemplate" -> "Bad ANB pseudo class argument.", "AllTokens" -> s|>]]
-		]		
-	]
-
 
 (* ::Section::Closed:: *)
 (*Process simple selectors*)
@@ -900,8 +955,8 @@ selectType[content:{{_Integer..}...}, type_String] :=
 (* check against any namespace *)
 validAttributeQ[None, {attributeName_String}] := 
 	With[{attributeList = Extract[$Document, Append[#, 2]]},
-		If[$Debug, Print["AttOnly: ", #, " ", attributeList]];
-		If[$Debug, Echo, Identity][
+		If[TrueQ @ $Debug, Print["AttOnly: ", #, " ", attributeList]];
+		If[TrueQ @ $Debug, Echo, Identity][
 			MatchQ[attributeList, {___, ((name_String | {_String, name_String}) /; StringMatchQ[name, attributeName, IgnoreCase -> $IgnoreCase["AttributeName"]]) -> _, ___}]
 		]
 	]&
@@ -910,20 +965,20 @@ validAttributeQ[None, {attributeName_String}] :=
 (* check against specific namespace; empty string implies no namespace *)
 validAttributeQ[attributeNamespace_String, {attributeName_String}] := 
 	With[{attributeList = Extract[$Document, Append[#, 2]]},
-		If[$Debug, Print["AttAndName: ", #, " ", attributeList]];
+		If[TrueQ @ $Debug, Print["AttAndName: ", #, " ", attributeList]];
 		Which[
 			(* case of '"IncludeNamespaces" -> True' and check for a match against the given attrib namespace, which could be empty e.g. "" *)
 			MatchQ[attributeList, {___, {ns_String /; StringMatchQ[ns, attributeNamespace], name_String /; StringMatchQ[name, attributeName, IgnoreCase -> $IgnoreCase["AttributeName"]]} -> _, ___}],
-				If[$Debug, Print["True and use attrib."]];
+				If[TrueQ @ $Debug, Print["True and use attrib."]];
 				True,
 			
 			(* case of '"IncludeNamespaces" -> Automatic' or 'False'; assume namespace is empty and only match against case *)
 			MatchQ[attributeList, {___, (name_String /; StringMatchQ[name, attributeName, IgnoreCase -> $IgnoreCase["AttributeName"]]) -> _, ___}],
-				If[$Debug, Print["Automatic/False."]];
+				If[TrueQ @ $Debug, Print["Automatic/False."]];
 				True,
 			
 			(* fallthrough case: return False *)
-			If[$Debug, Print["Fallthrough."]];
+			If[TrueQ @ $Debug, Print["Fallthrough."]];
 			True, False
 		]
 	]&
@@ -941,14 +996,14 @@ operatorValueCondition[value_, operator_, attributeValue_] :=
 		"$=", StringEndsQ[value, attributeValue, IgnoreCase -> $IgnoreCase["AttributeValue"]], 
 		"~=", AnyTrue[StringSplit[value, Whitespace], StringMatchQ[attributeValue, IgnoreCase -> $IgnoreCase["AttributeValue"]]], 
 		"|=", StringMatchQ[First[StringSplit[value, "-"]], attributeValue, IgnoreCase -> $IgnoreCase["AttributeValue"]], 
-		_, If[$Debug, "Operator fallthrough."]; False
+		_, If[TrueQ @ $Debug, "Operator fallthrough."]; False
 	]
 
 
 validAttributeQ[None, {attributeName_String, operator_String, attributeValue_String}] :=
 	With[{attributeList = Extract[$Document, Append[#, 2]]},
-		If[$Debug, Print["AttAndVal: ", #, " ", attributeList, " ", {attributeName, operator, attributeValue}]];
-		If[$Debug, Echo, Identity][
+		If[TrueQ @ $Debug, Print["AttAndVal: ", #, " ", attributeList, " ", {attributeName, operator, attributeValue}]];
+		If[TrueQ @ $Debug, Echo, Identity][
 			MatchQ[attributeList,
 				{___,
 					((name_String | {_String, name_String}) /; StringMatchQ[name, attributeName, IgnoreCase -> $IgnoreCase["AttributeName"]]) ->
@@ -961,14 +1016,14 @@ validAttributeQ[None, {attributeName_String, operator_String, attributeValue_Str
 
 validAttributeQ[attributeNamespace_String, {attributeName_String, operator_String, attributeValue_String}] :=
 	With[{attributeList = Extract[$Document, Append[#, 2]]},
-		If[$Debug, Print["AttAndNameAndVal: ", #, " ", attributeList]];
+		If[TrueQ @ $Debug, Print["AttAndNameAndVal: ", #, " ", attributeList]];
 		Which[
 			(* case of '"IncludeNamespaces" -> True' and check for a match against the given attrib namespace, which could be empty e.g. ""*)
 			MatchQ[attributeList, 
 				{___, {ns_String /; StringMatchQ[ns, attributeNamespace], n_String /; StringMatchQ[n, attributeName, IgnoreCase -> $IgnoreCase["AttributeName"]]} -> 
 					(v_String /; operatorValueCondition[v, operator, attributeValue]), ___}
 			],
-				If[$Debug, Print["True."]];
+				If[TrueQ @ $Debug, Print["True."]];
 				True,
 			
 			(* case of '"IncludeNamespaces" -> Automatic' or 'False'; assume namespace is empty and only match against case  *)
@@ -976,11 +1031,11 @@ validAttributeQ[attributeNamespace_String, {attributeName_String, operator_Strin
 				{___, (n_String /; StringMatchQ[n, attributeName, IgnoreCase -> $IgnoreCase["AttributeName"]]) -> 
 					(v_String /; operatorValueCondition[v, operator, attributeValue]), ___}
 			],
-				If[$Debug, Print["Automatic/False."]];
+				If[TrueQ @ $Debug, Print["Automatic/False."]];
 				True,
 			
 			(* fallthrough case: return False *)
-			True, If[$Debug, Print["Fallthrough."]]; False
+			True, If[TrueQ @ $Debug, Print["Fallthrough."]]; False
 		]
 	]&
 
@@ -1330,7 +1385,7 @@ processSimpleSelectorSequence[tokenizedSSS:{{_String, _String}...}] :=
 		
 		(* consume simple selectors until EOF or the next token is not part of a simple selector *)
 		While[pos <= l,
-			If[$Debug, Echo, Identity][{token, value} = tokenizedSSS[[pos]]];
+			If[TrueQ @ $Debug, Echo, Identity][{token, value} = tokenizedSSS[[pos]]];
 			Switch[token,
 				"universal", selection = selectUniversal[selection, value],				
 				"type",   specificity[[4]]++; selection = selectType[selection, value],
@@ -1545,7 +1600,10 @@ CSSSelector[document_, fullSelector_String, OptionsPattern[]] :=
 		processFullSelector @ fullSelector
 	]
 	
-CSSSelector /: Position[document:(obj_ /; Head[obj] === XMLObject["Document"] || Head[obj] === XMLElement), CSSSelector[fullSelector_String, opts:OptionsPattern[]]] := 
+CSSSelector /: Position[
+	document:(obj_ /; Head[obj] === XMLObject["Document"] || Head[obj] === XMLElement), 
+	CSSSelector[fullSelector_String(*, opts:OptionsPattern[]*)],
+	opts:OptionsPattern[Join[Options[CSSSelector], Options[Position]]]] := 
 	Module[{temp = CSSSelector[document, fullSelector, opts]},
 		If[ListQ[temp], temp[[All, "Elements"]], temp["Elements"]]
 	]
