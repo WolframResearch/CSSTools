@@ -252,6 +252,26 @@ P["universal"] = "(" ~~ P["namespace_prefix"] ~~ "?\\*)";
 
 
 (* ::Subsection::Closed:: *)
+(*Token access*)
+
+
+CSSSelector[a_?AssociationQ][key_] := a[key] 
+
+
+CSSSelector /: MakeBoxes[s:CSSSelector[a_?AssociationQ], StandardForm] :=
+	ToBoxes[
+		Interpretation[
+			Framed[a["String"], 
+				RoundingRadius -> 4, 
+				Background -> RGBColor[0.92, 0.98, 1],
+				ImageMargins -> 2,
+				FrameMargins -> {{5, 5}, {2, 2}},
+				FrameStyle -> Directive[RGBColor[0, 0.5, 1], AbsoluteThickness[1]],
+				BaseStyle -> {FontFamily -> Dynamic[CurrentValue[{StyleHints, "CodeFont"}]], FontSize -> 12, FontWeight -> Bold, FontColor -> GrayLevel[0.2]}],
+			s]]
+
+
+(* ::Subsection::Closed:: *)
 (*Namespace*)
 
 
@@ -598,7 +618,7 @@ parseANB[s_String] :=
 					{
 						Switch[a, "+"|"", 1, "-", -1, _, Interpreter["Integer"][a]], 
 						With[{str = StringReplace[rest, Whitespace -> ""]}, If[str == "", 0, Interpreter["Integer"][str]]]}], 
-			True, Failure["SelectorParse", <|"MessageTemplate" -> "Bad ANB pseudo class argument.", "Input" -> s|>]
+			True, Failure["SelectorParse", <|"Message" -> "Bad ANB pseudo class argument.", "Input" -> s|>]
 		]		
 	]
 
@@ -607,18 +627,20 @@ consumeNegationPseudoClass[tokens:{__?CSSTokenQ}, namespaces_, Hold[specificity_
 	Module[{localSelectorSequence, selectors},
 		localSelectorSequence = consumeCSSSelector[tokens, namespaces];
 		If[FailureQ[localSelectorSequence], 
-			Return @ Failure["BadSimpleSelector", <|"Message" -> "Negation pseudo class selector argument should be a simple selector."|>];
+			Return @ Failure["BadSimpleSelector", <|"Message" -> "Negation pseudo class selector argument should be a simple selector."|>]
 		];
-		selectors = localSelectorSequence["Selector"];
+		selectors = localSelectorSequence["Sequence"];
 		
 		If[selectors === {}, Return @ Failure["BadSimpleSelector", <|"Message" -> "Negation pseudo class selector has no arguments."|>]];
 		If[Length[selectors] > 1, Return @ Failure["BadSimpleSelector", <|"Message" -> "Negation pseudo class selector argument should be a simple selector."|>]];
-		If[MatchQ[localSelectorSequence["Selector"], {"SimpleSelector" -> _?AssociationQ}],
+		If[MatchQ[localSelectorSequence["Sequence"], {"SimpleSelector" -> _?AssociationQ}],
 			specificity += localSelectorSequence["Specificity"];
 			"SimpleSelector" -> <|
 				"Type"     -> "PseudoClass",
 				"Value"    -> "not",
-				"Children" -> localSelectorSequence["Selector"][[1, -1]]|>
+				"Children" -> localSelectorSequence["Sequence"][[1, -1]]|>
+			,
+			"BadMatch"
 		]
 	]
 		
@@ -628,7 +650,7 @@ consumeNegationPseudoClass[tokens:{__?CSSTokenQ}, namespaces_, Hold[specificity_
 
 
 consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
-	Module[{pos = 1, l = Length[tokens], ns, value, specificity = <|"a" -> 0, "b" -> 0, "c" -> 0|>, objects= {}},
+	Module[{pos = 1, l = Length[tokens], ns, value, specificity = <|"a" -> 0, "b" -> 0, "c" -> 0|>, objects= {}, inSimpleSelector = False},
 		(* skip any initial whitespace *)
 		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
 		
@@ -644,6 +666,7 @@ consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 						];
 					If[FailureQ[ns], Return @ ns]; (* a selector with an undeclared namespace prefix is invalid *)
 					value = consumeTypeOrUniversalSelector[pos, l, tokens, ns, Hold[specificity]];
+					If[!inSimpleSelector, inSimpleSelector = True];
 					If[FailureQ[value], Return @ value, AppendTo[objects, value]],
 				"delim",
 					Switch[tokens[[pos]]["String"],
@@ -656,27 +679,42 @@ consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 									consumeDefaultNamespace[pos, l, tokens, namespaces]
 								];
 							value = consumeTypeOrUniversalSelector[pos, l, tokens, ns, Hold[specificity]];
+							If[!inSimpleSelector, inSimpleSelector = True];
 							If[FailureQ[value], Return @ value, AppendTo[objects, value]],
 						"|", 
 							(* check whether the namespace declaration is followed by a Type or Universal selector *)
 							value = consumeTypeOrUniversalSelector[pos, l, tokens, ns, Hold[specificity]];
+							If[!inSimpleSelector, inSimpleSelector = True];
 							If[FailureQ[value], Return @ value, AppendTo[objects, value]],
 						"+" | "~" | ">", 
+							If[inSimpleSelector, 
+								inSimpleSelector = False
+								, 
+								Return @ Failure["BadSelector", <|"Message" -> "A combinator cannot follow another combinator."|>]
+							];
 							AppendTo[objects, consumeCSSCombinator[pos, l, tokens]],
 						".",
 							specificity["b"]++;
+							If[!inSimpleSelector, inSimpleSelector = True];
 							AppendTo[objects, consumeClassSelector[pos, l, tokens]],
 						_, 
 							Return @ Failure["BadSelector", <|"Message" -> "Unrecognized delimiter."|>]
 					],
 				"whitespace",
+					If[inSimpleSelector, 
+						inSimpleSelector = False
+						, 
+						Return @ Failure["BadSelector", <|"Message" -> "A combinator cannot follow another combinator."|>]
+					];
 					AppendTo[objects, consumeCSSCombinator[pos, l, tokens]],
 				"[]", 
 					specificity["b"]++;
+					If[!inSimpleSelector, inSimpleSelector = True];
 					AppendTo[objects, consumeAttributeSelector[tokens[[pos]]["Children"], namespaces]];
 					pos++,
 				"hash", 
 					specificity["a"]++;
+					If[!inSimpleSelector, inSimpleSelector = True];
 					AppendTo[objects, consumeIDSelector[pos, l, tokens]],
 				"colon",
 					If[isPseudoElement[pos, l, tokens],
@@ -684,11 +722,16 @@ consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 						AppendTo[objects, consumePseudoElementSelector[pos, l, tokens]];
 						,
 						AppendTo[objects, consumePseudoClassSelector[pos, l, tokens, namespaces, Hold[specificity]]];
-					],
+					];
+					If[!inSimpleSelector, inSimpleSelector = True],
 				_, Return @ Failure["BadSelector", <|"Message" -> "Unrecognized simple selector or combinator."|>]				
 			]
 		];
-		CSSSelector[<|"Sequence" -> objects, "Specificity" -> specificity|>]
+		If[!inSimpleSelector, 
+			Failure["BadSelector", <|"Message" -> "The selector must end with a simple selector."|>]
+			,
+			CSSSelector[<|"String" -> StringReplace[CSSUntokenize @ tokens, "/**/" -> ""], "Sequence" -> objects, "Specificity" -> specificity|>]
+		]
 	]
 
 
@@ -1577,7 +1620,7 @@ initializeGlobals[doc_, namespaces_List, id_String, {type_, name_, value_}] := (
 )
 
 
-Options[CSSSelector] = {
+(*Options[CSSSelector] = {
 	"Namespaces" -> {}, 
 	"ID" -> "id",
 	"CaseSensitive" -> {"Type" -> False, "AttributeName" -> False, "AttributeValue" -> False}};
@@ -1608,7 +1651,7 @@ CSSSelector /: Position[
 		If[ListQ[temp], temp[[All, "Elements"]], temp["Elements"]]
 	]
 
-CSSSelector /: Position[_, CSSSelector[fullSelector_String]] := {}
+CSSSelector /: Position[_, CSSSelector[fullSelector_String]] := {}*)
 
 
 (* ::Section::Closed:: *)

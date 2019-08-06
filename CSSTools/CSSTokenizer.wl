@@ -346,12 +346,11 @@ tokenizePercentage[x_String] := Flatten @ StringCases[x, num:RegularExpression[R
 tokenizeDimension[x_String] := Flatten @ StringCases[x, num:RegularExpression[RE["num"]] ~~ unit___ :> {tokenizeNumber @ num, unit}]
 
 Clear[tokenizeNumber]
-tokenizeNumber[x_String] := (* cache the Interpreter calls *)
-	tokenizeNumber[x] = 
-		If[StringMatchQ[x, RegularExpression["[+\\-]?[0-9]+"]], 
-			{x, Interpreter["Integer"][x], "integer"}
-			, 
-			{x, Interpreter["Number"][x], "number"}]
+tokenizeNumber[x_String] := 
+	If[StringMatchQ[x, RegularExpression["[+\\-]?[0-9]+"]], 
+		{x, Round @ Internal`StringToDouble[x](*Interpreter["Integer"][x]*), "integer"}
+		, 
+		{x, Internal`StringToDouble[x](*Interpreter["Number"][x]*), "number"}]
 		
 idHash[x_String] := 
 	If[StringMatchQ[x, RegularExpression[RE["ident-token"]]] && !StringMatchQ[x, RegularExpression["[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6,6}|[0-9a-fA-F]{8,8}"]], 

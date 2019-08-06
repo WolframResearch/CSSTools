@@ -19,9 +19,9 @@ Needs["CSSTools`CSSPropertyInterpreter`"]
 Begin["`Private`"]; (* Begin Private Context *) 
 
 
-(* keyword *)
+(* Keywords tokenize to ident tokens. As other parts of CSS must maintain case, ToLowerCase is applied here as opposed to during tokenization. *)
 parseSingleColorKeyWord[prop_String, keyword_String] := 
-	Switch[keyword,
+	Switch[ToLowerCase @ keyword,
 		"currentcolor",   Dynamic @ CurrentValue[FontColor], 
 		"transparent",    None, (* interpreted as GrayLevel[0, 0] by Interpreter["Color"] *)
 		"aliceblue",      RGBColor[Rational[16, 17], Rational[248, 255], 1], 
