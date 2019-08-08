@@ -783,13 +783,15 @@ styleAttributePattern[] :=
 	] :> css
 
 
+Options[ApplyCSSToXML] = Options[ApplyCSSSelectorToXML];
 ApplyCSSToXML[doc:XMLObject["Document"][___], CSSData_Dataset, wrapInDataset_:True] := ApplyCSSToXML[doc, Normal @ CSSData, wrapInDataset]
 ApplyCSSToXML[doc:XMLObject["Document"][___], CSSData_?validCSSDataQ, wrapInDataset_:True] :=
 	If[TrueQ @ wrapInDataset, Dataset, Identity][
-		(*FIXME: with selectors as objects, need to update how they are modified *)
-		With[{t = Selector[doc, #Selector]}, 
-			<|"Selector" -> #Selector, "Specificity" -> t[["Specificity"]], "Targets" -> t[["Elements"]], "Condition" -> #Condition, "Block" -> #Block|>
-		]& /@ CSSData]
+		(*FIXME: splice the returns list into the data. *)
+		With[{t = ApplyCSSSelectorToXML[CSSData[[All, "Selector"]], doc]}, 
+			(*WRONG*)<|"Selector" -> #Selector, "Specificity" -> t[["Specificity"]], "Targets" -> t[["Elements"]], "Condition" -> #Condition, "Block" -> #Block|>
+		]
+	]
 		
 ApplyCSSToXML[_, CSSData_?validCSSDataQ, ___] := Failure["BadDoc", <|"Message" -> "Invalid XML document."|>]
 ApplyCSSToXML[doc:XMLObject["Document"][___], ___] := Failure["BadData", <|"Message" -> "Invalid CSS data."|>]

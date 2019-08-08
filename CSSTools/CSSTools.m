@@ -48,8 +48,11 @@ ResolveCSSInheritance[target$, CSSData$] calculates the properties of the elemen
 
 (* ==== Selectors3` ==== *)
 SetUsage[CSSSelector, "\
-CSSSelector[selector$, XMLObject$] returns the CSS selector$ specificity and positions of XMLElement expressions in XMLObject$. 
-Position[XMLObject$, Selector[selector$]] returns only the positions of XMLElement expressions."];
+CSSSelector[string$] parses string$ as a CSS selector. If valid it returns a CSSSelector object."];
+SetUsage[CSSSelectorQ, "\
+CSSSelectorQ[CSSSelector$] returns True if CSSSelector$ is a valid CSSSelector object."];
+SetUsage[ApplyCSSSelectorToXML, "\
+ApplyCSSSelectorToXML[XMLObject$, CSSSelector$] gives a list of the positions at which objects matching CSSSelector$ appear in XMLObject$."];
 
 (* ==== required System` functions ==== *)
 System`CellFrameStyle; 
