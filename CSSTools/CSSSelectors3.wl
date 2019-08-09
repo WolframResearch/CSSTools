@@ -129,13 +129,19 @@ getLanguageOfDocumentElement[elemPos:{_Integer..}] :=
 untokenizeWithoutComments[tokens_] := StringReplace[CSSUntokenize @ tokens, "/**/" -> ""]
 
 showError[startPos_, stopPos_, tokens_] :=
-	Row[{
-		untokenizeWithoutComments @ tokens[[;; startPos - 1]],
+	If[Length[tokens] < 3,
 		Style[
-			untokenizeWithoutComments @ tokens[[startPos ;; stopPos]],
-			Background -> Yellow],
-		untokenizeWithoutComments @ tokens[[stopPos + 1 ;; ]]
-	}]
+			untokenizeWithoutComments @ tokens,
+			Background -> Yellow]
+		,
+		Row[{
+			untokenizeWithoutComments @ tokens[[;; startPos - 1]],
+			Style[
+				untokenizeWithoutComments @ tokens[[startPos ;; stopPos]],
+				Background -> Yellow],
+			untokenizeWithoutComments @ tokens[[stopPos + 1 ;; ]]
+		}]
+	]
 	
 modifyError[fail_Failure, pos_, tokens_] :=
 	Failure[fail[[1]], <|
@@ -354,7 +360,7 @@ consumeAttributeSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 			];
 			AdvancePosAndSkipWhitespace[pos, l, tokens];
 			(* check for non-whitespace at the end *)
-			If[pos < l, 
+			If[pos <= l, 
 				Throw @ Failure["BadAttribute", <|"Message"  -> "Attribute selector has too many tokens."|>]
 				,
 				"Attribute" -> <|
@@ -590,13 +596,25 @@ consumeNegationPseudoClass[tokens:{__?CSSTokenQ}, namespaces_, Hold[specificity_
 (*Single Selector*)
 
 
+consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] := 
+	Module[{selectors},
+		selectors = 
+			DeleteCases[
+				SplitBy[tokens, MatchQ[CSSToken[KeyValuePattern["Type" -> "comma"]]]], 
+				{CSSToken[KeyValuePattern["Type" -> "comma"]]}];
+		selectors = consumeSingleSelector[#, namespaces]& /@ selectors;
+		FirstCase[selectors, _?FailureQ, If[Length[selectors] == 1, First[selectors], selectors]]
+	]
+
+
+
 (* Notes: 
 	Each simple selector sequence must start with Type or Universal. 
 	The Universal simple selector is often implied and can be omitted.
 	Only the last simple selector sequence can have a pseudo element. *)
-consumeCSSSelector[{}, namespaces_] := Failure["BadSelector", <|"Message" -> "Selector is empty."|>]
+consumeSingleSelector[{}, namespaces_] := Failure["BadSelector", <|"Message" -> "Selector is empty."|>]
 	
-consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
+consumeSingleSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 	Catch @
 	Module[{pos, l, ns, value, specificity = <|"a" -> 0, "b" -> 0, "c" -> 0|>, objects = {}, sss = {}, inSimpleSelector = False},
 		(* trim any trailing whitespace (reduce the token count) *)
@@ -650,10 +668,17 @@ consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 								inSimpleSelector = False;
 								AppendTo[objects, "SimpleSelectorSequence" -> sss]; sss = {}; 
 								, 
-								Throw @ 
-									Failure["BadSelector", <|
-										"Message"  -> "A combinator cannot follow another combinator.",
-										"Position" -> showError[pos-1, pos, tokens]|>]
+								If[pos == 1,
+									Throw @ 
+										Failure["BadSelector", <|
+											"Message"  -> "A selector cannot start with a combinator.",
+											"Position" -> showError[pos, pos, tokens]|>]
+									,
+									Throw @ 
+										Failure["BadSelector", <|
+											"Message"  -> "A combinator cannot follow another combinator.",
+											"Position" -> showError[pos-1, pos, tokens]|>]
+								]
 							];
 							AppendTo[objects, consumeCSSCombinator[pos, l, tokens]],
 						".",
@@ -701,7 +726,7 @@ consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 						If[pos <= l, 
 							Throw @ 
 								Failure["BadSelector", <|
-									"Message"  -> "Only one pseudo element is allowed and must be after the last simple selector sequence.",
+									"Message"  -> "Pseudo element must be after the last simple selector sequence.",
 									"Position" -> showError[pos-3, pos-1, tokens]|>]
 							,
 							AppendTo[sss, value];
@@ -731,7 +756,7 @@ consumeCSSSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 			CSSSelector[<|
 				"String" -> StringReplace[CSSUntokenize @ tokens, "/**/" -> ""], 
 				"Sequence" -> objects, 
-				"Specificity" -> specificity|>]
+				"Specificity" -> Prepend[Values @ specificity, 0]|>]
 		]
 	]
 
@@ -1342,7 +1367,7 @@ processSelector[selector_?CSSSelectorQ] :=
 
 processFullSelector[fullSelector:{__?CSSSelectorQ}] :=
 	Module[{selectors, attempt},
-		attempt = Catch[processSelector /@ selectors];
+		attempt = Catch[processSelector /@ fullSelector];
 		If[FailureQ[attempt], 
 			attempt
 			,
@@ -1410,6 +1435,13 @@ CSSSelector[s_?StringQ, opts:OptionsPattern[{"Namespaces" -> {}}]] :=
 (*MakeBoxes*)
 
 
+(* 
+	Dataset can't handle this box structure and displays it as an ellipses. 
+	According to Chris Carlson, Dataset will display this in full in the next release.
+	For now, we greatly simplify the boxes just so we have something to see. *)
+(*CSSSelector /: MakeBoxes[s:CSSSelector[a_?AssociationQ], StandardForm] :=
+	ToBoxes @ s*)
+			
 CSSSelector /: MakeBoxes[s:CSSSelector[a_?AssociationQ], StandardForm] :=
 	ToBoxes[
 		Interpretation[
@@ -1417,14 +1449,15 @@ CSSSelector /: MakeBoxes[s:CSSSelector[a_?AssociationQ], StandardForm] :=
 				Framed[
 					Row[{
 						Style["#CSS ", RGBColor[0, 0.5, 1], Selectable -> False], 
-						Style[a["String"], Selectable -> True]}],
+						Style[If[StringQ[a["String"]], StringTrim @ a["String"], a["String"]], Selectable -> True]}],
 					RoundingRadius -> 4, 
 					Background -> RGBColor[0.92, 0.98, 1],
 					ImageMargins -> 2,
 					FrameMargins -> {{5, 5}, {2, 2}},
 					FrameStyle -> Directive[RGBColor[0, 0.5, 1], AbsoluteThickness[1]],
 					BaseStyle -> {FontFamily -> Dynamic[CurrentValue[{StyleHints, "CodeFont"}]], FontSize -> 12, FontWeight -> Bold, FontColor -> GrayLevel[0.2]}],
-				Editable -> False], 
+				Editable -> False,
+				ShowStringCharacters -> False], 
 			s]]
 			
 
@@ -1442,29 +1475,36 @@ CSSSelectorQ[___] := False
 
 
 (* ::Subsection::Closed:: *)
-(*ApplyCSSSelectorToXML*)
+(*ApplyCSSToXML*)
 
 
-(*
-	This function is similar to ApplyCSSToXML. It is more like an utility function.
-	It returns the expression positions in the XML document after applying one or more CSS selectors. 
-	It is used by ApplyCSSToXML.
-	It will most likely be merged with ApplyCSSToXML. *)
-Options[ApplyCSSSelectorToXML] = {
+(* ApplyCSSToXML:
+	Applies a selector to an XML document and returns the positions where the selector targets.
+	Similar to Position syntax, it takes an XML document as the first argument and scope as the second.
+	It has two different scopes:
+		CSSSelector  ---->  returns extractable positions, similar to Position syntax
+		CSSDataset   ---->  returns same dataset, but with added Targets column of extractable positions *)
+Options[ApplyCSSToXML] = {
 	"ID" -> "id",
 	"CaseSensitive" -> {"Type" -> False, "AttributeName" -> False, "AttributeValue" -> False}};
 
-	
-ApplyCSSSelectorToXML[sel_?CSSSelectorQ, doc:XMLObject[___], opts:OptionsPattern[]] :=
-	ApplyCSSSelectorToXML[{sel}, doc, opts]
 
-ApplyCSSSelectorToXML[sel:{__?CSSSelectorQ}, doc:XMLObject[___], opts:OptionsPattern[]] :=
+(* It returns the expression positions in the XML document after applying one or more CSS selectors. *)
+ApplyCSSToXML[doc:XMLObject["Document"][___], sel_?(Function[CSSSelectorQ[#] || StringQ[#]]), opts:OptionsPattern[]] :=
+	ApplyCSSToXML[doc, {sel}, opts]
+
+ApplyCSSToXML[doc:XMLObject["Document"][___], sel:{__?(Function[CSSSelectorQ[#] || StringQ[#]])}, opts:OptionsPattern[]] :=
 	Block[
 		{
 			$Document, $Elements, 
 			$DocumentRootPosition, $DocumentNamespaces, $DocumentLanguages, 
-			$ID, $IgnoreCase, temp, type, name, value
+			$ID, $IgnoreCase, temp, type, name, value, sel2
 		},
+		
+		(* upgrade any strings to CSS selector objects and then process *)
+		sel2 = Replace[sel, s_?StringQ :> CSSSelector[s], {1}];
+		If[AnyTrue[sel2, _?FailureQ], Return @ FirstCase[sel2, _?FailureQ]];
+		
 		$Document = doc;
 		
 		$Elements = Sort @ Position[$Document, XMLElement[__]];
@@ -1481,10 +1521,12 @@ ApplyCSSSelectorToXML[sel:{__?CSSSelectorQ}, doc:XMLObject[___], opts:OptionsPat
 				temp === False, {False, False, False},
 				True, {"Type", "AttributeName", "AttributeValue"} /. OptionValue["CaseSensitive"] /. _String :> False
 			];
-		$IgnoreCase = <|"Type" -> type, "AttributeName" -> name, "AttributeValue" -> value|>;
+		$IgnoreCase = <|"Type" -> !type, "AttributeName" -> !name, "AttributeValue" -> !value|>;
 		
-		{$Document, $Elements, $DocumentRootPosition, $DocumentNamespaces, $DocumentLanguages, $ID, $IgnoreCase}
+		processFullSelector[sel2]
 	]
+
+ApplyCSSToXML[_, sel:{__?CSSSelectorQ}, ___]       := Failure["BadDocument", <|"Message" -> "Invalid XML document."|>]
 
 
 (* ::Section::Closed:: *)

@@ -977,9 +977,9 @@ content a web browser is used. For notebook content Wolfram Desktop is used. \
 Cell[TextData[{
  "The rules are sorted by origin (1-5) and specificity of selector with \
 higher specificity overriding lower. See the ",
- ButtonBox["Selector",
+ ButtonBox["CSSSelector",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/Selector"],
+  ButtonData->"paclet:CSSTools/ref/CSSSelector"],
  " documentation to learn more about specificity. If two declarations have \
 the same weight (important/normal), origin and specificity, the latter \
 specified wins."

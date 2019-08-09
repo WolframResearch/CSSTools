@@ -1,6 +1,5 @@
 (* ::Package:: *)
 
-
 (* ::Section::Closed:: *)
 (*Package Header*)
 
@@ -27,13 +26,14 @@ $Debug;
 	---> defines consumeProperty and CSSPropertyData *)
 
 Needs["CSSTools`CSSTokenizer`"];   
+Needs["CSSTools`CSSSelectors3`"];
 Needs["CSSTools`CSSPropertyInterpreter`"];
 
 
 Begin["`Private`"];
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Notes*)
 
 
@@ -53,8 +53,12 @@ Begin["`Private`"];
 (*The main bottleneck is step (3) due to the large amount of interpretation necessary of the token sequences. The basic "data types" i.e. length, color, percentage etc. are cached to improve import speed. We justify the caching because websites often stick with particular color schemes and layouts which results in a large amount of reusing colors, styles and lengths. *)
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Consume Token Sequences*)
+
+
+(* ::Subsection::Closed:: *)
+(*Notes*)
 
 
 (* 
@@ -130,7 +134,7 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 
 
 (* ::Subsection::Closed:: *)
-(*Consume Style Sheet Preambles (charset, import)*)
+(*Consume Style Sheet Preambles (charset, import, namespace)*)
 
 
 SetAttributes[{consumeAtCharsetKeyword, consumeAtImportKeyword, consumeAtNamespaceKeyword}, HoldFirst];
@@ -213,8 +217,8 @@ consumeAtImportKeyword[pos_, l_, tokens_] :=
 			If[mediums =!= {}, data[[All, "Condition"]] = ConstantArray[mediums, Length[data]]];
 			Return @ data
 		]
-	]	
-	
+	]
+
 
 consumeAtNamespaceKeyword[pos_, l_, tokens_] :=
 	Module[{prefix, namespace, default = False},
@@ -247,6 +251,10 @@ consumeAtNamespaceKeyword[pos_, l_, tokens_] :=
 
 (* ::Subsection::Closed:: *)
 (*Consume Style Sheet Body (@rule, ruleset)*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*main*)
 
 
 SetAttributes[{consumeAtRule, consumeRuleset, consumeAtPageRule}, HoldFirst];
@@ -325,8 +333,8 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 			"Condition" -> ScreenStyleEnvironment -> "Printout",
 			"Block"     -> consumeAtPageBlock[tokens[[pos]]["Children"], pageSelectors]|>
 	]
-	
-	
+
+
 (* The @page {...} block contains only margin rules; CSS 2.1 does not allow specifying page size *)
 consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 	Module[{pos = 1, l = Length[tokens], dec, decStart, decEnd, declarations = {}},
@@ -350,8 +358,8 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 		];
 		declarations
 	]
-	
-	
+
+
 convertMarginsToPrintingOptions[declaration_?AssociationQ, scope_] :=
 	Module[{value},
 		If[!KeyExistsQ["Interpretation"] || FreeQ[declaration["Interpretation"], ImageMargins], Return @ declaration];
@@ -376,7 +384,7 @@ convertMarginsToPrintingOptions[declaration_?AssociationQ, scope_] :=
 						True,                        "PrintingMargins" -> value
 					]}|>
 	]
-	
+
 
 (* ::Subsubsection::Closed:: *)
 (*ruleset*)
@@ -396,6 +404,7 @@ consumeRuleset[pos_, l_, tokens_, namespaces_] :=
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
 		ruleset
 	]
+
 
 consumeDeclarationBlock[{}] := {} 
 
@@ -420,7 +429,8 @@ consumeDeclarationBlock[blockTokens:{__?CSSTokenQ}] :=
 		(* remove possible excess declarations *)
 		DeleteCases[validDeclarations, 0, {1}]
 	]
-	
+
+
 (* a declaration is "prop:val" or "prop:val !important" with optional semicolon if it is the last declaration *)
 consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 	Module[{decPos = 1, decLength = Length[decTokens], propertyPosition, valuePosition, important = False, declaration},
@@ -472,31 +482,35 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 	]
 
 
-
-
-(* ::Subsection::Closed:: *)
+(* ::Section:: *)
 (*Merge Properties*)
 
 
+(* ::Subsection::Closed:: *)
+(*Valid boxes, options, and expressions for merging*)
+
+
 expectedMainKeys     = {"Selector", "Condition", "Block"};
-expectedMainKeysFull = {"Selector", "Specificity", "Targets", "Condition", "Block"};
-expectedBlockKeys    = {"Important", "Property", "Value", "Interpretation"};
-expectedBlockKeysRaw = {"Important", "Property", "Value"};
+expectedMainKeysFull = {"Selector", (*"Specificity", *)"Targets", "Condition", "Block"};
+expectedBlockKeys     = {"Important", "Property", "Value"};
+expectedBlockKeysFull = {"Important", "Property", "Value", "Interpretation"};
+
 
 validCSSDataRawQ[data:{__Association}] := 
 	And[
 		AllTrue[Keys /@ data, MatchQ[expectedMainKeys]],
-		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeysRaw]]]
+		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeys]]]
 validCSSDataBareQ[data:{__Association}] := 
 	And[
 		AllTrue[Keys /@ data, MatchQ[expectedMainKeys]],
-		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeys]]]
+		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeysFull]]]
 validCSSDataFullQ[data:{__Association}] := 
 	And[
 		AllTrue[Keys /@ data, MatchQ[expectedMainKeysFull]],
-		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeys]]]
+		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeysFull]]]
 validCSSDataQ[data:{__Association}] := validCSSDataBareQ[data] || validCSSDataFullQ[data]
 validCSSDataQ[___] := False
+
 
 (* these include all inheritable options that make sense to pass on in a Notebook environment *)
 notebookLevelOptions = 
@@ -525,7 +539,8 @@ optionsToAvoidAtBoxLevel =
 		CellFrame, CellFrameColor, CellFrameLabelMargins, CellFrameLabels, CellFrameMargins, CellFrameStyle, 
 		CellLabel, CellLabelMargins, CellLabelPositioning, CellLabelStyle, 
 		ParagraphIndent};
-		
+
+
 validBoxes =
 	{
 		ActionMenuBox, AnimatorBox, ButtonBox, CheckboxBox, ColorSetterBox, 
@@ -563,40 +578,8 @@ removeBoxOptions[allOptions_, boxes:{__?validBoxesQ}] :=
 	]	
 
 
-(* ResolveCSSInterpretations:
-	1. Remove Missing and Failure interpretations.
-	2. Filter the options based on Notebook/Cell/Box levels.
-	3. Merge together Left/Right/Bottom/Top and Width/Height options.  *)
-ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_Dataset] :=
-	ResolveCSSInterpretations[type, Normal @ interpretationList]
-	
-ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_] := 
-	Module[{valid, initialSet},
-		valid = DeleteCases[Flatten @ interpretationList, _?FailureQ | _Missing, {1}];
-		valid = Select[valid, 
-			Switch[type, 
-				Cell,      MemberQ[cellLevelOptions, #[[1]]]&, 
-				Notebook,  MemberQ[notebookLevelOptions, #[[1]]]&,
-				Box,      !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&,
-				All,       True&]];
-		(* assemble options *)
-		initialSet = assemble[#, valid]& /@ Union[First /@ valid];
-		If[type === Box || type === All,
-			removeBoxOptions[initialSet, validBoxes]
-			,
-			initialSet]
-	]
-
-ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_Dataset] := ResolveCSSInterpretations[{box}, Normal @ interpretationList]
-ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_] := ResolveCSSInterpretations[{box}, interpretationList]	
-ResolveCSSInterpretations[boxes:{__?validBoxesQ}, interpretationList_] := 
-	Module[{valid, initialSet},
-		valid = DeleteCases[Flatten @ interpretationList, _?FailureQ | _Missing, {1}];
-		valid = Select[valid, !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&];
-		(* assemble options *)
-		initialSet = assemble[#, valid]& /@ Union[First /@ valid];
-		removeBoxOptions[initialSet, boxes /. Thread[validExpressions -> validBoxes]]				
-	]
+(* ::Subsection::Closed:: *)
+(*Assemble directives into one option*)
 
 
 assembleLRBTDirectives[x_List] := 
@@ -607,8 +590,10 @@ assembleLRBTDirectives[x_List] :=
 		With[{l = getSideFromLRBTDirective[Top,    xLocal]}, If[l =!= {}, r[[2, 2]] = setDirective @ l]]; 
 		r
 	]
-	
+
+
 getSideFromLRBTDirective[side:Left | Right | Bottom | Top, list_] := Reverse @ DeleteDuplicatesBy[Reverse[Join @@ Cases[list, side[___], {1}]], Head]
+
 
 (* Directive does not always like Dynamic inside of it, so move it outside if it exists. *)
 setDirective[(side:Left | Right | Bottom | Top)[        a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[Dynamic[prop_]], b___] ] := setDirective[side[Dynamic[a, prop, b]]] 
@@ -618,7 +603,8 @@ setDirective[(side:Left | Right | Bottom | Top)[        a___, (CSSBorderColor | 
 
 setDirective[(side:Left | Right | Bottom | Top)[Dynamic[a___]]] := Dynamic[Directive[a]]
 setDirective[(side:Left | Right | Bottom | Top)[        a___] ] := Directive[a]
-	
+
+
 assembleLRBT[x_List] := 
 	Module[{r = {{Automatic, Automatic}, {Automatic, Automatic}}},
 		Map[
@@ -631,6 +617,7 @@ assembleLRBT[x_List] :=
 			]&,
 			Flatten[x]];
 		r]
+
 
 assemble[opt:(FrameStyle | CellFrameStyle), rules_List] := 
 	opt -> assembleLRBTDirectives @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
@@ -679,8 +666,64 @@ assemble[subOption:"PrintingMargins", rules_] :=
 assemble[opt_, rules_List] := Last @ Cases[rules, HoldPattern[opt -> _], {1}]
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Main Functions*)
+
+
+(* ::Subsection::Closed:: *)
+(*ResolveCSSInterpretations (merge properties)*)
+
+
+(* ResolveCSSInterpretations:
+	1. Remove Missing and Failure interpretations.
+	2. Filter the options based on Notebook/Cell/Box levels.
+	3. Merge together Left/Right/Bottom/Top and Width/Height options.  
+	
+	It can also take a list of boxes e.g. ActionMenuBox or a list of expressions e.g. ActionMenu	
+*)
+
+
+(* ========= Cell/Notebook/Box/All version ========= *)
+(* normalize Dataset input *)
+ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_Dataset] :=
+	ResolveCSSInterpretations[type, Normal @ interpretationList]
+
+(* main function *)
+ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_] := 
+	Module[{valid, initialSet},
+		valid = DeleteCases[Flatten @ interpretationList, _?FailureQ | _Missing, {1}];
+		valid = Select[valid, 
+			Switch[type, 
+				Cell,      MemberQ[cellLevelOptions, #[[1]]]&, 
+				Notebook,  MemberQ[notebookLevelOptions, #[[1]]]&,
+				Box,      !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&,
+				All,       True&]];
+		(* assemble options *)
+		initialSet = assemble[#, valid]& /@ Union[First /@ valid];
+		If[type === Box || type === All,
+			removeBoxOptions[initialSet, validBoxes]
+			,
+			initialSet]
+	]
+
+
+(* ========= Box and expression versions ========= *)
+(* normalize Dataset input *)
+ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_Dataset] := 
+	ResolveCSSInterpretations[{box}, Normal @ interpretationList]
+	
+(* upgrade singleton to a list *)
+ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_] := ResolveCSSInterpretations[{box}, interpretationList]
+	
+(* main function *)
+ResolveCSSInterpretations[boxes:{__?validBoxesQ}, interpretationList_] := 
+	Module[{valid, initialSet},
+		valid = DeleteCases[Flatten @ interpretationList, _?FailureQ | _Missing, {1}];
+		valid = Select[valid, !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&];
+		(* assemble options *)
+		initialSet = assemble[#, valid]& /@ Union[First /@ valid];
+		removeBoxOptions[initialSet, boxes /. Thread[validExpressions -> validBoxes]]				
+	]
 
 
 (* ::Subsection::Closed:: *)
@@ -691,30 +734,45 @@ assemble[opt_, rules_List] := Last @ Cases[rules, HoldPattern[opt -> _], {1}]
 	1. Select the entries in the CSS data based on the provided selectors
 	2. order the selectors based on specificity and importance (if those options are on)
 	3. merge resulting list of interpreted options *)
+ClearAll[ResolveCSSCascade];
 Options[ResolveCSSCascade] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
 
-ResolveCSSCascade[box:_?validBoxesQ, CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] := 
+(*(* upgrade box singleton to a list *)
+ResolveCSSCascade[box:_?validBoxesQ, CSSData_Dataset, selectorList:{__?CSSSelectorQ}, opts:OptionsPattern[]] := 
 	ResolveCSSCascade[{box}, CSSData, selectorList, opts]	
 
-ResolveCSSCascade[boxes:{__?validBoxesQ}, CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] :=
+(* FIXME: what is this even doing? this looks like it would become a recursion error... *)
+ResolveCSSCascade[boxes:{__?validBoxesQ}, CSSData_Dataset, selectorList:{__?CSSSelectorQ}, opts:OptionsPattern[]] :=
 	ResolveCSSCascade[boxes, CSSData, selectorList, opts]
-	
-ResolveCSSCascade[type:(Cell|Notebook|Box|All), CSSData_Dataset, selectorList:{__String}, opts:OptionsPattern[]] :=
+*)
+(* normalize Dataset input *)
+ResolveCSSCascade[
+	type:(Cell|Notebook|Box|All), CSSData_Dataset, 
+	selectorList:{__?(Function[CSSSelectorQ[#] || StringQ[#]])}, opts:OptionsPattern[]
+] :=
 	ResolveCSSCascade[type, Normal @ CSSData, selectorList, opts]
 
-ResolveCSSCascade[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; validCSSDataQ[CSSData], selectorList:{__String}, opts:OptionsPattern[]] :=
+ResolveCSSCascade[
+	type:(Cell|Notebook|Box|All), CSSData:{__Association} /; validCSSDataQ[CSSData], 
+	selectorList:{__?(Function[CSSSelectorQ[#] || StringQ[#]])}, opts:OptionsPattern[]
+] :=
 	Module[{interpretationList, specificities},
 		(* start by filtering the data by the given list of selectors; ordering is maintained *)
-		(*FIXME: if selectors are objects and not simple strings, need to update how to select a subset of them*)
-		interpretationList = Select[CSSData, MatchQ[#Selector, Alternatives @@ selectorList]&];
+		(* match against the tokenized selector sequence, which should be unique *)
+		(* upgrade any string selectors to CSSSelector objects *)
+		interpretationList = Replace[selectorList, s_?StringQ :> CSSSelector[s], {1}];
+		If[AnyTrue[interpretationList, _?FailureQ], Return @ FirstCase[interpretationList, _?FailureQ]];
+		interpretationList = 
+ 			Select[
+ 				CSSData, 
+  				MatchQ[#Selector["Sequence"], Alternatives @@ Through[interpretationList["Sequence"]]] &];
 		
 		If[TrueQ @ OptionValue["IgnoreSpecificity"],
 			(* if ignoring specificity, then leave the user-supplied selector list alone *)
 			interpretationList = Flatten @ interpretationList[[All, "Block"]]
 			,
 			(* otherwise sort based on specificity but maintain order of duplicates; this is what should happen based on the CSS specification *)
-			(*FIXME: if selectors are objects, need to redo how properties are accessed *)
-			specificities = Selector["", #][["Specificity"]]& /@ interpretationList[[All, "Selector"]];
+			specificities = Through[interpretationList[[All, "Selector"]]["Specificity"]];
 			interpretationList = Flatten @ interpretationList[[Ordering[specificities]]][[All, "Block"]];
 		];
 		
@@ -726,7 +784,10 @@ ResolveCSSCascade[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; valid
 				If[TrueQ @ OptionValue["IgnoreImportance"],
 					interpretationList[[All, "Interpretation"]]
 					,
-					Join[Select[interpretationList, #Important == False&], Select[interpretationList, #Important == True&]][[All, "Interpretation"]]
+					Join[
+						Select[interpretationList, #Important == False&], 
+						Select[interpretationList, #Important == True&]
+					][[All, "Interpretation"]]
 				];
 				
 		(* now that the styles are all sorted, merge them *)
@@ -737,7 +798,11 @@ ResolveCSSCascade[___] := Failure["BadCSSData", <||>]
 
 
 (* ::Subsection::Closed:: *)
-(*Read styles from XMLObject*)
+(*ApplyCSSToXML, ExtractCSSFromXML*)
+
+
+(* ::Subsubsection::Closed:: *)
+(*Patterns in XMLElement where inline CSS can appear *)
 
 
 linkElementPattern[] :=
@@ -783,21 +848,44 @@ styleAttributePattern[] :=
 	] :> css
 
 
-Options[ApplyCSSToXML] = Options[ApplyCSSSelectorToXML];
-ApplyCSSToXML[doc:XMLObject["Document"][___], CSSData_Dataset, wrapInDataset_:True] := ApplyCSSToXML[doc, Normal @ CSSData, wrapInDataset]
+(* ::Subsubsection::Closed:: *)
+(*ApplyCSSToXML extension to CSS data*)
+
+
+(* ApplyCSSToXML:
+	Generally applies a selector to an XML document and returns the positions where the selector targets.
+	It has two different scopes:
+               CSSSelector  ---->  returns extractable positions, similar to Position syntax
+[defined here] CSSDataset   ---->  returns same dataset, but with added Targets column of extractable positions *)
+(* normalize Dataset input *)
+ApplyCSSToXML[doc:XMLObject["Document"][___], CSSData_Dataset, wrapInDataset_:True] := 
+	ApplyCSSToXML[doc, Normal @ CSSData, wrapInDataset]
+
+(* main function *)
 ApplyCSSToXML[doc:XMLObject["Document"][___], CSSData_?validCSSDataQ, wrapInDataset_:True] :=
 	If[TrueQ @ wrapInDataset, Dataset, Identity][
-		(*FIXME: splice the returns list into the data. *)
-		With[{t = ApplyCSSSelectorToXML[CSSData[[All, "Selector"]], doc]}, 
-			(*WRONG*)<|"Selector" -> #Selector, "Specificity" -> t[["Specificity"]], "Targets" -> t[["Elements"]], "Condition" -> #Condition, "Block" -> #Block|>
-		]
+		(* Rebuild the CSS data with the targets included. *)
+		MapThread[
+			<|
+				"Selector"    -> #1["Selector"], 
+				"Targets"     -> #2, 
+				"Condition"   -> #1["Condition"], 
+				"Block"       -> #1["Block"]|>&,
+			{CSSData, ApplyCSSToXML[doc, CSSData[[All, "Selector"]]]}] (* defined in CSSSelectors3 *)
 	]
 		
-ApplyCSSToXML[_, CSSData_?validCSSDataQ, ___] := Failure["BadDoc", <|"Message" -> "Invalid XML document."|>]
-ApplyCSSToXML[doc:XMLObject["Document"][___], ___] := Failure["BadData", <|"Message" -> "Invalid CSS data."|>]
+ApplyCSSToXML[_, CSSData_?validCSSDataQ, ___]      := Failure["BadDocument", <|"Message" -> "Invalid XML document."|>]
+ApplyCSSToXML[doc:XMLObject["Document"][___], ___] := Failure["BadData", <|"Message" -> "Invalid CSS."|>]
 
 
+(* ::Subsubsection::Closed:: *)
+(*ExtractCSSFromXML*)
+
+
+(* ExtractCSSFromXML:
+	*)
 Options[ExtractCSSFromXML] = {"RootDirectory" -> Automatic};
+ExtractCSSFromXML::nodir = "Directory `1` does not exist.";
 
 ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 	Module[
@@ -806,7 +894,13 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 			directStylePositions, directStyleContent, all},
 			
 		currentDir = Directory[];
-		SetDirectory[If[OptionValue["RootDirectory"] === Automatic, Directory[], OptionValue["RootDirectory"]]]; 
+		Which[
+			OptionValue["RootDirectory"] === Automatic, SetDirectory[Directory[]],
+			DirectoryQ[OptionValue["RootDirectory"]],   SetDirectory[OptionValue["RootDirectory"]],
+			True,                                       
+				Message[ExtractCSSFromXML::nodir, OptionValue["RootDirectory"]]; 
+				SetDirectory[Directory[]]
+		];
 		
 		(* process externally linked style sheets via <link> elements *)
 		externalSSPositions = Position[doc, First @ linkElementPattern[]];
@@ -828,8 +922,7 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 		directStyleContent = 
 			MapThread[
 				<|
-					"Selector" -> None, (*FIXME: with selectors as objects, we can represent in-line CSS with an appropriate selector object*)
-					"Specificity" -> {1, 0, 0, 0}, 
+					"Selector" -> CSSSelector[<|"String" -> None, "Sequence" -> {}, "Specificity" -> {1, 0, 0, 0}|>], 
 					"Targets" -> {#1}, 
 					"Condition" -> None, 
 					"Block" ->  consumeDeclarationBlock @ CSSTokenize @ #2|>&, 
@@ -846,18 +939,22 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 	]
 
 
-parents[x:{__Integer}] := Most @ Reverse @ NestWhileList[Drop[#, -2]&, x, Length[#] > 2&]
+(* ::Subsection::Closed:: *)
+(*ResolveCSSInheritance*)
 
-inheritedProperties[] := Pick[Keys@ #, Values @ #]& @ CSSPropertyData[[All, "Inherited"]];
-
-ResolveCSSInheritance[position_Dataset, CSSData_] := ResolveCSSInheritance[Normal @ position, CSSData]
-ResolveCSSInheritance[position_, CSSData_Dataset] := ResolveCSSInheritance[position, Normal @ CSSData]
 
 (* ResolveCSSInheritance
 	Based on the position in the XMLObject, 
 	1. look up all ancestors' positions
 	2. starting from the most ancient ancestor, calculate the styles of each ancestor, including inherited properties
 	3. with all inheritance resolved, recalculate the style at the XMLObject position *)
+
+(* normalize Dataset position input *)
+ResolveCSSInheritance[position_Dataset, CSSData_] := ResolveCSSInheritance[Normal @ position, CSSData]
+
+(* normalize CSS Dataset input *)
+ResolveCSSInheritance[position_, CSSData_Dataset] := ResolveCSSInheritance[position, Normal @ CSSData]
+
 ResolveCSSInheritance[position:{___?IntegerQ}, CSSData_?validCSSDataFullQ] :=
 	Module[{lineage, data = CSSData, a, temp, temp2, i},
 		(* order data by specificity *)
@@ -889,6 +986,11 @@ ResolveCSSInheritance[position:{___?IntegerQ}, CSSData_?validCSSDataFullQ] :=
 	]
 	
 ResolveCSSInheritance[position:{___?IntegerQ}, _] := Failure["BadData", <|"Message" -> "Invalid CSS data. CSS data must include specificity and target."|>]
+
+
+parents[x:{__Integer}] := Most @ Reverse @ NestWhileList[Drop[#, -2]&, x, Length[#] > 2&]
+
+inheritedProperties[] := Pick[Keys @ #, Values @ #]& @ CSSPropertyData[[All, "Inherited"]];
 
 
 (* ::Subsection::Closed:: *)
@@ -934,6 +1036,7 @@ InterpretedCSS[filepath_String, opts___] :=
 		If[TrueQ @ validCSSDataBareQ[raw] || MatchQ[raw, {}], raw, Failure["BadCSSFile", <||>]]
 	]
 
+
 ProcessToStylesheet[filepath_String, opts___] :=
 	Module[{raw, uniqueSelectors, allProcessed},
 		raw = ExternalCSS[filepath];
@@ -942,12 +1045,14 @@ ProcessToStylesheet[filepath_String, opts___] :=
 		(* get all selectors preserving order, but favor the last entry of any duplicates *)
 		uniqueSelectors = Reverse @ DeleteDuplicates[Reverse @ raw[[All, "Selector"]]];
 		
-		allProcessed = ResolveCSSCascade[All, raw, {#}]& /@ uniqueSelectors;
+		allProcessed = ResolveCSSCascade[All, raw, uniqueSelectors];
 		(*TODO: convert options like FrameMargins to actual styles ala FrameBoxOptions -> {FrameMargins -> _}*)
 		"Stylesheet" -> 
 			NotebookPut @ 
 				Notebook[
-					MapThread[Cell[StyleData[#1], Sequence @@ #2]&, {uniqueSelectors, allProcessed}], 
+					MapThread[
+						Cell[StyleData[#1], Sequence @@ #2]&, 
+						{StringTrim @ Through[uniqueSelectors["String"]], allProcessed}], 
 					StyleDefinitions -> "PrivateStylesheetFormatting.nb"]
 	]
 

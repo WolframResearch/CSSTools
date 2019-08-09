@@ -51,19 +51,17 @@ SetUsage[CSSSelector, "\
 CSSSelector[string$] parses string$ as a CSS selector. If valid it returns a CSSSelector object."];
 SetUsage[CSSSelectorQ, "\
 CSSSelectorQ[CSSSelector$] returns True if CSSSelector$ is a valid CSSSelector object."];
-SetUsage[ApplyCSSSelectorToXML, "\
-ApplyCSSSelectorToXML[XMLObject$, CSSSelector$] gives a list of the positions at which objects matching CSSSelector$ appear in XMLObject$."];
 
 (* ==== required System` functions ==== *)
 System`CellFrameStyle; 
 System`Box;
 
+Get["CSSTools`CSSSelectors3`"]            (* defines CSSSelector object *)
 Get["CSSTools`CSSPropertyInterpreter`"]   (* needs to be loaded first to define basic CSS 2.1 properties *)
 Get["CSSTools`CSSStyleSheetInterpreter`"] (* defines basic stylesheet token consumers and CSS cascade *)
 Get["CSSTools`CSSColors4`"];              (* redefines parseSingleColor (first defined in CSSPropertyInterpreter) *)
 Get["CSSTools`CSSPagedMedia3`"]           (* redefines @page token consumer (first defined in CSSStyleSheetInterpreter) *)
 
-Get["CSSTools`CSSSelectors3`"]               (* defines CSSSelector object *)
 
 ImportExport`RegisterImport[
 	"CSS",
