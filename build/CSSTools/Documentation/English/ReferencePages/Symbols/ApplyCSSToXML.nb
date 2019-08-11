@@ -14,7 +14,7 @@ NotebookDataLength[    149026,       3071]
 NotebookOptionsPosition[    142016,       2922]
 NotebookOutlinePosition[    144275,       2980]
 CellTagsIndexPosition[    144188,       2975]
-WindowTitle->ApplyCSSToXML
+WindowTitle->CSSTargets
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -93,12 +93,12 @@ Cell[BoxData[GridBox[{
          TextCell[
           Row[{"URL", 
             Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
-        StripOnInput->False], {"\<\"CSSTools/ref/ApplyCSSToXML\"\>":>
+        StripOnInput->False], {"\<\"CSSTools/ref/CSSTargets\"\>":>
        None, "\<\"Copy Wolfram Documentation Center URL\"\>":>
        Module[{DocumentationSearch`Private`nb$}, 
         DocumentationSearch`Private`nb$ = NotebookPut[
            Notebook[{
-             Cell["CSSTools/ref/ApplyCSSToXML"]}, Visible -> False]]; 
+             Cell["CSSTools/ref/CSSTargets"]}, Visible -> False]]; 
         SelectionMove[DocumentationSearch`Private`nb$, All, Notebook]; 
         FrontEndTokenExecute[DocumentationSearch`Private`nb$, "Copy"]; 
         NotebookClose[DocumentationSearch`Private`nb$]; Null], 
@@ -111,7 +111,7 @@ Cell[BoxData[GridBox[{
                MakeBoxes[
                 Hyperlink[
                 "http://reference.wolfram.com/language/CSSTools/ref/\
-ApplyCSSToXML.html"], StandardForm]], "Input", TextClipboardType -> 
+CSSTargets.html"], StandardForm]], "Input", TextClipboardType -> 
               "PlainText"]}, Visible -> False]]; 
         SelectionMove[DocumentationSearch`Private`nb$, All, Notebook]; 
         FrontEndTokenExecute[DocumentationSearch`Private`nb$, "Copy"]; 
@@ -124,7 +124,7 @@ ApplyCSSToXML.html"], StandardForm]], "Input", TextClipboardType ->
               TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$8294], 
               "http://reference.wolfram.com/system-modeler/", 
               "http://reference.wolfram.com/language/"], 
-             "CSSTools/ref/ApplyCSSToXML", ".html"]], None}]}]},
+             "CSSTools/ref/CSSTargets", ".html"]], None}]}]},
        Appearance->None,
        MenuAppearance->Automatic,
        MenuStyle->"URLMenu"]],
@@ -137,7 +137,7 @@ ApplyCSSToXML.html"], StandardForm]], "Input", TextClipboardType ->
 Cell[CellGroupData[{
 
 Cell[TextData[{
- Cell["ApplyCSSToXML", "ObjectName",ExpressionUUID->
+ Cell["CSSTargets", "ObjectName",ExpressionUUID->
   "3849b365-8d30-4505-87a7-0e14c035efa5"],
  Cell[BoxData[
   TemplateBox[{8},
@@ -150,12 +150,12 @@ Cell[TextData[{
 Cell[BoxData[GridBox[{
    {"", Cell[TextData[{
      Cell[BoxData[
-      RowBox[{"ApplyCSSToXML", "[", 
+      RowBox[{"CSSTargets", "[", 
        RowBox[{
         StyleBox["XMLObject", "TI"], ",", 
         StyleBox["CSSData", "TI"]}], "]"}]], "InlineFormula",ExpressionUUID->
       "3d380e3f-eb70-42d5-afd8-74d5a7ab5dc0"],
-     " \[LineSeparator]ApplyCSSToXML applies the ",
+     " \[LineSeparator]CSSTargets applies the ",
      Cell[BoxData[
       RowBox[{
        StyleBox["CSSData", "TI"], " "}]], "InlineFormula",ExpressionUUID->
@@ -204,7 +204,7 @@ Cell["", "SectionHeaderSpacer",ExpressionUUID->"a1f11b0a-c88e-4bfe-8040-e309cf60
 
 Cell["\<\
 CSS data is independent of the documents that it applies to. Use \
-ApplyCSSToXML to see which elements the CSS rules target and their \
+CSSTargets to see which elements the CSS rules target and their \
 specificity. \
 \>", "Notes",
  CellID->1067943069,ExpressionUUID->"7fd37375-aabc-441d-b315-e90736bb430a"],
@@ -783,7 +783,7 @@ tag.</tag></label></body>\>\"", ",", "\"\<XML\>\""}], "]"}]}], ";"}]], "Input",
 Cell[CellGroupData[{
 
 Cell[BoxData[
- RowBox[{"ApplyCSSToXML", "[", 
+ RowBox[{"CSSTargets", "[", 
   RowBox[{"doc", ",", "cssData"}], "]"}]], "Input",
  CellLabel->"In[4]:=",
  CellID->78224434,ExpressionUUID->"88c2553b-692c-400e-850d-7dd53828eba5"],
@@ -2192,7 +2192,7 @@ Cell[BoxData[
 Cell[CellGroupData[{
 
 Cell[BoxData[
- RowBox[{"ApplyCSSToXML", "[", 
+ RowBox[{"CSSTargets", "[", 
   RowBox[{"doc", ",", "cssData"}], "]"}]], "Input",
  CellLabel->"In[5]:=",
  CellID->647369780,ExpressionUUID->"c7016109-c0d2-4134-a84e-fe324ae18c87"],
@@ -2924,7 +2924,7 @@ Saveable->False,
 ScreenStyleEnvironment->"Working",
 WindowSize->{725, 750},
 WindowMargins->{{0, Automatic}, {Automatic, 0}},
-WindowTitle->"ApplyCSSToXML",
+WindowTitle->"CSSTargets",
 TaggingRules->{
  "ModificationHighlight" -> False, "ColorType" -> "SymbolColor", "LinkTrails" -> 
   GridBox[{{
@@ -2941,11 +2941,11 @@ TaggingRules->{
     "tutorialcollectionlinks" -> {}, "index" -> True, "label" -> 
     "C S S Tools Symbol", "language" -> "en", "paclet" -> "CSSTools", 
     "status" -> "None", "summary" -> 
-    "ApplyCSSToXML[XMLObject, CSSData] ApplyCSSToXML applies the CSSData to \
+    "CSSTargets[XMLObject, CSSData] CSSTargets applies the CSSData to \
 the symbolic XML, returning the CSSData with additional position and \
 specificity information.", "synonyms" -> {}, "tabletags" -> {}, "title" -> 
-    "ApplyCSSToXML", "titlemodifier" -> "", "windowtitle" -> "ApplyCSSToXML", 
-    "type" -> "Symbol", "uri" -> "CSSTools/ref/ApplyCSSToXML", 
+    "CSSTargets", "titlemodifier" -> "", "windowtitle" -> "CSSTargets", 
+    "type" -> "Symbol", "uri" -> "CSSTools/ref/CSSTargets", 
     "WorkflowDockedCell" -> ""}, "SearchTextTranslated" -> "", "NewStyles" -> 
   False},
 CellContext->"Global`",

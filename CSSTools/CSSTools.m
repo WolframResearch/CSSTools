@@ -37,8 +37,8 @@ ResolveCSSCascade[type$, CSSData$, {selectors$, $$}] combines options that were 
 CSS styles are merged following the CSS cascade and the resulting options are filtered by type$."];
 SetUsage[ExtractCSSFromXML, "\
 ExtractCSSFromXML[XMLObject$] imports the CSS declarations within XMLObject$."];
-SetUsage[ApplyCSSToXML, "\
-ApplyCSSToXML[XMLObject$, CSSData$] applies the CSSData$ to the symbolic XML, \
+SetUsage[CSSTargets, "\
+CSSTargets[XMLObject$, CSSData$] applies the CSSData$ to the symbolic XML, \
 returning the CSSData$ with additional position and specificity information."];
 SetUsage[ResolveCSSInterpretations, "\
 ResolveCSSInterpretations[type$, CSSInterpretations$] combines options that were interpreted from the CSS importer. \

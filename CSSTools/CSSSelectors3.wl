@@ -1475,25 +1475,25 @@ CSSSelectorQ[___] := False
 
 
 (* ::Subsection::Closed:: *)
-(*ApplyCSSToXML*)
+(*CSSTargets*)
 
 
-(* ApplyCSSToXML:
+(* CSSTargets:
 	Applies a selector to an XML document and returns the positions where the selector targets.
 	Similar to Position syntax, it takes an XML document as the first argument and scope as the second.
 	It has two different scopes:
 		CSSSelector  ---->  returns extractable positions, similar to Position syntax
 		CSSDataset   ---->  returns same dataset, but with added Targets column of extractable positions *)
-Options[ApplyCSSToXML] = {
+Options[CSSTargets] = {
 	"ID" -> "id",
 	"CaseSensitive" -> {"Type" -> False, "AttributeName" -> False, "AttributeValue" -> False}};
 
 
 (* It returns the expression positions in the XML document after applying one or more CSS selectors. *)
-ApplyCSSToXML[doc:XMLObject["Document"][___], sel_?(Function[CSSSelectorQ[#] || StringQ[#]]), opts:OptionsPattern[]] :=
-	ApplyCSSToXML[doc, {sel}, opts]
+CSSTargets[doc:XMLObject["Document"][___], sel_?(Function[CSSSelectorQ[#] || StringQ[#]]), opts:OptionsPattern[]] :=
+	CSSTargets[doc, {sel}, opts]
 
-ApplyCSSToXML[doc:XMLObject["Document"][___], sel:{__?(Function[CSSSelectorQ[#] || StringQ[#]])}, opts:OptionsPattern[]] :=
+CSSTargets[doc:XMLObject["Document"][___], sel:{__?(Function[CSSSelectorQ[#] || StringQ[#]])}, opts:OptionsPattern[]] :=
 	Block[
 		{
 			$Document, $Elements, 
@@ -1526,7 +1526,7 @@ ApplyCSSToXML[doc:XMLObject["Document"][___], sel:{__?(Function[CSSSelectorQ[#] 
 		processFullSelector[sel2]
 	]
 
-ApplyCSSToXML[_, sel:{__?CSSSelectorQ}, ___]       := Failure["BadDocument", <|"Message" -> "Invalid XML document."|>]
+CSSTargets[_, sel:{__?CSSSelectorQ}, ___]       := Failure["BadDocument", <|"Message" -> "Invalid XML document."|>]
 
 
 (* ::Section::Closed:: *)

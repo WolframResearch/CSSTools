@@ -798,7 +798,7 @@ ResolveCSSCascade[___] := Failure["BadCSSData", <||>]
 
 
 (* ::Subsection::Closed:: *)
-(*ApplyCSSToXML, ExtractCSSFromXML*)
+(*CSSTargets, ExtractCSSFromXML*)
 
 
 (* ::Subsubsection::Closed:: *)
@@ -849,20 +849,20 @@ styleAttributePattern[] :=
 
 
 (* ::Subsubsection::Closed:: *)
-(*ApplyCSSToXML extension to CSS data*)
+(*CSSTargets extension to CSS data*)
 
 
-(* ApplyCSSToXML:
+(* CSSTargets:
 	Generally applies a selector to an XML document and returns the positions where the selector targets.
 	It has two different scopes:
                CSSSelector  ---->  returns extractable positions, similar to Position syntax
 [defined here] CSSDataset   ---->  returns same dataset, but with added Targets column of extractable positions *)
 (* normalize Dataset input *)
-ApplyCSSToXML[doc:XMLObject["Document"][___], CSSData_Dataset, wrapInDataset_:True] := 
-	ApplyCSSToXML[doc, Normal @ CSSData, wrapInDataset]
+CSSTargets[doc:XMLObject["Document"][___], CSSData_Dataset, wrapInDataset_:True] := 
+	CSSTargets[doc, Normal @ CSSData, wrapInDataset]
 
 (* main function *)
-ApplyCSSToXML[doc:XMLObject["Document"][___], CSSData_?validCSSDataQ, wrapInDataset_:True] :=
+CSSTargets[doc:XMLObject["Document"][___], CSSData_?validCSSDataQ, wrapInDataset_:True] :=
 	If[TrueQ @ wrapInDataset, Dataset, Identity][
 		(* Rebuild the CSS data with the targets included. *)
 		MapThread[
@@ -871,11 +871,11 @@ ApplyCSSToXML[doc:XMLObject["Document"][___], CSSData_?validCSSDataQ, wrapInData
 				"Targets"     -> #2, 
 				"Condition"   -> #1["Condition"], 
 				"Block"       -> #1["Block"]|>&,
-			{CSSData, ApplyCSSToXML[doc, CSSData[[All, "Selector"]]]}] (* defined in CSSSelectors3 *)
+			{CSSData, CSSTargets[doc, CSSData[[All, "Selector"]]]}] (* defined in CSSSelectors3 *)
 	]
 		
-ApplyCSSToXML[_, CSSData_?validCSSDataQ, ___]      := Failure["BadDocument", <|"Message" -> "Invalid XML document."|>]
-ApplyCSSToXML[doc:XMLObject["Document"][___], ___] := Failure["BadData", <|"Message" -> "Invalid CSS."|>]
+CSSTargets[_, CSSData_?validCSSDataQ, ___]      := Failure["BadDocument", <|"Message" -> "Invalid XML document."|>]
+CSSTargets[doc:XMLObject["Document"][___], ___] := Failure["BadData", <|"Message" -> "Invalid CSS."|>]
 
 
 (* ::Subsubsection::Closed:: *)
@@ -909,12 +909,12 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 		With[{bools =  # =!= $Failed& /@ externalSSContent},
 			externalSSPositions = Pick[externalSSPositions, bools];
 			externalSSContent = Pick[externalSSContent, bools];];
-		externalSSContent = ApplyCSSToXML[doc, #, False]& /@ externalSSContent;
+		externalSSContent = CSSTargets[doc, #, False]& /@ externalSSContent;
 				
 		(* process internal style sheets given by <style> elements *)
 		internalSSPositions = Position[doc, First @ styleElementPattern[]];
 		internalSSContent = InternalCSS /@ Cases[doc, styleElementPattern[], Infinity];
-		internalSSContent = ApplyCSSToXML[doc, #, False]& /@ internalSSContent;
+		internalSSContent = CSSTargets[doc, #, False]& /@ internalSSContent;
 		
 		(* process internal styles given by 'style' attributes *)
 		directStylePositions = Position[doc, First @ styleAttributePattern[]];
