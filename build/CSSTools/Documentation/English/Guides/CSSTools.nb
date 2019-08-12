@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     14139,        399]
-NotebookOptionsPosition[      9912,        312]
-NotebookOutlinePosition[     11722,        355]
-CellTagsIndexPosition[     11679,        352]
+NotebookDataLength[     14095,        400]
+NotebookOptionsPosition[      9868,        313]
+NotebookOutlinePosition[     11678,        356]
+CellTagsIndexPosition[     11635,        353]
 WindowTitle->CSSTools
 WindowFrame->Normal*)
 
@@ -32,13 +32,15 @@ Cell[BoxData[GridBox[{
          TextCell[
           Row[{"Functions", 
             Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
-        StripOnInput->False], {"\<\"CSSTargets\"\>":>
-       Documentation`HelpLookup[
-       "paclet:CSSTools/ref/CSSTargets"], "\<\"CSSHeightMax\"\>":>
+        StripOnInput->False], {"\<\"CSSHeightMax\"\>":>
        Documentation`HelpLookup[
        "paclet:CSSTools/ref/CSSHeightMax"], "\<\"CSSHeightMin\"\>":>
        Documentation`HelpLookup[
-       "paclet:CSSTools/ref/CSSHeightMin"], "\<\"CSSWidthMax\"\>":>
+       "paclet:CSSTools/ref/CSSHeightMin"], "\<\"CSSSelector\"\>":>
+       Documentation`HelpLookup[
+       "paclet:CSSTools/ref/CSSSelector"], "\<\"CSSTargets\"\>":>
+       Documentation`HelpLookup[
+       "paclet:CSSTools/ref/CSSTargets"], "\<\"CSSWidthMax\"\>":>
        Documentation`HelpLookup[
        "paclet:CSSTools/ref/CSSWidthMax"], "\<\"CSSWidthMin\"\>":>
        Documentation`HelpLookup[
@@ -52,8 +54,7 @@ Cell[BoxData[GridBox[{
 \>":>Documentation`HelpLookup[
        "paclet:CSSTools/ref/ResolveCSSInheritance"], \
 "\<\"ResolveCSSInterpretations\"\>":>Documentation`HelpLookup[
-       "paclet:CSSTools/ref/ResolveCSSInterpretations"], "\<\"CSSSelector\"\>":>
-       Documentation`HelpLookup["paclet:CSSTools/ref/CSSSelector"]},
+       "paclet:CSSTools/ref/ResolveCSSInterpretations"]},
        Appearance->None,
        MenuAppearance->Automatic,
        MenuStyle->"GuideFunction"]],
@@ -118,7 +119,7 @@ CSSTools.html"], StandardForm]], "Input", TextClipboardType -> "PlainText"]},
            URL[
             StringJoin[
              If[
-              TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$7083], 
+              TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$7109], 
               "http://reference.wolfram.com/system-modeler/", 
               "http://reference.wolfram.com/language/"], 
              "CSSTools/guide/CSSTools", ".html"]], None}]}]},
@@ -273,12 +274,24 @@ Cell["Searching SymbolicXML", "GuideFunctionsSubsection",
 Cell[TextData[{
  Cell[BoxData[
   TemplateBox[{Cell[
+     TextData["CSSSelector"]],"paclet:CSSTools/ref/CSSSelector"},
+   "RefLink",
+   BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
+ " ",
+ StyleBox["\[LongDash]", "GuideEmDash"],
+ " creates a CSS selector object"
+}], "GuideText",
+ CellID->41288703],
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{Cell[
      TextData["CSSTargets"]],"paclet:CSSTools/ref/CSSTargets"},
    "RefLink",
    BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
  " ",
  StyleBox["\[LongDash]", "GuideEmDash"],
- " provides target and specificity information of CSS data acting on XML"
+ " provides target information of CSS selector acting on XML"
 }], "GuideText",
  CellID->2444546],
 
@@ -292,19 +305,7 @@ Cell[TextData[{
  StyleBox["\[LongDash]", "GuideEmDash"],
  " imports the CSS declarations within an XMLObject"
 }], "GuideText",
- CellID->321169176],
-
-Cell[TextData[{
- Cell[BoxData[
-  TemplateBox[{Cell[
-     TextData["CSSSelector"]],"paclet:CSSTools/ref/CSSSelector"},
-   "RefLink",
-   BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
- " ",
- StyleBox["\[LongDash]", "GuideEmDash"],
- " find positions of XMLElement in an XMLObject with CSS selector syntax"
-}], "GuideText",
- CellID->41288703]
+ CellID->321169176]
 }, Open  ]]
 }, Open  ]],
 
@@ -324,7 +325,7 @@ TaggingRules->{
          BaseStyle -> {"Link", "DockedLinkTrail"}]}]}}, ColumnAlignments -> 
     Left], "ExampleCounter" -> 1, "NeedPlatMsgIn" -> None, "RootCaptions" -> 
   "", "Metadata" -> {
-   "built" -> "{2019, 6, 19, 15, 6, 57.7712966}", 
+   "built" -> "{2019, 8, 12, 10, 25, 0.9485472}", 
     "history" -> {"0.0", "", "", ""}, "context" -> "CSSTools`", 
     "keywords" -> {}, "specialkeywords" -> {}, 
     "tutorialcollectionlinks" -> {}, "index" -> True, "label" -> 
@@ -336,7 +337,7 @@ HTML and XML. Wolfram Desktop also uses stylesheets, though the \
 specifications differ. This package provides tools for importing and \
 processing CSS to be used within Wolfram Desktop's stylesheet system.", 
     "synonyms" -> {}, "tabletags" -> 
-    DocumentationBuild`Make`Private`tabletaggingrules$6998, "title" -> 
+    DocumentationBuild`Make`Private`tabletaggingrules$7024, "title" -> 
     "CSSTools", "titlemodifier" -> "", "windowtitle" -> "CSSTools", "type" -> 
     "Guide", "uri" -> "CSSTools/guide/CSSTools"}},
 FrontEndVersion->"11.3 for Microsoft Windows (64-bit) (March 6, 2018)",
@@ -354,53 +355,53 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[580, 21, 4586, 109, 70, "AnchorBarGrid",ExpressionUUID->"0202b921-3e9e-4ef7-adfd-85842082b0b4",
+Cell[580, 21, 4594, 110, 70, "AnchorBarGrid",ExpressionUUID->"69a11b0c-f345-4e9e-ad20-f4c155a38458",
  CellID->1],
 Cell[CellGroupData[{
-Cell[5191, 134, 50, 1, 70, "GuideTitle",ExpressionUUID->"a2dfbf4b-a400-497d-b964-cad8f8e0772e",
+Cell[5199, 135, 50, 1, 70, "GuideTitle",ExpressionUUID->"a2dfbf4b-a400-497d-b964-cad8f8e0772e",
  CellID->942062912],
-Cell[5244, 137, 401, 7, 70, "GuideAbstract",ExpressionUUID->"b9255c52-39e9-48e0-bedb-b4fa7ec2beba",
+Cell[5252, 138, 401, 7, 70, "GuideAbstract",ExpressionUUID->"b9255c52-39e9-48e0-bedb-b4fa7ec2beba",
  CellID->2001916300]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[5682, 149, 137, 6, 70, "GuideReferenceSection",ExpressionUUID->"4998b31b-f94b-42ca-913b-8c6d06c3306d"],
-Cell[5822, 157, 31, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"9ba63920-68f7-42a3-aa55-5603d63c5a62"],
+Cell[5690, 150, 137, 6, 70, "GuideReferenceSection",ExpressionUUID->"b727239d-1026-4a1a-a903-e672df4bfe80"],
+Cell[5830, 158, 31, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"1741ce49-ad2e-455f-8b63-9dff61518dc2"],
 Cell[CellGroupData[{
-Cell[5878, 161, 69, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"8d817216-d113-4b36-bc3d-a0f25f4d05de",
+Cell[5886, 162, 69, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"8d817216-d113-4b36-bc3d-a0f25f4d05de",
  CellID->811494718],
-Cell[5950, 164, 373, 13, 70, "GuideText",ExpressionUUID->"dee08810-36bd-4ef8-b550-71bf497466fd",
+Cell[5958, 165, 373, 13, 70, "GuideText",ExpressionUUID->"dee08810-36bd-4ef8-b550-71bf497466fd",
  CellID->100541697],
-Cell[6326, 179, 341, 10, 70, "GuideText",ExpressionUUID->"fa3304e9-15e7-4c88-80b5-5c41585afd56",
+Cell[6334, 180, 341, 10, 70, "GuideText",ExpressionUUID->"fa3304e9-15e7-4c88-80b5-5c41585afd56",
  CellID->203374175]
 }, Open  ]],
-Cell[6682, 192, 58, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"92df8e96-2df7-4fb0-b6b7-28dfc06ca57c",
+Cell[6690, 193, 58, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"92df8e96-2df7-4fb0-b6b7-28dfc06ca57c",
  CellID->622275174],
 Cell[CellGroupData[{
-Cell[6765, 197, 81, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"5f8eaa5a-bc2f-4fac-88db-96866e681ff0",
+Cell[6773, 198, 81, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"5f8eaa5a-bc2f-4fac-88db-96866e681ff0",
  CellID->91319310],
-Cell[6849, 200, 365, 11, 70, "GuideText",ExpressionUUID->"8408ac38-d2a3-4364-b67d-6de38d05ba41",
+Cell[6857, 201, 365, 11, 70, "GuideText",ExpressionUUID->"8408ac38-d2a3-4364-b67d-6de38d05ba41",
  CellID->1463276848],
-Cell[7217, 213, 341, 11, 70, "GuideText",ExpressionUUID->"9fff43cf-59ce-41dc-a1cd-c525790c844f",
+Cell[7225, 214, 341, 11, 70, "GuideText",ExpressionUUID->"9fff43cf-59ce-41dc-a1cd-c525790c844f",
  CellID->348206879],
-Cell[7561, 226, 352, 10, 70, "GuideText",ExpressionUUID->"22c8ab8e-8da0-47ea-8af6-3ed63aad5b8a",
+Cell[7569, 227, 352, 10, 70, "GuideText",ExpressionUUID->"22c8ab8e-8da0-47ea-8af6-3ed63aad5b8a",
  CellID->47789317],
-Cell[7916, 238, 723, 23, 70, "InlineGuideFunctionListing",ExpressionUUID->"b73d0705-f48b-45f0-914a-4fc8a03afb09",
+Cell[7924, 239, 723, 23, 70, "InlineGuideFunctionListing",ExpressionUUID->"b73d0705-f48b-45f0-914a-4fc8a03afb09",
  CellID->58033752]
 }, Open  ]],
-Cell[8654, 264, 57, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"97bc2ebf-8ed5-4a50-830d-bcb39efb1d4e",
+Cell[8662, 265, 57, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"97bc2ebf-8ed5-4a50-830d-bcb39efb1d4e",
  CellID->71783130],
 Cell[CellGroupData[{
-Cell[8736, 269, 77, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"3f2d20fc-7cdc-4adb-8fc5-a03b4a0fdbf4",
+Cell[8744, 270, 77, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"3f2d20fc-7cdc-4adb-8fc5-a03b4a0fdbf4",
  CellID->159396722],
-Cell[8816, 272, 352, 10, 70, "GuideText",ExpressionUUID->"3d3dc613-bae0-45a3-970e-a82dcf688d97",
+Cell[8824, 273, 309, 10, 70, "GuideText",ExpressionUUID->"76b7ff53-5475-4aac-af5f-dfa262a0aec6",
+ CellID->41288703],
+Cell[9136, 285, 334, 10, 70, "GuideText",ExpressionUUID->"3d3dc613-bae0-45a3-970e-a82dcf688d97",
  CellID->2444546],
-Cell[9171, 284, 341, 10, 70, "GuideText",ExpressionUUID->"98ed5967-fc25-4d07-95b5-f70816b90d9d",
- CellID->321169176],
-Cell[9515, 296, 343, 10, 70, "GuideText",ExpressionUUID->"76b7ff53-5475-4aac-af5f-dfa262a0aec6",
- CellID->41288703]
+Cell[9473, 297, 341, 10, 70, "GuideText",ExpressionUUID->"98ed5967-fc25-4d07-95b5-f70816b90d9d",
+ CellID->321169176]
 }, Open  ]]
 }, Open  ]],
-Cell[9885, 310, 23, 0, 70, "FooterCell",ExpressionUUID->"e56e0d68-e088-4838-8100-dfd0e7b09722"]
+Cell[9841, 311, 23, 0, 70, "FooterCell",ExpressionUUID->"70ccb1d7-9cbb-4f6d-89c9-e34a7eb77240"]
 }
 ]
 *)

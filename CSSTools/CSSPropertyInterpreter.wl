@@ -1408,7 +1408,7 @@ parseSingleBGImage[prop_String, token_?CSSTokenQ] :=
 				   Missing["Not supported."],
 				_, invalidFunctionFailure @ CSSUntokenize @ token
 			],
-		"uri", parseURI @ token["String"],
+		"url", parseURI @ token["String"],
 		_,     unrecognizedValueFailure @ prop
 	]
 
@@ -1779,7 +1779,7 @@ consumeProperty[
 					
 				!FailureQ[value = parseSingleBorderWidth[prop, tokens[[pos]]]],
 					If[hasWidth, Return @ repeatedPropValueFailure @ (prop <> "-width")];
-					hasWidth = True; values["w"] = CSSBorderWidth @ value,
+					hasWidth = True; values["w"] = value,
 				
 				True, unrecognizedValueFailure @ prop						
 			];
@@ -1787,9 +1787,9 @@ consumeProperty[
 		];
 		
 		{
-			FrameStyle     -> wrapper[values["c"], values["s"], values["w"]], 
+			FrameStyle     -> wrapper[values["c"], values["s"], CSSBorderWidth @ values["w"]], 
 			CellFrameStyle -> wrapper[values["c"], values["s"]], 
-			CellFrame      -> wrapper[values["w"]]}
+			CellFrame      -> wrapper[CSSBorderWidth @ convertToCellThickness @ values["w"]]}
 	]
 
 
@@ -1852,7 +1852,7 @@ consumeProperty[prop:"content", tokens:{__?CSSTokenQ}] :=
 							_,                unrecognizedKeyWordFailure @ prop
 						],
 					"string", tokens[[pos]]["String"],
-					"uri",    
+					"url",    
 						With[{i = parseURI @ tokens[[pos]]["String"]}, 
 							If[FailureQ[i] || MissingQ[i], 
 								notAnImageFailure @ tokens[[pos]]["String"]
@@ -1970,7 +1970,7 @@ parseSingleListStyleImage[prop_String, token_?CSSTokenQ] :=
 				"none", None,
 				_,      unrecognizedKeyWordFailure @ prop
 			],
-		"uri", 
+		"url", 
 			With[{im = parseURI @ token["String"]}, 
 				Which[
 					FailureQ[im], im, 
@@ -2174,7 +2174,7 @@ consumeProperty[prop:"cursor", tokens:{__?CSSTokenQ}] :=
 						"ne-resize"|"sw-resize", "FrameRisingResize",
 						_,               unrecognizedKeyWordFailure @ prop
 					],
-				"uri", parseURI @ tokens[[pos]]["String"],
+				"url", parseURI @ tokens[[pos]]["String"],
 				_,     unrecognizedValueFailure @ prop
 			];
 		If[FailureQ[value], value, With[{v = value}, MouseAppearance[#, v]&]]

@@ -42,7 +42,7 @@ CSSTargets[XMLObject$, CSSData$] applies the CSSData$ to the symbolic XML, \
 returning the CSSData$ with additional position and specificity information."];
 SetUsage[ResolveCSSInterpretations, "\
 ResolveCSSInterpretations[type$, CSSInterpretations$] combines options that were interpreted from the CSS importer. \
-Any Left/Right/Bottom/Top and Min/Max values are merged."];
+Any Left/Right/Bottom/Top and Min/Max values are merged and the resulting options are filtered by type$."];
 SetUsage[ResolveCSSInheritance, "\
 ResolveCSSInheritance[target$, CSSData$] calculates the properties of the element at target$ including any inherited CSS properties."];
 

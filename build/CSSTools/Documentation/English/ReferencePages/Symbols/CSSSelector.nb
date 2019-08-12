@@ -1,0 +1,1788 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 11.3' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     71623,       1778]
+NotebookOptionsPosition[     59199,       1518]
+NotebookOutlinePosition[     61395,       1575]
+CellTagsIndexPosition[     61309,       1570]
+WindowTitle->CSSSelector
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[BoxData[GridBox[{
+   {Cell["C S S TOOLS SYMBOL", "PacletNameCell",ExpressionUUID->
+     "84e420e5-e290-493a-ba62-c47787360ca7"], Cell[TextData[{
+     Cell[BoxData[
+      ActionMenuBox[
+       FrameBox[
+        InterpretationBox[Cell[TextData[{
+          "Tutorials",
+          StyleBox[" \[FilledDownTriangle]", "AnchorBarArrow",
+           StripOnInput->False]
+         }],ExpressionUUID->"55229877-6d78-48da-bdbc-6c433c7337a5"],
+         TextCell[
+          Row[{"Tutorials", 
+            Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
+        StripOnInput->False], {"\<\"CSSTools\"\>":>Documentation`HelpLookup[
+       "paclet:CSSTools/tutorial/CSSTools"]},
+       Appearance->None,
+       MenuAppearance->Automatic,
+       MenuStyle->"Tutorials"]],
+      LineSpacing->{1.4, 0},ExpressionUUID->
+      "3c64fef8-0a9b-41ce-847b-08ce5c05ce15"],
+     "\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\
+\[ThickSpace]",
+     Cell[BoxData[
+      ActionMenuBox[
+       FrameBox[
+        InterpretationBox[Cell[TextData[{
+          "Related Guides",
+          StyleBox[" \[FilledDownTriangle]", "AnchorBarArrow",
+           StripOnInput->False]
+         }],ExpressionUUID->"4c1e1359-d584-427c-8368-f0423038037f"],
+         TextCell[
+          Row[{"Related Guides", 
+            Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
+        StripOnInput->False], {"\<\"CSSTools\"\>":>Documentation`HelpLookup[
+       "paclet:CSSTools/guide/CSSTools"]},
+       Appearance->None,
+       MenuAppearance->Automatic,
+       MenuStyle->"MoreAbout"]],
+      LineSpacing->{1.4, 0},ExpressionUUID->
+      "2755fd21-79a4-4c92-ad08-9e02220fb969"],
+     "\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\[ThickSpace]\
+\[ThickSpace]",
+     Cell[BoxData[
+      ActionMenuBox[
+       FrameBox[
+        InterpretationBox[Cell[TextData[{
+          "URL",
+          StyleBox[" \[FilledDownTriangle]", "AnchorBarArrow",
+           StripOnInput->False]
+         }],ExpressionUUID->"082b922a-740d-4a0b-bd40-57d72df26a5b"],
+         TextCell[
+          Row[{"URL", 
+            Style[" \[FilledDownTriangle]", "AnchorBarArrow"]}]]],
+        StripOnInput->False], {"\<\"CSSTools/ref/Selector\"\>":>
+       None, "\<\"Copy Wolfram Documentation Center URL\"\>":>
+       Module[{DocumentationSearch`Private`nb$}, 
+        DocumentationSearch`Private`nb$ = NotebookPut[
+           Notebook[{
+             Cell["CSSTools/ref/Selector"]}, Visible -> False]]; 
+        SelectionMove[DocumentationSearch`Private`nb$, All, Notebook]; 
+        FrontEndTokenExecute[DocumentationSearch`Private`nb$, "Copy"]; 
+        NotebookClose[DocumentationSearch`Private`nb$]; Null], 
+       Delimiter, "\<\"Copy web URL\"\>":>
+       Module[{DocumentationSearch`Private`nb$}, 
+        DocumentationSearch`Private`nb$ = NotebookPut[
+           Notebook[{
+             Cell[
+              BoxData[
+               MakeBoxes[
+                Hyperlink[
+                "http://reference.wolfram.com/language/CSSTools/ref/Selector.\
+html"], StandardForm]], "Input", TextClipboardType -> "PlainText"]}, Visible -> 
+            False]]; SelectionMove[
+         DocumentationSearch`Private`nb$, All, Notebook]; 
+        FrontEndTokenExecute[DocumentationSearch`Private`nb$, "Copy"]; 
+        NotebookClose[DocumentationSearch`Private`nb$]; 
+        Null], "\<\"Go to web URL\"\>":>FrontEndExecute[{
+         NotebookLocate[{
+           URL[
+            StringJoin[
+             If[
+              TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$9460], 
+              "http://reference.wolfram.com/system-modeler/", 
+              "http://reference.wolfram.com/language/"], 
+             "CSSTools/ref/Selector", ".html"]], None}]}]},
+       Appearance->None,
+       MenuAppearance->Automatic,
+       MenuStyle->"URLMenu"]],
+      LineSpacing->{1.4, 0},ExpressionUUID->
+      "13127ede-83a4-4480-a2ea-424fa934cec6"]
+    }], "AnchorBar",ExpressionUUID->"7f53656e-4d77-4dd4-9558-3ab01e215d03"]}
+  }]], "AnchorBarGrid",
+ CellID->1,ExpressionUUID->"28f1f339-64e5-47fb-ba63-4ecac1ce1079"],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ Cell["CSSSelector", "ObjectName",ExpressionUUID->
+  "fc65c512-5c29-47b8-87f6-fa2dcfd13f43"],
+ Cell[BoxData[
+  TemplateBox[{8},
+   "Spacer1"]],ExpressionUUID->"0d57b6f9-0a5e-4558-a2d2-0749712b1255"],
+ Cell[BoxData[
+ ""], "ObjectNameTranslation",ExpressionUUID->
+  "2b741ca4-13cf-4668-95fa-88b2130c4971"]
+}], "ObjectNameGrid",ExpressionUUID->"7a3b04c2-5729-4675-87f9-7ab968bf10ef"],
+
+Cell[BoxData[GridBox[{
+   {"", Cell[TextData[{
+     Cell[BoxData[
+      RowBox[{"CSSSelector", "[", 
+       StyleBox["string", "TI"], "]"}]], "InlineFormula",ExpressionUUID->
+      "e0eeac1c-f95a-4f34-abeb-25faba43c9bb"],
+     " \[LineSeparator]parses ",
+     Cell[BoxData[
+      StyleBox["string", "TI"]], "InlineFormula",ExpressionUUID->
+      "fafbe38d-7192-439d-b44b-58b6a8e468b6"],
+     " as a CSS selector. If valid it returns a CSSSelector object."
+    }],ExpressionUUID->"2aed2184-b532-402a-983b-34a207f6179d"]}
+  }]], "Usage",
+ GridBoxOptions->{
+ GridBoxBackground->{
+  "Columns" -> {{None}}, "ColumnsIndexed" -> {}, "Rows" -> {{None}}, 
+   "RowsIndexed" -> {}}},
+ CellID->982511436,ExpressionUUID->"01fc190d-c230-4d45-9f1f-1750930f0360"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[Cell[BoxData[
+ ButtonBox[Cell[TextData[{
+   Cell[BoxData[
+    TemplateBox[{6},
+     "Spacer1"]],ExpressionUUID->"a4ad0b96-420f-4168-9116-b87cb496822b"],
+   "Details"
+  }], "NotesFrameText",ExpressionUUID->"b383d85e-6d2e-4d7c-ad79-2e25e32db1bd"],
+  Appearance->{Automatic, None, "Normal", Automatic},
+  BaseStyle->None,
+  ButtonFunction:>(FrontEndExecute[{
+     FrontEnd`SelectionMove[
+      FrontEnd`SelectedNotebook[], All, ButtonCell], 
+     FrontEndToken["OpenCloseGroup"], 
+     FrontEnd`SelectionMove[
+      FrontEnd`SelectedNotebook[], After, CellContents]}]& ),
+  Evaluator->None,
+  Method->
+   "Preemptive"]],ExpressionUUID->"a1a4e6e5-abf3-4c59-adf5-8d6623382fde"]], \
+"NotesSection",
+ WholeCellGroupOpener->True,
+ CellGroupingRules->{"SectionGrouping", 50},
+ CellID->71023599,ExpressionUUID->"5c91a03b-11af-42e7-871e-ee8faedd9e72"],
+
+Cell["", "SectionHeaderSpacer",ExpressionUUID->"1fe2c7ed-a7cd-4372-aa20-a64b7554511d"],
+
+Cell["\<\
+Aspects of CSS selectors can belong to different namespaces. Normally the \
+namespaces, if any, are declared at the beginning of a CSS stylesheet using \
+an \"@namespace\" rule. This constructor would otherwise be unaware of \
+namespaces so an option is provided to include this information.\
+\>", "Notes",
+ CellID->440284988,ExpressionUUID->"b8d4d2dd-a2c6-4c31-981e-48d8c6f8bae3"],
+
+Cell[BoxData[GridBox[{
+   {Cell["      ", "TableRowIcon",ExpressionUUID->
+     "95af45e6-e495-432f-ab55-798dc0b9f967"], "\"\<Namespaces\>\"", 
+    RowBox[{"{", "}"}], Cell[
+    "Rules to convert namespace abbreviations.", "TableText",ExpressionUUID->
+     "863c0230-3271-4fbd-9da3-e6a9dee3b440"]}
+  }]], "3ColumnTableMod",
+ GridBoxOptions->{
+ GridBoxBackground->{
+  "Columns" -> {{None}}, "ColumnsIndexed" -> {}, "Rows" -> {{None}}, 
+   "RowsIndexed" -> {}},
+ GridBoxDividers->{"Rows" -> {{True, True}}}},
+ CellID->410826631,ExpressionUUID->"ab1fbf6e-3df0-4994-ae8d-9ba71f486238"],
+
+Cell[TextData[{
+ "The option values are of the form ",
+ StyleBox["prefix \[Rule] namespace", "InlineCode"],
+ " or ",
+ StyleBox["prefix \[Rule] namespace \[Rule] \"Default\"", "InlineCode"],
+ ". The latter form indicates that this namespace is interpreted as the \
+default namespace. There should be only one default namespace."
+}], "Notes",
+ CellID->45736260,ExpressionUUID->"60af278f-ea13-4051-bc73-31d07b01c2d8"],
+
+Cell["\<\
+Selector specificity is indicated by a set of four integers. Each integer \
+indicates the number of particular elements that appear in the selector. In \
+descending order these integers are\
+\>", "Notes",
+ CellID->452916219,ExpressionUUID->"36b1a9d4-43bb-4798-9bc5-ea77edb99343"],
+
+Cell[BoxData[GridBox[{
+   {Cell["      ", "TableRowIcon",ExpressionUUID->
+     "a222b0dc-5402-41fc-b569-a710b9c1f7ef"], Cell[
+    "inline style", "TableText",ExpressionUUID->
+     "ab4b32ac-4c5d-4989-9157-784006cf5af1"], Cell[
+    "in a document e.g. <h1 style=\"color:red\">", "TableText",
+     ExpressionUUID->"1b0eca43-5b66-4ac9-a96c-bf752992e5fc"]},
+   {Cell["      ", "TableRowIcon",ExpressionUUID->
+     "ab329826-a972-4d15-9acb-6ed6ac55866b"], Cell[
+    "ID selectors", "TableText",ExpressionUUID->
+     "e2b813c6-b8ff-4b22-bf3a-99e9e27b3df2"], Cell[
+    "#div, #header", "TableText",ExpressionUUID->
+     "281fe8ce-190c-47de-b0dc-d32d833af2a2"]},
+   {Cell["      ", "TableRowIcon",ExpressionUUID->
+     "34ca35bf-cb2d-4668-bca4-7e9a539c2619"], Cell[
+    "classes, attributes, pseudo-classes", "TableText",ExpressionUUID->
+     "53e8c545-cc77-4be3-9dd5-2c09971fef70"], Cell[
+    ".class, [class~=a], :hover", "TableText",ExpressionUUID->
+     "1d06a440-2da7-483e-b750-651c2b137ec8"]},
+   {Cell["      ", "TableRowIcon",ExpressionUUID->
+     "9a731cfb-0e03-4094-8502-5bf8302b3591"], Cell[
+    "elements and pseudo-elements", "TableText",ExpressionUUID->
+     "d7709f98-3466-4b4b-a598-dadba1a19387"], Cell[
+    "h1, li, ::before", "TableText",ExpressionUUID->
+     "99a47676-80b0-4ed9-98e8-3f9a41bf3c3a"]}
+  }]], "2ColumnTableMod",
+ GridBoxOptions->{
+ GridBoxBackground->{
+  "Columns" -> {{None}}, "ColumnsIndexed" -> {}, 
+   "Rows" -> {None, None, None, {None}}, "RowsIndexed" -> {}},
+ GridBoxDividers->{"Rows" -> {{True, True, True, True, True}}}},
+ CellID->292513715,ExpressionUUID->"625d542a-528f-43b1-9d68-b3be711cbb10"],
+
+Cell[TextData[{
+ "A selector \"h1:hover\" has specificity {0,0,1,1}. The inline style index \
+can be non-zero if extracting CSS from an XMLObject. See ",
+ ButtonBox["ExtractCSSFromXML",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/ExtractCSSFromXML"],
+ "."
+}], "Notes",
+ CellID->357733518,ExpressionUUID->"db224b5b-b5b5-477a-b65d-41807ab385b8"],
+
+Cell["", "SectionFooterSpacer",ExpressionUUID->"ccab2255-4737-4000-b1ec-d3512f3b0987"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{6},
+   "Spacer1"]],ExpressionUUID->"e851d81c-1fef-4f4c-8a28-9552b44c57b4"],
+ "Examples",
+ "\[NonBreakingSpace]\[NonBreakingSpace]",
+ Cell["(4)", "ExampleCount",ExpressionUUID->
+  "bc4d2f8d-53a9-409c-9c56-28d7111ad5ea"]
+}], "PrimaryExamplesSection",
+ WholeCellGroupOpener->True,
+ CellTags->"PrimaryExamplesSection",
+ CellID->124682739,ExpressionUUID->"6e25af12-09c8-43eb-9c78-32e3f104385f"],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ "Basic Examples",
+ "\[NonBreakingSpace]\[NonBreakingSpace]",
+ Cell["(1)", "ExampleCount",ExpressionUUID->
+  "8d41a63a-6ff6-4d20-9d2f-ecd57abafadc"]
+}], "ExampleSection", "ExampleSection",
+ WholeCellGroupOpener->True,
+ CellID->48020248,ExpressionUUID->"33690cca-87bf-4205-9cf4-b1495832bd6c"],
+
+Cell[BoxData[
+ RowBox[{"Needs", "[", "\"\<CSSTools`\>\"", "]"}]], "Input",
+ CellLabel->"In[1]:=",
+ CellID->47919439,ExpressionUUID->"63bc8ee5-e225-4309-ad58-fee8b5632ac0"],
+
+Cell["Construct a selector object", "ExampleText",
+ CellID->636035772,ExpressionUUID->"41fa212f-a226-4c33-aa09-a637ad15a59a"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"sel1", "=", 
+  RowBox[{"CSSSelector", "[", "\"\<h1 > *[href~=cat]\>\"", "]"}]}]], "Input",
+ CellLabel->"In[2]:=",
+ CellID->432058819,ExpressionUUID->"765ee8dc-8e36-4451-aa69-20a0efdf19b2"],
+
+Cell[BoxData[
+ InterpretationBox[
+  StyleBox[
+   FrameBox[
+    TemplateBox[{StyleBox["\"#CSS \"", 
+       RGBColor[0, 0.5, 1], Selectable -> False, StripOnInput -> False],
+      StyleBox["\"h1 > *[href~=cat]\"", Selectable -> True, StripOnInput -> 
+       False]},
+     "RowDefault"],
+    Background->RGBColor[0.92, 0.98, 1],
+    BaseStyle->{FontFamily -> Dynamic[
+        CurrentValue[{StyleHints, "CodeFont"}]], FontSize -> 12, FontWeight -> 
+      Bold, FontColor -> GrayLevel[0.2]},
+    FrameMargins->{{5, 5}, {2, 2}},
+    FrameStyle->Directive[
+      RGBColor[0, 0.5, 1], 
+      AbsoluteThickness[1]],
+    ImageMargins->2,
+    RoundingRadius->4,
+    StripOnInput->False],
+   Editable->False,
+   StripOnInput->False,
+   ShowStringCharacters->False],
+  CSSTools`CSSSelector[
+   Association[
+   "String" -> "h1 > *[href~=cat]", 
+    "Sequence" -> {
+     "SimpleSelectorSequence" -> {
+       "Type" -> Association[
+         "Namespace" -> Missing["NotFound"], "Name" -> "h1"]}, "Combinator" -> 
+      Association["Type" -> "Child"], 
+      "SimpleSelectorSequence" -> {
+       "Universal" -> Association["Namespace" -> Missing["NotFound"]], 
+        "Attribute" -> 
+        Association[
+         "Namespace" -> None, "Name" -> "href", "Match" -> "Include", "Value" -> 
+          "cat"]}}, "Specificity" -> {0, 0, 1, 1}]]]], "Output",
+ ImageSize->{174, 26},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[2]=",
+ CellID->110745681,ExpressionUUID->"d3a9825c-4068-426f-bd0e-d75b93ddcc2a"]
+}, Open  ]],
+
+Cell["Examine how the input string was parsed", "ExampleText",
+ CellID->569249250,ExpressionUUID->"e10bf859-f690-4d92-ac5c-809bdfc4db99"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"sel1", "[", "\"\<Sequence\>\"", "]"}], "//", "Column"}]], "Input",
+ CellLabel->"In[3]:=",
+ CellID->354198895,ExpressionUUID->"1d013202-4db7-4bf6-8cf1-51a55fc3c49b"],
+
+Cell[BoxData[
+ TagBox[GridBox[{
+    {
+     RowBox[{"\<\"SimpleSelectorSequence\"\>", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"\<\"Type\"\>", "\[Rule]", 
+        RowBox[{"\[LeftAssociation]", 
+         RowBox[{
+          RowBox[{"\<\"Namespace\"\>", "\[Rule]", 
+           RowBox[{"Missing", "[", "\<\"NotFound\"\>", "]"}]}], ",", 
+          RowBox[{"\<\"Name\"\>", "\[Rule]", "\<\"h1\"\>"}]}], 
+         "\[RightAssociation]"}]}], "}"}]}]},
+    {
+     RowBox[{"\<\"Combinator\"\>", "\[Rule]", 
+      RowBox[{"\[LeftAssociation]", 
+       RowBox[{"\<\"Type\"\>", "\[Rule]", "\<\"Child\"\>"}], 
+       "\[RightAssociation]"}]}]},
+    {
+     RowBox[{"\<\"SimpleSelectorSequence\"\>", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"\<\"Universal\"\>", "\[Rule]", 
+         RowBox[{"\[LeftAssociation]", 
+          RowBox[{"\<\"Namespace\"\>", "\[Rule]", 
+           RowBox[{"Missing", "[", "\<\"NotFound\"\>", "]"}]}], 
+          "\[RightAssociation]"}]}], ",", 
+        RowBox[{"\<\"Attribute\"\>", "\[Rule]", 
+         RowBox[{"\[LeftAssociation]", 
+          RowBox[{
+           RowBox[{"\<\"Namespace\"\>", "\[Rule]", "None"}], ",", 
+           RowBox[{"\<\"Name\"\>", "\[Rule]", "\<\"href\"\>"}], ",", 
+           RowBox[{"\<\"Match\"\>", "\[Rule]", "\<\"Include\"\>"}], ",", 
+           RowBox[{"\<\"Value\"\>", "\[Rule]", "\<\"cat\"\>"}]}], 
+          "\[RightAssociation]"}]}]}], "}"}]}]}
+   },
+   DefaultBaseStyle->"Column",
+   GridBoxAlignment->{"Columns" -> {{Left}}},
+   GridBoxItemSize->{"Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}],
+  "Column"]], "Output",
+ ImageSize->{527, 65},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[3]=",
+ CellID->315095647,ExpressionUUID->"8c9c2943-746e-4560-8163-008c1f7453d9"]
+}, Open  ]],
+
+Cell["Check specificity of the selector", "ExampleText",
+ CellID->20355043,ExpressionUUID->"9d8b3179-b7f9-4ddd-aaa3-c20fbfbaabc6"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"sel1", "[", "\"\<Specificity\>\"", "]"}]], "Input",
+ CellLabel->"In[4]:=",
+ CellID->283408170,ExpressionUUID->"f70738a3-6ff8-4aab-9eea-90e3a5925258"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"0", ",", "0", ",", "1", ",", "1"}], "}"}]], "Output",
+ ImageSize->{79, 14},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[4]=",
+ CellID->277907791,ExpressionUUID->"8e2262c4-4942-49a0-80d2-1f165936ca97"]
+}, Open  ]],
+
+Cell["\<\
+The input strings are validated. Incorrect selectors indicate the location of \
+the error. \
+\>", "ExampleText",
+ CellID->85640333,ExpressionUUID->"6dc893e9-33f4-4984-966c-914fa73c2acf"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"CSSSelector", "[", "\"\<a > b >\>\"", "]"}]], "Input",
+ CellLabel->"In[5]:=",
+ CellID->413918420,ExpressionUUID->"7786b7b5-0aa4-42bf-88c7-2b84e031d160"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{
+   TagBox["Failure",
+    "SummaryHead"], "[", 
+   DynamicModuleBox[{Typeset`open$$ = False, Typeset`embedState$$ = "Ready"}, 
+    TemplateBox[{PaneSelectorBox[{False -> GridBox[{{
+            FrameBox[
+             StyleBox["\"\[WarningSign]\"", 
+              Directive["Message", 35], StripOnInput -> False], 
+             ContentPadding -> False, FrameStyle -> None, 
+             FrameMargins -> {{0, 0}, {0, 0}}, StripOnInput -> False], 
+            GridBox[{{
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Message\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                 "\"The selector must end with a simple selector.\"", 
+                  "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Position\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                  TemplateBox[{"\"a > b \"", 
+                    StyleBox[
+                    "\">\"", Background -> RGBColor[1, 1, 0], StripOnInput -> 
+                    False], "\"\""}, "RowDefault"], "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Tag\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox["\"BadSelector\"", "SummaryItem"]}]}}, 
+             GridBoxAlignment -> {
+              "Columns" -> {{Left}}, "Rows" -> {{Automatic}}}, AutoDelete -> 
+             False, GridBoxItemSize -> {
+              "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+             GridBoxSpacings -> {"Columns" -> {{2}}, "Rows" -> {{Automatic}}},
+              BaseStyle -> {
+              ShowStringCharacters -> False, NumberMarks -> False, 
+               PrintPrecision -> 3, ShowSyntaxStyles -> False}]}}, 
+          GridBoxAlignment -> {"Rows" -> {{Top}}}, AutoDelete -> False, 
+          GridBoxItemSize -> {
+           "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+          BaselinePosition -> {1, 1}], True -> GridBox[{{
+            FrameBox[
+             StyleBox["\"\[WarningSign]\"", 
+              Directive["Message", 35], StripOnInput -> False], 
+             ContentPadding -> False, FrameStyle -> None, 
+             FrameMargins -> {{0, 0}, {0, 0}}, StripOnInput -> False], 
+            GridBox[{{
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Message\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                 "\"The selector must end with a simple selector.\"", 
+                  "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Position\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                  TemplateBox[{"\"a > b \"", 
+                    StyleBox[
+                    "\">\"", Background -> RGBColor[1, 1, 0], StripOnInput -> 
+                    False], "\"\""}, "RowDefault"], "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Tag\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox["\"BadSelector\"", "SummaryItem"]}]}}, 
+             GridBoxAlignment -> {
+              "Columns" -> {{Left}}, "Rows" -> {{Automatic}}}, AutoDelete -> 
+             False, GridBoxItemSize -> {
+              "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+             GridBoxSpacings -> {"Columns" -> {{2}}, "Rows" -> {{Automatic}}},
+              BaseStyle -> {
+              ShowStringCharacters -> False, NumberMarks -> False, 
+               PrintPrecision -> 3, ShowSyntaxStyles -> False}]}}, 
+          GridBoxAlignment -> {"Rows" -> {{Top}}}, AutoDelete -> False, 
+          GridBoxItemSize -> {
+           "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+          BaselinePosition -> {1, 1}]}, 
+       Dynamic[Typeset`open$$], ImageSize -> Automatic]},
+     "SummaryPanel"],
+    DynamicModuleValues:>{}], "]"}],
+  Failure["BadSelector", 
+   Association[
+   "Message" -> "The selector must end with a simple selector.", "Position" -> 
+    Row[{"a > b ", 
+       Style[">", Background -> RGBColor[1, 1, 0]], ""}]]],
+  Editable->False,
+  SelectWithContents->True,
+  Selectable->False]], "Output",
+ ImageSize->{409, 68},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[5]=",
+ CellID->32358383,ExpressionUUID->"05f0270f-261b-48dc-b810-9ddd3b21dfdf"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"CSSSelector", "[", "\"\<[ name=value b]\>\"", "]"}]], "Input",
+ CellLabel->"In[6]:=",
+ CellID->577650804,ExpressionUUID->"61228bb1-d9f3-40fd-bc4e-f4b63491109c"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{
+   TagBox["Failure",
+    "SummaryHead"], "[", 
+   DynamicModuleBox[{Typeset`open$$ = False, Typeset`embedState$$ = "Ready"}, 
+    TemplateBox[{PaneSelectorBox[{False -> GridBox[{{
+            FrameBox[
+             StyleBox["\"\[WarningSign]\"", 
+              Directive["Message", 35], StripOnInput -> False], 
+             ContentPadding -> False, FrameStyle -> None, 
+             FrameMargins -> {{0, 0}, {0, 0}}, StripOnInput -> False], 
+            GridBox[{{
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Message\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                 "\"Attribute selector has too many tokens.\"", 
+                  "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Position\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                  StyleBox[
+                  "\"[ name=value b]\"", Background -> RGBColor[1, 1, 0], 
+                   StripOnInput -> False], "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Tag\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox["\"BadAttribute\"", "SummaryItem"]}]}}, 
+             GridBoxAlignment -> {
+              "Columns" -> {{Left}}, "Rows" -> {{Automatic}}}, AutoDelete -> 
+             False, GridBoxItemSize -> {
+              "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+             GridBoxSpacings -> {"Columns" -> {{2}}, "Rows" -> {{Automatic}}},
+              BaseStyle -> {
+              ShowStringCharacters -> False, NumberMarks -> False, 
+               PrintPrecision -> 3, ShowSyntaxStyles -> False}]}}, 
+          GridBoxAlignment -> {"Rows" -> {{Top}}}, AutoDelete -> False, 
+          GridBoxItemSize -> {
+           "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+          BaselinePosition -> {1, 1}], True -> GridBox[{{
+            FrameBox[
+             StyleBox["\"\[WarningSign]\"", 
+              Directive["Message", 35], StripOnInput -> False], 
+             ContentPadding -> False, FrameStyle -> None, 
+             FrameMargins -> {{0, 0}, {0, 0}}, StripOnInput -> False], 
+            GridBox[{{
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Message\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                 "\"Attribute selector has too many tokens.\"", 
+                  "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Position\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                  StyleBox[
+                  "\"[ name=value b]\"", Background -> RGBColor[1, 1, 0], 
+                   StripOnInput -> False], "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Tag\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox["\"BadAttribute\"", "SummaryItem"]}]}}, 
+             GridBoxAlignment -> {
+              "Columns" -> {{Left}}, "Rows" -> {{Automatic}}}, AutoDelete -> 
+             False, GridBoxItemSize -> {
+              "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+             GridBoxSpacings -> {"Columns" -> {{2}}, "Rows" -> {{Automatic}}},
+              BaseStyle -> {
+              ShowStringCharacters -> False, NumberMarks -> False, 
+               PrintPrecision -> 3, ShowSyntaxStyles -> False}]}}, 
+          GridBoxAlignment -> {"Rows" -> {{Top}}}, AutoDelete -> False, 
+          GridBoxItemSize -> {
+           "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+          BaselinePosition -> {1, 1}]}, 
+       Dynamic[Typeset`open$$], ImageSize -> Automatic]},
+     "SummaryPanel"],
+    DynamicModuleValues:>{}], "]"}],
+  Failure["BadAttribute", 
+   Association[
+   "Message" -> "Attribute selector has too many tokens.", "Position" -> 
+    Style["[ name=value b]", Background -> RGBColor[1, 1, 0]]]],
+  Editable->False,
+  SelectWithContents->True,
+  Selectable->False]], "Output",
+ ImageSize->{380, 68},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[6]=",
+ CellID->113326140,ExpressionUUID->"080a5adc-1452-434c-a922-1409b23506c5"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"CSSSelector", "[", "\"\<div > p:first-cild\>\"", "]"}]], "Input",
+ CellLabel->"In[7]:=",
+ CellID->21510429,ExpressionUUID->"b63c58c5-cbf1-420d-b8d2-0d1dddfb35a6"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{
+   TagBox["Failure",
+    "SummaryHead"], "[", 
+   DynamicModuleBox[{Typeset`open$$ = False, Typeset`embedState$$ = "Ready"}, 
+    TemplateBox[{PaneSelectorBox[{False -> GridBox[{{
+            FrameBox[
+             StyleBox["\"\[WarningSign]\"", 
+              Directive["Message", 35], StripOnInput -> False], 
+             ContentPadding -> False, FrameStyle -> None, 
+             FrameMargins -> {{0, 0}, {0, 0}}, StripOnInput -> False], 
+            GridBox[{{
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Message\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                 "\"Unrecognized pseudo class selector.\"", 
+                  "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Position\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                  TemplateBox[{"\"div > p:\"", 
+                    StyleBox[
+                    "\"first-cild\"", Background -> RGBColor[1, 1, 0], 
+                    StripOnInput -> False], "\"\""}, "RowDefault"], 
+                  "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Tag\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox["\"BadPseudoClass\"", "SummaryItem"]}]}}, 
+             GridBoxAlignment -> {
+              "Columns" -> {{Left}}, "Rows" -> {{Automatic}}}, AutoDelete -> 
+             False, GridBoxItemSize -> {
+              "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+             GridBoxSpacings -> {"Columns" -> {{2}}, "Rows" -> {{Automatic}}},
+              BaseStyle -> {
+              ShowStringCharacters -> False, NumberMarks -> False, 
+               PrintPrecision -> 3, ShowSyntaxStyles -> False}]}}, 
+          GridBoxAlignment -> {"Rows" -> {{Top}}}, AutoDelete -> False, 
+          GridBoxItemSize -> {
+           "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+          BaselinePosition -> {1, 1}], True -> GridBox[{{
+            FrameBox[
+             StyleBox["\"\[WarningSign]\"", 
+              Directive["Message", 35], StripOnInput -> False], 
+             ContentPadding -> False, FrameStyle -> None, 
+             FrameMargins -> {{0, 0}, {0, 0}}, StripOnInput -> False], 
+            GridBox[{{
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Message\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                 "\"Unrecognized pseudo class selector.\"", 
+                  "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Position\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                  TemplateBox[{"\"div > p:\"", 
+                    StyleBox[
+                    "\"first-cild\"", Background -> RGBColor[1, 1, 0], 
+                    StripOnInput -> False], "\"\""}, "RowDefault"], 
+                  "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Tag\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox["\"BadPseudoClass\"", "SummaryItem"]}]}}, 
+             GridBoxAlignment -> {
+              "Columns" -> {{Left}}, "Rows" -> {{Automatic}}}, AutoDelete -> 
+             False, GridBoxItemSize -> {
+              "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+             GridBoxSpacings -> {"Columns" -> {{2}}, "Rows" -> {{Automatic}}},
+              BaseStyle -> {
+              ShowStringCharacters -> False, NumberMarks -> False, 
+               PrintPrecision -> 3, ShowSyntaxStyles -> False}]}}, 
+          GridBoxAlignment -> {"Rows" -> {{Top}}}, AutoDelete -> False, 
+          GridBoxItemSize -> {
+           "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+          BaselinePosition -> {1, 1}]}, 
+       Dynamic[Typeset`open$$], ImageSize -> Automatic]},
+     "SummaryPanel"],
+    DynamicModuleValues:>{}], "]"}],
+  Failure["BadPseudoClass", 
+   Association[
+   "Message" -> "Unrecognized pseudo class selector.", "Position" -> 
+    Row[{"div > p:", 
+       Style["first-cild", Background -> RGBColor[1, 1, 0]], ""}]]],
+  Editable->False,
+  SelectWithContents->True,
+  Selectable->False]], "Output",
+ ImageSize->{363, 68},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[7]=",
+ CellID->204629664,ExpressionUUID->"acb996e0-6418-4413-bdb9-c44621c95f7a"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"CSSSelector", "[", "\"\<div::after > p\>\"", "]"}]], "Input",
+ CellLabel->"In[8]:=",
+ CellID->278672920,ExpressionUUID->"d986779d-61b8-406e-95b0-fa098a2f66ac"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{
+   TagBox["Failure",
+    "SummaryHead"], "[", 
+   DynamicModuleBox[{Typeset`open$$ = False, Typeset`embedState$$ = "Ready"}, 
+    TemplateBox[{PaneSelectorBox[{False -> GridBox[{{
+            FrameBox[
+             StyleBox["\"\[WarningSign]\"", 
+              Directive["Message", 35], StripOnInput -> False], 
+             ContentPadding -> False, FrameStyle -> None, 
+             FrameMargins -> {{0, 0}, {0, 0}}, StripOnInput -> False], 
+            GridBox[{{
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Message\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                 "\"Pseudo element must be after the last simple selector \
+sequence.\"", "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Position\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                  TemplateBox[{"\"div\"", 
+                    StyleBox[
+                    "\"::after\"", Background -> RGBColor[1, 1, 0], 
+                    StripOnInput -> False], "\" > p\""}, "RowDefault"], 
+                  "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Tag\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox["\"BadSelector\"", "SummaryItem"]}]}}, 
+             GridBoxAlignment -> {
+              "Columns" -> {{Left}}, "Rows" -> {{Automatic}}}, AutoDelete -> 
+             False, GridBoxItemSize -> {
+              "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+             GridBoxSpacings -> {"Columns" -> {{2}}, "Rows" -> {{Automatic}}},
+              BaseStyle -> {
+              ShowStringCharacters -> False, NumberMarks -> False, 
+               PrintPrecision -> 3, ShowSyntaxStyles -> False}]}}, 
+          GridBoxAlignment -> {"Rows" -> {{Top}}}, AutoDelete -> False, 
+          GridBoxItemSize -> {
+           "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+          BaselinePosition -> {1, 1}], True -> GridBox[{{
+            FrameBox[
+             StyleBox["\"\[WarningSign]\"", 
+              Directive["Message", 35], StripOnInput -> False], 
+             ContentPadding -> False, FrameStyle -> None, 
+             FrameMargins -> {{0, 0}, {0, 0}}, StripOnInput -> False], 
+            GridBox[{{
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Message\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                 "\"Pseudo element must be after the last simple selector \
+sequence.\"", "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Position\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                  TemplateBox[{"\"div\"", 
+                    StyleBox[
+                    "\"::after\"", Background -> RGBColor[1, 1, 0], 
+                    StripOnInput -> False], "\" > p\""}, "RowDefault"], 
+                  "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Tag\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox["\"BadSelector\"", "SummaryItem"]}]}}, 
+             GridBoxAlignment -> {
+              "Columns" -> {{Left}}, "Rows" -> {{Automatic}}}, AutoDelete -> 
+             False, GridBoxItemSize -> {
+              "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+             GridBoxSpacings -> {"Columns" -> {{2}}, "Rows" -> {{Automatic}}},
+              BaseStyle -> {
+              ShowStringCharacters -> False, NumberMarks -> False, 
+               PrintPrecision -> 3, ShowSyntaxStyles -> False}]}}, 
+          GridBoxAlignment -> {"Rows" -> {{Top}}}, AutoDelete -> False, 
+          GridBoxItemSize -> {
+           "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+          BaselinePosition -> {1, 1}]}, 
+       Dynamic[Typeset`open$$], ImageSize -> Automatic]},
+     "SummaryPanel"],
+    DynamicModuleValues:>{}], "]"}],
+  Failure["BadSelector", 
+   Association[
+   "Message" -> 
+    "Pseudo element must be after the last simple selector sequence.", 
+    "Position" -> Row[{"div", 
+       Style["::after", Background -> RGBColor[1, 1, 0]], " > p"}]]],
+  Editable->False,
+  SelectWithContents->True,
+  Selectable->False]], "Output",
+ ImageSize->{510, 68},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[8]=",
+ CellID->540696432,ExpressionUUID->"95af72bf-66cf-4c1b-bc0b-762c2b6e5cf6"]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ "Scope",
+ "\[NonBreakingSpace]\[NonBreakingSpace]",
+ Cell["(1)", "ExampleCount",ExpressionUUID->
+  "9f2de0ee-036d-4193-823a-5f3b5f8cd8ce"]
+}], "ExampleSection", "ExampleSection",
+ WholeCellGroupOpener->True,
+ CellID->1293636265,ExpressionUUID->"aa92aa1f-6b82-4845-8812-a22aaa335681"],
+
+Cell["\<\
+Use CSSTargets to extract the positions of XMLElement instances that the \
+selector targets.\
+\>", "ExampleText",
+ CellID->356787859,ExpressionUUID->"42f03fbd-e352-4eb0-8ca3-951b53ffd54a"],
+
+Cell[BoxData[
+ RowBox[{"Needs", "[", "\"\<CSSTools`\>\"", "]"}]], "Input",
+ CellLabel->"In[1]:=",
+ CellID->156532367,ExpressionUUID->"d8f50830-1a59-4f09-9ed7-3d0689c52136"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+  "str", "=", 
+   "\"\<<html xml:lang='zh'>\\n     <head> <title>Test</title> </head>\\n     \
+  <body xmlns='http://www.w3.org/1999/xhtml'>\\n         <p lang='en' \
+class='red' myid='unique'>Here is some math.</p>\\n         <p>\\n           \
+<m:math xmlns:m='http://www.w3.org/1998/Math/MathML'>\\n             <m:mi \
+m:title='cat'>x</m:mi>\\n             <m:mo>+</m:mo>\\n             \
+<m:mn>1</m:mn>\\n          </m:math>\\n         </p>\\n     </body>\\n</html>\
+\>\""}], ";"}]], "Input",
+ CellLabel->"In[2]:=",
+ CellID->31366768,ExpressionUUID->"ea87049a-813c-4c57-a891-dde981bf8df4"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"obj", "=", 
+   RowBox[{"ImportString", "[", 
+    RowBox[{"str", ",", "\"\<XML\>\""}], "]"}]}], ";"}]], "Input",
+ CellLabel->"In[3]:=",
+ CellID->16992958,ExpressionUUID->"04b8b536-77af-4586-beef-0a8cf71b6fbb"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"CSSTargets", "[", 
+  RowBox[{"obj", ",", 
+   RowBox[{"CSSSelector", "[", "\"\<mo\>\"", "]"}]}], "]"}]], "Input",
+ CellLabel->"In[4]:=",
+ CellID->201089156,ExpressionUUID->"0f0a8b6b-6609-4939-8821-08f391f7c30f"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"{", 
+   RowBox[{"{", 
+    RowBox[{
+    "2", ",", "3", ",", "2", ",", "3", ",", "2", ",", "3", ",", "1", ",", "3",
+      ",", "2"}], "}"}], "}"}], "}"}]], "Output",
+ ImageSize->{197, 14},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[4]=",
+ CellID->106234490,ExpressionUUID->"632be229-145c-4b64-b553-50d086d94ddc"]
+}, Open  ]]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ "Options",
+ "\[NonBreakingSpace]\[NonBreakingSpace]",
+ Cell["(1)", "ExampleCount",ExpressionUUID->
+  "7e7fb773-0686-4c3b-a940-61141eff98c9"]
+}], "ExampleSection", "ExampleSection",
+ WholeCellGroupOpener->True,
+ CellID->2061341341,ExpressionUUID->"6529ac5d-578d-4b5b-a8f8-03a806c3387d"],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ "\"Namespaces\"",
+ "\[NonBreakingSpace]\[NonBreakingSpace]",
+ Cell["(1)", "ExampleCount",ExpressionUUID->
+  "f69cadc3-b93f-4399-a3da-d08713e8638d"]
+}], "ExampleSubsection", "ExampleSubsection",
+ WholeCellGroupOpener->True,
+ CellID->1757724783,ExpressionUUID->"27b66d06-332a-4788-90c8-f55ed953560a"],
+
+Cell[BoxData[
+ RowBox[{"Needs", "[", "\"\<CSSTools`\>\"", "]"}]], "Input",
+ CellLabel->"In[1]:=",
+ CellID->177795047,ExpressionUUID->"1da48930-1a2a-4983-a74f-5b804ae28ceb"],
+
+Cell["\<\
+If a namespace is given in the selector then an expansion rule is required. \
+Otherwise the selector won\[CloseCurlyQuote]t match any element.\
+\>", "ExampleText",
+ CellID->85034161,ExpressionUUID->"009afa23-ac2c-49af-8e04-ba67bf0aac5f"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"CSSSelector", "[", 
+  RowBox[{"\"\<m|mo\>\"", ",", 
+   RowBox[{"\"\<Namespaces\>\"", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{
+     "\"\<m\>\"", "->", "\"\<http://www.w3.org/1998/Math/MathML\>\""}], 
+     "}"}]}]}], "]"}]], "Input",
+ CellLabel->"In[2]:=",
+ CellID->297512230,ExpressionUUID->"e30e2347-d64c-4256-b666-a7541571e432"],
+
+Cell[BoxData[
+ InterpretationBox[
+  StyleBox[
+   FrameBox[
+    TemplateBox[{StyleBox["\"#CSS \"", 
+       RGBColor[0, 0.5, 1], Selectable -> False, StripOnInput -> False],
+      StyleBox["\"m|mo\"", Selectable -> True, StripOnInput -> False]},
+     "RowDefault"],
+    Background->RGBColor[0.92, 0.98, 1],
+    BaseStyle->{FontFamily -> Dynamic[
+        CurrentValue[{StyleHints, "CodeFont"}]], FontSize -> 12, FontWeight -> 
+      Bold, FontColor -> GrayLevel[0.2]},
+    FrameMargins->{{5, 5}, {2, 2}},
+    FrameStyle->Directive[
+      RGBColor[0, 0.5, 1], 
+      AbsoluteThickness[1]],
+    ImageMargins->2,
+    RoundingRadius->4,
+    StripOnInput->False],
+   Editable->False,
+   StripOnInput->False,
+   ShowStringCharacters->False],
+  CSSTools`CSSSelector[
+   Association[
+   "String" -> "m|mo", 
+    "Sequence" -> {
+     "SimpleSelectorSequence" -> {
+       "Type" -> Association[
+         "Namespace" -> "http://www.w3.org/1998/Math/MathML", "Name" -> 
+          "mo"]}}, "Specificity" -> {0, 0, 0, 1}]]]], "Output",
+ ImageSize->{83, 26},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[2]=",
+ CellID->67899643,ExpressionUUID->"2e1a4068-eb3e-4da5-8c93-05d61e0c3885"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"CSSSelector", "[", "\"\<m|mo\>\"", "]"}]], "Input",
+ CellLabel->"In[3]:=",
+ CellID->722724109,ExpressionUUID->"110e47f4-d8af-451e-a3d4-1325a93717f6"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{
+   TagBox["Failure",
+    "SummaryHead"], "[", 
+   DynamicModuleBox[{Typeset`open$$ = False, Typeset`embedState$$ = "Ready"}, 
+    TemplateBox[{PaneSelectorBox[{False -> GridBox[{{
+            FrameBox[
+             StyleBox["\"\[WarningSign]\"", 
+              Directive["Message", 35], StripOnInput -> False], 
+             ContentPadding -> False, FrameStyle -> None, 
+             FrameMargins -> {{0, 0}, {0, 0}}, StripOnInput -> False], 
+            GridBox[{{
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Message\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox["\"Not a declared namespace.\"", "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Position\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                  TemplateBox[{"\"\"", 
+                    StyleBox[
+                    "\"m\"", Background -> RGBColor[1, 1, 0], StripOnInput -> 
+                    False], "\"|mo\""}, "RowDefault"], "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Tag\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox["\"BadNamespace\"", "SummaryItem"]}]}}, 
+             GridBoxAlignment -> {
+              "Columns" -> {{Left}}, "Rows" -> {{Automatic}}}, AutoDelete -> 
+             False, GridBoxItemSize -> {
+              "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+             GridBoxSpacings -> {"Columns" -> {{2}}, "Rows" -> {{Automatic}}},
+              BaseStyle -> {
+              ShowStringCharacters -> False, NumberMarks -> False, 
+               PrintPrecision -> 3, ShowSyntaxStyles -> False}]}}, 
+          GridBoxAlignment -> {"Rows" -> {{Top}}}, AutoDelete -> False, 
+          GridBoxItemSize -> {
+           "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+          BaselinePosition -> {1, 1}], True -> GridBox[{{
+            FrameBox[
+             StyleBox["\"\[WarningSign]\"", 
+              Directive["Message", 35], StripOnInput -> False], 
+             ContentPadding -> False, FrameStyle -> None, 
+             FrameMargins -> {{0, 0}, {0, 0}}, StripOnInput -> False], 
+            GridBox[{{
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Message\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox["\"Not a declared namespace.\"", "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Position\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox[
+                  TemplateBox[{"\"\"", 
+                    StyleBox[
+                    "\"m\"", Background -> RGBColor[1, 1, 0], StripOnInput -> 
+                    False], "\"|mo\""}, "RowDefault"], "SummaryItem"]}]}, {
+               RowBox[{
+                 TagBox[
+                  TemplateBox[{"\"Tag\"", "\": \""}, "RowDefault"], 
+                  "SummaryItemAnnotation"], "\[InvisibleSpace]", 
+                 TagBox["\"BadNamespace\"", "SummaryItem"]}]}}, 
+             GridBoxAlignment -> {
+              "Columns" -> {{Left}}, "Rows" -> {{Automatic}}}, AutoDelete -> 
+             False, GridBoxItemSize -> {
+              "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+             GridBoxSpacings -> {"Columns" -> {{2}}, "Rows" -> {{Automatic}}},
+              BaseStyle -> {
+              ShowStringCharacters -> False, NumberMarks -> False, 
+               PrintPrecision -> 3, ShowSyntaxStyles -> False}]}}, 
+          GridBoxAlignment -> {"Rows" -> {{Top}}}, AutoDelete -> False, 
+          GridBoxItemSize -> {
+           "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}, 
+          BaselinePosition -> {1, 1}]}, 
+       Dynamic[Typeset`open$$], ImageSize -> Automatic]},
+     "SummaryPanel"],
+    DynamicModuleValues:>{}], "]"}],
+  Failure["BadNamespace", 
+   Association[
+   "Message" -> "Not a declared namespace.", "Position" -> Row[{"", 
+       Style["m", Background -> RGBColor[1, 1, 0]], "|mo"}]]],
+  Editable->False,
+  SelectWithContents->True,
+  Selectable->False]], "Output",
+ ImageSize->{316, 68},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[3]=",
+ CellID->8006655,ExpressionUUID->"110c59a3-7aa6-4b0e-a06f-6d6b0c62a465"]
+}, Open  ]],
+
+Cell["\<\
+If the selector does not specify a namespace, then the namespace is ignored \
+when targeting XML elements:\
+\>", "ExampleText",
+ CellID->420729697,ExpressionUUID->"a8276323-acfc-4764-9331-d9993bcb7b6b"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"obj", "=", 
+   RowBox[{"ImportString", "[", 
+    RowBox[{
+     InterpretationBox[
+      DynamicModuleBox[{Typeset`open = False}, 
+       TemplateBox[{"String",TagBox["String", "IconizedNameLight"],GridBox[{{
+            RowBox[{
+              TagBox["\"String length: \"", "IconizedLabel"], 
+              "\[InvisibleSpace]", 
+              TagBox["413", "IconizedItem"]}]}, {
+            RowBox[{
+              TagBox["\"Byte count: \"", "IconizedLabel"], 
+              "\[InvisibleSpace]", 
+              TagBox["448", "IconizedItem"]}]}}, 
+          GridBoxAlignment -> {"Columns" -> {{Left}}}, DefaultBaseStyle -> 
+          "Column", 
+          GridBoxItemSize -> {
+           "Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}],Dynamic[
+         Typeset`open]},
+        "IconizedObject"]],
+      "<html xml:lang='zh'>\n     <head> <title>Test</title> </head>\n       \
+<body xmlns='http://www.w3.org/1999/xhtml'>\n         <p lang='en' \
+class='red' myid='unique'>Here is some math.</p>\n         <p>\n           \
+<m:math xmlns:m='http://www.w3.org/1998/Math/MathML'>\n             <m:mi \
+m:title='cat'>x</m:mi>\n             <m:mo>+</m:mo>\n             \
+<m:mn>1</m:mn>\n          </m:math>\n         </p>\n     </body>\n</html>",
+      SelectWithContents->True,
+      Selectable->False], ",", "\"\<XML\>\""}], "]"}]}], ";"}]], "Input",
+ CellLabel->"In[4]:=",
+ CellID->350196467,ExpressionUUID->"228e5ba4-cc36-409b-a427-91a08aa58e76"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"CSSTargets", "[", 
+  RowBox[{"obj", ",", "\"\<mo\>\""}], "]"}]], "Input",
+ CellLabel->"In[5]:=",
+ CellID->244164636,ExpressionUUID->"9092190a-a89c-492b-bd4b-badf1a0c1fd9"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"{", 
+   RowBox[{"{", 
+    RowBox[{
+    "2", ",", "3", ",", "2", ",", "3", ",", "2", ",", "3", ",", "1", ",", "3",
+      ",", "2"}], "}"}], "}"}], "}"}]], "Output",
+ ImageSize->{197, 14},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[5]=",
+ CellID->31739089,ExpressionUUID->"22862e6a-06c0-447a-8b7d-419c10f8f710"]
+}, Open  ]]
+}, Closed]]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ "Applications",
+ "\[NonBreakingSpace]\[NonBreakingSpace]",
+ Cell["(1)", "ExampleCount",ExpressionUUID->
+  "80127f6a-0585-47bb-a9ab-bee2bfe2b6ea"]
+}], "ExampleSection", "ExampleSection",
+ WholeCellGroupOpener->True,
+ CellID->258228157,ExpressionUUID->"fd7e4ed4-a19f-47e5-9353-ef430f715a43"],
+
+Cell[BoxData[
+ RowBox[{"Needs", "[", "\"\<CSSTools`\>\"", "]"}]], "Input",
+ CellLabel->"In[1]:=",
+ CellID->92390800,ExpressionUUID->"6e64efa6-7fdb-461f-9010-48bfa96f4f02"],
+
+Cell["Start with an XMLObject.", "ExampleText",
+ CellID->367089718,ExpressionUUID->"bdfff4de-b933-44f7-b0ae-e8f50ccd99b2"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"cssExamplesDirectory", "=", 
+   RowBox[{"FileNameJoin", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"ParentDirectory", "[", 
+       RowBox[{"DirectoryName", "[", 
+        RowBox[{"FindFile", "[", "\"\<CSSTools`\>\"", "]"}], "]"}], "]"}], 
+      ",", "\"\<Examples\>\""}], "}"}], "]"}]}], ";"}]], "Input",
+ CellLabel->"In[2]:=",
+ CellID->708740087,ExpressionUUID->"28b60e42-05c3-4821-a45b-2cd11379fdfa"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"document", "=", 
+   RowBox[{"Import", "[", 
+    RowBox[{
+     RowBox[{"FileNameJoin", "[", 
+      RowBox[{"{", 
+       RowBox[{"cssExamplesDirectory", ",", "\"\<Example2.xml\>\""}], "}"}], 
+      "]"}], ",", "\"\<XMLObject\>\""}], "]"}]}], ";"}]], "Input",
+ CellLabel->"In[3]:=",
+ CellID->474320491,ExpressionUUID->"b9100040-d0ee-4444-8b1f-165837807242"],
+
+Cell["\<\
+Look for elements that belong to classes that contain the letter 'h'.\
+\>", "ExampleText",
+ CellID->806585214,ExpressionUUID->"15ba44f2-d061-4197-b5e9-f5e98ac42978"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"CSSTargets", "[", 
+  RowBox[{"document", ",", 
+   RowBox[{"CSSSelector", "[", "\"\<[class*=h]\>\"", "]"}]}], "]"}]], "Input",
+ CellLabel->"In[4]:=",
+ CellID->451328574,ExpressionUUID->"a90f497c-9f3b-4c8f-9d4c-606a89df38f9"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"2", ",", "3", ",", "2", ",", "3", ",", "1"}], "}"}], ",", 
+    RowBox[{"{", 
+     RowBox[{"2", ",", "3", ",", "2", ",", "3", ",", "331"}], "}"}], ",", 
+    RowBox[{"{", 
+     RowBox[{"2", ",", "3", ",", "2", ",", "3", ",", "333"}], "}"}], ",", 
+    RowBox[{"{", 
+     RowBox[{
+     "2", ",", "3", ",", "2", ",", "3", ",", "1", ",", "3", ",", "6"}], 
+     "}"}]}], "}"}], "}"}]], "Output",
+ ImageSize->{501, 14},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[4]=",
+ CellID->10189285,ExpressionUUID->"e6504470-c3e5-46aa-b399-5d3738cdefab"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"Extract", "[", 
+    RowBox[{"document", ",", 
+     RowBox[{"%", "[", 
+      RowBox[{"[", "1", "]"}], "]"}]}], "]"}], "[", 
+   RowBox[{"[", 
+    RowBox[{"All", ",", 
+     RowBox[{"1", ";;", "2"}]}], "]"}], "]"}], "//", "Column"}]], "Input",
+ CellLabel->"In[5]:=",
+ CellID->422396312,ExpressionUUID->"46e834bc-06c3-4ec1-9412-7e2e5a9ff081"],
+
+Cell[BoxData[
+ TagBox[GridBox[{
+    {
+     RowBox[{"XMLElement", "[", 
+      RowBox[{"\<\"div\"\>", ",", 
+       RowBox[{"{", 
+        RowBox[{"\<\"class\"\>", "\[Rule]", "\<\"head\"\>"}], "}"}]}], "]"}]},
+    {
+     RowBox[{"XMLElement", "[", 
+      RowBox[{"\<\"dl\"\>", ",", 
+       RowBox[{"{", 
+        RowBox[{"\<\"class\"\>", "\[Rule]", "\<\"bibliography\"\>"}], "}"}]}],
+       "]"}]},
+    {
+     RowBox[{"XMLElement", "[", 
+      RowBox[{"\<\"dl\"\>", ",", 
+       RowBox[{"{", 
+        RowBox[{"\<\"class\"\>", "\[Rule]", "\<\"bibliography\"\>"}], "}"}]}],
+       "]"}]},
+    {
+     RowBox[{"XMLElement", "[", 
+      RowBox[{"\<\"p\"\>", ",", 
+       RowBox[{"{", 
+        RowBox[{"\<\"class\"\>", "\[Rule]", "\<\"copyright\"\>"}], "}"}]}], 
+      "]"}]}
+   },
+   DefaultBaseStyle->"Column",
+   GridBoxAlignment->{"Columns" -> {{Left}}},
+   GridBoxItemSize->{"Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}],
+  "Column"]], "Output",
+ ImageSize->{263, 65},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[5]=",
+ CellID->127329240,ExpressionUUID->"161c66cf-a51f-4cd9-9060-cee37da48c8c"]
+}, Open  ]],
+
+Cell["Look for elements of class .no-num", "ExampleText",
+ CellID->112997094,ExpressionUUID->"3aac279e-db08-4fe8-b8e5-366e8ec39722"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"Extract", "[", 
+   RowBox[{"document", ",", 
+    RowBox[{
+     RowBox[{"CSSTargets", "[", 
+      RowBox[{"document", ",", 
+       RowBox[{"CSSSelector", "[", "\"\<.no-num\>\"", "]"}]}], "]"}], "[", 
+     RowBox[{"[", "1", "]"}], "]"}]}], "]"}], "//", "Column"}]], "Input",
+ CellLabel->"In[6]:=",
+ CellID->172130544,ExpressionUUID->"97852ca9-6c12-43fd-969f-723efba081b9"],
+
+Cell[BoxData[
+ TagBox[GridBox[{
+    {
+     RowBox[{"XMLElement", "[", 
+      RowBox[{"\<\"h2\"\>", ",", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"\<\"class\"\>", "\[Rule]", "\<\"no-num no-toc\"\>"}], ",", 
+         RowBox[{"\<\"id\"\>", "\[Rule]", "\<\"abstract\"\>"}]}], "}"}], ",", 
+       RowBox[{"{", "\<\"Abstract\"\>", "}"}]}], "]"}]},
+    {
+     RowBox[{"XMLElement", "[", 
+      RowBox[{"\<\"h2\"\>", ",", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"\<\"class\"\>", "\[Rule]", "\<\"no-num no-toc\"\>"}], ",", 
+         RowBox[{"\<\"id\"\>", "\[Rule]", "\<\"status\"\>"}]}], "}"}], ",", 
+       RowBox[{"{", "\<\"Status of this document\"\>", "}"}]}], "]"}]},
+    {
+     RowBox[{"XMLElement", "[", 
+      RowBox[{"\<\"h2\"\>", ",", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"\<\"class\"\>", "\[Rule]", "\<\"no-num no-toc\"\>"}], ",", 
+         RowBox[{"\<\"id\"\>", "\[Rule]", "\<\"contents\"\>"}]}], "}"}], ",", 
+       RowBox[{"{", "\<\"Table of contents\"\>", "}"}]}], "]"}]},
+    {
+     RowBox[{"XMLElement", "[", 
+      RowBox[{"\<\"h2\"\>", ",", 
+       RowBox[{"{", 
+        RowBox[{"\<\"class\"\>", "\[Rule]", "\<\"no-num no-toc\"\>"}], "}"}], 
+       ",", 
+       RowBox[{"{", "\<\"W3C Recommendation 06 November 2018\"\>", "}"}]}], 
+      "]"}]}
+   },
+   DefaultBaseStyle->"Column",
+   GridBoxAlignment->{"Columns" -> {{Left}}},
+   GridBoxItemSize->{"Columns" -> {{Automatic}}, "Rows" -> {{Automatic}}}],
+  "Column"]], "Output",
+ ImageSize->{540, 65},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[6]=",
+ CellID->36444222,ExpressionUUID->"cd417ee5-3dd8-470e-a4ec-e3b4cda510cc"]
+}, Open  ]],
+
+Cell["Apply multiple selectors at once", "ExampleText",
+ CellID->695449629,ExpressionUUID->"ff88e8ef-0cdd-47b7-aead-efc9dbeba097"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"CSSTargets", "[", 
+  RowBox[{"document", ",", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"CSSSelector", "[", "\"\<[class*=h]\>\"", "]"}], ",", 
+     RowBox[{"CSSSelector", "[", "\"\<.no-num\>\"", "]"}]}], "}"}]}], 
+  "]"}]], "Input",
+ CellLabel->"In[7]:=",
+ CellID->252086095,ExpressionUUID->"640a83f0-ad8d-4062-b3bb-b6207e06f7b2"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"2", ",", "3", ",", "2", ",", "3", ",", "1"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"2", ",", "3", ",", "2", ",", "3", ",", "331"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"2", ",", "3", ",", "2", ",", "3", ",", "333"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+      "2", ",", "3", ",", "2", ",", "3", ",", "1", ",", "3", ",", "6"}], 
+      "}"}]}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"2", ",", "3", ",", "2", ",", "3", ",", "2"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"2", ",", "3", ",", "2", ",", "3", ",", "10"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"2", ",", "3", ",", "2", ",", "3", ",", "19"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+      "2", ",", "3", ",", "2", ",", "3", ",", "1", ",", "3", ",", "3"}], 
+      "}"}]}], "}"}]}], "}"}]], "Output",
+ ImageSize->{501, 31},
+ ImageMargins->{{0, 0}, {0, 0}},
+ ImageRegion->{{0, 1}, {0, 1}},
+ CellLabel->"Out[7]=",
+ CellID->133769735,ExpressionUUID->"0c8d7201-57d3-4f3c-b825-b7cfdc6c2961"]
+}, Open  ]]
+}, Closed]],
+
+Cell["", "SectionFooterSpacer",ExpressionUUID->"ae81c43f-48b4-4df8-811c-807da3f4fdab"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{6},
+   "Spacer1"]],ExpressionUUID->"40ad2ecf-d0e3-4c62-8377-8ba4190435bb"],
+ "Tutorials"
+}], "TutorialsSection",
+ WholeCellGroupOpener->True,
+ CellID->250839057,ExpressionUUID->"896b3e67-7efd-4cfe-8dcd-77cab969e9ff"],
+
+Cell["", "SectionHeaderSpacer",ExpressionUUID->"9ac6a329-fecf-4e3a-a341-995d876dd7b7"],
+
+Cell[BoxData[
+ TemplateBox[{Cell[
+    TextData["CSSTools"]],"paclet:CSSTools/tutorial/CSSTools"},
+  "RefLink",
+  BaseStyle->"Tutorials"]], "Tutorials",
+ CellID->341631938,ExpressionUUID->"02ae5e55-b7c4-4130-9e0b-158115f9b6a4"],
+
+Cell["", "SectionFooterSpacer",ExpressionUUID->"3830ce23-e622-4a04-8b8a-141d6d98c74d"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{6},
+   "Spacer1"]],ExpressionUUID->"124846c4-d0f7-434a-9e56-be61fd6ce56e"],
+ "Related Guides"
+}], "MoreAboutSection",
+ WholeCellGroupOpener->True,
+ CellID->38303248,ExpressionUUID->"1f1effa8-45d9-45cc-b2e2-cda748fced19"],
+
+Cell["", "SectionHeaderSpacer",ExpressionUUID->"0516cf0d-33a8-4d95-b236-283a6aab0ce4"],
+
+Cell[BoxData[
+ TemplateBox[{Cell[
+    TextData["CSSTools"]],"paclet:CSSTools/guide/CSSTools"},
+  "RefLink",
+  BaseStyle->"MoreAbout"]], "MoreAbout",
+ CellID->396283692,ExpressionUUID->"a5a2617f-d771-4854-a333-3e9c8a98fddf"],
+
+Cell["", "SectionFooterSpacer",ExpressionUUID->"02ed775f-31e5-4788-90b0-257c3e79010c"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{6},
+   "Spacer1"]],ExpressionUUID->"bd8880e6-367f-4120-ad0a-7cb4a51b7a2c"],
+ "Related Links"
+}], "RelatedLinksSection",
+ WholeCellGroupOpener->True,
+ CellID->1584193535,ExpressionUUID->"2ca100f7-d708-41f3-81b1-c214294ae45a"],
+
+Cell["", "SectionHeaderSpacer",ExpressionUUID->"8c0a7475-3f22-41d6-998d-275e5e5b1253"],
+
+Cell[BoxData[{
+ RowBox[{
+  TemplateBox[{Cell[
+     TextData["Position"]],"paclet:ref/Position"},
+   "RefLink",
+   BaseStyle->"RelatedLinks"], "\n", "\[NonBreakingSpace]"}], "\n", 
+ RowBox[{
+  StyleBox[
+   RowBox[{"\[MediumSpace]", "\[FilledVerySmallSquare]", "\[MediumSpace]"}], 
+   "InlineSeparator"], "\n", " "}], "\n", 
+ TemplateBox[{Cell[
+    TextData["ExtractCSSFromXML"]],"paclet:CSSTools/ref/ExtractCSSFromXML"},
+  "RefLink",
+  BaseStyle->"RelatedLinks"]}], "RelatedLinks",
+ CellID->1038487239,ExpressionUUID->"201f8e1e-d45c-4426-a9ea-df37d4f19c3b"]
+}, Open  ]],
+
+Cell[" ", "FooterCell",ExpressionUUID->"c5f6d95f-c305-4ec5-a491-0a1a869d4747"]
+},
+Saveable->False,
+ScreenStyleEnvironment->"Working",
+WindowSize->{725, 750},
+WindowMargins->{{0, Automatic}, {Automatic, 0}},
+WindowTitle->"CSSSelector",
+TaggingRules->{
+ "ModificationHighlight" -> False, "ColorType" -> "SymbolColor", "LinkTrails" -> 
+  GridBox[{{
+      RowBox[{
+        ButtonBox[
+        "Wolfram Language", ButtonData -> "paclet:guide/WolframRoot", 
+         BaseStyle -> {"Link", "DockedLinkTrail"}]}]}}, ColumnAlignments -> 
+    Left], "ExampleCounter" -> 1, "NeedPlatMsgIn" -> None, "RootCaptions" -> 
+  "", "Metadata" -> {
+   "built" -> "{2019, 8, 12, 10, 25, 7.7911251}", 
+    "history" -> {"0.0", "", "", ""}, "context" -> "CSSTools`", 
+    "keywords" -> {}, "specialkeywords" -> {}, 
+    "tutorialcollectionlinks" -> {}, "index" -> True, "label" -> 
+    "C S S Tools Symbol", "language" -> "en", "paclet" -> "CSSTools", 
+    "status" -> "None", "summary" -> 
+    "CSSSelector[string] parses string as a CSS selector. If valid it returns \
+a CSSSelector object.", "synonyms" -> {}, "tabletags" -> {}, "title" -> 
+    "CSSSelector", "titlemodifier" -> "", "windowtitle" -> "CSSSelector", 
+    "type" -> "Symbol", "uri" -> "CSSTools/ref/Selector", 
+    "WorkflowDockedCell" -> ""}, "SearchTextTranslated" -> "", "NewStyles" -> 
+  False},
+CellContext->"Global`",
+FrontEndVersion->"11.3 for Microsoft Windows (64-bit) (March 6, 2018)",
+StyleDefinitions->Notebook[{
+   Cell[
+    StyleData[
+    StyleDefinitions -> FrontEnd`FileName[{"Wolfram"}, "Reference.nb"]]], 
+   Cell[
+    StyleData["Input"], CellContext -> "Global`"], 
+   Cell[
+    StyleData["Output"], CellContext -> "Global`"]}, Visible -> False, 
+  TaggingRules -> {"NewStyles" -> False}, FrontEndVersion -> 
+  "11.3 for Microsoft Windows (64-bit) (March 6, 2018)", StyleDefinitions -> 
+  "Default.nb"]
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{
+ "PrimaryExamplesSection"->{
+  Cell[10594, 263, 435, 11, 35, "PrimaryExamplesSection",ExpressionUUID->"6e25af12-09c8-43eb-9c78-32e3f104385f",
+   CellTags->"PrimaryExamplesSection",
+   CellID->124682739]}
+ }
+*)
+(*CellTagsIndex
+CellTagsIndex->{
+ {"PrimaryExamplesSection", 61110, 1563}
+ }
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[583, 21, 4057, 93, 55, "AnchorBarGrid",ExpressionUUID->"28f1f339-64e5-47fb-ba63-4ecac1ce1079",
+ CellID->1],
+Cell[CellGroupData[{
+Cell[4665, 118, 396, 9, 52, "ObjectNameGrid",ExpressionUUID->"7a3b04c2-5729-4675-87f9-7ab968bf10ef"],
+Cell[5064, 129, 747, 17, 110, "Usage",ExpressionUUID->"01fc190d-c230-4d45-9f1f-1750930f0360",
+ CellID->982511436]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[5848, 151, 854, 21, 37, "NotesSection",ExpressionUUID->"5c91a03b-11af-42e7-871e-ee8faedd9e72",
+ CellGroupingRules->{"SectionGrouping", 50},
+ CellID->71023599],
+Cell[6705, 174, 86, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"1fe2c7ed-a7cd-4372-aa20-a64b7554511d"],
+Cell[6794, 176, 391, 6, 70, "Notes",ExpressionUUID->"b8d4d2dd-a2c6-4c31-981e-48d8c6f8bae3",
+ CellID->440284988],
+Cell[7188, 184, 580, 12, 70, "3ColumnTableMod",ExpressionUUID->"ab1fbf6e-3df0-4994-ae8d-9ba71f486238",
+ CellID->410826631],
+Cell[7771, 198, 414, 8, 70, "Notes",ExpressionUUID->"60af278f-ea13-4051-bc73-31d07b01c2d8",
+ CellID->45736260],
+Cell[8188, 208, 289, 5, 70, "Notes",ExpressionUUID->"36b1a9d4-43bb-4798-9bc5-ea77edb99343",
+ CellID->452916219],
+Cell[8480, 215, 1630, 31, 70, "2ColumnTableMod",ExpressionUUID->"625d542a-528f-43b1-9d68-b3be711cbb10",
+ CellID->292513715],
+Cell[10113, 248, 355, 8, 70, "Notes",ExpressionUUID->"db224b5b-b5b5-477a-b65d-41807ab385b8",
+ CellID->357733518],
+Cell[10471, 258, 86, 0, 70, "SectionFooterSpacer",ExpressionUUID->"ccab2255-4737-4000-b1ec-d3512f3b0987"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[10594, 263, 435, 11, 35, "PrimaryExamplesSection",ExpressionUUID->"6e25af12-09c8-43eb-9c78-32e3f104385f",
+ CellTags->"PrimaryExamplesSection",
+ CellID->124682739],
+Cell[CellGroupData[{
+Cell[11054, 278, 307, 7, 29, "ExampleSection",ExpressionUUID->"33690cca-87bf-4205-9cf4-b1495832bd6c",
+ CellID->48020248],
+Cell[11364, 287, 171, 3, 26, "Input",ExpressionUUID->"63bc8ee5-e225-4309-ad58-fee8b5632ac0",
+ CellID->47919439],
+Cell[11538, 292, 125, 1, 38, "ExampleText",ExpressionUUID->"41fa212f-a226-4c33-aa09-a637ad15a59a",
+ CellID->636035772],
+Cell[CellGroupData[{
+Cell[11688, 297, 212, 4, 26, "Input",ExpressionUUID->"765ee8dc-8e36-4451-aa69-20a0efdf19b2",
+ CellID->432058819],
+Cell[11903, 303, 1520, 41, 47, "Output",ExpressionUUID->"d3a9825c-4068-426f-bd0e-d75b93ddcc2a",
+ CellID->110745681]
+}, Open  ]],
+Cell[13438, 347, 137, 1, 38, "ExampleText",ExpressionUUID->"e10bf859-f690-4d92-ac5c-809bdfc4db99",
+ CellID->569249250],
+Cell[CellGroupData[{
+Cell[13600, 352, 199, 4, 26, "Input",ExpressionUUID->"1d013202-4db7-4bf6-8cf1-51a55fc3c49b",
+ CellID->354198895],
+Cell[13802, 358, 1786, 43, 86, "Output",ExpressionUUID->"8c9c2943-746e-4560-8163-008c1f7453d9",
+ CellID->315095647]
+}, Open  ]],
+Cell[15603, 404, 130, 1, 38, "ExampleText",ExpressionUUID->"9d8b3179-b7f9-4ddd-aaa3-c20fbfbaabc6",
+ CellID->20355043],
+Cell[CellGroupData[{
+Cell[15758, 409, 173, 3, 26, "Input",ExpressionUUID->"f70738a3-6ff8-4aab-9eea-90e3a5925258",
+ CellID->283408170],
+Cell[15934, 414, 278, 7, 35, "Output",ExpressionUUID->"8e2262c4-4942-49a0-80d2-1f165936ca97",
+ CellID->277907791]
+}, Open  ]],
+Cell[16227, 424, 196, 4, 38, "ExampleText",ExpressionUUID->"6dc893e9-33f4-4984-966c-914fa73c2acf",
+ CellID->85640333],
+Cell[CellGroupData[{
+Cell[16448, 432, 176, 3, 70, "Input",ExpressionUUID->"7786b7b5-0aa4-42bf-88c7-2b84e031d160",
+ CellID->413918420],
+Cell[16627, 437, 4779, 100, 70, "Output",ExpressionUUID->"05f0270f-261b-48dc-b810-9ddd3b21dfdf",
+ CellID->32358383]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[21443, 542, 184, 3, 70, "Input",ExpressionUUID->"61228bb1-d9f3-40fd-bc4e-f4b63491109c",
+ CellID->577650804],
+Cell[21630, 547, 4628, 97, 70, "Output",ExpressionUUID->"080a5adc-1452-434c-a922-1409b23506c5",
+ CellID->113326140]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[26295, 649, 186, 3, 70, "Input",ExpressionUUID->"b63c58c5-cbf1-420d-b8d2-0d1dddfb35a6",
+ CellID->21510429],
+Cell[26484, 654, 4830, 102, 70, "Output",ExpressionUUID->"acb996e0-6418-4413-bdb9-c44621c95f7a",
+ CellID->204629664]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[31351, 761, 183, 3, 70, "Input",ExpressionUUID->"d986779d-61b8-406e-95b0-fa098a2f66ac",
+ CellID->278672920],
+Cell[31537, 766, 4864, 103, 70, "Output",ExpressionUUID->"95af72bf-66cf-4c1b-bc0b-762c2b6e5cf6",
+ CellID->540696432]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[36450, 875, 300, 7, 70, "ExampleSection",ExpressionUUID->"aa92aa1f-6b82-4845-8812-a22aaa335681",
+ CellID->1293636265],
+Cell[36753, 884, 198, 4, 70, "ExampleText",ExpressionUUID->"42f03fbd-e352-4eb0-8ca3-951b53ffd54a",
+ CellID->356787859],
+Cell[36954, 890, 172, 3, 70, "Input",ExpressionUUID->"d8f50830-1a59-4f09-9ed7-3d0689c52136",
+ CellID->156532367],
+Cell[37129, 895, 629, 12, 70, "Input",ExpressionUUID->"ea87049a-813c-4c57-a891-dde981bf8df4",
+ CellID->31366768],
+Cell[37761, 909, 243, 6, 70, "Input",ExpressionUUID->"04b8b536-77af-4586-beef-0a8cf71b6fbb",
+ CellID->16992958],
+Cell[CellGroupData[{
+Cell[38029, 919, 234, 5, 70, "Input",ExpressionUUID->"0f0a8b6b-6609-4939-8821-08f391f7c30f",
+ CellID->201089156],
+Cell[38266, 926, 389, 11, 35, "Output",ExpressionUUID->"632be229-145c-4b64-b553-50d086d94ddc",
+ CellID->106234490]
+}, Open  ]]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[38704, 943, 302, 7, 70, "ExampleSection",ExpressionUUID->"6529ac5d-578d-4b5b-a8f8-03a806c3387d",
+ CellID->2061341341],
+Cell[CellGroupData[{
+Cell[39031, 954, 315, 7, 70, "ExampleSubsection",ExpressionUUID->"27b66d06-332a-4788-90c8-f55ed953560a",
+ CellID->1757724783],
+Cell[39349, 963, 172, 3, 70, "Input",ExpressionUUID->"1da48930-1a2a-4983-a74f-5b804ae28ceb",
+ CellID->177795047],
+Cell[39524, 968, 247, 4, 70, "ExampleText",ExpressionUUID->"009afa23-ac2c-49af-8e04-ba67bf0aac5f",
+ CellID->85034161],
+Cell[CellGroupData[{
+Cell[39796, 976, 356, 9, 70, "Input",ExpressionUUID->"e30e2347-d64c-4256-b666-a7541571e432",
+ CellID->297512230],
+Cell[40155, 987, 1202, 34, 47, "Output",ExpressionUUID->"2e1a4068-eb3e-4da5-8c93-05d61e0c3885",
+ CellID->67899643]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[41394, 1026, 173, 3, 70, "Input",ExpressionUUID->"110e47f4-d8af-451e-a3d4-1325a93717f6",
+ CellID->722724109],
+Cell[41570, 1031, 4633, 95, 70, "Output",ExpressionUUID->"110c59a3-7aa6-4b0e-a06f-6d6b0c62a465",
+ CellID->8006655]
+}, Open  ]],
+Cell[46218, 1129, 212, 4, 70, "ExampleText",ExpressionUUID->"a8276323-acfc-4764-9331-d9993bcb7b6b",
+ CellID->420729697],
+Cell[46433, 1135, 1483, 31, 70, "Input",ExpressionUUID->"228e5ba4-cc36-409b-a427-91a08aa58e76",
+ CellID->350196467],
+Cell[CellGroupData[{
+Cell[47941, 1170, 195, 4, 70, "Input",ExpressionUUID->"9092190a-a89c-492b-bd4b-badf1a0c1fd9",
+ CellID->244164636],
+Cell[48139, 1176, 388, 11, 35, "Output",ExpressionUUID->"22862e6a-06c0-447a-8b7d-419c10f8f710",
+ CellID->31739089]
+}, Open  ]]
+}, Closed]]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[48588, 1194, 306, 7, 70, "ExampleSection",ExpressionUUID->"fd7e4ed4-a19f-47e5-9353-ef430f715a43",
+ CellID->258228157],
+Cell[48897, 1203, 171, 3, 70, "Input",ExpressionUUID->"6e64efa6-7fdb-461f-9010-48bfa96f4f02",
+ CellID->92390800],
+Cell[49071, 1208, 122, 1, 70, "ExampleText",ExpressionUUID->"bdfff4de-b933-44f7-b0ae-e8f50ccd99b2",
+ CellID->367089718],
+Cell[49196, 1211, 445, 11, 70, "Input",ExpressionUUID->"28b60e42-05c3-4821-a45b-2cd11379fdfa",
+ CellID->708740087],
+Cell[49644, 1224, 389, 10, 70, "Input",ExpressionUUID->"b9100040-d0ee-4444-8b1f-165837807242",
+ CellID->474320491],
+Cell[50036, 1236, 175, 3, 70, "ExampleText",ExpressionUUID->"15ba44f2-d061-4197-b5e9-f5e98ac42978",
+ CellID->806585214],
+Cell[CellGroupData[{
+Cell[50236, 1243, 247, 5, 70, "Input",ExpressionUUID->"a90f497c-9f3b-4c8f-9d4c-606a89df38f9",
+ CellID->451328574],
+Cell[50486, 1250, 662, 18, 35, "Output",ExpressionUUID->"e6504470-c3e5-46aa-b399-5d3738cdefab",
+ CellID->10189285]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[51185, 1273, 384, 11, 70, "Input",ExpressionUUID->"46e834bc-06c3-4ec1-9412-7e2e5a9ff081",
+ CellID->422396312],
+Cell[51572, 1286, 1133, 34, 86, "Output",ExpressionUUID->"161c66cf-a51f-4cd9-9060-cee37da48c8c",
+ CellID->127329240]
+}, Open  ]],
+Cell[52720, 1323, 132, 1, 70, "ExampleText",ExpressionUUID->"3aac279e-db08-4fe8-b8e5-366e8ec39722",
+ CellID->112997094],
+Cell[CellGroupData[{
+Cell[52877, 1328, 405, 10, 70, "Input",ExpressionUUID->"97852ca9-6c12-43fd-969f-723efba081b9",
+ CellID->172130544],
+Cell[53285, 1340, 1672, 43, 86, "Output",ExpressionUUID->"cd417ee5-3dd8-470e-a4ec-e3b4cda510cc",
+ CellID->36444222]
+}, Open  ]],
+Cell[54972, 1386, 130, 1, 70, "ExampleText",ExpressionUUID->"ff88e8ef-0cdd-47b7-aead-efc9dbeba097",
+ CellID->695449629],
+Cell[CellGroupData[{
+Cell[55127, 1391, 356, 9, 70, "Input",ExpressionUUID->"640a83f0-ad8d-4062-b3bb-b6207e06f7b2",
+ CellID->252086095],
+Cell[55486, 1402, 1135, 31, 52, "Output",ExpressionUUID->"0c8d7201-57d3-4f3c-b825-b7cfdc6c2961",
+ CellID->133769735]
+}, Open  ]]
+}, Closed]],
+Cell[56648, 1437, 86, 0, 70, "SectionFooterSpacer",ExpressionUUID->"ae81c43f-48b4-4df8-811c-807da3f4fdab"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[56771, 1442, 262, 7, 70, "TutorialsSection",ExpressionUUID->"896b3e67-7efd-4cfe-8dcd-77cab969e9ff",
+ CellID->250839057],
+Cell[57036, 1451, 86, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"9ac6a329-fecf-4e3a-a341-995d876dd7b7"],
+Cell[57125, 1453, 226, 5, 70, "Tutorials",ExpressionUUID->"02ae5e55-b7c4-4130-9e0b-158115f9b6a4",
+ CellID->341631938],
+Cell[57354, 1460, 86, 0, 70, "SectionFooterSpacer",ExpressionUUID->"3830ce23-e622-4a04-8b8a-141d6d98c74d"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[57477, 1465, 266, 7, 70, "MoreAboutSection",ExpressionUUID->"1f1effa8-45d9-45cc-b2e2-cda748fced19",
+ CellID->38303248],
+Cell[57746, 1474, 86, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"0516cf0d-33a8-4d95-b236-283a6aab0ce4"],
+Cell[57835, 1476, 223, 5, 70, "MoreAbout",ExpressionUUID->"a5a2617f-d771-4854-a333-3e9c8a98fddf",
+ CellID->396283692],
+Cell[58061, 1483, 86, 0, 70, "SectionFooterSpacer",ExpressionUUID->"02ed775f-31e5-4788-90b0-257c3e79010c"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[58184, 1488, 270, 7, 70, "RelatedLinksSection",ExpressionUUID->"2ca100f7-d708-41f3-81b1-c214294ae45a",
+ CellID->1584193535],
+Cell[58457, 1497, 86, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"8c0a7475-3f22-41d6-998d-275e5e5b1253"],
+Cell[58546, 1499, 556, 14, 70, "RelatedLinks",ExpressionUUID->"201f8e1e-d45c-4426-a9ea-df37d4f19c3b",
+ CellID->1038487239]
+}, Open  ]],
+Cell[59117, 1516, 78, 0, 70, "FooterCell",ExpressionUUID->"c5f6d95f-c305-4ec5-a491-0a1a869d4747"]
+}
+]
+*)
+
+(* End of internal cache information *)
+
