@@ -1,14 +1,12 @@
 (* Wolfram Language Package *)
 
-(* Created by the Wolfram Workbench Mar 5, 2019 *)
-
 (* ::Title:: *)
-(*CSS 2.1 Visual Style Importer*)
+(*CSS Visual Style Importer*)
 
 
 (* ::Text:: *)
 (*Author: Kevin Daily*)
-(*Date: 20190321*)
+(*Date: 20190814*)
 (*Version: 1*)
 
 
@@ -61,6 +59,7 @@ Get["CSSTools`CSSPropertyInterpreter`"]   (* needs to be loaded first to define 
 Get["CSSTools`CSSStyleSheetInterpreter`"] (* defines basic stylesheet token consumers and CSS cascade *)
 Get["CSSTools`CSSColors4`"];              (* redefines parseSingleColor (first defined in CSSPropertyInterpreter) *)
 Get["CSSTools`CSSPagedMedia3`"]           (* redefines @page token consumer (first defined in CSSStyleSheetInterpreter) *)
+Get["CSSTools`CSSMediaQueries4`"]         (* redefines consumeMediaQuery (first defined in CSSStyleSheetInterpreter) *)
 
 
 ImportExport`RegisterImport[

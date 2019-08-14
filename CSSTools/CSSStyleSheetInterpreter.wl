@@ -9,6 +9,7 @@ BeginPackage["CSSTools`CSSStyleSheetInterpreter`", {"CSSTools`"}];
 consumeDeclaration;
 consumeAtPageRule;
 consumeAtPageBlock;
+consumeMediaQuery;
 convertMarginsToPrintingOptions;
 notebookLevelOptions;
 assemble;
@@ -84,7 +85,7 @@ Begin["`Private`"];
 
 
 consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
-	Module[{pos = 1, l = Length[tokens], imports = {}, namespaces = {}, i = 1, lRulesets, rulesets},
+	Module[{pos = 1, l = Length[tokens], imports = {}, namespaces = {}, rulesets},
 		If[TrueQ @ $Debug, Echo[l, "Token Length"]];
 		
 		(* skip any leading whitespace (there shouldn't be any if @charset exists) *)
@@ -111,16 +112,27 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 		(* Having duplicate default namespaces or dupliate prefixes is nonconforming, but not an error. Remove them. *)
 		namespaces = Reverse @ DeleteDuplicatesBy[Reverse @ namespaces, #Default&];
 		namespaces = Reverse @ DeleteDuplicatesBy[Reverse @ namespaces, #Prefix&];
-				
+		
+		(* consume rulesets *)
+		rulesets = consumeRulesets[pos, l, tokens, namespaces];
+		
+		(* combine all stylesheets *)
+		Join[imports, rulesets]
+	]
+
+
+SetAttributes[consumeRulesets, HoldFirst];
+consumeRulesets[pos_, l_, tokens_, namespaces_, allowAtRule_:True] :=
+	Module[{lRulesets, rulesets, i = 1},
 		lRulesets = Count[tokens, CSSToken[KeyValuePattern["Type" -> "{}"]], {1}]; (* upper bound of possible rulesets *)
 		rulesets = ConstantArray[0, lRulesets]; (* container for processed rulesets *)
 		While[pos < l,
 			If[TrueQ @ $Debug, Echo[pos, "position before rule"]];
 			Which[
 				(* any at-rule *)
-				TokenTypeIs["at-keyword", tokens[[pos]]], 
+				allowAtRule && TokenTypeIs["at-keyword", tokens[[pos]]], 
 					If[TrueQ @ $Debug, Echo[tokens[[pos]], "consuming at rule"]]; 
-					(*TODO*)rulesets[[i]] = consumeAtRule[pos, l, tokens],
+					rulesets[[i]] = consumeAtRule[pos, l, tokens, namespaces],
 				
 				(* bad ruleset: missing a selector *)
 				TokenTypeIs["{}", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens], 
@@ -129,7 +141,7 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 				True, rulesets[[i]] = consumeRuleset[pos, l, tokens, namespaces]; i++;
 			];
 		];
-		Join[imports, DeleteCases[rulesets, 0, {1}]]
+		DeleteCases[rulesets, 0, {1}]
 	]
 
 
@@ -138,7 +150,6 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 
 
 SetAttributes[{consumeAtCharsetKeyword, consumeAtImportKeyword, consumeAtNamespaceKeyword}, HoldFirst];
-
 
 (* The character set is assumed UTF-8 and any charset is ignored. *)
 consumeAtCharsetKeyword[pos_, l_, tokens_] :=
@@ -188,7 +199,6 @@ consumeAtImportKeyword[pos_, l_, tokens_] :=
 		While[TokenTypeIsNot["semicolon", tokens[[pos]]],
 			mediaStart = pos;
 			AdvancePosToNextSemicolonOrComma[pos, l, tokens];
-			If[TrueQ @ $Debug, Echo[pos, "here"]];
 			If[pos == l, Echo["Media query has no closing. Reached EOF.", "@import error"]; Return @ {}];
 			AppendTo[mediums, CSSUntokenize @ tokens[[mediaStart ;; pos - 1]]];
 			If[TokenTypeIs["semicolon", tokens[[pos]]],
@@ -257,9 +267,9 @@ consumeAtNamespaceKeyword[pos_, l_, tokens_] :=
 (*main*)
 
 
-SetAttributes[{consumeAtRule, consumeRuleset, consumeAtPageRule}, HoldFirst];
+SetAttributes[{consumeAtRule, consumeRuleset, consumeAtPageRule, consumeAtMediaRule}, HoldFirst];
 
-consumeAtRule[pos_, l_, tokens_] :=
+consumeAtRule[pos_, l_, tokens_, namespaces_] :=
 	Which[
 		(* @import is not allowed after the top of the stylesheet, so skip them *)
 		TokenStringIs["import", tokens[[pos]]], 
@@ -271,10 +281,7 @@ consumeAtRule[pos_, l_, tokens_] :=
 		TokenStringIs["page", tokens[[pos]]], consumeAtPageRule[pos, l, tokens],
 			
 		(* @media *)
-		TokenStringIs["media", tokens[[pos]]], 
-			AdvancePosToNextSemicolonOrBlock[pos, l, tokens]; 
-			AdvancePosAndSkipWhitespace[pos, l, tokens];
-			{}, 
+		TokenStringIs["media", tokens[[pos]]], consumeAtMediaRule[pos, l, tokens, namespaces],
 			
 		(* unrecognized @rule *)
 		True, 
@@ -285,13 +292,84 @@ consumeAtRule[pos_, l_, tokens_] :=
 
 
 (* ::Subsubsection::Closed:: *)
+(*@media*)
+
+
+consumeAtMediaRule[pos_, l_, tokens_, namespaces_] := 
+	Module[{queries, values, queryStart},
+		Which[
+			(* Media queries are used in a number of places so don't re-check their validity. Instead skip any @media sequence. *)
+			TokenTypeIs["at-keyword", tokens[[pos]]] && TokenStringIs["media", tokens[[pos]]], 
+				AdvancePosAndSkipWhitespace[pos, l, tokens]
+			,
+			(* if no @media sequence then skip possible whitespace *)
+			TokenTypeIs["whitespace", tokens[[pos]]],
+				AdvancePosAndSkipWhitespace[pos, l, tokens]
+			,
+			True, Null
+		];
+		(* medias can be a comma-separated list *)
+		queryStart = pos; AdvancePosToNextBlock[pos, l, tokens];
+		queries = 
+			DeleteCases[
+				SplitBy[tokens[[queryStart ;; pos - 1]], MatchQ[CSSToken[KeyValuePattern["Type" -> "comma"]]]], 
+				{CSSToken[KeyValuePattern["Type" -> "comma"]]}];
+		queries = consumeMediaQuery /@ queries;
+		If[AnyTrue[queries, _?FailureQ], Return @ FirstCase[queries, _?FailureQ]];
+
+		If[TokenTypeIsNot["{}", tokens[[pos]]], Return @ Failure["BadMedia", <|"Message" -> "Expected @media block."|>]];
+		values = consumeAtMediaBlock[tokens[[pos]]["Children"], namespaces];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		values[[All, "Condition"]] = queries;
+		values
+	]
+	
+consumeMediaQuery[tokens:{___?CSSTokenQ}] :=
+	Module[{pos = 1, l = Length[tokens]},
+		(* trim whitespace tokens from ends *)
+		pos = l; If[TokenTypeIs["whitespace", tokens[[pos]]], RetreatPosAndSkipWhitespace[pos, l, tokens]]; l = pos;
+		pos = 1; If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
+		
+		Echo["HERE"];
+		
+		(* first token should be the media type *)
+		Switch[tokens[[pos]]["Type"],
+			"ident", 
+				Switch[tokens[[pos]]["String"],
+					"all",        None,
+					"braille",    Missing["Not supported."],
+					"embossed",   Missing["Not supported."],
+					"handheld",   None,
+					"print",      ScreenStyleEnvironment -> "Printout",
+					"projection", None,
+					"screen",     None,
+					"speech",     Missing["Not supported."],
+					"tty",        Missing["Not supported."],
+					"tv",         None,
+					_,            Missing["Not supported."] (* unknown query type *)
+				],
+			_, Failure["BadMedia", <|"Message" -> "Expected ident token in media query."|>]
+		]
+		
+		(* in future, media conditions follow immediately after the media type, if any *)
+	]
+	
+consumeAtMediaBlock[tokens:{___?CSSTokenQ}, namespaces_] :=
+	Module[{pos = 1, l = Length[tokens]},
+		(* skip any initial whitespace *)
+		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
+		(* consume rulesets, but do not allow additional @rules *)
+		consumeRulesets[pos, l, tokens, namespaces, False (* other @rules are not allowed *)]
+	]
+	
+
+(* ::Subsubsection::Closed:: *)
 (*@page*)
 
 
 consumeAtPageRule[pos_, l_, tokens_] := 
 	Module[{pageSelectors},
 		(* check for valid start of @page token sequence *)
-		If[TrueQ @ $Debug, Echo["HERE?"]];
 		If[TokenTypeIsNot["at-keyword", tokens[[pos]]] || TokenStringIsNot["page", tokens[[pos]]],
 			Echo[Row[{"Expected @page keyword instead of ", tokens[[pos]]}], "@page error"];
 			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
