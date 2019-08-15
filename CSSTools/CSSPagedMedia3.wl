@@ -399,7 +399,7 @@ consumePageSelector[tokens:{___?CSSTokenQ}] :=
 					pos++;
 					If[pos > l, Return @ Failure["UnexpectedParse", <|"Message" -> "Incomplete @page pseudo-page selector."|>]];
 					If[TokenTypeIs["ident", tokens[[pos]]],
-						Switch[tokens[[pos]]["String"],
+						Switch[ToLowerCase @ tokens[[pos]]["String"],
 							"left",  scope = Left,
 							"right", scope = Right,
 							"first", scope = First,
@@ -545,7 +545,7 @@ consumeProperty[prop:"size", tokens:{__?CSSTokenQ}] :=
 			(* case of single keyword *)
 			TokenTypeIs["ident", tokens[[pos]]],
 				value1 = 
-					Switch[tokens[[pos]]["String"],
+					Switch[ToLowerCase @ tokens[[pos]]["String"],
 						"auto", {"PageSize" -> {Automatic, Automatic}, "PaperSize" -> {Automatic, Automatic}},
 						_,      unrecognizedKeyWordFailure @ prop
 					];
@@ -617,7 +617,7 @@ consumeProperty[prop:"marks", tokens:{__?CSSTokenQ}] :=
 	Module[{pos = 1, l = Length[tokens], value},
 		Switch[tokens[[pos]]["Type"],
 			"ident",
-				Switch[tokens[[pos]]["String"],
+				Switch[ToLowerCase @ tokens[[pos]]["String"],
 					"none",  value = {"PrintRegistrationMarks" -> False},
 					"crop",  
 						value = {"PrintRegistrationMarks" -> True};
@@ -658,7 +658,7 @@ consumeProperty[prop:"bleed", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[tokens[[pos]]["String"],
+					Switch[ToLowerCase @ tokens[[pos]]["String"],
 						"auto", Missing["Not supported."], (* Computes to 6pt if marks has crop and to zero otherwise. *)
 						_,      unrecognizedKeyWordFailure @ prop
 					],
@@ -685,7 +685,7 @@ consumeProperty[prop:"page", tokens:{__?CSSTokenQ}] :=
 					(* 
 						If 'auto', the used value is the value specified on its nearest ancestor with a non-auto value. 
 						When specified on the root element, the used value for auto is the empty string. *)
-					If[StringMatchQ[tokens[[pos]]["String"], "auto", IgnoreCase -> True], 
+					If[TokenStringIs["auto", tokens[[pos]]], 
 						Missing["Not supported."]
 						,
 						Missing["Not supported."]

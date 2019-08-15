@@ -335,7 +335,7 @@ consumeMediaQuery[tokens:{___?CSSTokenQ}] :=
 		(* first token should be the media type *)
 		Switch[tokens[[pos]]["Type"],
 			"ident", 
-				Switch[tokens[[pos]]["String"],
+				Switch[ToLowerCase @ tokens[[pos]]["String"],
 					"all",        None,
 					"braille",    Missing["Not supported."],
 					"embossed",   Missing["Not supported."],
@@ -388,7 +388,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 				];
 				pos++;
 				If[TokenTypeIs["ident", tokens[[pos]]],
-					Switch[tokens[[pos]]["String"],
+					Switch[ToLowerCase @ tokens[[pos]]["String"],
 						"left",  Left,
 						"right", Right,
 						"first", Missing["Not supported."],

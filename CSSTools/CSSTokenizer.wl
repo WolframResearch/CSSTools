@@ -249,6 +249,10 @@ tokenizeFlat[x_String] :=
 				(* because of CSS Variables we need to catch this CDC token before parsing idents *)
 				"-->" :> CSSToken[<|"Type" -> "CDC", "String" -> "-->"|>], 
 				
+				(* 
+					It would be awesome if we could use ToLowerCase on the ident "String" key, but we can't.
+					1. CSS variables are case-sensitive idents
+					2. CSS selectors are case-insensitive, but may apply to case-sensitive documents. *)
 				s:RegularExpression @ RE["ident-token"] :> 
 					CSSToken[<|
 						"Type"      -> "ident", 
