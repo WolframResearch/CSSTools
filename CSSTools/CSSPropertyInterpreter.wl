@@ -14,6 +14,7 @@ unrecognizedValueFailure;
 parseAngle;
 parseCounter;
 parseLength;
+parseNumber;
 parseSingleColor;
 
 

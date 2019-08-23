@@ -25,10 +25,12 @@ SetUsage[TokenUnitIsNot,   "TokenUnitIsNot[string$, CSSToken$] gives True if the
 
 SetUsage[AdvancePosAndSkipWhitespace,      "AdvancePosAndSkipWhitespace[pos$, l$, CSSTokens$] increments pos$, then increments pos$ further if any whitespace tokens are detected."];
 SetUsage[RetreatPosAndSkipWhitespace,      "RetreatPosAndSkipWhitespace[pos$, l$, CSSTokens$] decrements pos$, then decrements pos$ further if any whitespace tokens are detected."];
+SetUsage[AdvancePosToNextDelimiter,        "AdvancePosToNextDelimiter[pos$, l$, CSSTokens$] increments pos$ until a delimiter CSS token is reached."];
 SetUsage[AdvancePosToNextSemicolon,        "AdvancePosToNextSemicolon[pos$, l$, CSSTokens$] increments pos$ until a semicolon CSS token is reached."];
 SetUsage[AdvancePosToNextSemicolonOrBlock, "AdvancePosToNextSemicolonOrBlock[pos$, l$, CSSTokens$] increments pos$ until a semicolon or block CSS token is reached."];
 SetUsage[AdvancePosToNextSemicolonOrComma, "AdvancePosToNextSemicolonOrComma[pos$, l$, CSSTokens$] increments pos$ until a semicolon or comma CSS token is reached."];
 SetUsage[AdvancePosToNextBlock,            "AdvancePosToNextBlock[pos$, l$, CSSTokens$] increments pos$ until a block CSS token is reached."];
+SetUsage[TrimWhitespaceTokens,             "TrimWhitespaceTokens[pos$, l$, CSSTokens$] removes any whitespace CSS tokens from the ends of the CSS token sequence."]
 
 
 Begin["`Private`"]
@@ -745,7 +747,7 @@ TokenUnitIsNot[___] := False
 	They are expected to run quickly so do no type checking. *)
 SetAttributes[
 	{
-		AdvancePosAndSkipWhitespace, RetreatPosAndSkipWhitespace, 
+		AdvancePosAndSkipWhitespace, RetreatPosAndSkipWhitespace, AdvancePosToNextDelimiter,
 		AdvancePosToNextSemicolon, AdvancePosToNextSemicolonOrBlock, AdvancePosToNextSemicolonOrComma,
 		AdvancePosToNextBlock}, 
 	HoldFirst];
@@ -753,12 +755,19 @@ SetAttributes[
 AdvancePosAndSkipWhitespace[pos_, l_, tokens_] := (pos++; While[pos < l && TokenTypeIs["whitespace", tokens[[pos]]], pos++])
 RetreatPosAndSkipWhitespace[pos_, l_, tokens_] := (pos--; While[pos > 1 && TokenTypeIs["whitespace", tokens[[pos]]], pos--])
 
+AdvancePosToNextDelimiter[pos_, l_, tokens_] :=        While[pos < l && TokenTypeIsNot["delim",               tokens[[pos]]], pos++]
 AdvancePosToNextSemicolon[pos_, l_, tokens_] :=        While[pos < l && TokenTypeIsNot["semicolon",           tokens[[pos]]], pos++]
 AdvancePosToNextSemicolonOrBlock[pos_, l_, tokens_] := While[pos < l && TokenTypeIsNot["{}" | "semicolon",    tokens[[pos]]], pos++]
 AdvancePosToNextSemicolonOrComma[pos_, l_, tokens_] := While[pos < l && TokenTypeIsNot["comma" | "semicolon", tokens[[pos]]], pos++]
 
 AdvancePosToNextBlock[pos_, l_, tokens_] := While[pos < l && !MatchQ[tokens[[pos]]["Type"], "{}"], pos++]
 
+
+SetAttributes[TrimWhitespaceTokens, HoldAll];
+(* Adjust 'pos' and 'l' such that whitespace tokens are effectively trimmed. *)
+TrimWhitespaceTokens[pos_, l_, tokens_] := (
+	pos = l; If[TokenTypeIs["whitespace", tokens[[pos]]], RetreatPosAndSkipWhitespace[pos, l, tokens]]; l = pos;
+	pos = 1; If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];)
 
 (* ::Section:: *)
 (*Package End*)
