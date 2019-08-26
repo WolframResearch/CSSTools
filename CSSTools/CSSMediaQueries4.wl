@@ -49,12 +49,18 @@ consumeMediaQuery[tokens:{___?CSSTokenQ}] :=
 			(* The next tokens, if any, are 'and' with <media-condition-without-or> *)
 			If[pos < l && TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs["and", tokens[[pos]]], 
 				AdvancePosAndSkipWhitespace[pos, l, tokens];
-				If[pos > l, Return @ Failure["BadMedia", <|"Message" -> "Unexpected end of media query."|>]];
+				If[pos > l, 
+					Throw @ 
+						Failure["BadMedia", <|
+							"Message"  -> "Unexpected end of media query.",
+							"Position" -> showError[pos, -1, tokens]|>]];
 				value = consumeMediaConditionWithoutOr[tokens[[pos ;; l]]]
 			]
 			,
 			(* attempt to consume entire token sequence as a <media-condition> *)
-			value = consumeMediaCondition[tokens]
+			value = Catch @ consumeMediaCondition[tokens];
+			If[FailureQ[value], Throw @ Failure[value[[1]], If[KeyExistsQ[value[[2]], "Parsed"], KeyDrop[value[[2]], "Parsed"], value[[2]]]]]
+			
 		];
 		conditions
 	]
@@ -106,19 +112,28 @@ consumeMediaCondition[tokens:{__?CSSTokenQ}] :=
 			TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs["not", tokens[[pos]]],
 				negate = True; 
 				AdvancePosAndSkipWhitespace[pos, l, tokens];
-				If[pos > l, Throw @ Failure["BadMedia", <|"Message" -> "Unexpected end of media query."|>]];
+				If[pos > l, 
+					Throw @ 
+						Failure["BadMedia", <|
+							"Message"  -> "Unexpected end of media query.",
+							"Position" -> showError[pos, -1, tokens],
+							"Parsed"   -> 1.0|>]];
 				If[TokenTypeIs["()" | "function", tokens[[pos]]],
 					value1 = consumeMediaInParens[tokens[[pos]]];
 					value1 = Replace[value1, Hold[x___] :> Hold[Not[x]]]
 					,
-					Throw @ Failure["BadMedia", <|"Message" -> "Expected <media-in-parens> after 'not'."|>]
+					Throw @ 
+						Failure["BadMedia", <|
+							"Message" -> "Expected <media-in-parens> after 'not'.",
+							"Parsed"  -> 1.0|>]
 				];
 				AdvancePosAndSkipWhitespace[pos, l, tokens];
 				If[pos <= l, 
 					Throw @ 
 						Failure["BadMedia", <|
 							"Message"  -> "Too many tokens in the media condition.",
-							"Position" -> showError[pos, -1, tokens]|>]]
+							"Position" -> showError[pos, -1, tokens],
+							"Parsed"   -> 1.0|>]]
 			,
 			(* <media-in-parens> *)
 			TokenTypeIs["()" | "function", tokens[[pos]]], 
@@ -126,13 +141,22 @@ consumeMediaCondition[tokens:{__?CSSTokenQ}] :=
 				AdvancePosAndSkipWhitespace[pos, l, tokens];
 				(* check for optionally repeating <media-and> or <media-or> *)
 				While[pos < l,
-					Echo[{tokens[[pos]], andSequence, orSequence}];
 					Which[
 						TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs["and", tokens[[pos]]],
-							If[orSequence, Throw @ Failure["BadMedia", <|"Message" -> "Logic level contains both 'and' and 'or'."|>]];
+							If[orSequence, 
+								Throw @ 
+									Failure["BadMedia", <|
+										"Message"  -> "Logic level contains both 'and' and 'or'.",
+										"Position" -> showError[1, -1, tokens],
+										"Parsed"   -> 1.0|>]];
 							andSequence = True;
 							AdvancePosAndSkipWhitespace[pos, l, tokens];
-							If[pos > l, Throw @ Failure["BadMedia", <|"Message" -> "Unexpected end of media query."|>]];
+							If[pos > l, 
+								Throw @ 
+								Failure["BadMedia", <|
+									"Message"  -> "Unexpected end of media query.", 
+									"Position" -> showError[pos, -1, tokens],
+									"Parsed"   -> 1.0|>]];
 							If[TokenTypeIs["()" | "function", tokens[[pos]]],
 								value2 = consumeMediaInParens[tokens[[pos]]];
 								If[MatchQ[value1, Hold[And[___]]], 
@@ -142,16 +166,29 @@ consumeMediaCondition[tokens:{__?CSSTokenQ}] :=
 									value1 = Thread[And[value1, value2], Hold]
 								];
 								,
-								Throw @ Failure["BadMedia", <|"Message" -> "Expected <media-in-parens> after 'not'."|>]
+								Throw @ 
+									Failure["BadMedia", <|
+										"Message" -> "Expected <media-in-parens> after 'not'.",
+										"Position" -> showError[1, -1, tokens],
+										"Parsed"  -> 1.0|>]
 							];
 							AdvancePosAndSkipWhitespace[pos, l, tokens];
-							Echo[{"AND", pos, l}];
 						,
 						TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs["or", tokens[[pos]]],
-							If[andSequence, Throw @ Failure["BadMedia", <|"Message" -> "Logic level contains both 'and' and 'or'."|>]];
+							If[andSequence, 
+								Throw @ 
+									Failure["BadMedia", <|
+										"Message"  -> "Logic level contains both 'and' and 'or'.",
+										"Position" -> showError[1, -1, tokens],
+										"Parsed"   -> 1.0|>]];
 							orSequence = True;
 							AdvancePosAndSkipWhitespace[pos, l, tokens];
-							If[pos > l, Throw @ Failure["BadMedia", <|"Message" -> "Unexpected end of media query."|>]];
+							If[pos > l, 
+								Throw @ 
+									Failure["BadMedia", <|
+										"Message"  -> "Unexpected end of media query.", 
+										"Position" -> showError[pos, -1, tokens],
+										"Parsed"   -> 1.0|>]];
 							If[TokenTypeIs["()" | "function", tokens[[pos]]],
 								value2 = consumeMediaInParens[tokens[[pos]]];
 								If[MatchQ[value1, Hold[Or[___]]], 
@@ -161,44 +198,56 @@ consumeMediaCondition[tokens:{__?CSSTokenQ}] :=
 									value1 = Thread[Or[value1, value2], Hold]
 								];
 								,
-								Throw @ Failure["BadMedia", <|"Message" -> "Expected <media-in-parens> after 'not'."|>]
+								Throw @ 
+									Failure["BadMedia", <|
+										"Message" -> "Expected <media-in-parens> after 'not'.",
+										"Parsed"  -> 1.0|>]
 							];
 							AdvancePosAndSkipWhitespace[pos, l, tokens];
-							Echo[{"OR", pos, l}];
 						,
 						True, 
-							Throw @ Failure["BadMedia", <|"Message" -> "Expected 'and' or 'or' token."|>]
+							Throw @ 
+								Failure["BadMedia", <|
+									"Message" -> "Expected 'and' or 'or' token.",
+									"Parsed"  -> 1.0|>]
 					]
 				]
 			,
 			True,
-				Throw @ Failure["BadMedia", <|"Message" -> "Unexpected token in media condition."|>]
+				Throw @ 
+					Failure["BadMedia", <|
+						"Message" -> "Unexpected token in media condition.", 
+						"Parsed"  -> 1.0|>]
 		];
 		value1
 	]
 
 (* can only be () or function token *)
 consumeMediaInParens[token_?CSSTokenQ] :=
-	Module[{pos = 1, l, tokens, value},
+	Module[{pos = 1, l, tokens, value, booleanError, plainError, rangeError, conditionError, all},
 		Switch[token["Type"],
 			"()", 
 				Which[
 					(* attempt to consume as <mf-boolean> *)
-					!FailureQ[value = Catch @ consumeMediaFeatureBoolean[token["Children"]]],
+					!FailureQ[value = booleanError = Catch @ consumeMediaFeatureBoolean[token["Children"]]],
 						Null
 					,
+					(*Echo[booleanError, "bool"];*)
 					(* attempt to consume as <mf-plain> *)
-					!FailureQ[value = Catch @ consumeMediaFeaturePlain[token["Children"]]],
+					!FailureQ[value = plainError = Catch @ consumeMediaFeaturePlain[token["Children"]]],
 						Null
 					,
+					(*Echo[plainError, "plain"];*)
 					(* attempt to consume as <mf-range> *)
-					!FailureQ[value = Catch @ consumeMediaFeatureRange[token["Children"]]],
+					!FailureQ[value = rangeError = Catch @ consumeMediaFeatureRange[token["Children"]]],
 						Null
 					,
+					(*Echo[rangeError, "range"];*)
 					(* attempt to consume as <media-condition> *)
-					!FailureQ[value = Catch @ consumeMediaCondition[token["Children"]]],
+					!FailureQ[value = conditionError = Catch @ consumeMediaCondition[token["Children"]]],
 						Null
 					,
+					(*Echo[conditionError, "cond"];*)
 					(* attempt to consume as <ident> <any-value> *)
 					True,
 						tokens = token["Children"]; l = Length[tokens];
@@ -206,10 +255,9 @@ consumeMediaInParens[token_?CSSTokenQ] :=
 						If[TokenTypeIs["ident", tokens[[pos]]], 
 							value = Hold[TrueQ @ False] (* valid but Indeterminate *)
 							,
-							Throw @ 
-								Failure["BadMedia", <|
-									"Message"  -> "Expected <media-in-parens> production.",
-									"Position" -> showError[pos, pos, {token}]|>]
+							all = {booleanError, plainError, rangeError, conditionError};
+							all = all[[FirstPosition[all[[All, 2, "Parsed"]], Max[all[[All, 2, "Parsed"]]]][[1]]]];
+							Throw @ all(*Failure[all[[1]], KeyDrop[all[[2]], "Parsed"]]*)
 						]
 				]
 			,
@@ -267,8 +315,10 @@ consumeMediaFeatureRange[tokens:{__?CSSTokenQ}] :=
 			inRegularOrder = True;
 			name = tokens[[pos]]["String"];
 			AdvancePosAndSkipWhitespace[pos, l, tokens];
-			op1 = consumeMediaFeatureRangeOperator[pos, l, tokens];
-			value1 = consumeMediaFeature[name, tokens[[pos ;; l]]];
+			op1 = Catch @ consumeMediaFeatureRangeOperator[pos, l, tokens];
+			If[FailureQ[op1], Throw @ modifyError[op1, pos, -1, tokens, "Parsed" -> 0.33]];
+			value1 = Catch @ consumeMediaFeature[name, tokens[[pos ;; l]]];
+			If[FailureQ[value1], Throw @ modifyError[value1, pos, -1, tokens, "Parsed" -> 1.0]];
 			,
 			(* case: <mf-value1> <op1> <mf-name> and optional <op2> <mf-value2> *)
 			inRegularOrder = False;
@@ -277,20 +327,23 @@ consumeMediaFeatureRange[tokens:{__?CSSTokenQ}] :=
 			value1 = tokens[[pos ;; valueEnd]];
 			pos = delimStart;
 			AppendTo[op1P, pos];
-			op1 = consumeMediaFeatureRangeOperator[pos, l, tokens]; 
+			op1 = Catch @ consumeMediaFeatureRangeOperator[pos, l, tokens]; 
+			If[FailureQ[op1], Throw @ modifyError[op1, pos, -1, tokens, "Parsed" -> 0.33]];
 			AppendTo[op1P, pos]; RetreatPosAndSkipWhitespace[op1P[[2]], 1, tokens];
 			Which[
 				StringStartsQ[tokens[[pos]]["String"], "min-" | "max-"],
 					Throw @ 
 						Failure["BadMFRange", <|
-							"Message" -> "Cannot use min/max prefixes in media range.", 
-							"Position" -> showError[pos, pos, tokens]|>]
+							"Message"  -> "Cannot use min/max prefixes in media range.", 
+							"Position" -> showError[pos, pos, tokens],
+							"Parsed"   -> 1.0|>]
 				,
 				!isRangedMediaFeature[tokens[[pos]]["String"]],
 					Throw @ 
 						Failure["BadMFRange", <|
-							"Message" -> "Media feature name is not of 'range' type.", 
-							"Position" -> showError[pos, pos, tokens]|>]
+							"Message"  -> "Media feature name is not of 'range' type.", 
+							"Position" -> showError[pos, pos, tokens],
+							"Parsed"   -> 1.0|>]
 				,
 				isMediaFeatureName[tokens[[pos]]["String"]], 
 					name = tokens[[pos]]["String"];
@@ -300,8 +353,9 @@ consumeMediaFeatureRange[tokens:{__?CSSTokenQ}] :=
 				True,
 					Throw @ 
 						Failure["BadMFRange", <|
-							"Message" -> "Expected a supported media feature name.",
-							"Position" -> showError[pos, pos, tokens]|>]
+							"Message"  -> "Expected a supported media feature name.",
+							"Position" -> showError[pos, pos, tokens],
+							"Parsed"   -> 1.0|>]
 			];
 			If[pos < l,
 				AppendTo[op2P, pos];
@@ -311,14 +365,16 @@ consumeMediaFeatureRange[tokens:{__?CSSTokenQ}] :=
 					MatchQ[op1, Equal],
 						Throw @ 
 							Failure["BadMFRange", <|
-								"Message" -> "Double-range format does not allow '=' as an operator.",
-								"Position" -> showError[op1P[[1]], op1P[[2]], tokens]|>]
+								"Message"  -> "Double-range format does not allow '=' as an operator.",
+								"Position" -> showError[op1P[[1]], op1P[[2]], tokens],
+								"Parsed"   -> 1.0|>]
 					,
 					MatchQ[op2, Equal],
 						Throw @ 
 							Failure["BadMFRange", <|
-								"Message" -> "Double-range format does not allow '=' as an operator.",
-								"Position" -> showError[op2P[[1]], op2P[[2]], tokens]|>]
+								"Message"  -> "Double-range format does not allow '=' as an operator.",
+								"Position" -> showError[op2P[[1]], op2P[[2]], tokens],
+								"Parsed"   -> 1.0|>]
 					,
 					Or[
 						MatchQ[op1, LessEqual | Less] && MatchQ[op2, GreaterEqual | Greater],
@@ -327,7 +383,8 @@ consumeMediaFeatureRange[tokens:{__?CSSTokenQ}] :=
 						Throw @ 
 							Failure["BadMFRange", <|
 								"Message" -> "Double-range format has both greater and less operators.",
-								"Op" -> {op1, op2}|>]
+								"Op"      -> {op1, op2},
+								"Parsed"  -> 1.0|>]
 					,
 					True,
 						Null
@@ -392,7 +449,8 @@ consumeMediaFeaturePlain[tokens:{__?CSSTokenQ}] :=
 				Throw @ 
 					Failure["BadMFPlain", <|
 						"Message"  -> "Expected a supported media feature name.",
-						"Position" -> showError[pos, pos, tokens]|>]
+						"Position" -> showError[pos, pos, tokens],
+						"Parsed"   -> 0.0|>]
 			]
 		];
 		If[pos <= l && TokenTypeIs["colon", tokens[[pos]]],
@@ -401,11 +459,13 @@ consumeMediaFeaturePlain[tokens:{__?CSSTokenQ}] :=
 			Throw @ 
 				Failure["BadMFPlain", <|
 					"Message"  -> "Expected a colon token.",
-					"Position" -> showError[pos, pos, tokens]|>]
+					"Position" -> showError[pos, pos, tokens],
+					"Parsed"   -> 0.33|>]
 		];
 		value = Catch @ consumeMediaFeature[name, tokens[[pos ;; l]]];
 		If[FailureQ[value], 
-			Throw @ modifyError[value, pos, -1, tokens]
+			(* a colon implies a plain media feature was attempted *)
+			Throw @ modifyError[value, pos, -1, tokens, "Parsed" -> 1.0] 
 			,
 			value
 		]
@@ -418,22 +478,42 @@ consumeMediaFeatureBoolean[tokens:{__?CSSTokenQ}] :=
 			Throw @ 
 				Failure["BadMFBoolean", <|
 					"Message"  -> "Too many tokens in the media feature boolean.", 
-					"Position" -> showError[pos+1, -1, tokens]|>]
+					"Position" -> showError[pos + 1, -1, tokens],
+					"Parsed"   -> 0.0|>]
 		];
-		If[TokenTypeIs["ident", tokens[[pos]]],
-			If[!StringStartsQ[tokens[[pos]]["String"], "min-" | "max-", IgnoreCase -> True],
-				value = mediaFeatureBoolean[ToLowerCase @ tokens[[pos]]["String"]]
-				,
+		Which[
+			TokenTypeIs["ident", tokens[[pos]]],
+				If[!StringStartsQ[tokens[[pos]]["String"], "min-" | "max-", IgnoreCase -> True],
+					If[isMediaFeatureName[tokens[[pos]]["String"]],
+						value = mediaFeatureBoolean[ToLowerCase @ tokens[[pos]]["String"]]
+						,
+						Throw @ 
+							Failure["BadMFBoolean", <|
+								"Message"  -> "Expected a media feature name.",
+								"Position" -> showError[pos, pos, tokens],
+								"Parsed"   -> 1.0|>]
+					]
+					,
+					Throw @ 
+						Failure["BadMFBoolean", <|
+							"Message"  -> "Prefixes are not allowed for media features with no value.",
+							"Position" -> showError[pos, pos, tokens],
+							"Parsed"   -> 1.0|>]
+				]
+			,
+			TokenTypeIs["()" | "function", tokens[[pos]]],
 				Throw @ 
 					Failure["BadMFBoolean", <|
-						"Message"  -> "Prefixes are not allowed for media features with no value.",
-						"Position" -> showError[pos, pos, tokens]|>]
-			]
+						"Message"  -> "Expected a media feature name.",
+						"Position" -> showError[pos, pos, tokens],
+						"Parsed"   -> 0.0|>] 
 			,
-			Throw @ 
-				Failure["BadMFBoolean", <|
-					"Message"  -> "Expected a media feature name.",
-					"Position" -> showError[pos, pos, tokens]|>]
+			True,
+				Throw @ 
+					Failure["BadMFBoolean", <|
+						"Message"  -> "Expected a media feature name.",
+						"Position" -> showError[pos, pos, tokens],
+						"Parsed"   -> 1.0|>] 
 		];
 		With[{v = value}, Hold[v]]
 	]
@@ -668,15 +748,12 @@ showError[startPos_, stopPos_, tokens_] :=
 		}]
 	]
 
-modifyError[fail_Failure, pos_, tokens_] :=
+ClearAll[modifyError];
+modifyError[fail_Failure, pos1_, pos2_, tokens_, rule_:Nothing] :=
 	Failure[fail[[1]], <|
 		"Message"  -> fail[[2, "Message"]], 
-		"Position" -> showError[pos, pos, tokens]|>]
-		
-modifyError[fail_Failure, pos1_, pos2_, tokens_] :=
-	Failure[fail[[1]], <|
-		"Message"  -> fail[[2, "Message"]], 
-		"Position" -> showError[pos1, pos2, tokens]|>]
+		"Position" -> showError[pos1, pos2, tokens],
+		rule|>]
 
 End[] (* End Private Context *)
 
