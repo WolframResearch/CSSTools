@@ -17,7 +17,7 @@ Needs["CSSTools`CSSPropertyInterpreter`"];
 Begin["`Private`"] (* Begin Private Context *) 
 
 consumeMediaQuery[tokens:{___?CSSTokenQ}] :=
-	Module[{pos = 1, l = Length[tokens], hasMediaType = False, mcStart = False, negate = False, conditions = {}, value},
+	Module[{pos = 1, l = Length[tokens], hasMediaType = False, mediaType = All, mcStart = False, negate = False, value1, value2},
 		TrimWhitespaceTokens[pos, l, tokens];
 		(* 
 			The start of a <media-query> is a little tricky. It can start with 'not', but we have to
@@ -33,36 +33,71 @@ consumeMediaQuery[tokens:{___?CSSTokenQ}] :=
 				AdvancePosAndSkipWhitespace[pos, l, tokens];
 			,
 			TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs["and" | "or", tokens[[pos]]],
-				Return @ Failure["BadMedia", <|"Message" -> "Reserved keyword " <> tokens[[pos]]["String"] <> " cannot be used."|>]
+				Throw @ 
+					Failure["BadMedia", <|
+						"Message"  -> "Reserved keyword '" <> tokens[[pos]]["String"] <> "' cannot be used.",
+						"Position" -> showError[pos, pos, tokens]|>]
 			,
 			isMediaType[tokens[[pos]]],
 				hasMediaType = True;
-				value = consumeMediaType[pos, l, tokens];
+				mediaType = consumeMediaType[pos, l, tokens];
 			,
 			True,
 				mcStart = True
 		];
 		If[!mcStart,
 			(* The next token must be an ident if one was not already consumed. *)
-			If[!hasMediaType && pos < l, value = consumeMediaType[pos, l, tokens]; hasMediaType = True];
-			If[FailureQ[value], Return @ value];
+			If[!hasMediaType && pos < l, mediaType = consumeMediaType[pos, l, tokens]; hasMediaType = True];
 			(* The next tokens, if any, are 'and' with <media-condition-without-or> *)
-			If[pos < l && TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs["and", tokens[[pos]]], 
-				AdvancePosAndSkipWhitespace[pos, l, tokens];
-				If[pos > l, 
-					Throw @ 
-						Failure["BadMedia", <|
-							"Message"  -> "Unexpected end of media query.",
-							"Position" -> showError[pos, -1, tokens]|>]];
-				value = consumeMediaConditionWithoutOr[tokens[[pos ;; l]]]
+			While[pos < l,
+				Which[
+					TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs["and", tokens[[pos]]],
+						AdvancePosAndSkipWhitespace[pos, l, tokens];
+						If[pos > l, 
+							Throw @ 
+								Failure["BadMedia", <|
+									"Message"  -> "Unexpected end of media query.", 
+									"Position" -> showError[pos, -1, tokens]|>]];
+						If[TokenTypeIs["()" | "function", tokens[[pos]]],
+							value2 = consumeMediaInParens[tokens[[pos]]];
+							Which[
+								!ValueQ[value1], 
+									value1 = value2;
+								,
+								MatchQ[value1, Hold[And[___]]], 
+									value2 = Replace[value2, Hold[x___] :> Hold[And[x]]];
+									value1 = Join[value1, value2, 2];
+								,
+								True,
+									value1 = Thread[And[value1, value2], Hold]
+							];
+							,
+							Throw @ 
+								Failure["BadMedia", <|
+									"Message" -> "Expected <media-in-parens> after 'not'.",
+									"Position" -> showError[1, -1, tokens]|>]
+						];
+						AdvancePosAndSkipWhitespace[pos, l, tokens];
+					,
+					TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs["or", tokens[[pos]]],
+						Throw @ 
+							Failure["BadMedia", <|
+								"Message"  -> "Logic level contains both 'and' and 'or'.",
+								"Position" -> showError[1, -1, tokens]|>];
+					,
+					True, 
+						Throw @ 
+							Failure["BadMedia", <|
+								"Message" -> "Expected 'and' token."|>]
+				]
 			]
 			,
 			(* attempt to consume entire token sequence as a <media-condition> *)
-			value = Catch @ consumeMediaCondition[tokens];
-			If[FailureQ[value], Throw @ Failure[value[[1]], If[KeyExistsQ[value[[2]], "Parsed"], KeyDrop[value[[2]], "Parsed"], value[[2]]]]]
+			value1 = Catch @ consumeMediaCondition[tokens];
+			If[FailureQ[value1], Throw @ Failure[value1[[1]], If[KeyExistsQ[value1[[2]], "Parsed"], KeyDrop[value1[[2]], "Parsed"], value1[[2]]]]]
 			
 		];
-		conditions
+		{mediaType, value1}
 	]
 	
 
@@ -253,7 +288,11 @@ consumeMediaInParens[token_?CSSTokenQ] :=
 						tokens = token["Children"]; l = Length[tokens];
 						TrimWhitespaceTokens[pos, l, tokens];
 						If[TokenTypeIs["ident", tokens[[pos]]], 
-							value = Hold[TrueQ @ False] (* valid but Indeterminate *)
+							If[pos == l, 
+								Throw @ booleanError
+								,
+								value = Hold[TrueQ @ False] (* valid but Indeterminate *)
+							]
 							,
 							all = {booleanError, plainError, rangeError, conditionError};
 							all = all[[FirstPosition[all[[All, 2, "Parsed"]], Max[all[[All, 2, "Parsed"]]]][[1]]]];
@@ -489,7 +528,7 @@ consumeMediaFeatureBoolean[tokens:{__?CSSTokenQ}] :=
 						,
 						Throw @ 
 							Failure["BadMFBoolean", <|
-								"Message"  -> "Expected a media feature name.",
+								"Message"  -> "Expected a supported media feature name.",
 								"Position" -> showError[pos, pos, tokens],
 								"Parsed"   -> 1.0|>]
 					]
@@ -511,14 +550,14 @@ consumeMediaFeatureBoolean[tokens:{__?CSSTokenQ}] :=
 			True,
 				Throw @ 
 					Failure["BadMFBoolean", <|
-						"Message"  -> "Expected a media feature name.",
+						"Message"  -> "Expected a supported media feature name.",
 						"Position" -> showError[pos, pos, tokens],
 						"Parsed"   -> 1.0|>] 
 		];
 		With[{v = value}, Hold[v]]
 	]
 	
-isRatio[pos_, l_, tokens_] :=
+(*isRatio[pos_, l_, tokens_] :=
 	Module[{p = pos},
 		If[TokenTypeIs["number", tokens[[p]]] && tokens[[p]]["ValueType"] === "integer",
 			AdvancePosAndSkipWhitespace[p, l, tokens]
@@ -531,7 +570,7 @@ isRatio[pos_, l_, tokens_] :=
 			Return @ False
 		];
 		p <= l && TokenTypeIs["number", tokens[[p]]] && tokens[[p]]["ValueType"] === "integer"
-	]
+	]*)
 	
 isMediaFeatureName[s_?StringQ] := 
 	StringMatchQ[
@@ -542,10 +581,10 @@ isMediaFeatureName[s_?StringQ] :=
 			"color-gamut", "hover", "any-hover", "pointer", "any-pointer"],
 		IgnoreCase -> True]
 		
-isMediaFeatureValue[pos_, l_, tokens_] :=
+(*isMediaFeatureValue[pos_, l_, tokens_] :=
 	Or[
 		isRatio[pos, l, tokens],
-		TokenTypeIs["dimension" | "ident" | "number", tokens[[pos]]]]
+		TokenTypeIs["dimension" | "ident" | "number", tokens[[pos]]]]*)
 
 isRangedMediaFeature[s_?StringQ] :=
 	StringMatchQ[
@@ -572,8 +611,8 @@ mediaFeatureBoolean["height"] := True (* WD has a positive minimum window height
 mediaFeatureBoolean["aspect-ratio"] := True (* always non-zero *)
 mediaFeatureBoolean["resolution"] := True
 mediaFeatureBoolean["color"] := True
-mediaFeatureBoolean["color-index"] := True
-mediaFeatureBoolean["monochrome"] := True
+mediaFeatureBoolean["color-index"] := True (* FE at least using SRGB *)
+mediaFeatureBoolean["monochrome"] := False (* assume running on a color device *)
 (* deprecated ranged features but must be supported *)
 mediaFeatureBoolean["device-width"] := True
 mediaFeatureBoolean["device-height"] := True
@@ -582,15 +621,15 @@ mediaFeatureBoolean["device-aspect-ratio"] := True
 (* discrete features *)
 mediaFeatureBoolean["orientation"] := True
 mediaFeatureBoolean["scan"] := True
-mediaFeatureBoolean["grid"] := True
-mediaFeatureBoolean["update"] := True
-mediaFeatureBoolean["overflow-block"] := True (* could be 'none'=False *)
+mediaFeatureBoolean["grid"] := False (* FE does not run on grid devices, only bitmap devices *)
+mediaFeatureBoolean["update"] := True (* FE is a fast-updating device *)
+mediaFeatureBoolean["overflow-block"] := True (* FE uses 'scroll' *)
 mediaFeatureBoolean["overflow-inline"] := True (* could be 'none'=False *)
 mediaFeatureBoolean["color-gamut"] := True
-mediaFeatureBoolean["hover"] := True (* could be 'none'=False *)
-mediaFeatureBoolean["any-hover"] := True (* could be 'none'=False *)
-mediaFeatureBoolean["pointer"] := True (* could be 'none'=False *)
-mediaFeatureBoolean["any-pointer"] := True (* could be 'none'=False *)
+mediaFeatureBoolean["hover"] := True 
+mediaFeatureBoolean["any-hover"] := True 
+mediaFeatureBoolean["pointer"] := True (* FE runs on either computer+mouse or on a touchscreen device. *)
+mediaFeatureBoolean["any-pointer"] := True 
 
 mediaFeatureBoolean[_?StringQ] := False
 
@@ -723,7 +762,435 @@ consumeMediaFeature[name:"height", tokens:{__?CSSTokenQ}] :=
 			With[{v = value}, Hold[CurrentValue[InputNotebook[], {WindowSize, 2}] == v]]
 		]
 	]
+
+
+(* FIXME:
+	When querying media with non-square pixels, resolution queries the density in the vertical dimension. 
+	We can query the FE's detected devices, but it doesn't tell us which screen the notebook is on... *)
+(* Printers may have a higher resolution than the screen. Is this a concern? *)
+consumeMediaFeature[name:"resolution", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		TrimWhitespaceTokens[pos, l, tokens];
+		Which[
+			TokenTypeIs["dimension", tokens[[pos]]], 
+				value = parseDimension[tokens[[pos]]]
+			,
+			TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs["infinity", tokens[[pos]]],
+				value = Infinity
+			,
+			True,
+				Throw @ 
+					Failure["BadMFValue", <|
+						"Message"  -> "Resolution must be a dimensions with unit dpi, dppx, or dpcm.",
+						"Position" -> showError[pos, pos, tokens]|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Too many tokens in the media feature value.", 
+					"Position" -> showError[pos, -1, tokens]|>]
+			,
+			(* FIXME: this should be more descirption e.g. CurrentValue[InputNotebook[], "Resolution"] but not possible... *)
+			With[{v = value}, Hold[First["Resolution" /. SystemInformation["Devices", "ScreenInformation"]] == v]]
+		]
+	]
+
+(* 
+	There's no method available to the FE to determine the monitor device's scan type. 
+	Almost all devices use 'progressive'. *)
+consumeMediaFeature[name:"scan", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		TrimWhitespaceTokens[pos, l, tokens];
+		If[TokenTypeIs["ident", tokens[[pos]]],
+			Switch[tokens[[pos]]["String"],
+				"interlace",   value = False,
+				"progressive", value = True,
+				_,             
+					Throw @ 
+						Failure["BadMFValue", <|
+							"Message"  -> "Scan must be either 'interlace' or 'progressive'.",
+							"Position" -> showError[pos, pos, tokens]|>]
+			]
+			,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Expected 'interlace' or 'progressive' keyword.",
+					"Position" -> showError[pos, pos, tokens]|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Too many tokens in the media feature value.", 
+					"Position" -> showError[pos, -1, tokens]|>]
+			,
+			With[{v = value}, Hold[v]]
+		]
+	]
+
+(* Legacy feature. FE only runs on bitmap devices. *)
+consumeMediaFeature[name:"grid", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		TrimWhitespaceTokens[pos, l, tokens];
+		If[TokenTypeIs["number", tokens[[pos]]] && tokens[[pos]]["ValueType"] === "integer",
+			value = parseNumber[tokens[[pos]]];
+			If[value != 0 || value != 1,
+				Throw @ 
+					Failure["BadMFValue", <|
+						"Message"  -> "Grid media feature must be either 0 or 1.",
+						"Position" -> showError[pos, pos, tokens]|>]
+			]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Too many tokens in the media feature value.", 
+					"Position" -> showError[pos, -1, tokens]|>]
+			,
+			With[{v = MatchQ[value, 0]}, Hold[v]]
+		]
+	]
 	
+consumeMediaFeature[name:"update", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		TrimWhitespaceTokens[pos, l, tokens];
+		If[TokenTypeIs["ident", tokens[[pos]]],
+			Switch[tokens[[pos]]["String"],
+				"none", value = False,
+				"slow", value = False,
+				"fast", value = True, (* FE only runs on "fast" displays. *)
+				_,             
+					Throw @ 
+						Failure["BadMFValue", <|
+							"Message"  -> "Update must be either 'none', 'slow' or 'fast'.",
+							"Position" -> showError[pos, pos, tokens]|>]
+			]
+			,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Expected 'none', 'slow' or 'fast' keyword.",
+					"Position" -> showError[pos, pos, tokens]|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Too many tokens in the media feature value.", 
+					"Position" -> showError[pos, -1, tokens]|>]
+			,
+			With[{v = value}, Hold[v]]
+		]
+	]
+
+consumeMediaFeature[name:"overflow-block", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		TrimWhitespaceTokens[pos, l, tokens];
+		If[TokenTypeIs["ident", tokens[[pos]]],
+			Switch[tokens[[pos]]["String"],
+				"none",           value = False,
+				"scroll",         value = True,  
+				"optional-paged", value = False, 
+				"paged",          value = False,
+				_,             
+					Throw @ 
+						Failure["BadMFValue", <|
+							"Message"  -> "Update must be either 'none', 'scroll', 'optional-paged' or 'paged'.",
+							"Position" -> showError[pos, pos, tokens]|>]
+			]
+			,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Expected 'none', 'scroll', 'optional-paged' or 'paged' keyword.",
+					"Position" -> showError[pos, pos, tokens]|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Too many tokens in the media feature value.", 
+					"Position" -> showError[pos, -1, tokens]|>]
+			,
+			With[{v = value}, Hold[v]]
+		]
+	]
+	
+consumeMediaFeature[name:"overflow-inline", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		TrimWhitespaceTokens[pos, l, tokens];
+		If[TokenTypeIs["ident", tokens[[pos]]],
+			Switch[tokens[[pos]]["String"],
+				"none",           value = False,
+				"scroll",         value = True,  
+				_,             
+					Throw @ 
+						Failure["BadMFValue", <|
+							"Message"  -> "Update must be either 'none' or 'scroll'.",
+							"Position" -> showError[pos, pos, tokens]|>]
+			]
+			,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Expected 'none' or 'scroll' keyword.",
+					"Position" -> showError[pos, pos, tokens]|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Too many tokens in the media feature value.", 
+					"Position" -> showError[pos, -1, tokens]|>]
+			,
+			With[{v = value}, Hold[v]]
+		]
+	]
+
+(* FIXME?: I'm assuming the device has a uniform bit depth and is not monochrome. *)
+consumeMediaFeature[name:"color", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		TrimWhitespaceTokens[pos, l, tokens];
+		If[TokenTypeIs["number", tokens[[pos]]] && tokens[[pos]]["ValueType"] === "integer",
+			value = parseNumber[tokens[[pos]]];
+			,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Color media feature must be an integer.",
+					"Position" -> showError[pos, pos, tokens]|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Too many tokens in the media feature value.", 
+					"Position" -> showError[pos, -1, tokens]|>]
+			,
+			With[{v = value}, Hold[First["BitDepth" /. SystemInformation["Devices", "ScreenInformation"]] == v]]
+		]
+	]
+
+(* FIXME: can we even test for this? Default to True for now. *)
+consumeMediaFeature[name:"color-index", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		TrimWhitespaceTokens[pos, l, tokens];
+		If[TokenTypeIs["number", tokens[[pos]]] && tokens[[pos]]["ValueType"] === "integer",
+			value = parseNumber[tokens[[pos]]];
+			,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Color-index media feature must be an integer.",
+					"Position" -> showError[pos, pos, tokens]|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Too many tokens in the media feature value.", 
+					"Position" -> showError[pos, -1, tokens]|>]
+			,
+			Hold[True](*With[{v = value}, Hold[TrueQ[v]]]*)
+		]
+	]
+	
+(* FIXME: can we even test for this? Default to False for now as FE usually runs on color devices. *)
+consumeMediaFeature[name:"monochrome", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		TrimWhitespaceTokens[pos, l, tokens];
+		If[TokenTypeIs["number", tokens[[pos]]] && tokens[[pos]]["ValueType"] === "integer",
+			value = parseNumber[tokens[[pos]]];
+			,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Monochrome media feature must be an integer.",
+					"Position" -> showError[pos, pos, tokens]|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Too many tokens in the media feature value.", 
+					"Position" -> showError[pos, -1, tokens]|>]
+			,
+			Hold[False](*With[{v = value}, Hold[TrueQ[v]]]*)
+		]
+	]
+
+(* FIXME?: not sure if we can test for this. We assume most devices are SRGB. *)
+consumeMediaFeature[name:"color-gamut", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		TrimWhitespaceTokens[pos, l, tokens];
+		If[TokenTypeIs["ident", tokens[[pos]]],
+			Switch[tokens[[pos]]["String"],
+				"srgb",    value = True,
+				"p3",      value = False,
+				"rec2020", value = False,  
+				_,             
+					Throw @ 
+						Failure["BadMFValue", <|
+							"Message"  -> "Color-gamut must be either 'srgb', 'p3' or 'rec2020'.",
+							"Position" -> showError[pos, pos, tokens]|>]
+			]
+			,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Expected 'srgb', 'p3' or 'rec2020' keyword.",
+					"Position" -> showError[pos, pos, tokens]|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Too many tokens in the media feature value.", 
+					"Position" -> showError[pos, -1, tokens]|>]
+			,
+			With[{v = value}, Hold[v]]
+		]
+	]
+
+(* FE runs on either computer+mouse or on a touchscreen device which are 'fine' pointer devices. *)
+consumeMediaFeature[name:"pointer" | "any-pointer", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		TrimWhitespaceTokens[pos, l, tokens];
+		If[TokenTypeIs["ident", tokens[[pos]]],
+			Switch[tokens[[pos]]["String"],
+				"none",   value = False,
+				"coarse", value = False,
+				"fine",   value = True,  
+				_,             
+					Throw @ 
+						Failure["BadMFValue", <|
+							"Message"  -> "Pointer must be either 'none', 'coarse' or 'fine'.",
+							"Position" -> showError[pos, pos, tokens]|>]
+			]
+			,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Expected 'none', 'coarse' or 'fine' keyword.",
+					"Position" -> showError[pos, pos, tokens]|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Too many tokens in the media feature value.", 
+					"Position" -> showError[pos, -1, tokens]|>]
+			,
+			With[{v = value}, Hold[v]]
+		]
+	]
+	
+(* FIXME?
+	FE runs on either computer+mouse (with hover) or on a touchscreen device (no hover). 
+	For now assume hover is available. *)
+consumeMediaFeature[name:"hover" | "any-hover", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		TrimWhitespaceTokens[pos, l, tokens];
+		If[TokenTypeIs["ident", tokens[[pos]]],
+			Switch[tokens[[pos]]["String"],
+				"none",  value = False,
+				"hover", value = True,
+				_,             
+					Throw @ 
+						Failure["BadMFValue", <|
+							"Message"  -> "Pointer must be either 'none' or 'hover'.",
+							"Position" -> showError[pos, pos, tokens]|>]
+			]
+			,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Expected 'none' or 'hover' keyword.",
+					"Position" -> showError[pos, pos, tokens]|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Too many tokens in the media feature value.", 
+					"Position" -> showError[pos, -1, tokens]|>]
+			,
+			With[{v = value}, Hold[v]]
+		]
+	]
+	
+(* FIXME: only detects the first monitor device... *)	
+consumeMediaFeature[name:"device-width", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		TrimWhitespaceTokens[pos, l, tokens];
+		If[TokenTypeIs["dimension", tokens[[pos]]], 
+			value = parseLength[tokens[[pos]]]
+			,
+			Throw @ Failure["BadMFValue", <|"Message" -> "Device-width must be a length with dimensions."|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Too many tokens in the media feature value.", 
+					"Position" -> showError[pos, -1, tokens]|>]
+			,
+			With[{v = value}, Hold[With[{w = First["FullScreenArea" /. SystemInformation["Devices", "ScreenInformation"]][[1]]}, w[[2]]-w[[1]]] == v]]
+		]
+	]
+
+(* FIXME: only detects the first monitor device... *)	
+consumeMediaFeature[name:"device-height", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], value},
+		TrimWhitespaceTokens[pos, l, tokens];
+		If[TokenTypeIs["dimension", tokens[[pos]]], 
+			value = parseLength[tokens[[pos]]]
+			,
+			Throw @ Failure["BadMFValue", <|"Message" -> "Device-height must be a length with dimensions."|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ 
+				Failure["BadMFValue", <|
+					"Message"  -> "Too many tokens in the media feature value.", 
+					"Position" -> showError[pos, -1, tokens]|>]
+			,
+			With[{v = value}, Hold[With[{w = First["FullScreenArea" /. SystemInformation["Devices", "ScreenInformation"]][[2]]}, w[[2]]-w[[1]]] == v]]
+		]
+	]
+	
+consumeMediaFeature[name:"device-aspect-ratio", tokens:{__?CSSTokenQ}] := 
+	Module[{pos = 1, l = Length[tokens], numerator, denomenator},
+		TrimWhitespaceTokens[pos, l, tokens];
+		If[TokenTypeIs["number", tokens[[pos]]], 
+			If[tokens[[pos]]["ValueType"] === "integer",
+				numerator = parseNumber[tokens[[pos]]];
+				If[numerator < 1, Throw @ Failure["BadMFValue", <|"Message" -> "Device-aspect-ratio numerator must be a positive integer."|>]]
+				,
+				Throw @ Failure["BadMFValue", <|"Message" -> "Device-aspect-ratio numerator is not an integer."|>]
+			]
+			,
+			Throw @ Failure["BadMFValue", <|"Message" -> "Device-aspect-ratio must be a ratio of two integers."|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[TokenTypeIs["delim", tokens[[pos]]] && TokenStringIs["/", tokens[[pos]]],
+			AdvancePosAndSkipWhitespace[pos, l, tokens]
+			,
+			Throw @ Failure["BadMFValue", <|"Message" -> "Device-aspect-ratio must use '/' delimiter."|>]
+		];
+		If[TokenTypeIs["number", tokens[[pos]]], 
+			If[tokens[[pos]]["ValueType"] === "integer",
+				denomenator = parseNumber[tokens[[pos]]];
+				If[denomenator < 1, Throw @ Failure["BadMFValue", <|"Message" -> "Device-aspect-ratio denomenator must be a positive integer."|>]]
+				,
+				Throw @ Failure["BadMFValue", <|"Message" -> "Device-aspect-ratio denomenator is not an integer."|>]
+			]
+			,
+			Throw @ Failure["BadMFValue", <|"Message" -> "Device-aspect-ratio must be a ratio of two integers."|>]
+		];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		If[pos <= l,
+			Throw @ Failure["BadMFValue", <|"Message" -> "Too many tokens in the media feature value."|>]
+			,
+			With[{v = Rational[numerator, denomenator]}, 
+				Hold[With[{w = First["FullScreenArea" /. SystemInformation["Devices", "ScreenInformation"]]}, (w[[1,2]]-w[[1,1]])/(w[[2,2]]-w[[2,1]])] == v]
+			]
+		]
+	]
+
 consumeMediaFeature[_, _] := Throw @ Failure["BadMFName", <|"Message" -> "Unrecognized media feature name."|>]
 
 

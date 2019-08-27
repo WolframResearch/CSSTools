@@ -14,6 +14,7 @@ unrecognizedValueFailure;
 parseAngle;
 parseCounter;
 parseLength;
+parseResolution;
 parseNumber;
 parseSingleColor;
 
@@ -1097,8 +1098,9 @@ parseZero[___] := Failure["UnexpectedParse", <|"Message" -> "Expected CSS token 
 (*<length>*)
 
 
+(* CSS's DPI is fixed at 96 *)
 parseLength[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> unit_}]], inFontSize_:False] := 
-	Module[{dpi = "Resolution" /. First[SystemInformation["Devices", "ScreenInformation"], "Resolution" -> 72]},
+	Module[{dpi = 96(*"Resolution" /. First[SystemInformation["Devices", "ScreenInformation"], "Resolution" -> 72]*)},
 		If[TrueQ[val == 0], Return @ 0];
 		(* parse units 
 			The following conversions to pixels are based on SVG length specs and DPI.
@@ -1114,6 +1116,7 @@ parseLength[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?Num
 			"pt", val,
 			"pc", 12*val,
 			"px", 0.75*val,
+			"q",  val/40/2.54*dpi,
 			_,    Failure["UnexpectedParse", <|"Message" -> "Unrecognized length unit."|>]
 		]
 	]
@@ -1139,6 +1142,22 @@ negativeQ[n_, prop_String, default_] :=
 
 parsePercentage[CSSToken[KeyValuePattern[{"Type" -> "percentage", "Value" -> val_?NumericQ}]]] := Scaled[val/100]
 parsePercentage[___] := Failure["UnexpectedParse", <|"Message" -> "Expected CSS token of percentage type."|>]
+
+
+(* ::Subsection::Closed:: *)
+(*<resolution>*)
+
+
+(* FE uses points to indicate DPI *)
+parseResolution[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> unit_}]]] :=
+	Module[{dpi = 96 (* fixed CSS value 1dppx = 96dpi *)},
+		Switch[unit, 
+			"dpi",  val,
+			"dpcm", val/2.54,
+			"dppx", val*dpi,
+			_,      Failure["UnexpectedParse", <|"Message" -> "Unrecognized dimension unit."|>]
+		]
+	]
 
 
 (* ::Subsection::Closed:: *)
