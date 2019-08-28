@@ -121,12 +121,7 @@ consumeMediaType[pos_, l_, tokens_] :=
 			Switch[tokens[[pos]]["Type"],
 				"ident",
 					Switch[ToLowerCase @ tokens[[pos]]["String"],
-						"all",    
-							Hold[
-								Or[
-									CurrentValue[InputNotebook[], ScreenStyleEnvironment] === "Working",
-									CurrentValue[InputNotebook[], ScreenStyleEnvironment] === "Printout",
-									CurrentValue[InputNotebook[], ScreenStyleEnvironment] === "SlideShow"]],
+						"all",    Hold[True],
 						"print",  Hold[CurrentValue[InputNotebook[], ScreenStyleEnvironment] === "Printout"],
 						"screen", Hold[CurrentValue[InputNotebook[], ScreenStyleEnvironment] =!= "Printout"],
 						"speech", Hold[False],

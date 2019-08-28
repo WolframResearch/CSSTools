@@ -554,8 +554,8 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 				<|
 					"Property"       -> prop, 
 					"Value"          -> CSSUntokenize @ valueTokens,
-					"Important"      -> important,
 					"Interpretation" -> valueTokens,
+					"Important"      -> important,
 					"Condition"      -> None|>
 			];
 		If[TrueQ @ $RawImport, 
@@ -577,7 +577,7 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 expectedMainKeys      = {"Selector", "Block"};
 expectedMainKeysFull  = {"Selector", "Targets", "Block"};
 expectedBlockKeys     = {"Property", "Value", "Important", "Condition"};
-expectedBlockKeysFull = {"Property", "Value", "Important", "Interpretation", "Condition"};
+expectedBlockKeysFull = {"Property", "Value", "Interpretation", "Important", "Condition"};
 
 
 validCSSDataRawQ[data:{__Association}] := 
@@ -769,6 +769,30 @@ assemble[opt_, rules_List] := Last @ Cases[rules, HoldPattern[opt -> _], {1}]
 
 (* ========= Cell/Notebook/Box/All version ========= *)
 (* normalize Dataset input *)
+ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), CSSData_Dataset] :=
+	ResolveCSSInterpretations[type, Normal @ CSSData]
+
+ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; validCSSDataQ[CSSData]] :=
+	Module[{valid, allOptionNames},
+		(* ordering is maintained *)
+		(* group properties with conditions together, but otherwise keep ordering? *)
+		valid = Select[CSSData, Not[FailureQ[#Interpretation] || MissingQ[#Interpretation]] &];
+		valid = 
+			<|
+				"Condition" -> #Condition,
+				"Interpretation" -> 
+					Select[#Interpretation, 
+						Switch[type, 
+							Cell,      MemberQ[cellLevelOptions, #[[1]]]&, 
+							Notebook,  MemberQ[notebookLevelOptions, #[[1]]]&,
+							Box,      !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&,
+							All,       True&]]
+			|>& /@ valid;
+		allOptionNames = Union[First /@ Flatten @ valid[[All, "Interpretation"]]];
+				(*TODO: STARTHERE*)		
+	]
+	
+(* normalize Dataset input *)
 ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_Dataset] :=
 	ResolveCSSInterpretations[type, Normal @ interpretationList]
 
@@ -795,10 +819,10 @@ ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_] :=
 (* normalize Dataset input *)
 ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_Dataset] := 
 	ResolveCSSInterpretations[{box}, Normal @ interpretationList]
-	
+
 (* upgrade singleton to a list *)
 ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_] := ResolveCSSInterpretations[{box}, interpretationList]
-	
+
 (* main function *)
 ResolveCSSInterpretations[boxes:{__?validBoxesQ}, interpretationList_] := 
 	Module[{valid, initialSet},
@@ -821,14 +845,6 @@ ResolveCSSInterpretations[boxes:{__?validBoxesQ}, interpretationList_] :=
 ClearAll[ResolveCSSCascade];
 Options[ResolveCSSCascade] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
 
-(*(* upgrade box singleton to a list *)
-ResolveCSSCascade[box:_?validBoxesQ, CSSData_Dataset, selectorList:{__?CSSSelectorQ}, opts:OptionsPattern[]] := 
-	ResolveCSSCascade[{box}, CSSData, selectorList, opts]	
-
-(* FIXME: what is this even doing? this looks like it would become a recursion error... *)
-ResolveCSSCascade[boxes:{__?validBoxesQ}, CSSData_Dataset, selectorList:{__?CSSSelectorQ}, opts:OptionsPattern[]] :=
-	ResolveCSSCascade[boxes, CSSData, selectorList, opts]
-*)
 (* normalize Dataset input *)
 ResolveCSSCascade[
 	type:(Cell|Notebook|Box|All), CSSData_Dataset, 
@@ -865,13 +881,10 @@ ResolveCSSCascade[
 		*)
 		interpretationList = 
 			Flatten @ 
-				If[TrueQ @ OptionValue["IgnoreImportance"],
-					interpretationList[[All, "Interpretation"]]
-					,
+				If[Not[TrueQ @ OptionValue["IgnoreImportance"]],
 					Join[
 						Select[interpretationList, #Important == False&], 
-						Select[interpretationList, #Important == True&]
-					][[All, "Interpretation"]]
+						Select[interpretationList, #Important == True&]]
 				];
 				
 		(* now that the styles are all sorted, merge them *)
@@ -951,9 +964,9 @@ CSSTargets[doc:XMLObject["Document"][___], CSSData_?validCSSDataQ, wrapInDataset
 		(* Rebuild the CSS data with the targets included. *)
 		MapThread[
 			<|
-				"Selector"    -> #1["Selector"], 
-				"Targets"     -> #2, 
-				"Block"       -> #1["Block"]|>&,
+				"Selector" -> #1["Selector"], 
+				"Targets"  -> #2, 
+				"Block"    -> #1["Block"]|>&,
 			{CSSData, CSSTargets[doc, CSSData[[All, "Selector"]]]}] (* defined in CSSSelectors3 *)
 	]
 		
