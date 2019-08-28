@@ -17,7 +17,7 @@ Needs["CSSTools`CSSPropertyInterpreter`"];
 Begin["`Private`"] (* Begin Private Context *) 
 
 consumeMediaQuery[tokens:{___?CSSTokenQ}] :=
-	Module[{pos = 1, l = Length[tokens], hasMediaType = False, mediaType = All, mcStart = False, negate = False, value1, value2},
+	Module[{pos = 1, l = Length[tokens], hasMediaType = False, mcStart = False, negate = False, value1, value2},
 		TrimWhitespaceTokens[pos, l, tokens];
 		(* 
 			The start of a <media-query> is a little tricky. It can start with 'not', but we have to
@@ -40,14 +40,14 @@ consumeMediaQuery[tokens:{___?CSSTokenQ}] :=
 			,
 			isMediaType[tokens[[pos]]],
 				hasMediaType = True;
-				mediaType = consumeMediaType[pos, l, tokens];
+				value1 = consumeMediaType[pos, l, tokens];
 			,
 			True,
 				mcStart = True
 		];
 		If[!mcStart,
 			(* The next token must be an ident if one was not already consumed. *)
-			If[!hasMediaType && pos < l, mediaType = consumeMediaType[pos, l, tokens]; hasMediaType = True];
+			If[!hasMediaType && pos < l, value1 = consumeMediaType[pos, l, tokens]; hasMediaType = True];
 			(* The next tokens, if any, are 'and' with <media-condition-without-or> *)
 			While[pos < l,
 				Which[
@@ -97,7 +97,10 @@ consumeMediaQuery[tokens:{___?CSSTokenQ}] :=
 			If[FailureQ[value1], Throw @ Failure[value1[[1]], If[KeyExistsQ[value1[[2]], "Parsed"], KeyDrop[value1[[2]], "Parsed"], value1[[2]]]]]
 			
 		];
-		{mediaType, value1}
+		(* add possible overall negation *)
+		If[negate, value1 = Replace[value1, Hold[x___] :> Hold[Not[x]]]];
+		(* reduce And expressions that contain redundant True booleans *)
+		value1 //. {HoldPattern[And[a___, True, b___]] :> And[a, b], HoldPattern[And[a_]] :> a}
 	]
 	
 
@@ -118,16 +121,25 @@ consumeMediaType[pos_, l_, tokens_] :=
 			Switch[tokens[[pos]]["Type"],
 				"ident",
 					Switch[ToLowerCase @ tokens[[pos]]["String"],
-						"all",    None,
-						"print",  ScreenStyleEnvironment -> "Printout",
-						"screen", None,
-						"speech", Missing["Not supported."],
-						Alternatives["tty", "tv", "projection", "handheld", "braille", "embossed", "aural"], Missing["Not supported."],
+						"all",    
+							Hold[
+								Or[
+									CurrentValue[InputNotebook[], ScreenStyleEnvironment] === "Working",
+									CurrentValue[InputNotebook[], ScreenStyleEnvironment] === "Printout",
+									CurrentValue[InputNotebook[], ScreenStyleEnvironment] === "SlideShow"]],
+						"print",  Hold[CurrentValue[InputNotebook[], ScreenStyleEnvironment] === "Printout"],
+						"screen", Hold[CurrentValue[InputNotebook[], ScreenStyleEnvironment] =!= "Printout"],
+						"speech", Hold[False],
+						Alternatives[
+							"tty", "tv", "projection", 
+							"handheld", "braille", "embossed", 
+							"aural"
+						],        Hold[False],
 						"or",     Failure["BadMedia", <|"Message" -> "Reserved keyword 'or' cannot be used."|>],
 						"and",    Failure["BadMedia", <|"Message" -> "Reserved keyword 'and' cannot be used."|>],
 						"not",    Failure["BadMedia", <|"Message" -> "Reserved keyword 'not' cannot be used."|>],
 						"only",   Failure["BadMedia", <|"Message" -> "Reserved keyword 'only' cannot be used."|>],
-						_,        Missing["Not supported."] (* unknown query type *)
+						_,        Failure["BadMedia", <|"Message" -> "Unknown media type."|>] 
 					],
 				_, Failure["BadMedia", <|"Message" -> "Expected ident token in media query."|>]
 			];

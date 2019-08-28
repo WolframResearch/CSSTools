@@ -114,12 +114,11 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 		namespaces = Reverse @ DeleteDuplicatesBy[Reverse @ namespaces, #Prefix&];
 		
 		(* consume rulesets *)
-		rulesets = consumeRulesets[pos, l, tokens, namespaces];
+		rulesets = Flatten @ consumeRulesets[pos, l, tokens, namespaces];
 		
 		(* combine all stylesheets *)
 		Join[imports, rulesets]
 	]
-
 
 SetAttributes[consumeRulesets, HoldFirst];
 consumeRulesets[pos_, l_, tokens_, namespaces_, allowAtRule_:True] :=
@@ -132,7 +131,8 @@ consumeRulesets[pos_, l_, tokens_, namespaces_, allowAtRule_:True] :=
 				(* any at-rule *)
 				allowAtRule && TokenTypeIs["at-keyword", tokens[[pos]]], 
 					If[TrueQ @ $Debug, Echo[tokens[[pos]], "consuming at rule"]]; 
-					rulesets[[i]] = consumeAtRule[pos, l, tokens, namespaces],
+					rulesets[[i]] = consumeAtRule[pos, l, tokens, namespaces];
+					i++,
 				
 				(* bad ruleset: missing a selector *)
 				TokenTypeIs["{}", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens], 
@@ -194,13 +194,12 @@ consumeAtImportKeyword[pos_, l_, tokens_] :=
 		If[TrueQ @ $Debug, Echo[pos, "position before @import media check"]];
 		
 		(* anything else is a comma-delimited set of media queries *)
-		(*TODO: implement proper media queries *)
 		mediums = {};
 		While[TokenTypeIsNot["semicolon", tokens[[pos]]],
 			mediaStart = pos;
 			AdvancePosToNextSemicolonOrComma[pos, l, tokens];
 			If[pos == l, Echo["Media query has no closing. Reached EOF.", "@import error"]; Return @ {}];
-			AppendTo[mediums, CSSUntokenize @ tokens[[mediaStart ;; pos - 1]]];
+			AppendTo[mediums, tokens[[mediaStart ;; pos - 1]]];
 			If[TokenTypeIs["semicolon", tokens[[pos]]],
 				(* break out of media loop*)
 				Break[] 
@@ -209,6 +208,10 @@ consumeAtImportKeyword[pos_, l_, tokens_] :=
 				AdvancePosAndSkipWhitespace[pos, l, tokens] 
 			]
 		];
+		mediums = consumeMediaQuery /@ mediums; 
+		If[AnyTrue[mediums, _?FailureQ], Return @ {}];
+		(* a media query list is true of any component is true, and false only if all are false, so combine into Or *)
+		mediums = Thread[Or @@ mediums, Hold];
 		AdvancePosAndSkipWhitespace[pos, l, tokens]; (* skip semicolon *)
 				
 		(* import without interpretation *)
@@ -224,7 +227,7 @@ consumeAtImportKeyword[pos_, l_, tokens_] :=
 			Return @ {}
 			, 
 			data = consumeStyleSheet @ CSSTokenize @ data;
-			If[mediums =!= {}, data[[All, "Condition"]] = ConstantArray[mediums, Length[data]]];
+			If[mediums =!= None, data[[All, "Block", All, "Condition"]] = mediums];
 			Return @ data
 		]
 	]
@@ -281,7 +284,9 @@ consumeAtRule[pos_, l_, tokens_, namespaces_] :=
 		TokenStringIs["page", tokens[[pos]]], consumeAtPageRule[pos, l, tokens],
 			
 		(* @media *)
-		TokenStringIs["media", tokens[[pos]]], consumeAtMediaRule[pos, l, tokens, namespaces],
+		TokenStringIs["media", tokens[[pos]]], 
+			If[TrueQ @ $Debug, Echo["consuming at-media rule"]];
+			consumeAtMediaRule[pos, l, tokens, namespaces],
 			
 		(* unrecognized @rule *)
 		True, 
@@ -316,11 +321,13 @@ consumeAtMediaRule[pos_, l_, tokens_, namespaces_] :=
 				{CSSToken[KeyValuePattern["Type" -> "comma"]]}];
 		queries = consumeMediaQuery /@ queries;
 		If[AnyTrue[queries, _?FailureQ], Return @ FirstCase[queries, _?FailureQ]];
-
+		(* a media query list is true of any component is true, and false only if all are false, so combine into Or *)
+		queries = Thread[Or @@ queries, Hold];
+		
 		If[TokenTypeIsNot["{}", tokens[[pos]]], Return @ Failure["BadMedia", <|"Message" -> "Expected @media block."|>]];
 		values = consumeAtMediaBlock[tokens[[pos]]["Children"], namespaces];
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
-		values[[All, "Condition"]] = queries;
+		values[[All, "Block", All, "Condition"]] = queries;
 		values
 	]
 	
@@ -329,8 +336,6 @@ consumeMediaQuery[tokens:{___?CSSTokenQ}] :=
 		(* trim whitespace tokens from ends *)
 		pos = l; If[TokenTypeIs["whitespace", tokens[[pos]]], RetreatPosAndSkipWhitespace[pos, l, tokens]]; l = pos;
 		pos = 1; If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
-		
-		Echo["HERE"];
 		
 		(* first token should be the media type *)
 		Switch[tokens[[pos]]["Type"],
@@ -368,7 +373,7 @@ consumeAtMediaBlock[tokens:{___?CSSTokenQ}, namespaces_] :=
 
 
 consumeAtPageRule[pos_, l_, tokens_] := 
-	Module[{pageSelectors},
+	Module[{pageSelectors, block},
 		(* check for valid start of @page token sequence *)
 		If[TokenTypeIsNot["at-keyword", tokens[[pos]]] || TokenStringIsNot["page", tokens[[pos]]],
 			Echo[Row[{"Expected @page keyword instead of ", tokens[[pos]]}], "@page error"];
@@ -406,10 +411,11 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 		];
 		
 		(* consume @page block *)
+		block = consumeAtPageBlock[tokens[[pos]]["Children"], pageSelectors];
+		block[[All, "Condition"]] = Hold[CurrentValue[InputNotebook[], ScreenStyleEnvironment] === "Printout"];
 		<|
-			"Selector"  -> "@page",
-			"Condition" -> ScreenStyleEnvironment -> "Printout",
-			"Block"     -> consumeAtPageBlock[tokens[[pos]]["Children"], pageSelectors]|>
+			"Selector" -> "@page",
+			"Block"    -> block|>	
 	]
 
 
@@ -443,7 +449,7 @@ convertMarginsToPrintingOptions[declaration_?AssociationQ, scope_] :=
 		If[!KeyExistsQ["Interpretation"] || FreeQ[declaration["Interpretation"], ImageMargins], Return @ declaration];
 		value = Flatten[{"PrintingMargins" /. PrintingOptions /. declaration["Interpretation"]}];
 		(* CSS 2.1 does not allow ex or em lengths *)
-		If[!FreeQ[value, FontSize | "FontXHeight"], Return @ Failure["BadLength", <|"Message" -> "Page margins cannot us 'em' or 'ex' units."|>];];
+		If[!FreeQ[value, FontSize | "FontXHeight"], Return @ Failure["BadLength", <|"Message" -> "Page margins cannot us 'em' or 'ex' units."|>]];
 		value = 
 			Replace[
 				value, 
@@ -475,7 +481,6 @@ consumeRuleset[pos_, l_, tokens_, namespaces_] :=
 		ruleset = 
 			<|
 				"Selector" -> consumeCSSSelector[tokens[[selectorStartPos ;; pos - 1]], namespaces], 
-				"Condition" -> None,
 				(* The block token is already encapsulated CSSToken[<|"Type" -> {}, "Children" -> {CSSTokens...}|>] *)
 				"Block" -> consumeDeclarationBlock @ If[Length[tokens[[pos]]["Children"]] > 1, tokens[[pos]]["Children"], {}]|>; 
 		(* return the formatted ruleset, but first make sure to skip the block *)
@@ -547,10 +552,11 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 					valueTokens = If[decPos < valuePosition, {}, decTokens[[valuePosition ;; decPos]]]
 				},
 				<|
-					"Important" -> important,
-					"Property" -> prop, 
-					"Value" -> CSSUntokenize @ valueTokens,
-					"Interpretation" -> valueTokens				|>
+					"Property"       -> prop, 
+					"Value"          -> CSSUntokenize @ valueTokens,
+					"Important"      -> important,
+					"Interpretation" -> valueTokens,
+					"Condition"      -> None|>
 			];
 		If[TrueQ @ $RawImport, 
 			KeyDropFrom[declaration, "Interpretation"]
@@ -568,10 +574,10 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 (*Valid boxes, options, and expressions for merging*)
 
 
-expectedMainKeys     = {"Selector", "Condition", "Block"};
-expectedMainKeysFull = {"Selector", (*"Specificity", *)"Targets", "Condition", "Block"};
-expectedBlockKeys     = {"Important", "Property", "Value"};
-expectedBlockKeysFull = {"Important", "Property", "Value", "Interpretation"};
+expectedMainKeys      = {"Selector", "Block"};
+expectedMainKeysFull  = {"Selector", "Targets", "Block"};
+expectedBlockKeys     = {"Property", "Value", "Important", "Condition"};
+expectedBlockKeysFull = {"Property", "Value", "Important", "Interpretation", "Condition"};
 
 
 validCSSDataRawQ[data:{__Association}] := 
@@ -947,7 +953,6 @@ CSSTargets[doc:XMLObject["Document"][___], CSSData_?validCSSDataQ, wrapInDataset
 			<|
 				"Selector"    -> #1["Selector"], 
 				"Targets"     -> #2, 
-				"Condition"   -> #1["Condition"], 
 				"Block"       -> #1["Block"]|>&,
 			{CSSData, CSSTargets[doc, CSSData[[All, "Selector"]]]}] (* defined in CSSSelectors3 *)
 	]
@@ -1001,9 +1006,8 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 			MapThread[
 				<|
 					"Selector" -> CSSSelector[<|"String" -> None, "Sequence" -> {}, "Specificity" -> {1, 0, 0, 0}|>], 
-					"Targets" -> {#1}, 
-					"Condition" -> None, 
-					"Block" ->  consumeDeclarationBlock @ CSSTokenize @ #2|>&, 
+					"Targets"  -> {#1}, 
+					"Block"    ->  consumeDeclarationBlock @ CSSTokenize @ #2|>&, 
 				{directStylePositions, directStyleContent}];
 		
 		(* combine all CSS sources based on position in XMLObject *)

@@ -159,7 +159,7 @@ $ValidPageMargins = {
 SetAttributes[{consumeAtPageRule}, HoldFirst];
 
 consumeAtPageRule[pos_, l_, tokens_] := 
-	Module[{selectorsStart, selectorsEnd, pageSelectors},
+	Module[{selectorsStart, selectorsEnd, pageSelectors, block},
 		(* check for valid start of @page token sequence *)
 		If[TokenTypeIsNot["at-keyword", tokens[[pos]]] || TokenStringIsNot["page", tokens[[pos]]],
 			Echo[Row[{"Expected @page keyword. Had instead ", tokens[[pos]]}], "@page error"];
@@ -182,10 +182,11 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 			];
 		
 		(* consume @page block *)
+		block = consumeAtPageBlock[tokens[[pos]]["Children"], pageSelectors];
+		block[[All, "Condition"]] = Hold[CurrentValue[InputNotebook[], ScreenStyleEnvironment] === "Printout"];
 		<|
-			"Selector"  -> "@page" <> If[NumericQ[selectorsStart], " " <> CSSUntokenize @ tokens[[selectorsStart ;; selectorsEnd]], ""],
-			"Condition" -> ScreenStyleEnvironment -> "Printout",
-			"Block"     -> consumeAtPageBlock[tokens[[pos]]["Children"], pageSelectors]|>	
+			"Selector" -> "@page" <> If[NumericQ[selectorsStart], " " <> CSSUntokenize @ tokens[[selectorsStart ;; selectorsEnd]], ""],
+			"Block"    -> block|>	
 	]
 
 
@@ -345,9 +346,9 @@ consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}, scope_, location_String, horizo
 				]
 			];
 		<|
-			"Important" -> False,
-			"Property" -> location,
-			"Value" -> Dataset @ declarations,
+			"Property"       -> location,
+			"Value"          -> Dataset @ declarations,
+			"Important"      -> False,
 			"Interpretation" -> 
 				Which[
 					MatchQ[scope, Left | Right], vertical -> scope @ horizontal @ interpretation,
