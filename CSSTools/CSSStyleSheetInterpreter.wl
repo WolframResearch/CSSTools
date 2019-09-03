@@ -680,8 +680,8 @@ getSideFromLRBTDirective[side:Left | Right | Bottom | Top, list_] := Reverse @ D
 
 
 (* Directive does not always like Dynamic inside of it, so move it outside if it exists. *)
-setDirective[(side:Left | Right | Bottom | Top)[        a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[Dynamic[prop_]], b___] ] := setDirective[side[Dynamic[a, prop, b]]] 
-setDirective[(side:Left | Right | Bottom | Top)[Dynamic[a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[Dynamic[prop_]], b___]]] := setDirective[side[Dynamic[a, prop, b]]]
+setDirective[(side:Left | Right | Bottom | Top)[        a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[Dynamic[prop_, ___]], b___] ] := setDirective[side[Dynamic[a, prop, b]]] 
+setDirective[(side:Left | Right | Bottom | Top)[Dynamic[a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[Dynamic[prop_, ___]], b___]]] := setDirective[side[Dynamic[a, prop, b]]]
 setDirective[(side:Left | Right | Bottom | Top)[Dynamic[a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[        prop_ ], b___]]] := setDirective[side[Dynamic[a, prop, b]]]
 setDirective[(side:Left | Right | Bottom | Top)[        a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[        prop_ ], b___] ] := setDirective[side[        a, prop, b] ]
 
@@ -888,7 +888,8 @@ ResolveCSSCascade[
 				];
 				
 		(* now that the styles are all sorted, merge them *)
-		ResolveCSSInterpretations[type, interpretationList]
+		(*ResolveCSSInterpretations[type, interpretationList]*)
+		interpretationList
 	]
 
 ResolveCSSCascade[___] := Failure["BadCSSData", <||>]

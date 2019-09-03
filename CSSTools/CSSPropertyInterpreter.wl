@@ -1779,7 +1779,7 @@ consumeProperty[
 	Module[
 		{
 			pos = 1, l = Length[tokens], value, 
-			wrapper = Switch[prop, "border-left", Left, "border-right", Right, "border-top", Top, "border-bottom", Bottom, _, Through[{Left, Right, Top, Bottom}[#]]&],
+			wrapper = Switch[prop, "border-left", Left, "border-right", Right, "border-top", Top, "border-bottom", Bottom, _, Through[{Left, Right, Top, Bottom}[##]]&],
 			values = <|
 				"c" -> initialValues[prop <> "-color"], 
 				"s" -> initialValues[prop <> "-style"], 
@@ -1799,7 +1799,7 @@ consumeProperty[
 					
 				!FailureQ[value = parseSingleBorderWidth[prop, tokens[[pos]]]],
 					If[hasWidth, Return @ repeatedPropValueFailure @ (prop <> "-width")];
-					hasWidth = True; values["w"] = value,
+					hasWidth = True; values["w"] = CSSBorderWidth @ value,
 				
 				True, unrecognizedValueFailure @ prop						
 			];
@@ -1807,9 +1807,9 @@ consumeProperty[
 		];
 		
 		{
-			FrameStyle     -> wrapper[values["c"], values["s"], CSSBorderWidth @ values["w"]], 
+			FrameStyle     -> wrapper[values["c"], values["s"], values["w"]], 
 			CellFrameStyle -> wrapper[values["c"], values["s"]], 
-			CellFrame      -> wrapper[CSSBorderWidth @ convertToCellThickness @ values["w"]]}
+			CellFrame      -> wrapper[convertToCellThickness @ values["w"]]}
 	]
 
 
@@ -2827,21 +2827,17 @@ consumeProperty[prop:"outline", tokens:{__?CSSTokenQ}] :=
 	},
 		While[pos <= l,
 			Which[
-				TokenTypeIs["function", tokens[[pos]]], (* only color can be a function *)
-					If[hasColor, Return @ repeatedPropValueFailure @ (prop <> "-color")]; 
-					hasColor = True; values["c"] = parseSingleColor[prop, tokens[[pos]]],
-					
 				!FailureQ[value = parseSingleColor[prop, tokens[[pos]]]],
 					If[hasColor, Return @ repeatedPropValueFailure @ (prop <> "-color")];
-					hasColor = True; values["c"] = value,
+					hasColor = True; values["c"] = CSSBorderColor @ value,
 				
 				!FailureQ[value = parseSingleBorderStyle[prop, tokens[[pos]]]],
 					If[hasStyle, Return @ repeatedPropValueFailure @ (prop <> "-style")];
-					hasStyle = True; values["s"] = value,
+					hasStyle = True; values["s"] = CSSBorderStyle @ value,
 					
 				!FailureQ[value = parseSingleBorderWidth[prop, tokens[[pos]]]],
 					If[hasWidth, Return @ repeatedPropValueFailure @ (prop <> "-width")];
-					hasWidth = True; values["w"] = value,
+					hasWidth = True; values["w"] = CSSBorderWidth @ value,
 				
 				True, unrecognizedValueFailure @ prop						
 			];
