@@ -219,8 +219,8 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "N/A",  (* shorthand property *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> Background -> Inherited,
-			"initial" -> Background -> None|>|>,
+			"inherit" -> <|Background -> Inherited|>,
+			"initial" -> <|Background -> None|>|>|>,
 	"background-attachment" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "scroll",
@@ -231,305 +231,312 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "transparent",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> Background -> Inherited,
-			"initial" -> Background -> None|>|>,
+			"inherit" -> <|Background -> Inherited|>,
+			"initial" -> <|Background -> None|>|>|>,
 	"background-image" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> System`BackgroundAppearance -> Inherited,
-			"initial" -> System`BackgroundAppearance -> None|>|>, 
+			"inherit" -> <|System`BackgroundAppearance -> Inherited|>,
+			"initial" -> <|System`BackgroundAppearance -> None|>|>|>, 
 	"background-position" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0% 0%",
 		"InterpretedGlobalValues" -> <|
 			(* Technically WL value should be {0,0}, but FE only supports keywords. *)
-			"inherit" -> System`BackgroundAppearanceOptions -> Inherited,
-			"initial" -> System`BackgroundAppearanceOptions -> "NoRepeat"|>|>, 
+			"inherit" -> <|System`BackgroundAppearanceOptions -> Inherited|>,
+			"initial" -> <|System`BackgroundAppearanceOptions -> "NoRepeat"|>|>|>, 
 	"background-repeat" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "repeat",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> System`BackgroundAppearanceOptions -> Inherited,
-			"initial" -> System`BackgroundAppearanceOptions -> "Repeat"|>|>, 
+			"inherit" -> <|System`BackgroundAppearanceOptions -> Inherited|>,
+			"initial" -> <|System`BackgroundAppearanceOptions -> "Repeat"|>|>|>, 
 	"border-collapse" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "separate",
 		"InterpretedGlobalValues" -> <|
 			(* FE only follows the 'collapse' model within Grid but does not provide a modifiable option. *)
-			"inherit" -> {},
+			"inherit" -> <||>,
 			"initial" -> Missing["Not supported."]|>|>, 
 	"border-color" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor", (* shorthand property, sets all 4 border sides *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Through[{Left, Right, Bottom, Top}[Inherited]], 
-				CellFrameStyle -> Through[{Left, Right, Bottom, Top}[Inherited]]},
-			"initial" -> {
-				FrameStyle     -> Through[{Left, Right, Bottom, Top}[CSSBorderColor[Dynamic @ CurrentValue[FontColor]]]], 
-				CellFrameStyle -> Through[{Left, Right, Bottom, Top}[CSSBorderColor[Dynamic @ CurrentValue[FontColor]]]]}|>|>, 
+			"inherit" -> <|
+				FrameStyle     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited], 
+				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited]|>,
+			"initial" -> <|
+				FrameStyle     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>], 
+				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>]|>|>|>, 
 	"border-top-color" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Top @ Inherited, 
-				CellFrameStyle -> Top @ Inherited},
-			"initial" -> {
-				FrameStyle     -> Top @ CSSBorderColor[Dynamic @ CurrentValue[FontColor]], 
-				CellFrameStyle -> Top @ CSSBorderColor[Dynamic @ CurrentValue[FontColor]]}|>|>, 
+			"inherit" -> <|
+				FrameStyle     -> <|"Top" -> <|"Color" -> Inherited|>|>, 
+				CellFrameStyle -> <|"Top" -> <|"Color" -> Inherited|>|>|>,
+			"initial" -> <|
+				FrameStyle     -> <|"Top" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>, 
+				CellFrameStyle -> <|"Top" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>|>, 
 	"border-right-color" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Right @ Inherited, 
-				CellFrameStyle -> Right @ Inherited},
-			"initial" -> {
-				FrameStyle     -> Right @ CSSBorderColor[Dynamic @ CurrentValue[FontColor]], 
-				CellFrameStyle -> Right @ CSSBorderColor[Dynamic @ CurrentValue[FontColor]]}|>|>,
+			"inherit" -> <|
+				FrameStyle     -> <|"Right" -> <|"Color" -> Inherited|>|>, 
+				CellFrameStyle -> <|"Right" -> <|"Color" -> Inherited|>|>|>,
+			"initial" -> <|
+				FrameStyle     -> <|"Right" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>, 
+				CellFrameStyle -> <|"Right" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>|>,
 	"border-bottom-color" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Bottom @ Inherited, 
-				CellFrameStyle -> Bottom @ Inherited},
-			"initial" -> {
-				FrameStyle     -> Bottom @ CSSBorderColor[Dynamic @ CurrentValue[FontColor]], 
-				CellFrameStyle -> Bottom @ CSSBorderColor[Dynamic @ CurrentValue[FontColor]]}|>|>,
+			"inherit" -> <|
+				FrameStyle     -> <|"Bottom" -> <|"Color" -> Inherited|>|>, 
+				CellFrameStyle -> <|"Bottom" -> <|"Color" -> Inherited|>|>|>,
+			"initial" -> <|
+				FrameStyle     -> <|"Bottom" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>, 
+				CellFrameStyle -> <|"Bottom" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>|>,
 	"border-left-color" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Left @ Inherited, 
-				CellFrameStyle -> Left @ Inherited},
-			"initial" -> {
-				FrameStyle     -> Left @ CSSBorderColor[Dynamic @ CurrentValue[FontColor]], 
-				CellFrameStyle -> Left @ CSSBorderColor[Dynamic @ CurrentValue[FontColor]]}|>|>,
+			"inherit" -> <|
+				FrameStyle     -> <|"Left" -> <|"Color" -> Inherited|>|>, 
+				CellFrameStyle -> <|"Left" -> <|"Color" -> Inherited|>|>|>,
+			"initial" -> <|
+				FrameStyle     -> <|"Left" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>, 
+				CellFrameStyle -> <|"Left" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>|>,
 	"border-style" -> <| (* AKA dashing *)
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none", (* shorthand property, sets all 4 sides *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Through[{Left, Right, Bottom, Top}[Inherited]], 
-				CellFrameStyle -> Through[{Left, Right, Bottom, Top}[Inherited]]},
-			"initial" -> {
-				FrameStyle     -> Through[{Left, Right, Bottom, Top}[CSSBorderStyle[None]]], 
-				CellFrameStyle -> Through[{Left, Right, Bottom, Top}[CSSBorderStyle[None]]]}|>|>, 
+			"inherit" -> <|
+				FrameStyle     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited], 
+				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited]|>,
+			"initial" -> <|
+				FrameStyle     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Style" -> None|>], 
+				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Style" -> None|>]|>|>|>, 
 	"border-top-style" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Top @ Inherited, 
-				CellFrameStyle -> Top @ Inherited},
-			"initial" -> {
-				FrameStyle     -> Top @ CSSBorderStyle[None], 
-				CellFrameStyle -> Top @ CSSBorderStyle[None]}|>|>, 
+			"inherit" -> <|
+				FrameStyle     -> <|"Top" -> <|"Style" -> Inherited|>|>, 
+				CellFrameStyle -> <|"Top" -> <|"Style" -> Inherited|>|>|>,
+			"initial" -> <|
+				FrameStyle     -> <|"Top" -> <|"Style" -> None|>|>, 
+				CellFrameStyle -> <|"Top" -> <|"Style" -> None|>|>|>|>|>, 
 	"border-right-style" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Right @ Inherited, 
-				CellFrameStyle -> Right @ Inherited},
-			"initial" -> {
-				FrameStyle     -> Right @ CSSBorderStyle[None], 
-				CellFrameStyle -> Right @ CSSBorderStyle[None]}|>|>,
+			"inherit" -> <|
+				FrameStyle     -> <|"Right" -> <|"Style" -> Inherited|>|>, 
+				CellFrameStyle -> <|"Right" -> <|"Style" -> Inherited|>|>|>,
+			"initial" -> <|
+				FrameStyle     -> <|"Right" -> <|"Style" -> None|>|>, 
+				CellFrameStyle -> <|"Right" -> <|"Style" -> None|>|>|>|>|>,
 	"border-bottom-style" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Bottom @ Inherited, 
-				CellFrameStyle -> Bottom @ Inherited},
-			"initial" -> {
-				FrameStyle     -> Bottom @ CSSBorderStyle[None], 
-				CellFrameStyle -> Bottom @ CSSBorderStyle[None]}|>|>,
+			"inherit" -> <|
+				FrameStyle     -> <|"Bottom" -> <|"Style" -> Inherited|>|>, 
+				CellFrameStyle -> <|"Bottom" -> <|"Style" -> Inherited|>|>|>,
+			"initial" -> <|
+				FrameStyle     -> <|"Bottom" -> <|"Style" -> None|>|>, 
+				CellFrameStyle -> <|"Bottom" -> <|"Style" -> None|>|>|>|>|>,
 	"border-left-style" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Left @ Inherited, 
-				CellFrameStyle -> Left @ Inherited},
-			"initial" -> {
-				FrameStyle     -> Left @ CSSBorderStyle[None], 
-				CellFrameStyle -> Left @ CSSBorderStyle[None]}|>|>,
+			"inherit" -> <|
+				FrameStyle     -> <|"Left" -> <|"Style" -> Inherited|>|>, 
+				CellFrameStyle -> <|"Left" -> <|"Style" -> Inherited|>|>|>,
+			"initial" -> <|
+				FrameStyle     -> <|"Left" -> <|"Style" -> None|>|>, 
+				CellFrameStyle -> <|"Left" -> <|"Style" -> None|>|>|>|>|>,
 	"border-width" -> <| (* AKA thickness *)
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium", (* shorthand property, sets all 4 border sides *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle -> Through[{Left, Right, Bottom, Top}[Inherited]], 
-				CellFrame  -> Through[{Left, Right, Bottom, Top}[Inherited]]},
-			"initial" -> {
-				FrameStyle -> Through[{Left, Right, Bottom, Top}[CSSBorderWidth[Thickness[Medium]]]], 
-				CellFrame  -> Through[{Left, Right, Bottom, Top}[CSSBorderWidth[2]]]}|>|>, 
+			"inherit" -> <|
+				FrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited], 
+				CellFrame  -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited]|>,
+			"initial" -> <|
+				FrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Width" -> Thickness[Medium]|>], 
+				CellFrame  -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Width" -> 2|>]|>|>|>, 
 	"border-top-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle -> Top @ Inherited, 
-				CellFrame  -> Top @ Inherited},
-			"initial" -> {
-				FrameStyle -> Top @ CSSBorderWidth[Thickness[Medium]], 
-				CellFrame  -> Top @ CSSBorderWidth[2]}|>|>, 
+			"inherit" -> <|
+				FrameStyle -> <|"Top" -> <|"Width" -> Inherited|>|>, 
+				CellFrame  -> <|"Top" -> <|"Width" -> Inherited|>|>|>,
+			"initial" -> <|
+				FrameStyle -> <|"Top" -> <|"Width" -> Thickness[Medium]|>|>, 
+				CellFrame  -> <|"Top" -> <|"Width" -> 2|>|>|>|>|>, 
 	"border-right-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle -> Right @ Inherited, 
-				CellFrame  -> Right @ Inherited},
-			"initial" -> {
-				FrameStyle -> Right @ CSSBorderWidth[Thickness[Medium]], 
-				CellFrame  -> Right @ CSSBorderWidth[2]}|>|>,
+			"inherit" -> <|
+				FrameStyle -> <|"Right" -> <|"Width" -> Inherited|>|>, 
+				CellFrame  -> <|"Right" -> <|"Width" -> Inherited|>|>|>,
+			"initial" -> <|
+				FrameStyle -> <|"Right" -> <|"Width" -> Thickness[Medium]|>|>, 
+				CellFrame  -> <|"Right" -> <|"Width" -> 2|>|>|>|>|>,
 	"border-bottom-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle -> Bottom @ Inherited, 
-				CellFrame  -> Bottom @ Inherited},
-			"initial" -> {
-				FrameStyle -> Bottom @ CSSBorderWidth[Thickness[Medium]], 
-				CellFrame  -> Bottom @ CSSBorderWidth[2]}|>|>,
+			"inherit" -> <|
+				FrameStyle -> <|"Bottom" -> <|"Width" -> Inherited|>|>, 
+				CellFrame  -> <|"Bottom" -> <|"Width" -> Inherited|>|>|>,
+			"initial" -> <|
+				FrameStyle -> <|"Bottom" -> <|"Width" -> Thickness[Medium]|>|>, 
+				CellFrame  -> <|"Bottom" -> <|"Width" -> 2|>|>|>|>|>,
 	"border-left-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle -> Left @ Inherited, 
-				CellFrame  -> Left @ Inherited},
-			"initial" -> {
-				FrameStyle -> Left @ CSSBorderWidth[Thickness[Medium]], 
-				CellFrame  -> Left @ CSSBorderWidth[2]}|>|>,
+			"inherit" -> <|
+				FrameStyle -> <|"Left" -> <|"Width" -> Inherited|>|>, 
+				CellFrame  -> <|"Left" -> <|"Width" -> Inherited|>|>|>,
+			"initial" -> <|
+				FrameStyle -> <|"Left" -> <|"Width" -> Thickness[Medium]|>|>, 
+				CellFrame  -> <|"Left" -> <|"Width" -> 2|>|>|>|>|>,
 	"border" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand property, sets all 4 border sides color/style/width*)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Through[{Left, Right, Bottom, Top}[Inherited]], 
-				CellFrame      -> Through[{Left, Right, Bottom, Top}[Inherited]],
-				CellFrameStyle -> Through[{Left, Right, Bottom, Top}[Inherited]]},
-			"initial" -> {
-				FrameStyle     -> Through[{Left, Right, Bottom, Top}[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None], CSSBorderWidth[Thickness[Medium]]]], 
-				CellFrame      -> Through[{Left, Right, Bottom, Top}[CSSBorderWidth[2]]],
-				CellFrameStyle -> Through[{Left, Right, Bottom, Top}[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None]]]}|>|>, 
+			"inherit" -> <|
+				FrameStyle     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited], 
+				CellFrame      -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited],
+				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited]|>,
+			"initial" -> <|
+				FrameStyle     -> 
+					AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|
+						"Color" -> Dynamic @ CurrentValue[FontColor], 
+						"Style" -> None, 
+						"Width" -> Thickness[Medium]|>], 
+				CellFrame      -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 2],
+				CellFrameStyle -> 
+					AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|
+						"Color" -> Dynamic @ CurrentValue[FontColor], 
+						"Style" -> None|>]|>|>|>, 
 	"border-top" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Top @ Inherited, 
-				CellFrame      -> Top @ Inherited,
-				CellFrameStyle -> Top @ Inherited},
-			"initial" -> {
-				FrameStyle     -> Top[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None], CSSBorderWidth[Thickness[Medium]]], 
-				CellFrame      -> Top[CSSBorderWidth[2]],
-				CellFrameStyle -> Top[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None]]}|>|>, 
+			"inherit" -> <|
+				FrameStyle     -> <|"Top" -> Inherited|>, (* START HERE *)
+				CellFrame      -> <|"Top" -> Inherited|>,
+				CellFrameStyle -> <|"Top" -> Inherited|>|>,
+			"initial" -> <|
+				FrameStyle     -> <|"Top" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None, "Width" -> Thickness[Medium]|>|>, 
+				CellFrame      -> <|"Top" -> <|"Width" -> 2|>|>,
+				CellFrameStyle -> <|"Top" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>|>, 
 	"border-right" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Right @ Inherited, 
-				CellFrame      -> Right @ Inherited,
-				CellFrameStyle -> Right @ Inherited},
-			"initial" -> {
-				FrameStyle     -> Right[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None], CSSBorderWidth[Thickness[Medium]]], 
-				CellFrame      -> Right[CSSBorderWidth[2]],
-				CellFrameStyle -> Right[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None]]}|>|>, 
+			"inherit" -> <|
+				FrameStyle     -> <|"Right" -> Inherited|>, 
+				CellFrame      -> <|"Right" -> Inherited|>,
+				CellFrameStyle -> <|"Right" -> Inherited|>|>,
+			"initial" -> <|
+				FrameStyle     -> <|"Right" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None, "Width" -> Thickness[Medium]|>|>, 
+				CellFrame      -> <|"Right" -> <|"Width" -> 2|>|>,
+				CellFrameStyle -> <|"Right" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>|>, 
 	"border-bottom" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Bottom @ Inherited, 
-				CellFrame      -> Bottom @ Inherited,
-				CellFrameStyle -> Bottom @ Inherited},
-			"initial" -> {
-				FrameStyle     -> Bottom[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None], CSSBorderWidth[Thickness[Medium]]], 
-				CellFrame      -> Bottom[CSSBorderWidth[2]],
-				CellFrameStyle -> Bottom[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None]]}|>|>, 
+			"inherit" -> <|
+				FrameStyle     -> <|"Bottom" -> Inherited|>, 
+				CellFrame      -> <|"Bottom" -> Inherited|>,
+				CellFrameStyle -> <|"Bottom" -> Inherited|>|>,
+			"initial" -> <|
+				FrameStyle     -> <|"Bottom" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None, "Width" -> Thickness[Medium]|>|>, 
+				CellFrame      -> <|"Bottom" -> <|"Width" -> 2|>|>,
+				CellFrameStyle -> <|"Bottom" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>|>, 
 	"border-left" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameStyle     -> Left @ Inherited, 
-				CellFrame      -> Left @ Inherited,
-				CellFrameStyle -> Left @ Inherited},
-			"initial" -> {
-				FrameStyle     -> Left[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None], CSSBorderWidth[Thickness[Medium]]], 
-				CellFrame      -> Left[CSSBorderWidth[2]],
-				CellFrameStyle -> Left[CSSBorderColor[Dynamic @ CurrentValue[FontColor]], CSSBorderStyle[None]]}|>|>,
+			"inherit" -> <|
+				FrameStyle     -> <|"Left" -> Inherited|>, 
+				CellFrame      -> <|"Left" -> Inherited|>,
+				CellFrameStyle -> <|"Left" -> Inherited|>|>,
+			"initial" -> <|
+				FrameStyle     -> <|"Left" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None, "Width" -> Thickness[Medium]|>|>, 
+				CellFrame      -> <|"Left" -> <|"Width" -> 2|>|>,
+				CellFrameStyle -> <|"Left" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>|>,
 	"border-spacing" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> Spacings -> Inherited,
-			"initial" -> Spacings -> 0|>|>,
+			"inherit" -> <|Spacings -> Inherited|>,
+			"initial" -> <|Spacings -> 0|>|>|>,
 	"bottom" -> <|(* no equivalent FE option *)
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> Alignment -> {Automatic, Inherited}, 
-			"initial" -> Alignment -> {Automatic, Automatic}|>|>, 
+			"inherit" -> <|Alignment -> {Automatic, Inherited}|>, 
+			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>|>, 
 	"caption-side" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "top",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {}, (* no equivalent FE option *)
+			"inherit" -> <||>, (* no equivalent FE option *)
 			"initial" -> Missing["Not supported."]|>|>, 
 	"clear" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {}, (* no equivalent FE option *)
+			"inherit" -> <||>, (* no equivalent FE option *)
 			"initial" -> Missing["Not supported."]|>|>,		
 	"clip" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {}, (* no equivalent FE option *)
+			"inherit" -> <||>, (* no equivalent FE option *)
 			"initial" -> Missing["Not supported."]|>|>,
 	"color" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "N/A", (* depends on user agent aka WD *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> FontColor -> Inherited,
-			"initial" -> FontColor -> Black|>|>,(* no set CSS specification, so use reasonable setting *)
+			"inherit" -> <|FontColor -> Inherited|>,
+			"initial" -> <|FontColor -> Black|>|>|>,(* no set CSS specification|>, so use reasonable setting *)
 	"content" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> DisplayFunction -> Inherited,
-			"initial" -> DisplayFunction -> Function[Identity]|>|>,    
+			"inherit" -> <|DisplayFunction -> Inherited|>,
+			"initial" -> <|DisplayFunction -> Function[Identity]|>|>|>,    
 	"counter-increment" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> CounterIncrements -> Inherited,
-			"initial" -> CounterIncrements -> {}|>|>,
+			"inherit" -> <|CounterIncrements -> Inherited|>,
+			"initial" -> <|CounterIncrements -> {}|>|>|>,
 	"counter-reset" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 		
-			"inherit" -> CounterAssignments -> Inherited,
-			"initial" -> CounterAssignments -> {}|>|>,   
+			"inherit" -> <|CounterAssignments -> Inherited|>,
+			"initial" -> <|CounterAssignments -> {}|>|>|>,   
 	"cursor" -> <|(* no FE option to control mouse appearance *)
 		"Inherited" -> True,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {},
-			"initial" -> (TagBox[#, MouseAppearanceTag["Arrow"]]&)|>|>, 
+			"inherit" -> <||>,
+			"initial" -> <|"MouseAppearance" -> (TagBox[#, MouseAppearanceTag["Arrow"]]&)|>|>|>, 
 	"direction" -> <|(* so far FE only has left-to-right *)
 		"Inherited" -> True,
 		"CSSInitialValue" -> "ltr",
@@ -558,86 +565,86 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> True,
 		"CSSInitialValue" -> "N/A", (* shorthand property *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
+			"inherit" -> <|
 				FontFamily     -> Inherited,
 				FontSize       -> Inherited,
 				FontSlant      -> Inherited,
 				FontVariations -> {"CapsType" -> Inherited},
 				FontWeight     -> Inherited,
-				LineSpacing    -> Inherited},
-			"initial" -> {
+				LineSpacing    -> Inherited|>,
+			"initial" -> <|
 				FontFamily     :> CurrentValue[$FrontEnd, {StyleDefinitions, "Text", FontFamily}, "Arial"],
 				FontSize       -> Medium,
 				FontSlant      -> Plain,
 				FontVariations -> {"CapsType" -> "Normal"},
 				FontWeight     -> Plain,
-				LineSpacing    -> {1.2, 0}}|>|>, 
+				LineSpacing    -> {1.2, 0}|>|>|>, 
 	"font-family" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "N/A", (* depends on user agent aka WD *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> FontFamily -> Inherited,
-			"initial" -> FontFamily :> CurrentValue[$FrontEnd, {StyleDefinitions, "Text", FontFamily}, "Arial"]|>|>, 
+			"inherit" -> <|FontFamily -> Inherited|>,
+			"initial" -> <|FontFamily :> CurrentValue[$FrontEnd, {StyleDefinitions, "Text", FontFamily}, "Arial"]|>|>|>, 
 	"font-size" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "medium",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> FontSize -> Inherited,
-			"initial" -> FontSize -> Medium|>|>,   
+			"inherit" -> <|FontSize -> Inherited|>,
+			"initial" -> <|FontSize -> Medium|>|>|>,   
 	"font-style" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> FontSlant -> Inherited,
-			"initial" -> FontSlant -> Plain|>|>,    
+			"inherit" -> <|FontSlant -> Inherited|>,
+			"initial" -> <|FontSlant -> Plain|>|>|>,    
 	"font-variant" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> FontVariations -> {"CapsType" -> Inherited},
-			"initial" -> FontVariations -> {"CapsType" -> "Normal"}|>|>, 
+			"inherit" -> <|FontVariations -> {"CapsType" -> Inherited}|>,
+			"initial" -> <|FontVariations -> {"CapsType" -> "Normal"}|>|>|>, 
 	"font-weight" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> FontWeight -> Inherited,
-			"initial" -> FontWeight -> Plain|>|>, 
+			"inherit" -> <|FontWeight -> Inherited|>,
+			"initial" -> <|FontWeight -> Plain|>|>|>, 
 	"height" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> ImageSize -> {CSSHeightMin[Inherited], CSSHeightMax[Inherited]},
-			"initial" -> ImageSize -> {CSSHeightMin[Automatic], CSSHeightMax[Automatic]}|>|>, 
+			"inherit" -> <|ImageSize -> {CSSHeightMin[Inherited], CSSHeightMax[Inherited]}|>,
+			"initial" -> <|ImageSize -> {CSSHeightMin[Automatic], CSSHeightMax[Automatic]}|>|>|>, 
 	"left" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> Alignment -> {Inherited, Automatic},
-			"initial" -> Alignment -> {Automatic, Automatic}|>|>, 
+			"inherit" -> <|Alignment -> {Inherited, Automatic}|>,
+			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>|>, 
 	"letter-spacing" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> FontTracking -> Inherited,
-			"initial" -> FontTracking -> "Plain"|>|>, 
+			"inherit" -> <|FontTracking -> Inherited|>,
+			"initial" -> <|FontTracking -> "Plain"|>|>|>, 
 	"line-height" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> LineSpacing -> Inherited,
-			"initial" -> LineSpacing -> {1.2, 0}|>|>, 
+			"inherit" -> <|LineSpacing -> Inherited|>,
+			"initial" -> <|LineSpacing -> {1.2, 0}|>|>|>, 
 	"list-style" -> <|(* short-hand for list-style-image/position/type *)
 		"Inherited" -> True,
 		"CSSInitialValue" -> "N/A", (* shorthand property *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> CellDingbat -> Inherited,
-			"initial" -> CellDingbat -> "\[FilledCircle]"|>|>, 
+			"inherit" -> <|CellDingbat -> Inherited|>,
+			"initial" -> <|CellDingbat -> "\[FilledCircle]"|>|>|>, 
 	"list-style-image" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> CellDingbat -> Inherited,
-			"initial" -> CellDingbat -> None|>|>,
+			"inherit" -> <|CellDingbat -> Inherited|>,
+			"initial" -> <|CellDingbat -> None|>|>|>,
 	"list-style-position" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "outside",
@@ -648,92 +655,92 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> True,
 		"CSSInitialValue" -> "disc",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> CellDingbat -> Inherited,
-			"initial" -> CellDingbat -> "\[FilledCircle]"|>|>,
+			"inherit" -> <|CellDingbat -> Inherited|>,
+			"initial" -> <|CellDingbat -> "\[FilledCircle]"|>|>|>,
 	"margin" -> <|(* shorthand property, sets all 4 margins *)
 		"Inherited" -> False,
 		"CSSInitialValue" -> "N/A", 
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				ImageMargins    -> Through[{Left, Right, Bottom, Top}[Inherited]],
-				CellMargins     -> Through[{Left, Right, Bottom, Top}[Inherited]],
-				PrintingOptions -> {"PrintingMargins" -> Through[{Left, Right, Bottom, Top}[Inherited]]}},
-			"initial" -> {
-				ImageMargins    -> Through[{Left, Right, Bottom, Top}[0]],
-				CellMargins     -> Through[{Left, Right, Bottom, Top}[0]],
-				PrintingOptions -> {"PrintingMargins" -> Through[{Left, Right, Bottom, Top}[0]]}}|>|>, 
+			"inherit" -> <|
+				ImageMargins    -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited],
+				CellMargins     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited],
+				PrintingOptions -> <|"PrintingMargins" -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited]|>|>,
+			"initial" -> <|
+				ImageMargins    -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0],
+				CellMargins     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0],
+				PrintingOptions -> <|"PrintingMargins" -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0]|>|>|>|>, 
 	"margin-top" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				ImageMargins    -> Top @ Inherited,
-				CellMargins     -> Top @ Inherited,
-				PrintingOptions -> {"PrintingMargins" -> Top @ Inherited}},
-			"initial" -> {
-				ImageMargins    -> Top @ 0,
-				CellMargins     -> Top @ 0,
-				PrintingOptions -> {"PrintingMargins" -> Top @ 0}}|>|>,
+			"inherit" -> <|
+				ImageMargins    -> <|"Top" -> Inherited|>,
+				CellMargins     -> <|"Top" -> Inherited|>,
+				PrintingOptions -> <|"PrintingMargins" -> <|"Top" -> Inherited|>|>|>,
+			"initial" -> <|
+				ImageMargins    -> <|"Top" -> 0|>,
+				CellMargins     -> <|"Top" -> 0|>,
+				PrintingOptions -> <|"PrintingMargins" -> <|"Top" -> 0|>|>|>|>|>,
 	"margin-right" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				ImageMargins    -> Right @ Inherited,
-				CellMargins     -> Right @ Inherited,
-				PrintingOptions -> {"PrintingMargins" -> Right @ Inherited}},
-			"initial" -> {
-				ImageMargins    -> Right @ 0,
-				CellMargins     -> Right @ 0,
-				PrintingOptions -> {"PrintingMargins" -> Right @ 0}}|>|>,
+			"inherit" -> <|
+				ImageMargins    -> <|"Right" -> Inherited|>,
+				CellMargins     -> <|"Right" -> Inherited|>,
+				PrintingOptions -> <|"PrintingMargins" -> <|"Right" -> Inherited|>|>|>,
+			"initial" -> <|
+				ImageMargins    -> <|"Right" -> 0|>,
+				CellMargins     -> <|"Right" -> 0|>,
+				PrintingOptions -> <|"PrintingMargins" -> <|"Right" -> 0|>|>|>|>|>,
 	"margin-bottom" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				ImageMargins    -> Bottom @ Inherited,
-				CellMargins     -> Bottom @ Inherited,
-				PrintingOptions -> {"PrintingMargins" -> Bottom @ Inherited}},
-			"initial" -> {
-				ImageMargins    -> Bottom @ 0,
-				CellMargins     -> Bottom @ 0,
-				PrintingOptions -> {"PrintingMargins" -> Bottom @ 0}}|>|>,
+			"inherit" -> <|
+				ImageMargins    -> <|"Bottom" -> Inherited|>,
+				CellMargins     -> <|"Bottom" -> Inherited|>,
+				PrintingOptions -> <|"PrintingMargins" -> <|"Bottom" -> Inherited|>|>|>,
+			"initial" -> <|
+				ImageMargins    -> <|"Bottom" -> 0|>,
+				CellMargins     -> <|"Bottom" -> 0|>,
+				PrintingOptions -> <|"PrintingMargins" -> <|"Bottom" -> 0|>|>|>|>|>,
 	"margin-left" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				ImageMargins    -> Left @ Inherited,
-				CellMargins     -> Left @ Inherited,
-				PrintingOptions -> {"PrintingMargins" -> Left @ Inherited}},
-			"initial" -> {
-				ImageMargins    -> Left @ 0,
-				CellMargins     -> Left @ 0,
-				PrintingOptions -> {"PrintingMargins" -> Left @ 0}}|>|>,
+			"inherit" -> <|
+				ImageMargins    -> <|"Left" -> Inherited|>,
+				CellMargins     -> <|"Left" -> Inherited|>,
+				PrintingOptions -> <|"PrintingMargins" -> <|"Left" -> Inherited|>|>|>,
+			"initial" -> <|
+				ImageMargins    -> <|"Left" -> 0|>,
+				CellMargins     -> <|"Left" -> 0|>,
+				PrintingOptions -> <|"PrintingMargins" -> <|"Left" -> 0|>|>|>|>|>,
 	"max-height" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> ImageSize -> CSSHeightMax[Inherited],
-			"initial" -> ImageSize -> CSSHeightMax[Infinity]|>|>,
+			"inherit" -> <|ImageSize -> CSSHeightMax[Inherited]|>,
+			"initial" -> <|ImageSize -> CSSHeightMax[Infinity]|>|>|>,
 	"max-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> ImageSize -> CSSWidthMax[Inherited],
-			"initial" -> ImageSize -> CSSWidthMax[Infinity]|>|>,
+			"inherit" -> <|ImageSize -> CSSWidthMax[Inherited]|>,
+			"initial" -> <|ImageSize -> CSSWidthMax[Infinity]|>|>|>,
 	"min-height" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> ImageSize -> CSSHeightMin[Inherited],
-			"initial" -> ImageSize -> CSSHeightMin[0]|>|>,
+			"inherit" -> <|ImageSize -> CSSHeightMin[Inherited]|>,
+			"initial" -> <|ImageSize -> CSSHeightMin[0]|>|>|>,
 	"min-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> ImageSize -> CSSWidthMin[Inherited],
-			"initial" -> ImageSize -> CSSWidthMin[0]|>|>,
+			"inherit" -> <|ImageSize -> CSSWidthMin[Inherited]|>,
+			"initial" -> <|ImageSize -> CSSWidthMin[0]|>|>|>,
 	"orphans" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "2",
@@ -768,80 +775,80 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "visible",(* not supported in FE*)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> ImageSizeAction -> Inherited,
+			"inherit" -> <|ImageSizeAction -> Inherited|>,
 			"initial" -> Missing["Not supported."]|>|>, 
 	"padding" -> <|(* shorthand property, sets all 4 sides *)
 		"Inherited" -> False,
 		"CSSInitialValue" -> "N/A", 
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameMargins     -> Through[{Left, Right, Bottom, Top}[Inherited]],
-				CellFrameMargins -> Through[{Left, Right, Bottom, Top}[Inherited]]},
-			"initial" -> {
-				FrameMargins     -> Through[{Left, Right, Bottom, Top}[0]],
-				CellFrameMargins -> Through[{Left, Right, Bottom, Top}[0]]}|>|>, 
+			"inherit" -> <|
+				FrameMargins     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited],
+				CellFrameMargins -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited]|>,
+			"initial" -> <|
+				FrameMargins     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0],
+				CellFrameMargins -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0]|>|>|>, 
 	"padding-top" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameMargins     -> Top @ Inherited,
-				CellFrameMargins -> Top @ Inherited},
-			"initial" -> {
-				FrameMargins     -> Top @ 0,
-				CellFrameMargins -> Top @ 0}|>|>,
+			"inherit" -> <|
+				FrameMargins     -> <|"Top" -> Inherited|>,
+				CellFrameMargins -> <|"Top" -> Inherited|>|>,
+			"initial" -> <|
+				FrameMargins     -> <|"Top" -> 0|>,
+				CellFrameMargins -> <|"Top" -> 0|>|>|>|>,
 	"padding-bottom" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameMargins     -> Bottom @ Inherited,
-				CellFrameMargins -> Bottom @ Inherited},
-			"initial" -> {
-				FrameMargins     -> Bottom @ 0,
-				CellFrameMargins -> Bottom @ 0}|>|>,
+			"inherit" -> <|
+				FrameMargins     -> <|"Bottom" -> Inherited|>,
+				CellFrameMargins -> <|"Bottom" -> Inherited|>|>,
+			"initial" -> <|
+				FrameMargins     -> <|"Bottom" -> 0|>,
+				CellFrameMargins -> <|"Bottom" -> 0|>|>|>|>,
 	"padding-left" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameMargins     -> Left @ Inherited,
-				CellFrameMargins -> Left @ Inherited},
-			"initial" -> {
-				FrameMargins     -> Left @ 0,
-				CellFrameMargins -> Left @ 0}|>|>,
+			"inherit" -> <|
+				FrameMargins     -> <|"Left" -> Inherited|>,
+				CellFrameMargins -> <|"Left" -> Inherited|>|>,
+			"initial" -> <|
+				FrameMargins     -> <|"Left" -> 0|>,
+				CellFrameMargins -> <|"Left" -> 0|>|>|>|>,
 	"padding-right" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
-				FrameMargins     -> Right @ Inherited,
-				CellFrameMargins -> Right @ Inherited},
-			"initial" -> {
-				FrameMargins     -> Right @ 0,
-				CellFrameMargins -> Right @ 0}|>|>,
+			"inherit" -> <|
+				FrameMargins     -> <|"Right" -> Inherited|>,
+				CellFrameMargins -> <|"Right" -> Inherited|>|>,
+			"initial" -> <|
+				FrameMargins     -> <|"Right" -> 0|>,
+				CellFrameMargins -> <|"Right" -> 0|>|>|>|>,
 	"page-break-after" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> PageBreakBelow -> Inherited,
-			"initial" -> PageBreakBelow -> Automatic|>|>, 
+			"inherit" -> <|PageBreakBelow -> Inherited|>,
+			"initial" -> <|PageBreakBelow -> Automatic|>|>|>, 
 	"page-break-before" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> PageBreakAbove -> Inherited,
-			"initial" -> PageBreakAbove -> Automatic|>|>, 
+			"inherit" -> <|PageBreakAbove -> Inherited|>,
+			"initial" -> <|PageBreakAbove -> Automatic|>|>|>, 
 	"page-break-inside" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
+			"inherit" -> <|
 				PageBreakWithin      -> Inherited,
-				GroupPageBreakWithin -> Inherited},
-			"initial" -> {
+				GroupPageBreakWithin -> Inherited|>,
+			"initial" -> <|
 				PageBreakWithin      -> Automatic,
-				GroupPageBreakWithin -> Automatic}|>|>, 
+				GroupPageBreakWithin -> Automatic|>|>|>, 
 	"position" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "static",
@@ -858,8 +865,8 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> Alignment -> {Inherited, Automatic},
-			"initial" -> Alignment -> {Automatic, Automatic}|>|>, 
+			"inherit" -> <|Alignment -> {Inherited, Automatic}|>,
+			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>|>, 
 	"table-layout" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
@@ -870,36 +877,36 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> True,
 		"CSSInitialValue" -> "N/A", (* a nameless value that acts as 'left' if 'direction' is 'ltr', 'right' if 'direction' is 'rtl' *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> TextAlignment -> Inherited,
-			"initial" -> TextAlignment -> Automatic|>|>, 
+			"inherit" -> <|TextAlignment -> Inherited|>,
+			"initial" -> <|TextAlignment -> Automatic|>|>|>, 
 	"text-decoration" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> FontVariations -> Inherited,
-			"initial" -> FontVariations -> {}|>|>,       
+			"inherit" -> <|FontVariations -> Inherited|>,
+			"initial" -> <|FontVariations -> {}|>|>|>,       
 	"text-indent" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
+			"inherit" -> <|
 				LineIndent      -> Inherited,
-				ParagraphIndent -> Inherited},
-			"initial" -> {
+				ParagraphIndent -> Inherited|>,
+			"initial" -> <|
 				LineIndent      -> 0,
-				ParagraphIndent -> 0}|>|>,
+				ParagraphIndent -> 0|>|>|>,
 	"text-transform" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> FontVariations -> {"CapsType" -> Inherited},
-			"initial" -> FontVariations -> {"CapsType" -> "Normal"}|>|>,  
+			"inherit" -> <|FontVariations -> {"CapsType" -> Inherited}|>,
+			"initial" -> <|FontVariations -> {"CapsType" -> "Normal"}|>|>|>,  
 	"top" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> Alignment -> {Automatic, Inherited},
-			"initial" -> Alignment -> {Automatic, Automatic}|>|>, 
+			"inherit" -> <|Alignment -> {Automatic, Inherited}|>,
+			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>|>, 
 	"unicode-bidi" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "normal",
@@ -910,18 +917,18 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "baseline",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> {
+			"inherit" -> <|
 				BaselinePosition -> Inherited,
-				CellBaseline     -> Inherited},
-			"initial" -> {
+				CellBaseline     -> Inherited|>,
+			"initial" -> <|
 				BaselinePosition -> Baseline -> Baseline,
-				CellBaseline     -> Center}|>|>,  
+				CellBaseline     -> Center|>|>|>,  
 	"visibility" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "visible",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> ShowContents -> Inherited,
-			"initial" -> ShowContents -> True|>|>, 
+			"inherit" -> <|ShowContents -> Inherited|>,
+			"initial" -> <|ShowContents -> True|>|>|>, 
 	"white-space" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
@@ -938,8 +945,8 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> ImageSize -> {CSSWidthMin[Inherited], CSSWidthMax[Inherited]},
-			"initial" -> ImageSize -> {CSSWidthMin[Automatic], CSSWidthMax[Automatic]}|>|>, 
+			"inherit" -> <|ImageSize -> {CSSWidthMin[Inherited], CSSWidthMax[Inherited]}|>,
+			"initial" -> <|ImageSize -> {CSSWidthMin[Automatic], CSSWidthMax[Automatic]}|>|>|>, 
 	"word-spacing" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
@@ -1566,7 +1573,7 @@ consumeProperty[prop:"border-collapse", tokens:{__?CSSTokenQ}] :=
 
 (* 
 	Setting a single border/frame is only possible in WL if all 4 edges are specified at the same time. 
-	This requires post-processing of the parsed result. We use Top/Right/Bottom/Left wrappers to keep track of each edge.*)
+	This requires post-processing of the parsed result. *)
 consumeProperty[
 	prop:"border-top-color" | "border-right-color" | "border-bottom-color" | "border-left-color", 
 	tokens:{__?CSSTokenQ}
@@ -1579,12 +1586,12 @@ consumeProperty[
 			, 
 			wrapper = 
 				Switch[prop, 
-					"border-top-color",    Top, 
-					"border-right-color",  Right, 
-					"border-bottom-color", Bottom, 
-					"border-left-color",   Left
+					"border-top-color",    "Top", 
+					"border-right-color",  "Right", 
+					"border-bottom-color", "Bottom", 
+					"border-left-color",   "Left"
 				];
-			# -> wrapper[CSSBorderColor @ value]& /@ {FrameStyle, CellFrameStyle}
+			<|# -> <|wrapper -> <|"Color" -> value|>|>& /@ {FrameStyle, CellFrameStyle}|>
 		]
 	]	
 
@@ -1593,18 +1600,18 @@ consumeProperty[prop:"border-color", tokens:{__?CSSTokenQ}] :=
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleColor[prop, tokens[[pos]]];
-			If[FailureQ[value], Return @ value, AppendTo[results, CSSBorderColor @ value]]; 
+			If[FailureQ[value], Return @ value, AppendTo[results, <|"Color" -> value|>]]; 
 			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		results =
 			Switch[Length[results],
-				1, {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]},
-				2, {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[1]], Top @ results[[1]]},
-				3, {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
-				4, {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
+				1, <|"Left" -> results[[1]], "Right" -> results[[1]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
+				2, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
+				3, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>,
+				4, <|"Left" -> results[[4]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>,
 				_, tooManyTokensFailure @ tokens
 			];
-		{FrameStyle -> results, CellFrameStyle -> results}
+		<|FrameStyle -> results, CellFrameStyle -> results|>
 	]
 
 
@@ -1665,24 +1672,24 @@ consumeProperty[
 		If[FailureQ[value], 
 			value
 			, 
-			wrapper = Switch[prop, "border-top-style", Top, "border-right-style", Right, "border-bottom-style", Bottom, "border-left-style", Left];
-			# -> wrapper[CSSBorderStyle @ value]& /@ {FrameStyle, CellFrameStyle}
+			wrapper = Switch[prop, "border-top-style", "Top", "border-right-style", "Right", "border-bottom-style", "Bottom", "border-left-style", "Left"];
+			<|# -> <|wrapper -> <|"Style" -> value|>|>& /@ {FrameStyle, CellFrameStyle}|>
 		]
-	]	
+	]
 	
 (* sets all 4 border/frame edges at once *)
 consumeProperty[prop:"border-style", tokens:{__?CSSTokenQ}] := 
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleBorderStyle[prop, tokens[[pos]]];
-			If[FailureQ[value], Return @ value, AppendTo[results, CSSBorderStyle @ value]];
+			If[FailureQ[value], Return @ value, AppendTo[results, <|"Style" -> value|>]];
 			AdvancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		Switch[Length[results],
-			1, # -> {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]}& /@ {FrameStyle, CellFrameStyle},
-			2, # -> {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[1]], Top @ results[[1]]}& /@ {FrameStyle, CellFrameStyle},
-			3, # -> {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}& /@ {FrameStyle, CellFrameStyle},
-			4, # -> {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}& /@ {FrameStyle, CellFrameStyle},
+			1, <|# -> <|"Left" -> results[[1]], "Right" -> results[[1]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>& /@ {FrameStyle, CellFrameStyle}|>,
+			2, <|# -> <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>& /@ {FrameStyle, CellFrameStyle}|>,
+			3, <|# -> <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>& /@ {FrameStyle, CellFrameStyle}|>,
+			4, <|# -> <|"Left" -> results[[4]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>& /@ {FrameStyle, CellFrameStyle}|>,
 			_, tooManyTokensFailure @ tokens
 		]
 	]
@@ -1720,29 +1727,31 @@ consumeProperty[
 		If[FailureQ[value], 
 			value
 			, 
-			wrapper = Switch[prop, "border-top-width", Top, "border-right-width", Right, "border-bottom-width", Bottom, "border-left-width", Left];
-			{FrameStyle -> wrapper[CSSBorderWidth @ value], CellFrame -> wrapper[CSSBorderWidth @ convertToCellThickness @ value]}
+			wrapper = Switch[prop, "border-top-width", "Top", "border-right-width", "Right", "border-bottom-width", "Bottom", "border-left-width", "Left"];
+			<|
+				FrameStyle -> <|wrapper -> <|"Width" -> value|>|>, 
+				CellFrame  -> <|wrapper -> <|"Width" -> convertToCellThickness @ value|>|>|>
 		]
-	]	
+	]
 	
 (* sets all 4 frame edge thickness at once *)
 consumeProperty[prop:"border-width", tokens:{__?CSSTokenQ}] := 
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = parseSingleBorderWidth[prop, tokens[[pos]]];
-			If[FailureQ[value], Return @ value, AppendTo[results, CSSBorderWidth @ value]];
+			If[FailureQ[value], Return @ value, AppendTo[results, <|"Width" -> value|>]];
 			AdvancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		(* expand out results  to {{L,R},{B,T}} *)
 		results = 
 			Switch[Length[results],
-				1, {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]},
-				2, {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[1]], Top @ results[[1]]},
-				3, {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}, 
-				4, {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
+				1, <|"Left" -> results[[1]], "Right" -> results[[1]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
+				2, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
+				3, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>, 
+				4, <|"Left" -> results[[4]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>,
 				_, Return @ tooManyTokensFailure @ tokens
 			];
-		{FrameStyle -> results, CellFrame -> Map[convertToCellThickness, results, {3}]}
+		<|FrameStyle -> results, CellFrame -> Map[convertToCellThickness, results, {2}]|>
 	]
 	
 (* WL FrameStyle thickness is best given as a calculated AbsoluteThickness for numerical values. *)
@@ -1776,40 +1785,48 @@ consumeProperty[
 	prop:"border" | "border-top" | "border-right" | "border-bottom" | "border-left", 
 	tokens:{__?CSSTokenQ}
 ] := 
-	Module[
-		{
-			pos = 1, l = Length[tokens], value, 
-			wrapper = Switch[prop, "border-left", Left, "border-right", Right, "border-top", Top, "border-bottom", Bottom, _, Through[{Left, Right, Top, Bottom}[##]]&],
-			values = <|
-				"c" -> initialValues[prop <> "-color"], 
-				"s" -> initialValues[prop <> "-style"], 
-				"w" -> initialValues[prop <> "-width"]|>,
-			hasColor = False, hasStyle = False, hasWidth = False
-		},
+	Module[{pos = 1, l = Length[tokens], value, wrapper, values, hasColor = False, hasStyle = False, hasWidth = False},
+		wrapper = 
+			Switch[prop, 
+				"border-left",   "Left", 
+				"border-right",  "Right", 
+				"border-top",    "Top", 
+				"border-bottom", "Bottom", 
+				_,               "Top"];
+		values = <|
+			"c" -> initialValues[prop <> "-color"][wrapper, "Color"], 
+			"s" -> initialValues[prop <> "-style"][wrapper, "Style"], 
+			"w" -> initialValues[prop <> "-width"][wrapper, "Width"]|>;
 		
 		While[pos <= l,
 			Which[
 				!FailureQ[value = parseSingleColor[prop, tokens[[pos]]]],
 					If[hasColor, Return @ repeatedPropValueFailure @ (prop <> "-color")];
-					hasColor = True; values["c"] = CSSBorderColor @ value,
+					hasColor = True; values["c"] = value,
 				
 				!FailureQ[value = parseSingleBorderStyle[prop, tokens[[pos]]]],
 					If[hasStyle, Return @ repeatedPropValueFailure @ (prop <> "-style")];
-					hasStyle = True; values["s"] = CSSBorderStyle @ value,
+					hasStyle = True; values["s"] = value,
 					
 				!FailureQ[value = parseSingleBorderWidth[prop, tokens[[pos]]]],
 					If[hasWidth, Return @ repeatedPropValueFailure @ (prop <> "-width")];
-					hasWidth = True; values["w"] = CSSBorderWidth @ value,
+					hasWidth = True; values["w"] = value,
 				
-				True, unrecognizedValueFailure @ prop						
+				True, Return @ unrecognizedValueFailure @ prop						
 			];
 			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
-		
-		{
-			FrameStyle     -> wrapper[values["c"], values["s"], values["w"]], 
-			CellFrameStyle -> wrapper[values["c"], values["s"]], 
-			CellFrame      -> wrapper[convertToCellThickness @ values["w"]]}
+		If[prop === "border",
+			<|
+				FrameStyle     -> AssociationThread[{"Left", "Right", "Top", "Bottom"} -> <|"Color" -> values["c"], "Style" -> values["s"], "Width" -> values["w"]|>], 
+				CellFrameStyle -> AssociationThread[{"Left", "Right", "Top", "Bottom"} -> <|"Color" -> values["c"], "Style" -> values["s"]|>], 
+				CellFrame      -> AssociationThread[{"Left", "Right", "Top", "Bottom"} -> <|"Width" -> convertToCellThickness @ values["w"]|>]|>
+			,
+			<|
+				FrameStyle     -> <|wrapper -> <|"Color" -> values["c"], "Style" -> values["s"], "Width" -> values["w"]|>|>, 
+				CellFrameStyle -> <|wrapper -> <|"Color" -> values["c"], "Style" -> values["s"]|>|>, 
+				CellFrame      -> <|wrapper -> <|"Width" -> convertToCellThickness @ values["w"]|>|>|>
+		]
 	]
 
 
@@ -2709,10 +2726,10 @@ consumeProperty[prop:"margin", tokens:{__?CSSTokenQ}] :=
 		(* expand out results  to {{L,R},{B,T}} *)
 		results = 
 			Switch[Length[results],
-				1, {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]},
-				2, {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[1]], Top @ results[[1]]},
-				3, {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}, 
-				4, {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
+				1, <|"Left" -> results[[1]], "Right" -> results[[1]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
+				2, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
+				3, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>, 
+				4, <|"Left" -> results[[4]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>,
 				_, Return @ tooManyTokensFailure @ tokens
 			];
 		{ImageMargins -> results, CellMargins -> results, PrintingOptions -> {"PrintingMargins" -> results}}
@@ -2905,10 +2922,10 @@ consumeProperty[prop:"padding", tokens:{__?CSSTokenQ}] :=
 		(* expand out results  to {{L,R},{B,T}} *)
 		results = 
 			Switch[Length[results],
-				1, {Left @ results[[1]], Right @ results[[1]], Bottom @ results[[1]], Top @ results[[1]]},
-				2, {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[1]], Top @ results[[1]]},
-				3, {Left @ results[[2]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]}, 
-				4, {Left @ results[[4]], Right @ results[[2]], Bottom @ results[[3]], Top @ results[[1]]},
+				1, <|"Left" -> results[[1]], "Right" -> results[[1]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
+				2, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
+				3, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>, 
+				4, <|"Left" -> results[[4]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>,
 				_, Return @ tooManyTokensFailure @ tokens
 			];
 		{FrameMargins -> results, CellFrameMargins -> results}
