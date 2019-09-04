@@ -580,18 +580,13 @@ expectedBlockKeys     = {"Property", "Value", "Important", "Condition"};
 expectedBlockKeysFull = {"Property", "Value", "Interpretation", "Important", "Condition"};
 
 
-validCSSDataRawQ[data:{__Association}] := 
-	And[
-		AllTrue[Keys /@ data, MatchQ[expectedMainKeys]],
-		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeys]]]
-validCSSDataBareQ[data:{__Association}] := 
-	And[
-		AllTrue[Keys /@ data, MatchQ[expectedMainKeys]],
-		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeysFull]]]
-validCSSDataFullQ[data:{__Association}] := 
-	And[
-		AllTrue[Keys /@ data, MatchQ[expectedMainKeysFull]],
-		AllTrue[Keys /@ Flatten @ data[[All, "Block"]], MatchQ[expectedBlockKeysFull]]]
+validCSSBlockQ[data:{__Association}]     := AllTrue[Keys /@ data, MatchQ[expectedBlockKeys]]
+validCSSBlockFullQ[data:{__Association}] := AllTrue[Keys /@ data, MatchQ[expectedBlockKeysFull]]
+
+validCSSDataRawQ[data:{__Association}]  := And[AllTrue[Keys /@ data, MatchQ[expectedMainKeys]],     validCSSBlockQ[Flatten @ data[[All, "Block"]]]]
+validCSSDataBareQ[data:{__Association}] := And[AllTrue[Keys /@ data, MatchQ[expectedMainKeys]],	    validCSSBlockFullQ[Flatten @ data[[All, "Block"]]]]
+validCSSDataFullQ[data:{__Association}] := And[AllTrue[Keys /@ data, MatchQ[expectedMainKeysFull]],	validCSSBlockFullQ[Flatten @ data[[All, "Block"]]]]
+
 validCSSDataQ[data:{__Association}] := validCSSDataBareQ[data] || validCSSDataFullQ[data]
 validCSSDataQ[___] := False
 
@@ -666,60 +661,148 @@ removeBoxOptions[allOptions_, boxes:{__?validBoxesQ}] :=
 (*Assemble directives into one option*)
 
 
-assembleLRBTDirectives[x_List] := 
-	Module[{xLocal = Flatten @ x, r = {{Automatic, Automatic}, {Automatic, Automatic}}},
-		With[{l = getSideFromLRBTDirective[Left,   xLocal]}, If[l =!= {}, r[[1, 1]] = setDirective @ l]]; 
-		With[{l = getSideFromLRBTDirective[Right,  xLocal]}, If[l =!= {}, r[[1, 2]] = setDirective @ l]]; 
-		With[{l = getSideFromLRBTDirective[Bottom, xLocal]}, If[l =!= {}, r[[2, 1]] = setDirective @ l]]; 
-		With[{l = getSideFromLRBTDirective[Top,    xLocal]}, If[l =!= {}, r[[2, 2]] = setDirective @ l]]; 
-		r
+moveLRBTHoldToOutside[defaultValue_, heldValue_Hold] := 
+	Module[{value = defaultValue, h = heldValue},
+		With[{i = value}, h = Replace[h, Hold[x___] :> Hold[x, True, i]]];
+		h = h //. Hold[a___, Hold[x___], b___] :> Hold[a, x, b];
+		h = Replace[h, Hold[x___] :> Hold[Which[x]]];
+		Replace[h, Hold[x___] :> x, {1}]
 	]
 
 
-getSideFromLRBTDirective[side:Left | Right | Bottom | Top, list_] := Reverse @ DeleteDuplicatesBy[Reverse[Join @@ Cases[list, side[___], {1}]], Head]
+frameOptionQ[input_] := MemberQ[{CellFrameStyle, FrameStyle}, input]
+frameOptionQ[___] := False
+
+getSideFromLRBTDirective[CSSBlockData_?validCSSBlockFullQ, option_?frameOptionQ, side:("Left" | "Right" | "Bottom" | "Top")] :=
+	Module[{h = Hold[], j = 1, value, cond},
+		While[j < Length[CSSBlockData],
+			value = CSSBlockData[[j]]["Interpretation", option, side];
+			cond = CSSBlockData[[j]]["Condition"];
+			If[!MissingQ[value] && cond =!= None,
+				If[KeyExistsQ[value, "Style"] && value["Style"] === None && Length[value] > 1, value = KeyDropFrom[value, "Style"]];
+				With[{i = Directive @@ Values @ value, c = cond}, h = Replace[h, Hold[x___] :> Hold[x, c, i]]]
+			];
+			j++
+		];
+		If[j < Length[CSSBlockData], (* check for a fallthrough condition *)
+			value = CSSBlockData[[j]]["Interpretation", option, side];
+			If[!MissingQ[value], 
+				If[KeyExistsQ[value, "Style"] && value["Style"] === None && Length[value] > 1, 
+					value = Directive @@ Values @ KeyDropFrom[value, "Style"]]
+					,
+					value = Directive @@ Values @ value
+				, 
+				value = Automatic
+			];
+		];
+		moveLRBTHoldToOutside[value, h]
+	]
+
+assembleLRBTDirectives[CSSBlockData_?validCSSBlockFullQ, option_?frameOptionQ] :=
+	Module[{temp},
+		temp = getSideFromLRBTDirective[CSSBlockData, option, #] & /@ {"Left", "Right", "Bottom", "Top"};
+		temp = Replace[temp, Hold[Which[True, Automatic]] :> Hold[Automatic], 2];
+		Replace[temp, p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> If[FreeQ[p, Which], {{l, r}, {b, t}}, Dynamic[{{l, r}, {b, t}}]]]
+	]
 
 
-(* Directive does not always like Dynamic inside of it, so move it outside if it exists. *)
-setDirective[(side:Left | Right | Bottom | Top)[        a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[Dynamic[prop_, ___]], b___] ] := setDirective[side[Dynamic[a, prop, b]]] 
-setDirective[(side:Left | Right | Bottom | Top)[Dynamic[a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[Dynamic[prop_, ___]], b___]]] := setDirective[side[Dynamic[a, prop, b]]]
-setDirective[(side:Left | Right | Bottom | Top)[Dynamic[a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[        prop_ ], b___]]] := setDirective[side[Dynamic[a, prop, b]]]
-setDirective[(side:Left | Right | Bottom | Top)[        a___, (CSSBorderColor | CSSBorderStyle | CSSBorderWidth)[        prop_ ], b___] ] := setDirective[side[        a, prop, b] ]
+marginOptionQ[input_] := MemberQ[{CellFrameMargins, FrameMargins, ImageMargins, CellMargins, CellFrame}, input]
+marginOptionQ[___] := False
 
-setDirective[(side:Left | Right | Bottom | Top)[Dynamic[a___]]] := Dynamic[Directive[a]]
-setDirective[(side:Left | Right | Bottom | Top)[        a___] ] := Directive[a]
+getSideFromLRBTPadding[CSSBlockData_?validCSSBlockFullQ, option_?marginOptionQ, side:("Left" | "Right" | "Bottom" | "Top")] :=
+	Module[{h = Hold[], j = 1, value, cond},
+		While[j < Length[CSSBlockData],
+			value = CSSBlockData[[j]]["Interpretation", option, side, If[option === CellFrame, "Width", Unevaluated[Sequence[]]]];
+			cond = CSSBlockData[[j]]["Condition"];
+			If[!MissingQ[value] && cond =!= None,
+				With[{i = value, c = cond}, h = Replace[h, Hold[x___] :> Hold[x, c, i]]]
+			];
+			j++
+		];
+		(* check for a fallthrough condition *)
+		If[j < Length[CSSBlockData], 
+			value = CSSBlockData[[j]]["Interpretation", option, side, If[option === CellFrame, "Width", Unevaluated[Sequence[]]]], 
+			If[MissingQ[value], value = Automatic]
+		];
+		moveLRBTHoldToOutside[value, h]
+	]
+
+assembleLRBTPadding[CSSBlockData_?validCSSBlockFullQ, option_?marginOptionQ] :=
+	Module[{temp},
+		temp = getSideFromLRBTPadding[CSSBlockData, option, #] & /@ {"Left", "Right", "Bottom", "Top"};
+		temp = Replace[temp, Hold[Which[True, Automatic]] :> Hold[Automatic], 2];
+		Replace[temp, p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> If[FreeQ[p, Which], {{l, r}, {b, t}}, Dynamic[{{l, r}, {b, t}}]]]
+	]
+	
+
+sizeOptionQ[input_] := MemberQ[{ImageSize}, input]
+sizeOptionQ[___] := False		
+
+getMinMaxSizing[CSSBlockData_?validCSSBlockFullQ, option_?sizeOptionQ, orientation:("Height" | "Width"), size:("Min" | "Max")] :=
+	Module[{h = Hold[], j = 1, value, cond},
+		While[j < Length[CSSBlockData],
+			value = CSSBlockData[[j]]["Interpretation", option, orientation, size];
+			cond = CSSBlockData[[j]]["Condition"];
+			If[!MissingQ[value] && cond =!= None,
+				With[{i = value, c = cond}, h = Replace[h, Hold[x___] :> Hold[x, c, i]]]
+			];
+			j++
+		];
+		(* check for a fallthrough condition *)
+		If[j < Length[CSSBlockData], 
+			value = CSSBlockData[[j]]["Interpretation", option, orientation, size], 
+			If[MissingQ[value], value = Automatic]
+		];
+		moveLRBTHoldToOutside[value, h]
+	]
+	
+assembleLRBTSizing[CSSBlockData_?validCSSBlockFullQ, option_?sizeOptionQ] :=
+	Module[{temp},
+		temp = {
+			getMinMaxSizing[CSSBlockData, option, "Width",  "Min"],
+			getMinMaxSizing[CSSBlockData, option, "Width",  "Max"],
+			getMinMaxSizing[CSSBlockData, option, "Height", "Min"],
+			getMinMaxSizing[CSSBlockData, option, "Height", "Max"]};
+		temp = Replace[temp, Hold[Which[True, Automatic]] :> Hold[Automatic], 2];
+		Which[
+			temp[[1]] === temp[[2]] && temp[[3]] === temp[[4]],
+				Replace[temp, p:{Hold[wn_], Hold[wx_], Hold[hn_], Hold[hx_]} :> If[FreeQ[p, Which], {wn, hn}, Dynamic[{wn, hn}]]],
+			True,
+				Replace[temp, p:{Hold[wn_], Hold[wx_], Hold[hn_], Hold[hx_]} :> If[FreeQ[p, Which], {{wn, wx}, {hn, hx}}, Dynamic[{{wn, wx}, {hn, hx}}]]]
+		]
+	]
+	
+	
+assembleFontVariations[CSSBlockData_?validCSSBlockFullQ, option:FontVariations] :=
+	Module[{h = Hold[], j = 1, value, cond},
+		While[j < Length[CSSBlockData],
+			value = CSSBlockData[[j]]["Interpretation", option];
+			cond = CSSBlockData[[j]]["Condition"];
+			Echo[{j, value, cond}];
+			If[!MissingQ[value] && cond =!= None,
+				With[{i = value, c = cond}, h = Replace[h, Hold[x___] :> Hold[x, c, i]]]
+			];
+			j++
+		];
+		(* check for a fallthrough condition *)
+		If[j < Length[CSSBlockData], 
+			value = CSSBlockData[[j]]["Interpretation", option], 
+			If[MissingQ[value], value = Automatic]
+		];
+		moveLRBTHoldToOutside[value, h]
+	]
 
 
-assembleLRBT[x_List] := 
-	Module[{r = {{Automatic, Automatic}, {Automatic, Automatic}}},
-		Map[
-			With[{value = First[#]}, 
-				Switch[Head[#], 
-					Bottom | CSSHeightMin, r[[2, 1]] = value,
-					Top    | CSSHeightMax, r[[2, 2]] = value,
-					Left   | CSSWidthMin,  r[[1, 1]] = value,
-					Right  | CSSWidthMax,  r[[1, 2]] = value]
-			]&,
-			Flatten[x]];
-		r]
+assemble[opt_?frameOptionQ,  CSSBlockData_?validCSSBlockFullQ] := opt -> assembleLRBTDirectives[CSSBlockData, opt]
+assemble[opt_?marginOptionQ, CSSBlockData_?validCSSBlockFullQ] := opt -> assembleLRBTPadding[CSSBlockData, opt]
+assemble[opt_?sizeOptionQ,   CSSBlockData_?validCSSBlockFullQ] := opt -> assembleLRBTSizing[CSSBlockData, opt]
 
+(* CellFrameColor is only used in the outline property, which is not supported *)
+(* (*TODO*) assemble[opt:CellFrameColor, CSSBlockData_?validCSSBlockFullQ] := opt -> assembleLRBTDirectives[CSSBlockData, opt] *)
 
-assemble[opt:(FrameStyle | CellFrameStyle), rules_List] := 
-	opt -> assembleLRBTDirectives @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
-
-assemble[opt:(FrameMargins | ImageMargins | CellMargins | CellFrameMargins), rules_List] := 
-	opt -> assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
-
-assemble[opt:ImageSize, rules_List] := 
-	opt -> Replace[assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], {x_, x_} :> x, {1}]
 	 
-assemble[opt:CellFrame, rules_List] := 
-	opt -> Replace[assembleLRBT @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], CSSBorderWidth[x_] :> x, {2}]
-
 assemble[opt:FontVariations, rules_List] := 
 	opt -> DeleteDuplicatesBy[Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], First]
-
-(* not used much *)
-assemble[opt:CellFrameColor, rules_List] := opt -> Last @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}]
 
 (* PrintingOptions is a list of suboptions. These suboptions need to be assembled.*)
 assemble[opt:PrintingOptions, rules_List] := 
@@ -836,6 +919,37 @@ ResolveCSSInterpretations[boxes:{__?validBoxesQ}, interpretationList_] :=
 
 (* ::Subsection::Closed:: *)
 (*ResolveCSSCascade*)
+
+
+(* From https://developer.mozilla.org/en-US/docs/Web/CSS/Cascade
+The cascading algorithm determines how to find the value to apply for each property for each document element.
+
+1. It first filters all the delarations from the different sources to keep only the delarations that apply to a given element. 
+That means delarations whose selector matches the given element and which are part of an appropriate media at-rule.
+
+2. Then it sorts these delarations according to their importance, that is, whether or not they are followed by !important, 
+and by their origin. The cascade is in ascending order, which means that !important values from a user-defined style sheet 
+have precedence over normal values originated from a user-agent style sheet:
+	Origin		Importance
+A	user agent	normal
+B	user		normal
+C	author		normal
+D	animations	
+E	author		!important
+F	user		!important
+G	user agent	!important
+H	transitions	
+
+3. In case of equality, the specificity of a value is considered to choose one or the other.
+
+How then do we resolve the cascade? 
+Because of the imported CSS data, it behaves is if all rules come from a single style sheet (origin).
+Thus rule (1) only has one SS source but multiple selectors within the SS can be simultaneously active.
+This is tricky with @media conditions since these conditions are not immediately resolved.
+Rule (2), due to only one origin, is only a bisected sorting of declarations by importance.
+Rule (3) often applies; if two rules have the same importance then the one with the higher specificity wins.
+If specificity is also equal, then the last rule wins.
+*)
 
 
 (* ResolveCSSCascade:
