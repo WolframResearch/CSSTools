@@ -391,7 +391,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 					AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens];
 					Return @ {}
 				];
-				pos++;
+				pos++; (* skip colon *)
 				If[TokenTypeIs["ident", tokens[[pos]]],
 					Switch[ToLowerCase @ tokens[[pos]]["String"],
 						"left",  Left,
@@ -554,8 +554,8 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 				<|
 					"Property"       -> prop, 
 					"Value"          -> CSSUntokenize @ valueTokens,
-					"Interpretation" -> valueTokens,
 					"Important"      -> important,
+					"Interpretation" -> valueTokens,
 					"Condition"      -> None|>
 			];
 		If[TrueQ @ $RawImport, 
@@ -577,7 +577,7 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 expectedMainKeys      = {"Selector", "Block"};
 expectedMainKeysFull  = {"Selector", "Targets", "Block"};
 expectedBlockKeys     = {"Property", "Value", "Important", "Condition"};
-expectedBlockKeysFull = {"Property", "Value", "Interpretation", "Important", "Condition"};
+expectedBlockKeysFull = {"Property", "Value", "Important", "Interpretation", "Condition"};
 
 
 validCSSBlockQ[data:{__Association}]     := AllTrue[Keys /@ data, MatchQ[expectedBlockKeys]]
@@ -628,7 +628,7 @@ validBoxes =
 		LocatorPaneBox, OpenerBox, OverlayBox, PaneBox, PanelBox, 
 		PaneSelectorBox, PopupMenuBox, ProgressIndicatorBox, RadioButtonBox,
 		SetterBox, Slider2DBox, SliderBox, TabViewBox, TemplateBox, TogglerBox, TooltipBox};	
-validExpressions =
+validBoxGenerators =
 	{
 		ActionMenu, Animator, Button, Checkbox, ColorSetter, 
 		Dynamic, DynamicWrapper, Frame, Graphics3D, Graphics, 
@@ -640,9 +640,9 @@ validBoxOptions =
 	{
 		Alignment, Appearance, Background, DisplayFunction, Frame, FrameMargins, FrameStyle, 
 		FontTracking, ImageMargins, ImageSize, ImageSizeAction, Spacings, Scrollbars};
-validBoxesQ = MemberQ[Join[validBoxes, validExpressions], #]&;
+validBoxesQ = With[{all = Join[validBoxes, validBoxGenerators]}, MemberQ[all, #]&];
 
-removeBoxOptions[allOptions_, boxes:{__?validBoxesQ}] :=
+movePseudoOptionsIntoBoxOptions[allOptions_, boxes:{__?validBoxesQ}] :=
 	Module[{currentOpts, optNames = allOptions[[All, 1]]},
 		Join[
 			Cases[allOptions, Rule[Background, _] | Rule[FontTracking, _], {1}],
@@ -658,50 +658,54 @@ removeBoxOptions[allOptions_, boxes:{__?validBoxesQ}] :=
 
 
 (* ::Subsection::Closed:: *)
-(*Assemble directives into one option*)
+(*Assemble possibly conditioned options*)
 
 
-moveLRBTHoldToOutside[defaultValue_, heldValue_Hold] := 
-	Module[{value = defaultValue, h = heldValue},
+(* 
+	Media queries add conditions to the normal CSS cascade. There may be multiple valid conditions. 
+	Option values and their conditions are combined into a held Which expression. *)
+assembleGeneralCase[CSSBlockData_?validCSSBlockFullQ, option_, Hold[subKeys___], modifyValueFunction_Function] :=
+	Module[{h = Hold[], j = 1, value, cond},
+		While[j <= Length[CSSBlockData],
+			value = CSSBlockData[[j]]["Interpretation", option, subKeys];
+			value = modifyValueFunction[value, CSSBlockData[[j]]];
+			cond = CSSBlockData[[j]]["Condition"];
+			If[!MissingQ[value],
+				If[cond === None, Break[]]; (* break if found fallthrough case *)
+				With[{i = value, c = cond}, h = Replace[h, Hold[x___] :> Hold[x, c, i]]]
+			];
+			j++
+		];
+		(* set the fallthrough condition if reached end of list *)
+		If[j > Length[CSSBlockData], value = Automatic];
 		With[{i = value}, h = Replace[h, Hold[x___] :> Hold[x, True, i]]];
+		(* remove any internal holds, add the head Which *)
 		h = h //. Hold[a___, Hold[x___], b___] :> Hold[a, x, b];
 		h = Replace[h, Hold[x___] :> Hold[Which[x]]];
-		Replace[h, Hold[x___] :> x, {1}]
+		h = Replace[h, Hold[x___] :> x, {1}]; (* not sure if this is needed.... *)
+		(* reduce to just the held default if only the default exists *)
+		Replace[h, Hold[Which[True, x_]] :> Hold[x]]
 	]
 
 
 frameOptionQ[input_] := MemberQ[{CellFrameStyle, FrameStyle}, input]
 frameOptionQ[___] := False
 
-getSideFromLRBTDirective[CSSBlockData_?validCSSBlockFullQ, option_?frameOptionQ, side:("Left" | "Right" | "Bottom" | "Top")] :=
-	Module[{h = Hold[], j = 1, value, cond},
-		While[j < Length[CSSBlockData],
-			value = CSSBlockData[[j]]["Interpretation", option, side];
-			cond = CSSBlockData[[j]]["Condition"];
-			If[!MissingQ[value] && cond =!= None,
+modifyValueToDirective = 
+	Function[{v, dummy},
+		Module[{value = v},
+			If[!MissingQ[value],
 				If[KeyExistsQ[value, "Style"] && value["Style"] === None && Length[value] > 1, value = KeyDropFrom[value, "Style"]];
-				With[{i = Directive @@ Values @ value, c = cond}, h = Replace[h, Hold[x___] :> Hold[x, c, i]]]
-			];
-			j++
-		];
-		If[j < Length[CSSBlockData], (* check for a fallthrough condition *)
-			value = CSSBlockData[[j]]["Interpretation", option, side];
-			If[!MissingQ[value], 
-				If[KeyExistsQ[value, "Style"] && value["Style"] === None && Length[value] > 1, 
-					value = Directive @@ Values @ KeyDropFrom[value, "Style"]]
-					,
-					value = Directive @@ Values @ value
-				, 
-				value = Automatic
-			];
-		];
-		moveLRBTHoldToOutside[value, h]
+				Directive @@ Values @ value
+				,
+				value
+			]
+		]
 	]
 
 assembleLRBTDirectives[CSSBlockData_?validCSSBlockFullQ, option_?frameOptionQ] :=
 	Module[{temp},
-		temp = getSideFromLRBTDirective[CSSBlockData, option, #] & /@ {"Left", "Right", "Bottom", "Top"};
-		temp = Replace[temp, Hold[Which[True, Automatic]] :> Hold[Automatic], 2];
+		temp = assembleGeneralCase[CSSBlockData, option, Hold[#], modifyValueToDirective]& /@ {"Left", "Right", "Bottom", "Top"};
 		Replace[temp, p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> If[FreeQ[p, Which], {{l, r}, {b, t}}, Dynamic[{{l, r}, {b, t}}]]]
 	]
 
@@ -709,28 +713,9 @@ assembleLRBTDirectives[CSSBlockData_?validCSSBlockFullQ, option_?frameOptionQ] :
 marginOptionQ[input_] := MemberQ[{CellFrameMargins, FrameMargins, ImageMargins, CellMargins, CellFrame}, input]
 marginOptionQ[___] := False
 
-getSideFromLRBTPadding[CSSBlockData_?validCSSBlockFullQ, option_?marginOptionQ, side:("Left" | "Right" | "Bottom" | "Top")] :=
-	Module[{h = Hold[], j = 1, value, cond},
-		While[j < Length[CSSBlockData],
-			value = CSSBlockData[[j]]["Interpretation", option, side, If[option === CellFrame, "Width", Unevaluated[Sequence[]]]];
-			cond = CSSBlockData[[j]]["Condition"];
-			If[!MissingQ[value] && cond =!= None,
-				With[{i = value, c = cond}, h = Replace[h, Hold[x___] :> Hold[x, c, i]]]
-			];
-			j++
-		];
-		(* check for a fallthrough condition *)
-		If[j < Length[CSSBlockData], 
-			value = CSSBlockData[[j]]["Interpretation", option, side, If[option === CellFrame, "Width", Unevaluated[Sequence[]]]], 
-			If[MissingQ[value], value = Automatic]
-		];
-		moveLRBTHoldToOutside[value, h]
-	]
-
 assembleLRBTPadding[CSSBlockData_?validCSSBlockFullQ, option_?marginOptionQ] :=
 	Module[{temp},
-		temp = getSideFromLRBTPadding[CSSBlockData, option, #] & /@ {"Left", "Right", "Bottom", "Top"};
-		temp = Replace[temp, Hold[Which[True, Automatic]] :> Hold[Automatic], 2];
+		temp = assembleGeneralCase[CSSBlockData, option, Hold[#, If[option === CellFrame, "Width", Unevaluated[Sequence[]]]], #&]& /@ {"Left", "Right", "Bottom", "Top"};
 		Replace[temp, p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> If[FreeQ[p, Which], {{l, r}, {b, t}}, Dynamic[{{l, r}, {b, t}}]]]
 	]
 	
@@ -738,32 +723,14 @@ assembleLRBTPadding[CSSBlockData_?validCSSBlockFullQ, option_?marginOptionQ] :=
 sizeOptionQ[input_] := MemberQ[{ImageSize}, input]
 sizeOptionQ[___] := False		
 
-getMinMaxSizing[CSSBlockData_?validCSSBlockFullQ, option_?sizeOptionQ, orientation:("Height" | "Width"), size:("Min" | "Max")] :=
-	Module[{h = Hold[], j = 1, value, cond},
-		While[j < Length[CSSBlockData],
-			value = CSSBlockData[[j]]["Interpretation", option, orientation, size];
-			cond = CSSBlockData[[j]]["Condition"];
-			If[!MissingQ[value] && cond =!= None,
-				With[{i = value, c = cond}, h = Replace[h, Hold[x___] :> Hold[x, c, i]]]
-			];
-			j++
-		];
-		(* check for a fallthrough condition *)
-		If[j < Length[CSSBlockData], 
-			value = CSSBlockData[[j]]["Interpretation", option, orientation, size], 
-			If[MissingQ[value], value = Automatic]
-		];
-		moveLRBTHoldToOutside[value, h]
-	]
-	
 assembleLRBTSizing[CSSBlockData_?validCSSBlockFullQ, option_?sizeOptionQ] :=
 	Module[{temp},
 		temp = {
-			getMinMaxSizing[CSSBlockData, option, "Width",  "Min"],
-			getMinMaxSizing[CSSBlockData, option, "Width",  "Max"],
-			getMinMaxSizing[CSSBlockData, option, "Height", "Min"],
-			getMinMaxSizing[CSSBlockData, option, "Height", "Max"]};
-		temp = Replace[temp, Hold[Which[True, Automatic]] :> Hold[Automatic], 2];
+			assembleGeneralCase[CSSBlockData, option, Hold["Width",  "Min"], #&],
+			assembleGeneralCase[CSSBlockData, option, Hold["Width",  "Max"], #&],
+			assembleGeneralCase[CSSBlockData, option, Hold["Height", "Min"], #&],
+			assembleGeneralCase[CSSBlockData, option, Hold["Height", "Max"], #&]};
+		(* convert to simplified forms if possible, adding Dynamic if needed *)
 		Which[
 			temp[[1]] === temp[[2]] && temp[[3]] === temp[[4]],
 				Replace[temp, p:{Hold[wn_], Hold[wx_], Hold[hn_], Hold[hx_]} :> If[FreeQ[p, Which], {wn, hn}, Dynamic[{wn, hn}]]],
@@ -772,149 +739,50 @@ assembleLRBTSizing[CSSBlockData_?validCSSBlockFullQ, option_?sizeOptionQ] :=
 		]
 	]
 	
-	
+
+modifyValueIfTextDecoration = Function[{v, data}, If[MissingQ[v] && data["Property"] === "text-decoration", Automatic, v]];
+
 assembleFontVariations[CSSBlockData_?validCSSBlockFullQ, option:FontVariations] :=
-	Module[{h = Hold[], j = 1, value, cond},
-		While[j < Length[CSSBlockData],
-			value = CSSBlockData[[j]]["Interpretation", option];
-			cond = CSSBlockData[[j]]["Condition"];
-			Echo[{j, value, cond}];
-			If[!MissingQ[value] && cond =!= None,
-				With[{i = value, c = cond}, h = Replace[h, Hold[x___] :> Hold[x, c, i]]]
-			];
-			j++
-		];
-		(* check for a fallthrough condition *)
-		If[j < Length[CSSBlockData], 
-			value = CSSBlockData[[j]]["Interpretation", option], 
-			If[MissingQ[value], value = Automatic]
-		];
-		moveLRBTHoldToOutside[value, h]
+	Module[{suboptions},
+		suboptions = DeleteMissing[#[option] & /@ CSSBlockData[[All, "Interpretation"]], Infinity];
+		suboptions = Union @ Flatten[Keys /@ suboptions];
+		(# -> Replace[assembleGeneralCase[CSSBlockData, option, Hold[#], modifyValueIfTextDecoration], {Hold[x__] :> Dynamic[x]}])& /@ suboptions
 	]
 
-
+ClearAll[assemble];
 assemble[opt_?frameOptionQ,  CSSBlockData_?validCSSBlockFullQ] := opt -> assembleLRBTDirectives[CSSBlockData, opt]
 assemble[opt_?marginOptionQ, CSSBlockData_?validCSSBlockFullQ] := opt -> assembleLRBTPadding[CSSBlockData, opt]
 assemble[opt_?sizeOptionQ,   CSSBlockData_?validCSSBlockFullQ] := opt -> assembleLRBTSizing[CSSBlockData, opt]
+assemble[opt:FontVariations, CSSBlockData_?validCSSBlockFullQ] := opt -> assembleFontVariations[CSSBlockData, opt]
 
 (* CellFrameColor is only used in the outline property, which is not supported *)
 (* (*TODO*) assemble[opt:CellFrameColor, CSSBlockData_?validCSSBlockFullQ] := opt -> assembleLRBTDirectives[CSSBlockData, opt] *)
 
-	 
-assemble[opt:FontVariations, rules_List] := 
-	opt -> DeleteDuplicatesBy[Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x, {1}], First]
-
-(* PrintingOptions is a list of suboptions. These suboptions need to be assembled.*)
-assemble[opt:PrintingOptions, rules_List] := 
-	Module[{subOptions},
-		subOptions = Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x];
-		assemble[#, subOptions]& /@ Union[First /@ subOptions]
-	]
-
-assemble[subOption:"InnerOuterMargins", rules_] := 
-	Module[{pageSide, orderedRules = Flatten @ Cases[rules, HoldPattern[subOption -> x_] :> x]},
-		(* InnerOuterMargins only appears if a Left/Right page was detected *)
-		(* get page side *)
-		pageSide = getSideFromLRBTDirective[orderedRules, Left];
-		If[pageSide === {}, pageSide = getSideFromLRBTDirective[orderedRules, Right]];
-		{Last @ getSideFromLRBTDirective[pageSide, Left], Last @ getSideFromLRBTDirective[pageSide, Right]}
+assembleSubOption[CSSBlockData_?validCSSBlockFullQ, option:PrintingOptions, subOption:"PrintingMargins"] :=
+	Module[{temp},
+		temp = assembleGeneralCase[CSSBlockData, option, Hold[subOption, #], #&]& /@ {"Left", "Right", "Bottom", "Top"};
+		(*temp = Replace[temp, Hold[Which[True, x_]] :> Hold[x], 2];*)
+		Replace[temp, p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> If[FreeQ[p, Which], {{l, r}, {b, t}}, Dynamic[{{l, r}, {b, t}}]]]
 	]
 	
-assemble[subOption:"PrintingMargins", rules_] := 
-	Module[{orderedRules = Flatten @ Cases[rules, HoldPattern[subOption -> x_] :> x]},
-		subOption -> {
-			(* left/right *)
-			{FirstCase[orderedRules, All[Left[x_]] :> x, Automatic], FirstCase[orderedRules, All[Right[x_]] :> x, Automatic]},
-			(* bottom/top *)
-			{FirstCase[orderedRules, All[Bottom[x_]] :> x, Automatic], FirstCase[orderedRules, All[Top[x_]] :> x, Automatic]}}
+assembleSubOption[CSSBlockData_?validCSSBlockFullQ, option:PrintingOptions, subOption_] :=
+	Module[{temp},
+		temp = assembleGeneralCase[CSSBlockData, option, Hold[subOption], #&];
+		subOption -> Replace[temp, p:Hold[x___] :> If[FreeQ[p, Which], x, Dynamic[x]]]
+	]
+	
+assemble[opt:PrintingOptions, CSSBlockData_?validCSSBlockFullQ] := 
+	Module[{allSubOptions},
+		allSubOptions = Union @ Flatten[Keys /@ DeleteMissing[#[opt] & /@ CSSBlockData[[All, "Interpretation"]]]];
+		opt -> (assembleSubOption[CSSBlockData, opt, #]& /@ allSubOptions)
 	]
 
 (* fallthrough *)
-assemble[opt_, rules_List] := Last @ Cases[rules, HoldPattern[opt -> _], {1}]
+assemble[opt_, CSSBlockData_?validCSSBlockFullQ] := opt -> First @ DeleteMissing[#[opt]& /@ CSSBlockData[[All, "Interpretation"]]]
 
 
 (* ::Section:: *)
 (*Main Functions*)
-
-
-(* ::Subsection::Closed:: *)
-(*ResolveCSSInterpretations (merge properties)*)
-
-
-(* ResolveCSSInterpretations:
-	1. Remove Missing and Failure interpretations.
-	2. Filter the options based on Notebook/Cell/Box levels.
-	3. Merge together Left/Right/Bottom/Top and Width/Height options.  
-	
-	It can also take a list of boxes e.g. ActionMenuBox or a list of expressions e.g. ActionMenu	
-*)
-
-
-(* ========= Cell/Notebook/Box/All version ========= *)
-(* normalize Dataset input *)
-ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), CSSData_Dataset] :=
-	ResolveCSSInterpretations[type, Normal @ CSSData]
-
-ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), CSSData:{__Association} /; validCSSDataQ[CSSData]] :=
-	Module[{valid, allOptionNames},
-		(* ordering is maintained *)
-		(* group properties with conditions together, but otherwise keep ordering? *)
-		valid = Select[CSSData, Not[FailureQ[#Interpretation] || MissingQ[#Interpretation]] &];
-		valid = 
-			<|
-				"Condition" -> #Condition,
-				"Interpretation" -> 
-					Select[#Interpretation, 
-						Switch[type, 
-							Cell,      MemberQ[cellLevelOptions, #[[1]]]&, 
-							Notebook,  MemberQ[notebookLevelOptions, #[[1]]]&,
-							Box,      !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&,
-							All,       True&]]
-			|>& /@ valid;
-		allOptionNames = Union[First /@ Flatten @ valid[[All, "Interpretation"]]];
-				(*TODO: STARTHERE*)		
-	]
-	
-(* normalize Dataset input *)
-ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_Dataset] :=
-	ResolveCSSInterpretations[type, Normal @ interpretationList]
-
-(* main function *)
-ResolveCSSInterpretations[type:(Cell|Notebook|Box|All), interpretationList_] := 
-	Module[{valid, initialSet},
-		valid = DeleteCases[Flatten @ interpretationList, _?FailureQ | _Missing, {1}];
-		valid = Select[valid, 
-			Switch[type, 
-				Cell,      MemberQ[cellLevelOptions, #[[1]]]&, 
-				Notebook,  MemberQ[notebookLevelOptions, #[[1]]]&,
-				Box,      !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&,
-				All,       True&]];
-		(* assemble options *)
-		initialSet = assemble[#, valid]& /@ Union[First /@ valid];
-		If[type === Box || type === All,
-			removeBoxOptions[initialSet, validBoxes]
-			,
-			initialSet]
-	]
-
-
-(* ========= Box and expression versions ========= *)
-(* normalize Dataset input *)
-ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_Dataset] := 
-	ResolveCSSInterpretations[{box}, Normal @ interpretationList]
-
-(* upgrade singleton to a list *)
-ResolveCSSInterpretations[box:_?validBoxesQ, interpretationList_] := ResolveCSSInterpretations[{box}, interpretationList]
-
-(* main function *)
-ResolveCSSInterpretations[boxes:{__?validBoxesQ}, interpretationList_] := 
-	Module[{valid, initialSet},
-		valid = DeleteCases[Flatten @ interpretationList, _?FailureQ | _Missing, {1}];
-		valid = Select[valid, !MemberQ[optionsToAvoidAtBoxLevel, #[[1]]]&];
-		(* assemble options *)
-		initialSet = assemble[#, valid]& /@ Union[First /@ valid];
-		removeBoxOptions[initialSet, boxes /. Thread[validExpressions -> validBoxes]]				
-	]
 
 
 (* ::Subsection::Closed:: *)
@@ -942,71 +810,137 @@ H	transitions
 
 3. In case of equality, the specificity of a value is considered to choose one or the other.
 
-How then do we resolve the cascade? 
+How then do we resolve the cascade in WL code? 
 Because of the imported CSS data, it behaves is if all rules come from a single style sheet (origin).
 Thus rule (1) only has one SS source but multiple selectors within the SS can be simultaneously active.
-This is tricky with @media conditions since these conditions are not immediately resolved.
+This is tricky with @media conditions since these conditions are not immediately resolved by the FE.
 Rule (2), due to only one origin, is only a bisected sorting of declarations by importance.
 Rule (3) often applies; if two rules have the same importance then the one with the higher specificity wins.
 If specificity is also equal, then the last rule wins.
+
+In practice, we 
+1. gather all relevant declarations, including all from @media rulesets
+2. delete any declarations that failed to parse or are missing
+3. since we have only one origin, sort remaining declarations by importance then by specificity (unless turned off via an option)
+4. merge across related properties into FE options
+
+Step (4) is complicated 
+SIDED PROPERTIES LEFT/RIGHT/BOTTOM/TOP:
+Some properties are given per side of the box, whereas the FE has only one option e.g. FrameStyle.
+For example, 'margin-left' can override 'margin' settings so long 'margin-left' comes after 'margin'.
+We thus perform the cascade on each side, then join them together into the FE option value.
+SIZE PROPERTIES MIN/MAX:
+Some properties are given as min/max values, whereas the FE has only one option e.g. ImageSize.
+For example, 'min-width' can override 'width' settings so long as 'min-width' comes after 'width'.
+We thus perform the cascade on each min/max limit, then join them together into the FE option value.
+FONT PROPERTIES:
+The CSS properties text-decoration, text-transform, and font-variant are separate props.
+The FE has similar features, but all are given as suboptions in the FontVariations option.
+Resolving this cascade is perhaps not exactly conformant with the CSS spec because 3 props must merge to one option value.
 *)
 
 
 (* ResolveCSSCascade:
 	1. Select the entries in the CSS data based on the provided selectors
 	2. order the selectors based on specificity and importance (if those options are on)
-	3. merge resulting list of interpreted options *)
+	3. merge resulting list of interpreted options 
+Arg1: scope
+	CSS lacks scope in that all most properties can apply to all boxes.
+	WD has options that apply to specific levels e.g. Cell/Notebook/Box/All. 
+	This argument can also take a list of boxes e.g. ActionMenuBox or a list of box generators e.g. ActionMenu.
+Arg2:  
+*)	
 ClearAll[ResolveCSSCascade];
 Options[ResolveCSSCascade] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
 
 (* normalize Dataset input *)
-ResolveCSSCascade[
-	type:(Cell|Notebook|Box|All), CSSData_Dataset, 
-	selectorList:{__?(Function[CSSSelectorQ[#] || StringQ[#]])}, opts:OptionsPattern[]
-] :=
-	ResolveCSSCascade[type, Normal @ CSSData, selectorList, opts]
+ResolveCSSCascade[scope_, CSSData_Dataset, selectorList_, opts:OptionsPattern[]] := ResolveCSSCascade[scope, Normal @ CSSData, selectorList, opts]
 
+(* upgrade single selector to a selector list *)
+ResolveCSSCascade[scope_, CSSData_, selectorList_ /; !ListQ[selectorList], opts:OptionsPattern[]] := ResolveCSSCascade[scope, CSSData, {selectorList}, opts]
+
+(* main function *)
 ResolveCSSCascade[
-	type:(Cell|Notebook|Box|All), CSSData:{__Association} /; validCSSDataQ[CSSData], 
+	scope:(Cell | Notebook | Box | All | None | _?validBoxesQ | {__?validBoxesQ}), CSSData:{__Association} /; validCSSDataQ[CSSData], 
 	selectorList:{__?(Function[CSSSelectorQ[#] || StringQ[#]])}, opts:OptionsPattern[]
 ] :=
-	Module[{interpretationList, specificities},
+	Module[{atRules, sel, dataSubset, specificities, declarations, optionNames, resolvedOptions},
 		(* start by filtering the data by the given list of selectors; ordering is maintained *)
 		(* match against the tokenized selector sequence, which should be unique *)
 		(* upgrade any string selectors to CSSSelector objects *)
-		interpretationList = Replace[selectorList, s_?StringQ :> CSSSelector[s], {1}];
-		If[AnyTrue[interpretationList, _?FailureQ], Return @ FirstCase[interpretationList, _?FailureQ]];
-		interpretationList = 
+		(* exceptions: @page rules *)
+		sel = Select[selectorList, !StringStartsQ[#, WhitespaceCharacter... ~~ "@"]&];
+		sel = Replace[selectorList, s_?StringQ :> CSSSelector[s], {1}];
+		If[AnyTrue[sel, _?FailureQ], Return @ FirstCase[sel, _?FailureQ]];
+		dataSubset = 
  			Select[
  				CSSData, 
-  				MatchQ[#Selector["Sequence"], Alternatives @@ Through[interpretationList["Sequence"]]] &];
-		
+  				MatchQ[#Selector["Sequence"], Alternatives @@ Through[sel["Sequence"]]] &];
+  		
 		If[TrueQ @ OptionValue["IgnoreSpecificity"],
 			(* if ignoring specificity, then leave the user-supplied selector list alone *)
-			interpretationList = Flatten @ interpretationList[[All, "Block"]]
+			declarations = Flatten @ dataSubset[[All, "Block"]]
 			,
 			(* otherwise sort based on specificity but maintain order of duplicates; this is what should happen based on the CSS specification *)
-			specificities = Through[interpretationList[[All, "Selector"]]["Specificity"]];
-			interpretationList = Flatten @ interpretationList[[Ordering[specificities]]][[All, "Block"]];
+			specificities = Through[dataSubset[[All, "Selector"]]["Specificity"]];
+			declarations = Flatten @ dataSubset[[Ordering[specificities]]][[All, "Block"]];
 		];
 		
-		(* Following CSS cascade spec:
-			Move !important CSS properties to the end since they should override all other properties, but maintain their ordering.
-		*)
-		interpretationList = 
+		(* add @page at rules, should only apply at Notebook scope *)
+		(* FIXME: in paged module 3 the pages have their own specificity. Page specificity has not been implemented *)
+  		atRules = Select[selectorList, StringStartsQ[#, WhitespaceCharacter... ~~ "@"]&];
+  		If[MemberQ[atRules, s_?StringQ /; StringStartsQ[s, WhitespaceCharacter... ~~ "@page", IgnoreCase -> True]],
+  			dataSubset =
+	  			Join[
+	  				Select[CSSData, MatchQ[#Selector, s_?StringQ /; StringStartsQ[s, WhitespaceCharacter... ~~ "@page", IgnoreCase -> True]]&], 
+	  				dataSubset]
+  		];
+  		
+		(* 
+			Following CSS cascade spec, move !important CSS properties to the end 
+			since they should override all other properties, but maintain their ordering. *)
+		declarations = 
 			Flatten @ 
 				If[Not[TrueQ @ OptionValue["IgnoreImportance"]],
 					Join[
-						Select[interpretationList, #Important == False&], 
-						Select[interpretationList, #Important == True&]]
+						Select[declarations, #Important == False&], 
+						Select[declarations, #Important == True&]]
 				];
-				
-		(* now that the styles are all sorted, merge them *)
-		(*ResolveCSSInterpretations[type, interpretationList]*)
-		interpretationList
+		
+		(* 
+			Remove props that failed to parse or are unsupported. 
+			Reverse the order so most important declaration is now first (so we can later scan through the list from the start). *)		
+		declarations = Reverse @ Select[declarations, Not[FailureQ[#Interpretation] || MissingQ[#Interpretation]] &];
+		
+		(* Filter detected options to the appropriate scope Box/Cell/Notebook/$FrontEnd *)
+		optionNames = Union @ Flatten[Keys /@ declarations[[All, "Interpretation"]]];
+		optionNames =
+			Select[
+				optionNames, 
+				Switch[scope, 
+					_?validBoxesQ,    !MemberQ[optionsToAvoidAtBoxLevel, #]&,
+					{__?validBoxesQ}, !MemberQ[optionsToAvoidAtBoxLevel, #]&,
+					Cell,              MemberQ[cellLevelOptions, #]&, 
+					Notebook,          MemberQ[notebookLevelOptions, #]&,
+					Box,              !MemberQ[optionsToAvoidAtBoxLevel, #]&,
+					All | None,        True&]];
+					
+		(* assemble declarations into FE options *)
+		resolvedOptions = assemble[#, declarations]& /@ optionNames;
+		Which[
+			MatchQ[scope, Box | All],
+				movePseudoOptionsIntoBoxOptions[resolvedOptions, validBoxes],
+			MatchQ[scope, _?validBoxesQ | {__?validBoxesQ}],
+				movePseudoOptionsIntoBoxOptions[resolvedOptions, If[ListQ[scope], scope, {scope}] /. Thread[validBoxGenerators -> validBoxes]],
+			True,
+				resolvedOptions
+		]		
 	]
 
-ResolveCSSCascade[___] := Failure["BadCSSData", <||>]
+ResolveCSSCascade[scope_, ___] /; !MatchQ[scope, (Cell | Notebook | Box | All | None | _?validBoxesQ | {__?validBoxesQ})] := 
+	Failure["BadScope", <|"Message" -> "First argument expected as All, Notebook, Cell, Box or box generator."|>]
+ResolveCSSCascade[_, CSSData:{__Association} /; !validCSSDataQ[CSSData], ___] := 
+	Failure["BadCSSData", <|"Message" -> "CSS data appears invalid."|>]
 
 
 (* ::Subsection::Closed:: *)

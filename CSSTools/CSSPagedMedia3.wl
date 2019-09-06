@@ -208,7 +208,7 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 				TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs[Alternatives @@ Join[$ApplicableCSSPageProperties, {"size", "marks", "bleed", "page"}], tokens[[pos]]],
 					decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
 					dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
-					If[TrueQ @ $Debug, Echo[dec, "@page delcaration"]];
+					If[TrueQ @ $Debug, Echo[dec, "@page declaration"]];
 					If[!FailureQ[dec], 
 						Which[
 							TokenStringIs["margin" | "margin-top" | "margin-bottom" | "margin-left" | "margin-right", tokens[[pos]]],
@@ -231,28 +231,39 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 	
 convertMarginsToPrintingOptions[declaration_?AssociationQ, scope_] :=
 	Module[{value},
-		If[!KeyExistsQ["Interpretation"] || FreeQ[declaration["Interpretation"], ImageMargins], Return @ declaration];
-		value = Flatten[{ImageMargins /. declaration["Interpretation"]}];
+		If[
+			Or[
+				!KeyExistsQ[declaration, "Interpretation"],
+				!KeyExistsQ[declaration["Interpretation"], PrintingOptions], 
+				!KeyExistsQ[declaration["Interpretation", PrintingOptions, "PrintingMargins"]]],
+			Return @ declaration
+		];
+		value = declaration["Interpretation", PrintingOptions, "PrintingMargins"];
 		value = 
-			Replace[
-				value, 
-				{
-					(h:Left | Right)[Scaled[x_]] :> h @ Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 1}]],
-					(h:Top | Bottom)[Scaled[x_]] :> h @ Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 2}]]},
-				{1}
+			KeyValueMap[
+				Rule[
+					#1,
+					Which[
+						MatchQ[#1, "Left" | "Right"], 
+							Replace[#2, Scaled[x_] :> Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 1}]]],
+						MatchQ[#1, "Top" | "Bottom"],
+							Replace[#2, Scaled[x_] :> Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 2}]]],
+						True,
+							#2
+					]
+				]&,
+				value
 			];
+		value = <|value|>;
 		<|
 			declaration, 
-			"Interpretation" -> 
-				PrintingOptions -> {
+			"Interpretation" -> <|
+				PrintingOptions -> <|
 					Which[
-						MatchQ[scope, Left | Right],  
-							"InnerOuterMargins" -> {
-								FirstCase[value, x:Left[_] :> x, Nothing],
-								FirstCase[value, x:Right[_] :> x, Nothing]},
-						MatchQ[scope, First], Missing["Not supported."],
-						True, "PrintingMargins" -> value
-					]}|>
+						MatchQ[scope, Left | Right], <|"InnerOuterMargins" -> DeleteMissing @ {value["Left"], value["Right"]}|>,
+						MatchQ[scope, First],        Missing["Not supported."],
+						True,                        "PrintingMargins" -> <|value|>
+					]|>|>|>
 	]
 
 	
@@ -291,12 +302,12 @@ consumeAtPageMarginRule[tokens:{___?CSSTokenQ}, scope_] :=
 		];
 		{horizontal, vertical} =
 			Switch[location = tokens[[pos]]["String"],
-				"top-left",      {Left,   PageHeaders},
-				"top-center",    {Center, PageHeaders},
-				"top-right",     {Right,  PageHeaders},
-				"bottom-left",   {Left,   PageFooters},
-				"bottom-center", {Center, PageFooters},
-				"bottom-right",  {Right,  PageFooters},
+				"top-left",      {"Left",   PageHeaders},
+				"top-center",    {"Center", PageHeaders},
+				"top-right",     {"Right",  PageHeaders},
+				"bottom-left",   {"Left",   PageFooters},
+				"bottom-center", {"Center", PageFooters},
+				"bottom-right",  {"Right",  PageFooters},
 				_,               {None,   None}
 			];
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
@@ -333,7 +344,7 @@ consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}, scope_, location_String, horizo
 			]
 		];
 		interpretation =
-			With[{res = ResolveCSSInterpretations[Cell, Flatten[Flatten[declarations][[All, "Interpretation"]]]]},
+			With[{res = ResolveCSSCascade[Cell, {<|"Selector" -> CSSSelector["dummy"], "Block" -> declarations|>}, {"dummy"}]},
 				With[{v = DisplayFunction /. res},
 					If[MatchQ[v, Normal | None],
 						None
@@ -351,9 +362,11 @@ consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}, scope_, location_String, horizo
 			"Important"      -> False,
 			"Interpretation" -> 
 				Which[
-					MatchQ[scope, Left | Right], vertical -> scope @ horizontal @ interpretation,
+					MatchQ[scope, Left | Right], <|vertical -> {<|"Page" -> ToString @ scope, "Position" -> horizontal, "Content" -> interpretation|>}|>,
 					MatchQ[scope, First],        Missing["Not supported."],
-					True,                        vertical -> {Left @ horizontal @ interpretation, Right @ horizontal @ interpretation}
+					True,                        <|vertical -> {
+						                            <|"Page" -> "Left",  "Position" -> horizontal, "Content" -> interpretation|>, 
+						                            <|"Page" -> "Right", "Position" -> horizontal, "Content" -> interpretation|>}|>
 				]|>
 	]	
 
@@ -430,80 +443,100 @@ AssociateTo[CSSPropertyData,
 			"Inherited" -> False,
 			"CSSInitialValue" -> "auto",
 			"InterpretedGlobalValues" -> <|
-				"inherit" -> {}, (* no equivalent FE option *)
+				"inherit" -> <||>, (* no equivalent FE option *)
 				"initial" -> Missing["Not supported."]|>|>,
 		"bleed" -> <|
 			"Inherited" -> False,
 			"CSSInitialValue" -> "auto",
 			"InterpretedGlobalValues" -> <|
-				"inherit" -> {}, (* no equivalent FE option *)
+				"inherit" -> <||>, (* no equivalent FE option *)
 				"initial" -> Missing["Not supported."]|>|>,
 		"marks" -> <|
 			"Inherited" -> False,
 			"CSSInitialValue" -> "none",
 			"InterpretedGlobalValues" -> <|
-				"inherit" -> PrintingOptions -> {"PrintRegistrationMarks" -> Inherited}, 
-				"initial" -> PrintingOptions -> {"PrintRegistrationMarks" -> False}|>|>,
+				"inherit" -> <|PrintingOptions -> <|"PrintRegistrationMarks" -> Inherited|>|>, 
+				"initial" -> <|PrintingOptions -> <|"PrintRegistrationMarks" -> False|>|>|>|>,
 		"size" -> <|
 			"Inherited" -> False,
 			"CSSInitialValue" -> "auto",
 			"InterpretedGlobalValues" -> <|
-				"inherit" -> 
-					PrintingOptions -> {
+				"inherit" -> <|
+					PrintingOptions -> <|
 						"PageSize"  -> Inherited,
-						"PaperSize" -> Inherited},
-				"initial" -> 
-					PrintingOptions -> {
+						"PaperSize" -> Inherited|>|>,
+				"initial" -> <|
+					PrintingOptions -> <|
 						"PageSize"  -> {Automatic, Automatic},
-						"PaperSize" -> {Automatic, Automatic}}|>|>}];
+						"PaperSize" -> {Automatic, Automatic}|>|>|>|>}];
 						
 Map[
 	If[FreeQ[notebookLevelOptions, #], AppendTo[notebookLevelOptions, #]]&,
 	{PrintingOptions, PageHeaders, PageFooters}];
 
 
-assemble[opt:(PageHeaders | PageFooters), rules_] := 
-	Module[{orderedRules = Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x]},
+ClearAll[getSideFromLRBTSubOption];
+getSideFromLRBTSubOption[CSSBlockData_?validCSSBlockFullQ, option:PrintingOptions, subOption:"PrintingMargins", side:("Left" | "Right" | "Bottom" | "Top")] :=
+	Module[{h = Hold[], j = 1, value, cond},
+		While[j <= Length[CSSBlockData],
+			value = CSSBlockData[[j]]["Interpretation", option, subOption, side];
+			cond = CSSBlockData[[j]]["Condition"];
+			If[!MissingQ[value],
+				If[cond === None, Break[]]; (* break if found fallthrough case *)
+				With[{i = value, c = cond}, h = Replace[h, Hold[x___] :> Hold[x, c, i]]]
+			];
+			j++
+		];
+		(* check for a fallthrough condition *)
+		If[j > Length[CSSBlockData], value = Automatic];
+		moveLRBTHoldToOutside[value, h]
+	]
+	
+assembleSubOption[CSSBlockData_?validCSSBlockFullQ, option:PrintingOptions, subOption:"PrintingMargins"] :=
+	Module[{temp},
+		temp = getSideFromLRBTSubOption[CSSBlockData, option, subOption, #] & /@ {"Left", "Right", "Bottom", "Top"};
+		temp = Replace[temp, Hold[Which[True, x_]] :> Hold[x], 2];
+		Replace[temp, p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> If[FreeQ[p, Which], {{l, r}, {b, t}}, Dynamic[{{l, r}, {b, t}}]]]
+	]
+	
+assembleSubOption[CSSBlockData_?validCSSBlockFullQ, option:PrintingOptions, subOption_] :=
+	Module[{h = Hold[], j = 1, value, cond},
+		While[j <= Length[CSSBlockData],
+			value = CSSBlockData[[j]]["Interpretation", option, subOption];
+			cond = CSSBlockData[[j]]["Condition"];
+			If[!MissingQ[value],
+				If[cond === None, Break[]]; (* break if found fallthrough case *)
+				With[{i = value, c = cond}, h = Replace[h, Hold[x___] :> Hold[x, c, i]]]
+			];
+			j++
+		];
+		(* check for a fallthrough condition *)
+		If[j > Length[CSSBlockData], value = Automatic];
+		h = moveLRBTHoldToOutside[value, h];
+		subOption -> Replace[h, p:Hold[x___] :> If[FreeQ[p, Which], x, Dynamic[x]]]
+	]
+	
+assemble[opt:PrintingOptions, CSSBlockData_?validCSSBlockFullQ] := 
+	Module[{allSubOptions},
+		allSubOptions = Union @ Flatten[Keys /@ DeleteMissing[#[opt] & /@ CSSBlockData[[All, "Interpretation"]]]];
+		opt -> (assembleSubOption[CSSBlockData, opt, #]& /@ allSubOptions)
+	]
+	
+assemble[opt:(PageHeaders | PageFooters), CSSBlockData_?validCSSBlockFullQ] := 
+	Module[{orderedRules = Flatten @ DeleteMissing[#[opt] & /@ CSSBlockData[[All, "Interpretation"]]]},
 		opt -> {
 			(* left page *)
 			{
-				FirstCase[orderedRules, Left[Left[x_]] :> x,   None, {1}],
-				FirstCase[orderedRules, Left[Center[x_]] :> x, None, {1}],
-				FirstCase[orderedRules, Left[Right[x_]] :> x,  None, {1}]},
+				First[Select[orderedRules, #Page === "Left" && #Position === "Left" &],   <|"Content" -> None|>]["Content"],
+				First[Select[orderedRules, #Page === "Left" && #Position === "Center" &], <|"Content" -> None|>]["Content"],
+				First[Select[orderedRules, #Page === "Left" && #Position === "Right" &],  <|"Content" -> None|>]["Content"]},
 			(* right page *)
 			{
-				FirstCase[orderedRules, Right[Left[x_]] :> x,   None, {1}],
-				FirstCase[orderedRules, Right[Center[x_]] :> x, None, {1}],
-				FirstCase[orderedRules, Right[Right[x_]] :> x,  None, {1}]}}
+				First[Select[orderedRules, #Page === "Right" && #Position === "Left" &],   <|"Content" -> None|>]["Content"],
+				First[Select[orderedRules, #Page === "Right" && #Position === "Center" &], <|"Content" -> None|>]["Content"],
+				First[Select[orderedRules, #Page === "Right" && #Position === "Right" &],  <|"Content" -> None|>]["Content"]}}
 	]
-
-(* PrintingOptions is a list of suboptions. These suboptions need to be assembled.*)
-assemble[opt:PrintingOptions, rules_List] := 
-	Module[{subOptions},
-		subOptions = Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x];
-		assemble[#, subOptions]& /@ Union[First /@ subOptions]
-	]
-
-(* PrintingOptions suboption assembly *)
-assemble[opt:("PageSize" | "PaperSize"), rules_] := opt -> Last @ Cases[rules, HoldPattern[opt -> x_] :> x]
-
-assemble[opt:"InnerOuterMargins", rules_] := 
-	Module[{pageSide, orderedRules = Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x]},
-		(* InnerOuterMargins only appears if a Left/Right page was detected *)
-		(* get page side *)
-		pageSide = getSideFromLRBTDirective[orderedRules, Left];
-		If[pageSide === {}, pageSide = getSideFromLRBTDirective[orderedRules, Right]];
-		{Last @ getSideFromLRBTDirective[pageSide, Left], Last @ getSideFromLRBTDirective[pageSide, Right]}
-	]
-	
-assemble[opt:"PrintingMargins", rules_] := 
-	Module[{orderedRules = Flatten @ Cases[rules, HoldPattern[opt -> x_] :> x]},
-		opt -> {
-			(* left/right *)
-			{FirstCase[orderedRules, All[Left[x_]] :> x, Automatic], FirstCase[orderedRules, All[Right[x_]] :> x, Automatic]},
-			(* bottom/top *)
-			{FirstCase[orderedRules, All[Bottom[x_]] :> x, Automatic], FirstCase[orderedRules, All[Top[x_]] :> x, Automatic]}}
-	]
+			
 
 
 (* ::Subsection:: *)
@@ -574,7 +607,7 @@ consumeProperty[prop:"size", tokens:{__?CSSTokenQ}] :=
 		If[pos <= l, Return @ tooManyTokensFailure @ tokens];
 		If[FailureQ[value1], Return @ value1];
 		If[FailureQ[value2], Return @ value2];
-		PrintingOptions -> Join[value1, value2]
+		<|PrintingOptions -> <|Join[value1, value2]|>|>
 	]
 	
 parseSinglePaperSize[prop_String, token_?CSSTokenQ] :=
@@ -645,7 +678,7 @@ consumeProperty[prop:"marks", tokens:{__?CSSTokenQ}] :=
 		];
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
 		If[pos <= l, Return @ tooManyTokensFailure @ tokens];
-		If[FailureQ[value], value, PrintingOptions -> value]
+		If[FailureQ[value], value, <|PrintingOptions -> <|value|>|>]
 	]
 
 
