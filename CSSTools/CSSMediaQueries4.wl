@@ -17,11 +17,11 @@ Needs["CSSTools`CSSPropertyInterpreter`"];
 Begin["`Private`"] (* Begin Private Context *) 
 
 consumeMediaQuery[tokens:{___?CSSTokenQ}] :=
-	Module[{pos = 1, l = Length[tokens], hasMediaType = False, mcStart = False, negate = False, value1, value2},
+	Module[{pos = 1, l = Length[tokens], hasMediaType = False, mediaConditionStart = False, negate = False, value1, value2},
 		TrimWhitespaceTokens[pos, l, tokens];
 		(* 
 			The start of a <media-query> is a little tricky. It can start with 'not', but we have to
-			determine whether the 'not' is for a <media-not> or a <media-query>.
+			determine whether the 'not' is for a <media-not> or a <media-query> production.
 			Consume tokens as if it were a standard media query, 
 			but exit early and try again as a <media-condition> if anything fails to parse. *)
 		Which[
@@ -43,9 +43,9 @@ consumeMediaQuery[tokens:{___?CSSTokenQ}] :=
 				value1 = consumeMediaType[pos, l, tokens];
 			,
 			True,
-				mcStart = True
+				mediaConditionStart = True
 		];
-		If[!mcStart,
+		If[!mediaConditionStart,
 			(* The next token must be an ident if one was not already consumed. *)
 			If[!hasMediaType && pos < l, value1 = consumeMediaType[pos, l, tokens]; hasMediaType = True];
 			(* The next tokens, if any, are 'and' with <media-condition-without-or> *)
@@ -613,48 +613,32 @@ isFalseInTheNegativeRange[s_?StringQ] :=
 		
 
 (* ranged features *)
-mediaFeatureBoolean["width"] := True (* WD has a positive minimum window width so this is always positive *)
-mediaFeatureBoolean["height"] := True (* WD has a positive minimum window height so this is always positive *)
-mediaFeatureBoolean["aspect-ratio"] := True (* always non-zero *)
-mediaFeatureBoolean["resolution"] := True
-mediaFeatureBoolean["color"] := True
-mediaFeatureBoolean["color-index"] := True (* FE at least using SRGB *)
-mediaFeatureBoolean["monochrome"] := False (* assume running on a color device *)
+mediaFeatureBoolean["width"]               := True  (* WD has a positive minimum window width so this is always positive *)
+mediaFeatureBoolean["height"]              := True  (* WD has a positive minimum window height so this is always positive *)
+mediaFeatureBoolean["aspect-ratio"]        := True  (* always non-zero *)
+mediaFeatureBoolean["resolution"]          := True
+mediaFeatureBoolean["color"]               := True
+mediaFeatureBoolean["color-index"]         := True  (* FE at least using SRGB *)
+mediaFeatureBoolean["monochrome"]          := False (* assume running on a color device *)
 (* deprecated ranged features but must be supported *)
-mediaFeatureBoolean["device-width"] := True
-mediaFeatureBoolean["device-height"] := True
+mediaFeatureBoolean["device-width"]        := True
+mediaFeatureBoolean["device-height"]       := True
 mediaFeatureBoolean["device-aspect-ratio"] := True
 
 (* discrete features *)
-mediaFeatureBoolean["orientation"] := True
-mediaFeatureBoolean["scan"] := True
-mediaFeatureBoolean["grid"] := False (* FE does not run on grid devices, only bitmap devices *)
-mediaFeatureBoolean["update"] := True (* FE is a fast-updating device *)
-mediaFeatureBoolean["overflow-block"] := True (* FE uses 'scroll' *)
-mediaFeatureBoolean["overflow-inline"] := True (* could be 'none'=False *)
-mediaFeatureBoolean["color-gamut"] := True
-mediaFeatureBoolean["hover"] := True 
-mediaFeatureBoolean["any-hover"] := True 
-mediaFeatureBoolean["pointer"] := True (* FE runs on either computer+mouse or on a touchscreen device. *)
-mediaFeatureBoolean["any-pointer"] := True 
+mediaFeatureBoolean["orientation"]     := True
+mediaFeatureBoolean["scan"]            := True
+mediaFeatureBoolean["grid"]            := False (* FE does not run on grid devices, only bitmap devices *)
+mediaFeatureBoolean["update"]          := True  (* FE is a fast-updating device *)
+mediaFeatureBoolean["overflow-block"]  := True  (* FE uses 'scroll' *)
+mediaFeatureBoolean["overflow-inline"] := True  (* could be 'none'=False *)
+mediaFeatureBoolean["color-gamut"]     := True
+mediaFeatureBoolean["hover"]           := True 
+mediaFeatureBoolean["any-hover"]       := True 
+mediaFeatureBoolean["pointer"]         := True  (* FE runs on either computer+mouse or on a touchscreen device. *)
+mediaFeatureBoolean["any-pointer"]     := True 
 
 mediaFeatureBoolean[_?StringQ] := False
-
-(*TODO: is this list necessary? *)
-(*CSSMediaFeatureProperties = <|
-	"width" -> <|
-		"Value" -> "length",
-		"Type"  -> "range"|>,
-	"height" -> <|
-		"Value" -> "length",
-		"Type"  -> "range"|>,
-	"aspect-ratio" -> <|
-		"Value" -> "ratio",
-		"Type"  -> "range"|>,
-	"orientation" -> <|
-		"Value" -> {"portrait", "landscape"},
-		"Type"  -> "discrete"|>
-|>*)
 
 
 consumeMediaFeature[name_?StringQ /; StringStartsQ[name, "min-" | "max-", IgnoreCase -> True], tokens:{__?CSSTokenQ}] := 

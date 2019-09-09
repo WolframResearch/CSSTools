@@ -14,7 +14,7 @@ BeginPackage["CSSTools`", { "GeneralUtilities`"}]
 (* Exported symbols added here with SymbolName::usage *) 
 
 (* ==== CSSPropertyInterpreter` ==== *)
-SetUsage[CSSHeightMin, "\
+(*SetUsage[CSSHeightMin, "\
 CSSHeightMin[value$] indicates value$ is to be interpreted as a minimum height taken from a CSS property."];
 SetUsage[CSSHeightMax, "\
 CSSHeightMax[value$] indicates value$ is to be interpreted as a maximum height taken from a CSS property."];
@@ -27,7 +27,7 @@ CSSBorderColor[value$] indicates value$ is an interpreted CSS color."];
 SetUsage[CSSBorderStyle, "\
 CSSBorderStyle[value$] indicates value$ is an interpreted CSS border style."];
 SetUsage[CSSBorderWidth, "\
-CSSBorderWidth[value$] indicates value$ is an interpreted CSS border width."];
+CSSBorderWidth[value$] indicates value$ is an interpreted CSS border width."];*)
 
 (* ==== CSSStyleSheetInterpreter` ==== *)
 SetUsage[ResolveCSSCascade, "\

@@ -473,56 +473,8 @@ AssociateTo[CSSPropertyData,
 Map[
 	If[FreeQ[notebookLevelOptions, #], AppendTo[notebookLevelOptions, #]]&,
 	{PrintingOptions, PageHeaders, PageFooters}];
-
-
-ClearAll[getSideFromLRBTSubOption];
-getSideFromLRBTSubOption[CSSBlockData_?validCSSBlockFullQ, option:PrintingOptions, subOption:"PrintingMargins", side:("Left" | "Right" | "Bottom" | "Top")] :=
-	Module[{h = Hold[], j = 1, value, cond},
-		While[j <= Length[CSSBlockData],
-			value = CSSBlockData[[j]]["Interpretation", option, subOption, side];
-			cond = CSSBlockData[[j]]["Condition"];
-			If[!MissingQ[value],
-				If[cond === None, Break[]]; (* break if found fallthrough case *)
-				With[{i = value, c = cond}, h = Replace[h, Hold[x___] :> Hold[x, c, i]]]
-			];
-			j++
-		];
-		(* check for a fallthrough condition *)
-		If[j > Length[CSSBlockData], value = Automatic];
-		moveLRBTHoldToOutside[value, h]
-	]
 	
-assembleSubOption[CSSBlockData_?validCSSBlockFullQ, option:PrintingOptions, subOption:"PrintingMargins"] :=
-	Module[{temp},
-		temp = getSideFromLRBTSubOption[CSSBlockData, option, subOption, #] & /@ {"Left", "Right", "Bottom", "Top"};
-		temp = Replace[temp, Hold[Which[True, x_]] :> Hold[x], 2];
-		Replace[temp, p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> If[FreeQ[p, Which], {{l, r}, {b, t}}, Dynamic[{{l, r}, {b, t}}]]]
-	]
-	
-assembleSubOption[CSSBlockData_?validCSSBlockFullQ, option:PrintingOptions, subOption_] :=
-	Module[{h = Hold[], j = 1, value, cond},
-		While[j <= Length[CSSBlockData],
-			value = CSSBlockData[[j]]["Interpretation", option, subOption];
-			cond = CSSBlockData[[j]]["Condition"];
-			If[!MissingQ[value],
-				If[cond === None, Break[]]; (* break if found fallthrough case *)
-				With[{i = value, c = cond}, h = Replace[h, Hold[x___] :> Hold[x, c, i]]]
-			];
-			j++
-		];
-		(* check for a fallthrough condition *)
-		If[j > Length[CSSBlockData], value = Automatic];
-		h = moveLRBTHoldToOutside[value, h];
-		subOption -> Replace[h, p:Hold[x___] :> If[FreeQ[p, Which], x, Dynamic[x]]]
-	]
-	
-assemble[opt:PrintingOptions, CSSBlockData_?validCSSBlockFullQ] := 
-	Module[{allSubOptions},
-		allSubOptions = Union @ Flatten[Keys /@ DeleteMissing[#[opt] & /@ CSSBlockData[[All, "Interpretation"]]]];
-		opt -> (assembleSubOption[CSSBlockData, opt, #]& /@ allSubOptions)
-	]
-	
-assemble[opt:(PageHeaders | PageFooters), CSSBlockData_?validCSSBlockFullQ] := 
+assembleByFEOption[opt:(PageHeaders | PageFooters), CSSBlockData_?validCSSBlockFullQ] := 
 	Module[{orderedRules = Flatten @ DeleteMissing[#[opt] & /@ CSSBlockData[[All, "Interpretation"]]]},
 		opt -> {
 			(* left page *)
