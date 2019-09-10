@@ -370,6 +370,8 @@ consumeAtMediaBlock[tokens:{___?CSSTokenQ}, namespaces_] :=
 	]
 	
 
+
+
 (* ::Subsubsection::Closed:: *)
 (*@page*)
 
@@ -433,7 +435,6 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 				dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
 				If[!FailureQ[dec], 
 					dec = convertMarginsToPrintingOptions[dec, scope];
-					dec = dec /. head:((Left | Right | Bottom | Top)[_]) :> scope[head];
 					AppendTo[declarations, dec]
 				];
 				pos = decEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
@@ -448,27 +449,41 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 
 convertMarginsToPrintingOptions[declaration_?AssociationQ, scope_] :=
 	Module[{value},
-		If[!KeyExistsQ["Interpretation"] || FreeQ[declaration["Interpretation"], ImageMargins], Return @ declaration];
-		value = Flatten[{"PrintingMargins" /. PrintingOptions /. declaration["Interpretation"]}];
+		If[
+			Or[
+				!KeyExistsQ[declaration, "Interpretation"],
+				!KeyExistsQ[declaration["Interpretation"], PrintingOptions], 
+				!KeyExistsQ[declaration["Interpretation", PrintingOptions, "PrintingMargins"]]],
+			Return @ declaration
+		];
+		value = declaration["Interpretation", PrintingOptions, "PrintingMargins"];
 		(* CSS 2.1 does not allow ex or em lengths *)
 		If[!FreeQ[value, FontSize | "FontXHeight"], Return @ Failure["BadLength", <|"Message" -> "Page margins cannot us 'em' or 'ex' units."|>]];
 		value = 
-			Replace[
-				value, 
-				{
-					(h:Left | Right)[Scaled[x_]] :> h @ Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 1}]],
-					(h:Top | Bottom)[Scaled[x_]] :> h @ Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 2}]]},
-				{1}
+			KeyValueMap[
+				Rule[
+					#1,
+					Which[
+						MatchQ[#1, "Left" | "Right"], 
+							Replace[#2, Scaled[x_] :> Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 1}]]],
+						MatchQ[#1, "Top" | "Bottom"],
+							Replace[#2, Scaled[x_] :> Dynamic[x*CurrentValue[EvaluationNotebook[], {PrintingOptions, "PaperSize", 2}]]],
+						True,
+							#2
+					]
+				]&,
+				value
 			];
+		value = <|value|>;
 		<|
 			declaration, 
-			"Interpretation" -> 
-				PrintingOptions -> {
+			"Interpretation" -> <|
+				PrintingOptions -> <|
 					Which[
-						MatchQ[scope, Left | Right], "InnerOuterMargins" -> {FirstCase[value, x:Left[_] :> x, Nothing], FirstCase[value, x:Right[_] :> x, Nothing]},
+						MatchQ[scope, Left | Right], <|"InnerOuterMargins" -> DeleteMissing @ {value["Left"], value["Right"]}|>,
 						MatchQ[scope, First],        Missing["Not supported."],
-						True,                        "PrintingMargins" -> value
-					]}|>
+						True,                        "PrintingMargins" -> <|value|>
+					]|>|>|>
 	]
 
 
@@ -663,10 +678,12 @@ movePseudoOptionsIntoBoxOptions[allOptions_, boxes:{__?validBoxesQ}] :=
 (*Assemble possibly conditioned options*)
 
 
+(* These assembly functions are used within CSSCascade. *)
+
 (* 
 	Media queries add conditions to the normal CSS cascade. There may be multiple valid conditions. 
 	Option values and their conditions are combined into a held Which expression. *)
-assembleGeneralCase[CSSBlockData_?validCSSBlockFullQ, option_, Hold[subKeys___], modifyValueFunction_Function] :=
+assembleWithConditions[CSSBlockData_?validCSSBlockFullQ, option_, Hold[subKeys___], modifyValueFunction_Function] :=
 	Module[{h = Hold[], j = 1, value, cond},
 		While[j <= Length[CSSBlockData],
 			value = CSSBlockData[[j]]["Interpretation", option, subKeys];
@@ -688,7 +705,9 @@ assembleGeneralCase[CSSBlockData_?validCSSBlockFullQ, option_, Hold[subKeys___],
 		(* reduce to just the held default if only the default exists *)
 		Replace[h, Hold[Which[True, x_]] :> Hold[x]]
 	]
-	
+
+ClearAll[assemble];
+(* Assembling general CSS properties into FE options. This is the most general case. *)
 assemble[prop_?StringQ, scope_, CSSBlockData_] :=
 	Module[{validBlockData, optionNames},
 		(* only look at declarations that match 'prop' *)
@@ -698,60 +717,87 @@ assemble[prop_?StringQ, scope_, CSSBlockData_] :=
 		(* run the FE option assembly function *)
 		assembleByFEOption[#, validBlockData]& /@ optionNames
 	]
-	
+
+(* 
+	The FE options that take option values of the form {{left, right}, {bottom, top}} need to be assembled
+	from each side's individual CSS cascade. If the input is specific to one side, the other sides are 
+	filled in with Automatic. The 'prop' input is assumed normalized to lowercase. 
+	If media conditions (that contain Which) are detected, then the entire expression is wrapped in Dynamic. *)
+assembleLRBT[prop_?StringQ, LRBTList_] :=
+	Which[
+		StringContainsQ[prop, "top"], 
+			Replace[
+				LRBTList, 
+				p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> 
+					If[FreeQ[p, Which], {{Automatic, Automatic}, {Automatic, t}}, Dynamic[{{Automatic, Automatic}, {Automatic, t}}]]],
+		StringContainsQ[prop, "bottom"], 
+			Replace[
+				LRBTList, 
+				p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> 
+					If[FreeQ[p, Which], {{Automatic, Automatic}, {b, Automatic}}, Dynamic[{{Automatic, Automatic}, {b, Automatic}}]]],
+		StringContainsQ[prop, "left"], 
+			Replace[
+				LRBTList, 
+				p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> 
+					If[FreeQ[p, Which], {{l, Automatic}, {Automatic, Automatic}}, Dynamic[{{l, Automatic}, {Automatic, Automatic}}]]],
+		StringContainsQ[prop, "right"], 
+			Replace[
+				LRBTList, 
+				p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> 
+					If[FreeQ[p, Which], {{Automatic, r}, {Automatic, Automatic}}, Dynamic[{{Automatic, r}, {Automatic, Automatic}}]]],
+		True,
+			Replace[LRBTList, p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> If[FreeQ[p, Which], {{l, r}, {b, t}}, Dynamic[{{l, r}, {b, t}}]]]
+	]
+
+
+(* Assembling background properties into FE options:
+	CSS background properties are often just using the shorthand 'background'. *)
 assemble[
-	inputProp_?StringQ /; StringMatchQ[StringTrim @ inputProp, "border" | "border-top" | "border-bottom" | "border-right" | "border-left", IgnoreCase -> True], 
+	inputProp_?StringQ /; StringStartsQ[StringTrim @ inputProp, "background", IgnoreCase -> True], 
 	scope_, 
 	CSSBlockData_
 ] :=
-	Module[{validBlockData, optionNames, temp, prop = ToLowerCase @ inputProp},
-		(* only look at declarations that match 'prop' *)
-		validBlockData = Select[CSSBlockData, StringContainsQ[#Property, prop | "border"]&];
+	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp},
+		(* check whether input is a valid background long-form properties *)
+		If[!MatchQ[prop, "background" | "background-attachment" | "background-color" | "background-image" | "background-position" | "background-repeat"], 
+			Return @ Failure["BadProp", <|"Message" -> "Unrecognized background property.", "Prop" -> prop|>]];
+		
+		(* only look at declarations that match 'prop', including relevant shorthand properties *)
+		(* always include 'background' shorthand *)
+		validBlockData = 
+			Select[
+				CSSBlockData, 
+				If[StringMatchQ[prop, "background"],
+					StringStartsQ[#Property, "background"] (* If only asking for 'background', include every background long-form property. *)
+					,
+					Or[
+						StringMatchQ[#Property, prop],        (* always include literal property *)
+						StringMatchQ[#Property, "background"] (* always include 'background' shorthand *)
+					]
+				]&];
 		(* filter FE options to the set scope *)
 		optionNames = filterOptionNames[scope, validBlockData];
 		(* run the FE option assembly function *)
-		
-		Function[{x},
-			Which[
-				MatchQ[x, _?frameStyleOptionQ],
-					temp = assembleGeneralCase[validBlockData, x, Hold[#], modifyValueToDirective]& /@ {"Left", "Right", "Bottom", "Top"};
-				,
-				MatchQ[x, CellFrame],
-					temp = assembleGeneralCase[validBlockData, x, Hold[#, "Width"], #&]& /@ {"Left", "Right", "Bottom", "Top"}
-				,
-				True, 
-					temp = {Hold[Automatic], Hold[Automatic], Hold[Automatic], Hold[Automatic]}
-			]
-		] /@ optionNames;
-		Which[
-			StringContainsQ[prop, "top"], 
-				Replace[
-					temp, 
-					p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> 
-						If[FreeQ[p, Which], {{Automatic, Automatic}, {Automatic, t}}, Dynamic[{{Automatic, Automatic}, {Automatic, t}}]]],
-			StringContainsQ[prop, "bottom"], 
-				Replace[
-					temp, 
-					p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> 
-						If[FreeQ[p, Which], {{Automatic, Automatic}, {b, Automatic}}, Dynamic[{{Automatic, Automatic}, {b, Automatic}}]]],
-			StringContainsQ[prop, "left"], 
-				Replace[
-					temp, 
-					p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> 
-						If[FreeQ[p, Which], {{l, Automatic}, {Automatic, Automatic}}, Dynamic[{{l, Automatic}, {Automatic, Automatic}}]]],
-			StringContainsQ[prop, "right"], 
-				Replace[
-					temp, 
-					p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> 
-						If[FreeQ[p, Which], {{Automatic, r}, {Automatic, Automatic}}, Dynamic[{{Automatic, r}, {Automatic, Automatic}}]]],
-			True, True(*START HERE*)
-		]		
+		temp = assembleByFEOption[#, validBlockData]& /@ optionNames;
+		Switch[prop,
+			"background-color",    Select[temp, MatchQ[#, Background -> _]&],
+			"background-image",    Select[temp, MatchQ[#, System`BackgroundAppearance -> _]&],
+			"background-position", Select[temp, MatchQ[#, System`BackgroundAppearanceOptions -> _]&],
+			"background-repeat",   Select[temp, MatchQ[#, System`BackgroundAppearanceOptions -> _]&],
+			_,                     temp
+		]
 	]
+	
+	
+(* Assembling border properties into FE options:
+	CSS border properties are often shorthands for groups of more specific properties e.g. border and border-top also include border-top-style. 
+	If performing the CSS cascade on a particular side, or the whole border, then these shorthand propreties need to be included as well 
+	since they include the side of interest. *)
 
 frameStyleOptionQ[input_] := MemberQ[{CellFrameStyle, FrameStyle}, input]
 frameStyleOptionQ[___] := False
 
-modifyValueToDirective = 
+modifyValueToDirective = (* value modification function for assembleWithConditions of directives *)
 	Function[{v, dummy},
 		Module[{value = v},
 			If[!MissingQ[value],
@@ -763,81 +809,284 @@ modifyValueToDirective =
 		]
 	]
 
-assembleLRBTDirectives[CSSBlockData_?validCSSBlockFullQ, option_?frameStyleOptionQ] :=
-	Module[{temp},
-		temp = assembleGeneralCase[CSSBlockData, option, Hold[#], modifyValueToDirective]& /@ {"Left", "Right", "Bottom", "Top"};
-		Replace[temp, p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> If[FreeQ[p, Which], {{l, r}, {b, t}}, Dynamic[{{l, r}, {b, t}}]]]
-	]
-
-
-marginOptionQ[input_] := MemberQ[{CellFrameMargins, FrameMargins, ImageMargins, CellMargins, CellFrame}, input]
-marginOptionQ[___] := False
-
-assembleLRBTPadding[CSSBlockData_?validCSSBlockFullQ, option_?marginOptionQ] :=
-	Module[{temp},
-		temp = assembleGeneralCase[CSSBlockData, option, Hold[#, If[option === CellFrame, "Width", Unevaluated[Sequence[]]]], #&]& /@ {"Left", "Right", "Bottom", "Top"};
-		Replace[temp, p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> If[FreeQ[p, Which], {{l, r}, {b, t}}, Dynamic[{{l, r}, {b, t}}]]]
+assemble[
+	inputProp_?StringQ /; StringStartsQ[StringTrim @ inputProp, "border", IgnoreCase -> True], 
+	scope_, 
+	CSSBlockData_
+] :=
+	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp},
+		(* check whether input is a valid border long-form properties *)
+		If[!MatchQ[prop, 
+				"border" | "border-top" | "border-bottom" | "border-right" | "border-left" |
+				"border-color" | "border-style" | "border-width" |
+				"border-top-style"    | "border-top-width"    | "border-top-color" |
+				"border-bottom-style" | "border-bottom-width" | "border-bottom-color" |
+				"border-left-style"   | "border-left-width"   | "border-left-color" |
+				"border-right-style"  | "border-right-width"  | "border-right-color"], 
+			Return @ Failure["BadProp", <|"Message" -> "Unrecognized border property.", "Prop" -> prop|>]];
+		
+		(* only look at declarations that match 'prop', including relevant shorthand properties *)
+		(* always include 'border' shorthand; include matched side shorthand; include any color/style/width shorthand *)
+		validBlockData = 
+			Select[
+				CSSBlockData, 
+				Which[
+					StringMatchQ[prop, "border"],
+						StringStartsQ[#Property, "border"] (* If only asking for 'border', include every border property. *)
+					,
+					StringMatchQ[prop, "border-style"],
+						StringStartsQ[#Property, "border"] && StringEndsQ[#Property, "style"] (* If only asking for 'border-style', include every border style property. *)
+					,
+					StringMatchQ[prop, "border-width"],
+						StringStartsQ[#Property, "border"] && StringEndsQ[#Property, "width"] (* If only asking for 'border-width', include every border width property. *)
+					,
+					StringMatchQ[prop, "border-color"],
+						StringStartsQ[#Property, "border"] && StringEndsQ[#Property, "color"] (* If only asking for 'border-color', include every border color property. *)
+					,
+					True,
+						Or[
+							StringMatchQ[#Property, prop],     (* always include literal property *)
+							StringMatchQ[#Property, "border"], (* always include 'border' shorthand *)
+							If[StringStartsQ[prop, "border-top"],    StringMatchQ[#Property, "border-top"],    False], (* possibly include matched side shorthands *)
+							If[StringStartsQ[prop, "border-left"],   StringMatchQ[#Property, "border-left"],   False], 
+							If[StringStartsQ[prop, "border-right"],  StringMatchQ[#Property, "border-right"],  False],
+							If[StringStartsQ[prop, "border-bottom"], StringMatchQ[#Property, "border-bottom"], False], 
+							If[StringEndsQ[prop, "color"],           StringMatchQ[#Property, "border-color"],  False], (* possibly include color/style/width shorthands *)
+							If[StringEndsQ[prop, "style"],           StringMatchQ[#Property, "border-style"],  False],
+							If[StringEndsQ[prop, "width"],           StringMatchQ[#Property, "border-width"],  False]
+						]
+				]&];
+		(* filter FE options to the set scope *)
+		optionNames = filterOptionNames[scope, validBlockData];
+		(* run the FE option assembly function *)
+		
+		Function[{x},
+			x ->
+				Which[
+					MatchQ[x, _?frameStyleOptionQ], (* FrameStyle, CellFrameStyle *)
+						temp = assembleWithConditions[validBlockData, x, Hold[#], modifyValueToDirective]& /@ {"Left", "Right", "Bottom", "Top"};
+						assembleLRBT[prop, temp]
+					,
+					MatchQ[x, CellFrame],
+						temp = assembleWithConditions[validBlockData, x, Hold[#, "Width"], #&]& /@ {"Left", "Right", "Bottom", "Top"};
+						assembleLRBT[prop, temp]
+					,
+					True, 
+						temp = {Hold[Automatic], Hold[Automatic], Hold[Automatic], Hold[Automatic]};
+						assembleLRBT[prop, temp]
+				]
+		] /@ optionNames				
 	]
 	
-
-sizeOptionQ[input_] := MemberQ[{ImageSize}, input]
-sizeOptionQ[___] := False		
-
-assembleLRBTSizing[CSSBlockData_?validCSSBlockFullQ, option_?sizeOptionQ] :=
-	Module[{temp},
-		temp = {
-			assembleGeneralCase[CSSBlockData, option, Hold["Width",  "Min"], #&],
-			assembleGeneralCase[CSSBlockData, option, Hold["Width",  "Max"], #&],
-			assembleGeneralCase[CSSBlockData, option, Hold["Height", "Min"], #&],
-			assembleGeneralCase[CSSBlockData, option, Hold["Height", "Max"], #&]};
-		(* convert to simplified forms if possible, adding Dynamic if needed *)
-		Which[
-			temp[[1]] === temp[[2]] && temp[[3]] === temp[[4]],
-				Replace[temp, p:{Hold[wn_], Hold[wx_], Hold[hn_], Hold[hx_]} :> If[FreeQ[p, Which], {wn, hn}, Dynamic[{wn, hn}]]],
-			True,
-				Replace[temp, p:{Hold[wn_], Hold[wx_], Hold[hn_], Hold[hx_]} :> If[FreeQ[p, Which], {{wn, wx}, {hn, hx}}, Dynamic[{{wn, wx}, {hn, hx}}]]]
+	
+(* Assembling font properties into FE options:
+	CSS font properties are often just using the shorthand 'font'. *)
+assemble[
+	inputProp_?StringQ /; StringStartsQ[StringTrim @ inputProp, "font", IgnoreCase -> True], 
+	scope_, 
+	CSSBlockData_
+] :=
+	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp},
+		(* check whether input is a valid font long-form properties *)
+		If[!MatchQ[prop, "font" | "font-family" | "font-size" | "font-style" | "font-variant" | "font-weight"], 
+			Return @ Failure["BadProp", <|"Message" -> "Unrecognized font property.", "Prop" -> prop|>]];
+		
+		(* only look at declarations that match 'prop', including relevant shorthand properties *)
+		(* always include 'font' shorthand *)
+		validBlockData = 
+			Select[
+				CSSBlockData, 
+				If[StringMatchQ[prop, "font"],
+					StringStartsQ[#Property, "font"] (* If only asking for 'font', include every font long-form property. *)
+					,
+					Or[
+						StringMatchQ[#Property, prop],  (* always include literal property *)
+						StringMatchQ[#Property, "font"] (* always include 'font' shorthand *)
+					]
+				]&];
+		(* filter FE options to the set scope *)
+		optionNames = filterOptionNames[scope, validBlockData];
+		(* run the FE option assembly function *)
+		temp = assembleByFEOption[#, validBlockData]& /@ optionNames;
+		Switch[prop,
+			"font-family",  Select[temp, MatchQ[#, FontFamily -> _]&],
+			"font-size",    Select[temp, MatchQ[#, FontSize -> _]&],
+			"font-style",   Select[temp, MatchQ[#, FontSlant -> _]&],
+			"font-variant", Select[temp, MatchQ[#, FontVariations -> _]&],
+			"font-weight",  Select[temp, MatchQ[#, FontWeight -> _]&],
+			_,              temp
 		]
 	]
 	
+	
+(* Assembling list-style properties into FE options *)
+assemble[
+	inputProp_?StringQ /; StringStartsQ[StringTrim @ inputProp, "list", IgnoreCase -> True], 
+	scope_, 
+	CSSBlockData_
+] :=
+	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp},
+		(* check whether input is a valid list-style long-form properties *)
+		If[!MatchQ[prop, "list-style" | "list-style-image" | "list-style-position" | "list-style-type"], 
+			Return @ Failure["BadProp", <|"Message" -> "Unrecognized ist-style property.", "Prop" -> prop|>]];
+		
+		(* only look at declarations that match 'prop', including relevant shorthand properties *)
+		(* always include 'list-style' shorthand *)
+		validBlockData = 
+			Select[
+				CSSBlockData, 
+				If[StringMatchQ[prop, "list-style"],
+					StringStartsQ[#Property, "list-style"] (* If only asking for 'list-style', include every list-style long-form property. *)
+					,
+					Or[
+						StringMatchQ[#Property, prop],        (* always include literal property *)
+						StringMatchQ[#Property, "list-style"] (* always include 'list-style' shorthand *)
+					]
+				]&];
+		(* filter FE options to the set scope *)
+		optionNames = filterOptionNames[scope, validBlockData];
+		(* run the FE option assembly function *)
+		temp = assembleByFEOption[#, validBlockData]& /@ optionNames;
+		(* The only FE option that 'list-style' translates to is CellDingbat, so no filtering is needed here. *)
+		temp
+	]
+	
 
-modifyValueIfTextDecoration = Function[{v, data}, If[MissingQ[v] && data["Property"] === "text-decoration", Automatic, v]];
+(* Assembling margin properties into FE options:
+	CSS margin properties are often shorthands for groups of more specific properties e.g. margin also include margin-top. 
+	If performing the CSS cascade on a particular side, or the whole border, then these shorthand propreties need to be included as well 
+	since they include the side of interest. 
+	The @page rule can also contain the 'margin' proprty. It translates to a different FE option and must be handled separately. *)
+marginOptionQ[input_] := MemberQ[{CellFrameMargins, FrameMargins, ImageMargins, CellMargins}, input]
+marginOptionQ[___] := False
 
-assembleFontVariations[CSSBlockData_?validCSSBlockFullQ, option:FontVariations] :=
-	Module[{suboptions},
-		suboptions = DeleteMissing[#[option] & /@ CSSBlockData[[All, "Interpretation"]], Infinity];
-		suboptions = Union @ Flatten[Keys /@ suboptions];
-		(# -> Replace[assembleGeneralCase[CSSBlockData, option, Hold[#], modifyValueIfTextDecoration], {Hold[x__] :> Dynamic[x]}])& /@ suboptions
+assemble[
+	inputProp_?StringQ /; StringStartsQ[StringTrim @ inputProp, "margin" | "padding", IgnoreCase -> True], 
+	scope_, 
+	CSSBlockData_
+] :=
+	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp, mainProp},
+		(* check whether input is a valid margin/padding long-form properties *)
+		mainProp = If[StringStartsQ[prop, "margin"], "margin", "padding"];
+		If[!MatchQ[prop, Alternatives[#, # <> "-top", # <> "-bottom", # <> "-right", # <> "-left"]& @ mainProp], 
+			Return @ Failure["BadProp", <|"MessageTemplate" -> "Unrecognized `main` property.", "MessageParameters" -> <|"main" -> mainProp|>, "Prop" -> prop|>]];
+		
+		(* only look at declarations that match 'prop', including relevant shorthand properties *)
+		(* always include 'margin'/'padding' shorthand *)
+		validBlockData = 
+			Select[
+				CSSBlockData, 
+				If[StringMatchQ[prop, mainProp],
+					StringStartsQ[#Property, mainProp] (* If only asking for 'margin'/'padding', include every margin/padding property. *)
+					,
+					Or[
+						StringMatchQ[#Property, prop],    (* always include literal property *)
+						StringMatchQ[#Property, mainProp] (* always include 'margin'/'padding' shorthand *)
+					]
+				]&];
+		(* filter FE options to the set scope *)
+		optionNames = filterOptionNames[scope, validBlockData];
+		(* run the FE option assembly function *)
+		
+		Function[{x},
+			x ->
+				Which[
+					MatchQ[x, _?marginOptionQ], (* CellFrameMargins, FrameMargins, ImageMargins, CellMargins *)
+						temp = assembleWithConditions[validBlockData, x, Hold[#], #&]& /@ {"Left", "Right", "Bottom", "Top"};
+						assembleLRBT[prop, temp]
+					,
+					MatchQ[x, PrintingOptions], 
+						PrintingOptions /. assembleByFEOption[PrintingOptions, validBlockData]
+					,
+					True, 
+						temp = {Hold[Automatic], Hold[Automatic], Hold[Automatic], Hold[Automatic]};
+						assembleLRBT[prop, temp]
+				]
+		] /@ optionNames				
+	]
+	
+	
+(* Assembling height/width properties into FE options:
+	CSS height/width properties can be overridden by min/max versions of height/width properties. 
+	If performing the CSS cascade then these min/max propreties need to be included as well. *)
+sizeOptionQ[input_] := MemberQ[{ImageSize}, input]
+sizeOptionQ[___] := False		
+
+assemble[
+	inputProp_?StringQ /; StringEndsQ[StringTrim @ inputProp, "height" | "width", IgnoreCase -> True], 
+	scope_, 
+	CSSBlockData_
+] :=
+	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp, mainProp},
+		(* check whether input is a valid margin/padding long-form properties *)
+		mainProp = If[StringEndsQ[prop, "height"], "height", "width"];
+		If[!MatchQ[prop, Alternatives[#, "min-" <> #, "max-" <> #]& @ mainProp], 
+			Return @ Failure["BadProp", <|"MessageTemplate" -> "Unrecognized `main` property.", "MessageParameters" -> <|"main" -> mainProp|>, "Prop" -> prop|>]];
+		
+		(* only look at declarations that match 'prop'; always include all height/width properties *)
+		validBlockData = Select[CSSBlockData, StringEndsQ[#Property, mainProp]&];
+		(* filter FE options to the set scope *)
+		optionNames = filterOptionNames[scope, validBlockData];
+		(* run the FE option assembly function *)
+		
+		Function[{x},
+			x ->
+				Which[
+					MatchQ[x, _?sizeOptionQ], (* ImageSize *)
+						temp = {
+							assembleWithConditions[validBlockData, x, Hold["Width",  "Min"], #&],
+							assembleWithConditions[validBlockData, x, Hold["Width",  "Max"], #&],
+							assembleWithConditions[validBlockData, x, Hold["Height", "Min"], #&],
+							assembleWithConditions[validBlockData, x, Hold["Height", "Max"], #&]};
+						(* convert to simplified forms if possible, adding Dynamic if needed *)
+						Which[
+							temp[[1]] === temp[[2]] && temp[[3]] === temp[[4]],
+								Replace[temp, p:{Hold[wn_], Hold[wx_], Hold[hn_], Hold[hx_]} :> If[FreeQ[p, Which], {wn, hn}, Dynamic[{wn, hn}]]],
+							temp[[1]] === temp[[2]],
+								Replace[temp, p:{Hold[wn_], Hold[wx_], Hold[hn_], Hold[hx_]} :> If[FreeQ[p, Which], {wn, {hn, hx}}, Dynamic[{wn, {hn, hx}}]]],
+							temp[[3]] === temp[[4]],
+								Replace[temp, p:{Hold[wn_], Hold[wx_], Hold[hn_], Hold[hx_]} :> If[FreeQ[p, Which], {{wn, wx}, hn}, Dynamic[{{wn, wx}, hn}]]],
+							True,
+								Replace[temp, p:{Hold[wn_], Hold[wx_], Hold[hn_], Hold[hx_]} :> If[FreeQ[p, Which], {{wn, wx}, {hn, hx}}, Dynamic[{{wn, wx}, {hn, hx}}]]]
+						]
+					,
+					True, 
+						Automatic
+				]
+		] /@ optionNames				
 	]
 
-ClearAll[assembleByFEOption];
-assembleByFEOption[opt_?frameStyleOptionQ,  CSSBlockData_?validCSSBlockFullQ] := opt -> assembleLRBTDirectives[CSSBlockData, opt]
-assembleByFEOption[opt_?marginOptionQ, CSSBlockData_?validCSSBlockFullQ] := opt -> assembleLRBTPadding[CSSBlockData, opt]
-assembleByFEOption[opt_?sizeOptionQ,   CSSBlockData_?validCSSBlockFullQ] := opt -> assembleLRBTSizing[CSSBlockData, opt]
-assembleByFEOption[opt:FontVariations, CSSBlockData_?validCSSBlockFullQ] := opt -> assembleFontVariations[CSSBlockData, opt]
 
 (* CellFrameColor is only used in the outline property, which is not supported *)
 (* (*TODO*) assembleByFEOption[opt:CellFrameColor, CSSBlockData_?validCSSBlockFullQ] := opt -> assembleLRBTDirectives[CSSBlockData, opt] *)
 
-assembleSubOption[CSSBlockData_?validCSSBlockFullQ, option:PrintingOptions, subOption:"PrintingMargins"] :=
-	Module[{temp},
-		temp = assembleGeneralCase[CSSBlockData, option, Hold[subOption, #], #&]& /@ {"Left", "Right", "Bottom", "Top"};
-		Replace[temp, p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> If[FreeQ[p, Which], {{l, r}, {b, t}}, Dynamic[{{l, r}, {b, t}}]]]
-	]
-	
-assembleSubOption[CSSBlockData_?validCSSBlockFullQ, option:PrintingOptions, subOption_] :=
-	Module[{temp},
-		temp = assembleGeneralCase[CSSBlockData, option, Hold[subOption], #&];
-		subOption -> Replace[temp, p:Hold[x___] :> If[FreeQ[p, Which], x, Dynamic[x]]]
-	]
-	
+
+(* general case 
+	It looks at all the interpretations in a block of declarations (assumed sorted by importance, specificity, and already filtered for validity) 
+	and takes only those that match the given FE option. The rest are deleted. 
+	Assuming the sorting has put the most important option at the top, only the first element is taken. *)
+assembleByFEOption[FEopt_, CSSBlockData_?validCSSBlockFullQ] := FEopt -> First[DeleteMissing[#[FEopt]& /@ CSSBlockData[[All, "Interpretation"]]], Automatic]
+
+
+(* Assembling @page declarations into FE options:
+	All CSS @page properties eventually end up as FE PrintingOptions. *)
 assembleByFEOption[opt:PrintingOptions, CSSBlockData_?validCSSBlockFullQ] := 
 	Module[{allSubOptions},
 		allSubOptions = Union @ Flatten[Keys /@ DeleteMissing[#[opt] & /@ CSSBlockData[[All, "Interpretation"]]]];
 		opt -> (assembleSubOption[CSSBlockData, opt, #]& /@ allSubOptions)
 	]
 
-(* fallthrough *)
-assembleByFEOption[opt_, CSSBlockData_?validCSSBlockFullQ] := opt -> First[DeleteMissing[#[opt]& /@ CSSBlockData[[All, "Interpretation"]]], Automatic]
+assembleSubOption[CSSBlockData_?validCSSBlockFullQ, option:PrintingOptions, subOption:"PrintingMargins"] :=
+	Module[{temp},
+		temp = assembleWithConditions[CSSBlockData, option, Hold[subOption, #], #&]& /@ {"Left", "Right", "Bottom", "Top"};
+		subOption -> Replace[temp, p:{Hold[l_], Hold[r_], Hold[b_], Hold[t_]} :> If[FreeQ[p, Which], {{l, r}, {b, t}}, Dynamic[{{l, r}, {b, t}}]]]
+	]
+	
+assembleSubOption[CSSBlockData_?validCSSBlockFullQ, option:PrintingOptions, subOption_] :=
+	Module[{temp},
+		temp = assembleWithConditions[CSSBlockData, option, Hold[subOption], #&];
+		subOption -> Replace[temp, p:Hold[x___] :> If[FreeQ[p, Which], x, Dynamic[x]]]
+	]
 
 
 (* ::Section:: *)
@@ -845,7 +1094,7 @@ assembleByFEOption[opt_, CSSBlockData_?validCSSBlockFullQ] := opt -> First[Delet
 
 
 (* ::Subsection::Closed:: *)
-(*ResolveCSSCascade*)
+(*CSSCascade*)
 
 
 (* From https://developer.mozilla.org/en-US/docs/Web/CSS/Cascade
@@ -899,7 +1148,7 @@ Resolving this cascade is perhaps not exactly conformant with the CSS spec becau
 *)
 
 
-(* ResolveCSSCascade:
+(* CSSCascade:
 	1. Select the entries in the CSS data based on the provided selectors
 	2. order the selectors based on specificity and importance (if those options are on)
 	3. merge resulting list of interpreted options 
@@ -909,31 +1158,32 @@ Arg1: scope
 	This argument can also take a list of boxes e.g. ActionMenuBox or a list of box generators e.g. ActionMenu.
 Arg2:  
 *)	
-ClearAll[ResolveCSSCascade];
-Options[ResolveCSSCascade] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
+ClearAll[CSSCascade];
+Options[CSSCascade] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
 
 (* normalize Dataset input *)
-ResolveCSSCascade[props_, scope_, CSSData_Dataset, selectorList_, opts:OptionsPattern[]] := 
-	ResolveCSSCascade[props, scope, Normal @ CSSData, selectorList, opts]
+CSSCascade[props_, scope_, CSSData_Dataset, selectorList_, opts:OptionsPattern[]] := 
+	CSSCascade[props, scope, Normal @ CSSData, selectorList, opts]
 
-ResolveCSSCascade[{}, scope_, CSSData_, selectorList_, opts:OptionsPattern[]] := {}
+CSSCascade[{}, scope_, CSSData_, selectorList_, opts:OptionsPattern[]] := {}
 
 (* main function *)
-ResolveCSSCascade[
+CSSCascade[
 	inputProps:_?StringQ | {__?StringQ} | All, 
 	scope:(Cell | Notebook | Box | All | None | _?validBoxesQ | {__?validBoxesQ}), 
 	CSSData_?validCSSDataQ, 
 	inputSelectorList:_?(Function[CSSSelectorQ[#] || StringQ[#]]) | {__?(Function[CSSSelectorQ[#] || StringQ[#]])} | All, 
 	opts:OptionsPattern[]
 ] :=
-	Module[{props, selectorList, atRules, sel, dataSubset, specificities, declarations, optionNames, resolvedOptions},
+	Module[{props, selectorList, atRules, sel, dataSubset, specificities, declarations, resolvedOptions},
 		(* expand any inputs *)
 		props = 
-			Which[
-				inputProps === All,          Union @ Flatten @ CSSData[[All, "Block", All, "Property"]], 
-				MatchQ[inputProps, _?ListQ], inputProps,
-				True,                        {inputProps}
-			];
+			StringTrim @ ToLowerCase @ 
+				Which[
+					MatchQ[inputProps, All],     Union @ Flatten @ CSSData[[All, "Block", All, "Property"]], 
+					MatchQ[inputProps, _?ListQ], Union @ Flatten @ inputProps,
+					True,                        Union @ Flatten @ {inputProps}
+				];
 		selectorList = 
 			Which[
 				MatchQ[inputSelectorList, All],     CSSData[[All, "Selector"]],
@@ -942,10 +1192,10 @@ ResolveCSSCascade[
 			];
 		
 		(* start by filtering the data by the given list of selectors; ordering is maintained *)
-		(* match against the tokenized selector sequence, which should be unique *)
-		(* upgrade any string selectors to CSSSelector objects *)
 		(* exceptions: @page rules *)
-		sel = Select[selectorList, (StringQ[#] && !StringStartsQ[#, WhitespaceCharacter... ~~ "@"] || MatchQ[#, _CSSSelector])&];
+		(* upgrade any string selectors to CSSSelector objects *)
+		(* match against the tokenized selector sequence, which should be unique *)
+		sel = Select[selectorList, ((StringQ[#] && !StringStartsQ[#, "@"]) || MatchQ[#, _CSSSelector])&];
 		sel = Replace[selectorList, s_?StringQ :> CSSSelector[s], {1}];
 		If[AnyTrue[sel, _?FailureQ], Return @ FirstCase[sel, _?FailureQ]];
 		dataSubset = 
@@ -953,6 +1203,7 @@ ResolveCSSCascade[
  				CSSData, 
   				MatchQ[#Selector["Sequence"], Alternatives @@ Through[sel["Sequence"]]] &];
   		
+  		(* gather all declarations, ordered by specificity unless that process is switched off *)
 		If[TrueQ @ OptionValue["IgnoreSpecificity"],
 			(* if ignoring specificity, then leave the user-supplied selector list alone *)
 			declarations = Flatten @ dataSubset[[All, "Block"]]
@@ -962,52 +1213,48 @@ ResolveCSSCascade[
 			declarations = Flatten @ dataSubset[[Ordering[specificities]]][[All, "Block"]];
 		];
 		
-		(* add @page at rules, should only apply at Notebook scope *)
+		(* add @page declarations; they should only apply at Notebook scope *)
 		(* FIXME: in paged module 3 the pages have their own specificity. Page specificity has not been implemented *)
-  		atRules = Select[selectorList, StringQ[#] && StringStartsQ[#, WhitespaceCharacter... ~~ "@"]&];
-  		If[MemberQ[atRules, s_ /; StringStartsQ[s, WhitespaceCharacter... ~~ "@page", IgnoreCase -> True]],
-  			dataSubset = Select[CSSData, MatchQ[#Selector, s_?StringQ /; StringStartsQ[s, WhitespaceCharacter... ~~ "@page", IgnoreCase -> True]]&];
+  		atRules = Select[selectorList, StringQ[#] && StringStartsQ[#, "@"]&];
+  		If[MemberQ[atRules, s_ /; StringStartsQ[s, "@page"]],
+  			dataSubset = Select[CSSData, MatchQ[#Selector, s_?StringQ /; StringStartsQ[s, "@page"]]&];
   			declarations = Join[Flatten @ dataSubset[[All, "Block"]], declarations]
   		];
   		
   		(* Remove props that failed to parse or are unsupported. *)
   		declarations = Select[declarations, Not[FailureQ[#Interpretation] || MissingQ[#Interpretation]]&];
-  	
-  		(* filter properties involved in this cascade, expanding any short-hand properties *)
-  		(*declarations = Pick[declarations, StringMatchQ[#Property, Alternatives @@ props, IgnoreCase -> True] & /@ declarations];*)
-  		  		
+  		
 		(* 
 			Following CSS cascade spec, move !important CSS properties to the end 
-			since they should override all other properties, but maintain their ordering. *)
+			since they should override all other properties, but maintain their ordering. 
+			Then reverse the order so most important declaration is now first (so we can later scan through the list from the start). *)
 		declarations = 
-			Flatten @ 
+			Reverse @ Flatten @ 
 				If[Not[TrueQ @ OptionValue["IgnoreImportance"]],
 					Join[
 						Select[declarations, #Important == False&], 
 						Select[declarations, #Important == True&]]
+					,
+					declarations
 				];
-		
-		(* Reverse the order so most important declaration is now first (so we can later scan through the list from the start). *)		
-		declarations = Reverse @ declarations;
 						
 		(* assemble declarations into FE options *)
-		resolvedOptions = assemble[#, scope, declarations]& /@ props;
-		Flatten @ Which[
-			MatchQ[scope, Box | All],
-				movePseudoOptionsIntoBoxOptions[resolvedOptions, validBoxes],
-			MatchQ[scope, _?validBoxesQ | {__?validBoxesQ}],
-				movePseudoOptionsIntoBoxOptions[resolvedOptions, If[ListQ[scope], scope, {scope}] /. Thread[validBoxGenerators -> validBoxes]],
-			True,
-				resolvedOptions
-		]		
+		resolvedOptions = Flatten[assemble[#, scope, declarations]& /@ props];
+		Flatten @ 
+			Which[
+				MatchQ[scope, Box | All],
+					movePseudoOptionsIntoBoxOptions[resolvedOptions, validBoxes],
+				MatchQ[scope, _?validBoxesQ | {__?validBoxesQ}],
+					movePseudoOptionsIntoBoxOptions[resolvedOptions, If[ListQ[scope], scope, {scope}] /. Thread[validBoxGenerators -> validBoxes]],
+				True,
+					resolvedOptions
+			]		
 	]
 
-ResolveCSSCascade[props_, scope_, ___] /; !MatchQ[scope, (Cell | Notebook | Box | All | None | _?validBoxesQ | {__?validBoxesQ})] := 
+CSSCascade[props_, scope_, ___] /; !MatchQ[scope, (Cell | Notebook | Box | All | None | _?validBoxesQ | {__?validBoxesQ})] := 
 	Failure["BadScope", <|"Message" -> "Second argument expected as All, Notebook, Cell, Box or box generator."|>]
-ResolveCSSCascade[props_, scope_, CSSData_ /; !validCSSDataQ[CSSData], ___] := 
+CSSCascade[props_, scope_, CSSData_ /; !validCSSDataQ[CSSData], ___] := 
 	Failure["BadCSSData", <|"Message" -> "CSS data appears invalid."|>]
-(*ResolveCSSCascade[props_, scope_, _, _, ___] := 
-	Failure["BadCSSData", <|"Message" -> "Fourth argument should be a list of CSSSelectors or strings."|>]*)
 
 
 filterOptionNames[scope_, CSSBlockData_] :=
@@ -1280,7 +1527,7 @@ ProcessToStylesheet[filepath_String, opts___] :=
 		(* get all selectors preserving order, but favor the last entry of any duplicates *)
 		uniqueSelectors = Reverse @ DeleteDuplicates[Reverse @ raw[[All, "Selector"]]];
 		
-		allProcessed = ResolveCSSCascade[All, raw, uniqueSelectors];
+		allProcessed = CSSCascade[All, All, raw, uniqueSelectors];
 		(*TODO: convert options like FrameMargins to actual styles ala FrameBoxOptions -> {FrameMargins -> _}*)
 		"Stylesheet" -> 
 			NotebookPut @ 

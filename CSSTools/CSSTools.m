@@ -30,17 +30,17 @@ SetUsage[CSSBorderWidth, "\
 CSSBorderWidth[value$] indicates value$ is an interpreted CSS border width."];*)
 
 (* ==== CSSStyleSheetInterpreter` ==== *)
-SetUsage[ResolveCSSCascade, "\
-ResolveCSSCascade[type$, CSSData$, {selectors$, $$}] combines options that were interpreted from the CSS importer. \
+SetUsage[CSSCascade, "\
+CSSCascade[type$, CSSData$, {selectors$, $$}] combines options that were interpreted from the CSS importer. \
 CSS styles are merged following the CSS cascade and the resulting options are filtered by type$."];
 SetUsage[ExtractCSSFromXML, "\
 ExtractCSSFromXML[XMLObject$] imports the CSS declarations within XMLObject$."];
 SetUsage[CSSTargets, "\
 CSSTargets[XMLObject$, CSSData$] applies the CSSData$ to the symbolic XML, \
 returning the CSSData$ with additional position and specificity information."];
-SetUsage[ResolveCSSInterpretations, "\
+(*SetUsage[ResolveCSSInterpretations, "\
 ResolveCSSInterpretations[type$, CSSInterpretations$] combines options that were interpreted from the CSS importer. \
-Any Left/Right/Bottom/Top and Min/Max values are merged and the resulting options are filtered by type$."];
+Any Left/Right/Bottom/Top and Min/Max values are merged and the resulting options are filtered by type$."];*)
 SetUsage[ResolveCSSInheritance, "\
 ResolveCSSInheritance[target$, CSSData$] calculates the properties of the element at target$ including any inherited CSS properties."];
 

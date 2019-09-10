@@ -212,8 +212,7 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 					If[!FailureQ[dec], 
 						Which[
 							TokenStringIs["margin" | "margin-top" | "margin-bottom" | "margin-left" | "margin-right", tokens[[pos]]],
-								dec = convertMarginsToPrintingOptions[dec, scope];
-								dec = dec /. head:((Left | Right | Bottom | Top)[_]) :> scope[head]
+								dec = convertMarginsToPrintingOptions[dec, scope]
 							,
 							True, Null
 						];
@@ -344,7 +343,7 @@ consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}, scope_, location_String, horizo
 			]
 		];
 		interpretation =
-			With[{res = ResolveCSSCascade[Cell, {<|"Selector" -> CSSSelector["dummy"], "Block" -> declarations|>}, {"dummy"}]},
+			With[{res = CSSCascade[All, Cell, {<|"Selector" -> CSSSelector["dummy"], "Block" -> declarations|>}, {"dummy"}]},
 				With[{v = DisplayFunction /. res},
 					If[MatchQ[v, Normal | None],
 						None

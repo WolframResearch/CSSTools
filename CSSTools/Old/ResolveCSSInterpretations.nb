@@ -158,9 +158,9 @@ Cell[TextData[{
  "This function does not take into account whether the interpretations came \
 from important CSS rules, or whether the interpretations came from multiple \
 CSS rule sets. Use ",
- ButtonBox["ResolveCSSCascade",
+ ButtonBox["CSSCascade",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/ResolveCSSCascade"],
+  ButtonData->"paclet:CSSTools/ref/CSSCascade"],
  " to take specificity and importance into account."
 }], "Notes",
  CellChangeTimes->{{3.7746047791429796`*^9, 3.7746048956712475`*^9}},
@@ -207,9 +207,9 @@ Cell[TextData[{
   BaseStyle->"Link",
   ButtonData->"paclet:CSSTools/ref/ResolveCSSInheritance"],
  " \[EmptyVerySmallSquare] ",
- ButtonBox["ResolveCSSCascade",
+ ButtonBox["CSSCascade",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/ResolveCSSCascade"]
+  ButtonData->"paclet:CSSTools/ref/CSSCascade"]
 }], "SeeAlso",
  CellChangeTimes->{{3.762101111259701*^9, 3.7621011205767255`*^9}},
  CellID->929782353,ExpressionUUID->"0cb90bb9-975d-4287-b1e5-a8f7043c7d94"]
@@ -3060,9 +3060,9 @@ Cell[BoxData[
 }, Open  ]],
 
 Cell[TextData[{
- ButtonBox["ResolveCSSCascade",
+ ButtonBox["CSSCascade",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/ResolveCSSCascade"],
+  ButtonData->"paclet:CSSTools/ref/CSSCascade"],
  " takes into account the specificity of each selector. Indicate the selector \
 by either a string, CSSSelector constructor, or a pre-constructed CSSSelector \
 object."
@@ -3073,7 +3073,7 @@ object."
 Cell[CellGroupData[{
 
 Cell[BoxData[
- RowBox[{"ResolveCSSCascade", "[", 
+ RowBox[{"CSSCascade", "[", 
   RowBox[{"Cell", ",", "ds", ",", 
    RowBox[{"{", 
     RowBox[{"\"\<.header\>\"", ",", 
@@ -3091,9 +3091,9 @@ Cell[BoxData[
 }, Open  ]],
 
 Cell[TextData[{
- ButtonBox["ResolveCSSCascade",
+ ButtonBox["CSSCascade",
   BaseStyle->"Link",
-  ButtonData->"paclet:CSSTools/ref/ResolveCSSCascade"],
+  ButtonData->"paclet:CSSTools/ref/CSSCascade"],
  " also takes into account the importance of each declaration."
 }], "ExampleText",
  CellChangeTimes->{3.7746056188541813`*^9},
@@ -3102,7 +3102,7 @@ Cell[TextData[{
 Cell[CellGroupData[{
 
 Cell[BoxData[
- RowBox[{"ResolveCSSCascade", "[", 
+ RowBox[{"CSSCascade", "[", 
   RowBox[{"Cell", ",", "ds", ",", 
    RowBox[{"{", 
     RowBox[{

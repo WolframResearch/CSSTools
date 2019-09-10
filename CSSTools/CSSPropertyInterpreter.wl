@@ -217,7 +217,7 @@ If[!AssociationQ[CSSPropertyData], CSSPropertyData = <||>];
 AssociateTo[CSSPropertyData, {
 	"background" -> <|
 		"Inherited" -> False,
-		"CSSInitialValue" -> "N/A",  (* shorthand property *)
+		"CSSInitialValue" -> "N/A",  (* shorthand property for background-attachment/color/image/position/repeat*)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|Background -> Inherited|>,
 			"initial" -> <|Background -> None|>|>|>,
