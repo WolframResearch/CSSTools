@@ -6,7 +6,7 @@
 
 (* ::Text:: *)
 (*Author: Kevin Daily*)
-(*Date: 20190814*)
+(*Date: 20190911*)
 (*Version: 1*)
 
 
@@ -15,15 +15,15 @@ BeginPackage["CSSTools`", { "GeneralUtilities`"}]
 
 (* ==== CSSStyleSheetInterpreter` ==== *)
 SetUsage[CSSCascade, "\
-CSSCascade[CSSProprty$, type$, CSSData$, CSSSelectorFilter] combines options that were interpreted from the CSS importer. \
+CSSCascade[CSSProperty$, type$, CSSData$, CSSSelectorFilter] combines options that were interpreted from the CSS importer. \
 CSS declarations are merged following the CSS cascade and the resulting options are filtered by type$."];
 SetUsage[ExtractCSSFromXML, "\
 ExtractCSSFromXML[XMLObject$] imports the CSS declarations within XMLObject$."];
 SetUsage[CSSTargets, "\
 CSSTargets[XMLObject$, CSSData$] applies the CSSData$ to the symbolic XML, \
 returning the CSSData$ with additional position and specificity information."];
-SetUsage[ResolveCSSInheritance, "\
-ResolveCSSInheritance[target$, CSSData$] calculates the properties of the element at target$ including any inherited CSS properties."];
+SetUsage[CSSInheritance, "\
+CSSInheritance[target$, type$, CSSData$] calculates the properties of the element at target$ including any inherited CSS properties."];
 
 (* ==== Selectors3` ==== *)
 SetUsage[CSSSelector, "\

@@ -1424,21 +1424,21 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 
 
 (* ::Subsection::Closed:: *)
-(*ResolveCSSInheritance*)
+(*CSSInheritance*)
 
 
-(* ResolveCSSInheritance
+(* CSSInheritance
 	Based on the position in the XMLObject, 
 	1. look up all ancestors' positions
 	2. starting from the most ancient ancestor, calculate the styles of each ancestor, including inherited properties
 	3. with all inheritance resolved, recalculate the style at the XMLObject position *)
 
 (* normalize Dataset position input *)
-ResolveCSSInheritance[position_Dataset, scope_, CSSData_] := ResolveCSSInheritance[Normal @ position, scope, CSSData]
-ResolveCSSInheritance[position_, scope_, CSSData_Dataset] := ResolveCSSInheritance[position, scope, Normal @ CSSData]
+CSSInheritance[position_Dataset, scope_, CSSData_] := CSSInheritance[Normal @ position, scope, CSSData]
+CSSInheritance[position_, scope_, CSSData_Dataset] := CSSInheritance[position, scope, Normal @ CSSData]
 
 (* main function *)
-ResolveCSSInheritance[position:{___?IntegerQ}, scope_, CSSData_?validCSSDataFullQ] :=
+CSSInheritance[position:{___?IntegerQ}, scope_, CSSData_?validCSSDataFullQ] :=
 	Module[{lineage, CSSDataSubset, i, inheritableProps, previous, current},
 		(* get the position of all ancestors *)
 		lineage = parents[position];
@@ -1488,7 +1488,7 @@ ResolveCSSInheritance[position:{___?IntegerQ}, scope_, CSSData_?validCSSDataFull
 		CSSCascade[All, scope, CSSDataSubset, All, "IgnoreSpecificity" -> True]
 	]
 	
-ResolveCSSInheritance[position:{___?IntegerQ}, _] := 
+CSSInheritance[position:{___?IntegerQ}, _] := 
 	Failure["BadData", <|"Message" -> "Invalid CSS data. CSS data must include specificity and target."|>]
 
 

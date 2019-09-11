@@ -1,0 +1,1734 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 12.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     81687,       1726]
+NotebookOptionsPosition[     72831,       1543]
+NotebookOutlinePosition[     73508,       1567]
+CellTagsIndexPosition[     73428,       1562]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell[TextData[{
+ "New in: ",
+ Cell["0.0", "HistoryData",
+  CellTags->"New",ExpressionUUID->"af915e94-5d7d-4ef0-a6d5-62a60562a45f"],
+ " | Modified in: ",
+ Cell[" ", "HistoryData",
+  CellTags->"Modified",ExpressionUUID->"91b89d04-af30-4242-a61b-6b440b2244ae"],
+ " | Obsolete in: ",
+ Cell[" ", "HistoryData",
+  CellTags->"Obsolete",ExpressionUUID->"df7ba674-c37f-4403-afd2-267d09202743"],
+ " | Excised in: ",
+ Cell[" ", "HistoryData",
+  CellTags->"Excised",ExpressionUUID->"f18ca5fe-36dd-4d4b-822c-739ec3cba956"]
+}], "History",
+ CellID->1247902091,ExpressionUUID->"d65da6c0-1789-4d33-bb87-02d8f9452dec"],
+
+Cell[CellGroupData[{
+
+Cell["Categorization", "CategorizationSection",
+ CellID->1122911449,ExpressionUUID->"dba8c2bf-bdc6-4f5b-ac59-ded035447953"],
+
+Cell["Symbol", "Categorization",
+ CellLabel->"Entity Type",
+ CellID->686433507,ExpressionUUID->"612aa2d7-158d-4411-8b9b-aa6a6214544f"],
+
+Cell["CSSTools", "Categorization",
+ CellLabel->"Paclet Name",
+ CellID->605800465,ExpressionUUID->"eae9b717-6285-416a-8e81-0fb4f1a9c0db"],
+
+Cell["CSSTools`", "Categorization",
+ CellLabel->"Context",
+ CellID->468444828,ExpressionUUID->"360f096b-6486-433d-b92a-55002257acac"],
+
+Cell["CSSTools/ref/CSSInheritance", "Categorization",
+ CellLabel->"URI",ExpressionUUID->"3c314a23-1d9b-42e4-b538-e2e21c066e7f"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Keywords", "KeywordsSection",
+ CellID->477174294,ExpressionUUID->"29b1c55e-5000-4b12-a842-34f384e928a0"],
+
+Cell["XXXX", "Keywords",
+ CellID->1164421360,ExpressionUUID->"f32362df-9ddd-4cbb-ada2-66621b3d1f1d"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Syntax Templates", "TemplatesSection",
+ CellID->1872225408,ExpressionUUID->"627942b2-f1a6-41f9-9d13-07487a8db027"],
+
+Cell[BoxData[""], "Template",
+ CellLabel->"Additional Function Template",
+ CellID->1562036412,ExpressionUUID->"302fc04f-86d1-40e6-9b98-9e4ce072692e"],
+
+Cell[BoxData[""], "Template",
+ CellLabel->"Arguments Pattern",
+ CellID->158391909,ExpressionUUID->"1b00437e-5fd5-43ff-b02e-b5242c24eee3"],
+
+Cell[BoxData[""], "Template",
+ CellLabel->"Local Variables",
+ CellID->1360575930,ExpressionUUID->"43e1d796-b2d4-42fd-85f0-e3e0304f59eb"],
+
+Cell[BoxData[""], "Template",
+ CellLabel->"Color Equal Signs",
+ CellID->793782254,ExpressionUUID->"877549c0-c175-425f-925a-146d9a8c7fa1"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Details", "DetailsSection",
+ CellID->307771771,ExpressionUUID->"7af24f51-e14b-4867-9b11-9d2715a02a1a"],
+
+Cell["XXXX", "Details",
+ CellLabel->"Lead",
+ CellID->670882175,ExpressionUUID->"276e18f6-da69-4cd0-a988-fb8eaad9ba44"],
+
+Cell["XXXX", "Details",
+ CellLabel->"Developers",
+ CellID->350963985,ExpressionUUID->"0baac9b1-57bb-4f23-a031-6dcda5642096"],
+
+Cell["XXXX", "Details",
+ CellLabel->"Authors",
+ CellID->8391405,ExpressionUUID->"c35fc0e8-7f21-4fdf-8e9e-eb51cc5edbc5"],
+
+Cell["XXXX", "Details",
+ CellLabel->"Feature Name",
+ CellID->3610269,ExpressionUUID->"0943dfbd-e3dd-4e3f-85d6-eaef93c4f5e0"],
+
+Cell["XXXX", "Details",
+ CellLabel->"QA",
+ CellID->401364205,ExpressionUUID->"6c4c68ac-4341-4d93-ad80-c175c75de97a"],
+
+Cell["XXXX", "Details",
+ CellLabel->"DA",
+ CellID->350204745,ExpressionUUID->"d04d8ddd-9709-45e4-8ff2-c89ddbb200ee"],
+
+Cell["XXXX", "Details",
+ CellLabel->"Docs",
+ CellID->732958810,ExpressionUUID->"0efce3bf-7806-4250-a140-a59f36c33c88"],
+
+Cell["XXXX", "Details",
+ CellLabel->"Features Page Notes",
+ CellID->222905350,ExpressionUUID->"9bd9282a-2463-428e-a87b-56d3bd60c1b0"],
+
+Cell["XXXX", "Details",
+ CellLabel->"Comments",
+ CellID->240026365,ExpressionUUID->"2f1257d4-c6fe-4d0b-ab8e-6a9d7385ee70"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["CSSInheritance", "ObjectName",
+ CellID->1224892054,ExpressionUUID->"688d75bc-340d-4da7-b5a6-9049681387e6"],
+
+Cell[TextData[{
+ Cell["   ", "ModInfo",ExpressionUUID->"ff09091d-4230-4569-90dd-babda5b206e3"],
+ Cell[BoxData[
+  RowBox[{"CSSInheritance", "[", 
+   RowBox[{
+    StyleBox["target", "TI"], ",", 
+    StyleBox["type", "TI"], ",", 
+    StyleBox["CSSData", "TI"]}], "]"}]], "InlineFormula",ExpressionUUID->
+  "d2d02caa-5635-4db7-8590-134541f9726f"],
+ " \[LineSeparator]calculates the properties of the element at ",
+ StyleBox["target",
+  FontSlant->"Italic"],
+ " including any inherited CSS properties."
+}], "Usage",
+ CellChangeTimes->{{3.774605886664511*^9, 3.774605933155219*^9}, {
+  3.7772271695794992`*^9, 3.777227169845151*^9}},
+ CellID->982511436,ExpressionUUID->"f6a997b2-2caa-448b-a7f2-a8e22d9996ae"],
+
+Cell["\<\
+This is also known as getting the calculated properties of a specific XML \
+element.\
+\>", "Notes",
+ CellChangeTimes->{{3.774607112923376*^9, 3.774607131242479*^9}, {
+  3.7772270670793777`*^9, 3.777227067282503*^9}},
+ CellID->8321735,ExpressionUUID->"e201c564-9da0-4d96-a7ce-9452937878d0"],
+
+Cell[TextData[{
+ "Certain CSS properties are inheritable from parent element to child \
+element. Some inheritance is automatic e.g. color and font proprieties. Other \
+inheritance can be forced with the ",
+ StyleBox["inherit", "InlineCode"],
+ " keyword. Even if a selector targets an element with a set of style rules, \
+the element could also be styled due to inheritance of styles from its \
+ancestors."
+}], "Notes",
+ CellChangeTimes->{{3.7746060024508038`*^9, 3.774606083204687*^9}, {
+  3.7746061535009356`*^9, 3.7746061567778406`*^9}},
+ CellID->1067943069,ExpressionUUID->"330f87e6-18e3-46c7-bd58-56f3115ad629"],
+
+Cell[TextData[{
+ "Wolfram Desktop also has inheritance of option values. Most options are \
+inheritable and inheritance can be forced with the ",
+ ButtonBox["Inherit",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/Inherit"],
+ " option value."
+}], "Notes",
+ CellChangeTimes->{{3.774606099005569*^9, 3.774606125738908*^9}, {
+  3.774606271155855*^9, 3.7746063425527115`*^9}},
+ CellID->71056514,ExpressionUUID->"0e0e1e18-db88-4d8d-8802-6c614ad2c083"],
+
+Cell["\<\
+Inheritance is not a property of the CSS stylesheet. Inheritance is resolved \
+when CSS acts on an XML document.\
+\>", "Notes",
+ CellChangeTimes->{{3.7746064280210514`*^9, 3.7746065031707287`*^9}},
+ CellID->326496822,ExpressionUUID->"5ce3c761-e740-4f90-b747-66f666580373"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Tutorials", "TutorialsSection",
+ CellID->250839057,ExpressionUUID->"f8652376-a5ab-41af-85a8-e24094ba1249"],
+
+Cell[TextData[ButtonBox["CSSTools",
+ BaseStyle->"Link",
+ ButtonData->"paclet:CSSTools/tutorial/CSSTools"]], "Tutorials",
+ CellChangeTimes->{{3.762101033487421*^9, 3.7621010376800995`*^9}},
+ CellID->341631938,ExpressionUUID->"c0b26dc5-122d-411c-8a8b-9705e037d52e"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Related Demonstrations", "RelatedDemonstrationsSection",
+ CellID->1268215905,ExpressionUUID->"e7a4fe18-64fc-47ae-a34c-1ea525741e9c"],
+
+Cell["XXXX", "RelatedDemonstrations",
+ CellID->1129518860,ExpressionUUID->"4556fdc6-614c-4798-a642-f9e506b6f25e"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Related Links", "RelatedLinksSection",
+ CellID->1584193535,ExpressionUUID->"545c0584-ad4f-4101-b994-079eda410c33"],
+
+Cell["XXXX", "RelatedLinks",
+ CellID->1038487239,ExpressionUUID->"72801f10-3bff-4874-9753-040a5d52e34b"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["See Also", "SeeAlsoSection",
+ CellID->1255426704,ExpressionUUID->"582da6ae-2f12-4e93-a087-f36de51dd83e"],
+
+Cell[TextData[ButtonBox["CSSCascade",
+ BaseStyle->"Link",
+ ButtonData->"paclet:CSSTools/ref/CSSCascade"]], "SeeAlso",
+ CellChangeTimes->{3.7621010557613335`*^9},
+ CellID->929782353,ExpressionUUID->"5bf4b678-f755-43be-9088-5de5fad65d09"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["More About", "MoreAboutSection",
+ CellID->38303248,ExpressionUUID->"120e9287-f300-4cfe-94fa-9113019f61d5"],
+
+Cell[TextData[ButtonBox["CSSTools",
+ BaseStyle->"Link",
+ ButtonData->"paclet:CSSTools/guide/CSSTools"]], "MoreAbout",
+ CellChangeTimes->{{3.762101039870405*^9, 3.762101043268321*^9}},
+ CellID->1665078683,ExpressionUUID->"4e0617e5-b1d5-424f-8792-6b1336be7619"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ InterpretationBox[GridBox[{
+    {
+     StyleBox["Examples", "PrimaryExamplesSection"], 
+     ButtonBox[
+      RowBox[{
+       RowBox[{"More", " ", "Examples"}], " ", "\[RightTriangle]"}],
+      BaseStyle->"ExtendedExamplesLink",
+      ButtonData:>"ExtendedExamples"]}
+   }],
+  $Line = 0; Null]], "PrimaryExamplesSection",
+ CellID->880084151,ExpressionUUID->"91f8d3d9-0987-4660-ae4d-54db0eb374ef"],
+
+Cell[BoxData[
+ RowBox[{"Needs", "[", "\"\<CSSTools`\>\"", "]"}]], "Input",
+ CellLabel->"In[11]:=",
+ CellID->12271288,ExpressionUUID->"28829a2b-9a63-424f-a833-65695f075faf"],
+
+Cell["Load an XML file with embedded CSS rules.", "ExampleText",
+ CellChangeTimes->{{3.7746065372207403`*^9, 3.7746065561086035`*^9}},
+ CellID->14111362,ExpressionUUID->"73187e9c-c5ca-437f-847e-ae34a6e7213f"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"cssExamplesDirectory", "=", 
+   RowBox[{"FileNameJoin", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"ParentDirectory", "[", 
+       RowBox[{"DirectoryName", "[", 
+        RowBox[{"FindFile", "[", "\"\<CSSTools`\>\"", "]"}], "]"}], "]"}], 
+      ",", "\"\<Examples\>\""}], "}"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"doc", "=", 
+   RowBox[{"Import", "[", 
+    RowBox[{
+     RowBox[{"FileNameJoin", "[", 
+      RowBox[{"{", 
+       RowBox[{"cssExamplesDirectory", ",", "\"\<index.html\>\""}], "}"}], 
+      "]"}], ",", "\"\<XMLObject\>\""}], "]"}]}], ";"}]}], "Input",
+ CellChangeTimes->{{3.774606586481776*^9, 3.774606598251951*^9}},
+ CellLabel->"In[12]:=",
+ CellID->357691610,ExpressionUUID->"5b90204f-3f00-4180-aa18-7a638f8cbe27"],
+
+Cell["Extract the CSS references.", "ExampleText",
+ CellChangeTimes->{3.7746066227580566`*^9},
+ CellID->72447410,ExpressionUUID->"360b4a77-bccc-4153-9083-08292c6de943"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ds", "=", 
+   RowBox[{"ExtractCSSFromXML", "[", 
+    RowBox[{"doc", ",", 
+     RowBox[{"\"\<RootDirectory\>\"", "\[Rule]", "cssExamplesDirectory"}]}], 
+    "]"}]}], ";"}]], "Input",
+ CellChangeTimes->{3.774606711882187*^9},
+ CellLabel->"In[14]:=",
+ CellID->372680361,ExpressionUUID->"fd9da4c4-ab76-4207-ba13-3065cad0b15c"],
+
+Cell["\<\
+The third rule of the example CSS data has two style declarations.\
+\>", "ExampleText",
+ CellChangeTimes->{
+  3.7746067275581355`*^9, {3.774606758353136*^9, 3.7746067923511906`*^9}},
+ CellID->594693738,ExpressionUUID->"237f621d-c14c-4f3b-8445-56a3c3b40044"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"ds", "[", 
+  RowBox[{"[", "3", "]"}], "]"}]], "Input",
+ CellChangeTimes->{{3.7746067131007805`*^9, 3.7746067143233843`*^9}},
+ CellLabel->"In[15]:=",
+ CellID->422662971,ExpressionUUID->"2eab8c5c-28ae-49dd-9c3e-1fb13f5a3dbc"],
+
+Cell[BoxData[
+ TemplateBox[{TagBox[
+    DynamicModuleBox[{
+     TypeSystem`NestedGrid`PackagePrivate`$state$$ = 
+      Data`UnorderedAssociation[
+       "RowCount" -> 20, "Length" -> 3, "InitialType" -> 
+        TypeSystem`Struct[{"Selector", "Targets", "Block"}, {
+          TypeSystem`AnyType, 
+           TypeSystem`Vector[
+            TypeSystem`Vector[
+             TypeSystem`Atom[Integer], TypeSystem`AnyLength], 
+            TypeSystem`AnyLength], 
+           TypeSystem`Vector[
+            
+            TypeSystem`Struct[{
+             "Property", "Value", "Important", "Interpretation", 
+              "Condition"}, {
+              TypeSystem`Atom[String], 
+              TypeSystem`Atom[String], 
+              TypeSystem`Atom[TypeSystem`Boolean], TypeSystem`AnyType, 
+              TypeSystem`AnyType}], TypeSystem`AnyLength]}], "Shape" -> 
+        TypeSystem`PackageScope`DocumentShape[
+          
+          Association[{"Selector"} -> 
+           TypeSystem`PackageScope`UnknownShape, {"Targets"} -> 
+           TypeSystem`PackageScope`Limited[
+             TypeSystem`PackageScope`ColumnShape[
+             TypeSystem`PackageScope`UnknownShape], 1, {
+              TypeSystem`NestedGrid`PackagePrivate`$docPath["Targets"]}], {
+            "Block"} -> TypeSystem`PackageScope`ElidedShape[1]], 1], 
+        "InitialData" -> TypeSystem`PackageScope`CacheHandle[123580840], 
+        "Type" -> TypeSystem`Struct[{"Selector", "Targets", "Block"}, {
+          TypeSystem`AnyType, 
+           TypeSystem`Vector[
+            TypeSystem`Vector[
+             TypeSystem`Atom[Integer], TypeSystem`AnyLength], 
+            TypeSystem`AnyLength], 
+           TypeSystem`Vector[
+            
+            TypeSystem`Struct[{
+             "Property", "Value", "Important", "Interpretation", 
+              "Condition"}, {
+              TypeSystem`Atom[String], 
+              TypeSystem`Atom[String], 
+              TypeSystem`Atom[TypeSystem`Boolean], TypeSystem`AnyType, 
+              TypeSystem`AnyType}], TypeSystem`AnyLength]}], "HandleQ" -> 
+        True, "RowTarget" -> 20, "Data" -> 
+        TypeSystem`PackageScope`CacheHandle[123580840]], 
+      TypeSystem`NestedGrid`PackagePrivate`$path$$ = {}, 
+      TypeSystem`NestedGrid`PackagePrivate`$pos$$ = 1, 
+      TypeSystem`NestedGrid`PackagePrivate`$grid$$ = 
+      DynamicModule[{
+        TypeSystem`NestedGrid`PackagePrivate`renderedGrid = Deploy[
+           Style[
+            Grid[{{
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Selector\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Selector\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 1109963717][{
+                    Key["Selector"]}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[1109963717][
+                  GeneralUtilities`Slice[
+                   Key["Selector"]]], "Mouse"], Background -> GrayLevel[0.95],
+                 Alignment -> {Left, Baseline}], 
+               Pane[
+                Annotation[
+                 RawBoxes[
+                  StyleBox[
+                   InterpretationBox[
+                    StyleBox[
+                    FrameBox[
+                    TemplateBox[{
+                    StyleBox["\"#CSS \"", 
+                    RGBColor[0, 0.5, 1], Selectable -> False, StripOnInput -> 
+                    False], 
+                    StyleBox[
+                    "\"h1\"", Selectable -> True, StripOnInput -> False]}, 
+                    "RowDefault"], RoundingRadius -> 4, Background -> 
+                    RGBColor[0.92, 0.98, 1], ImageMargins -> 2, 
+                    FrameMargins -> {{5, 5}, {2, 2}}, FrameStyle -> Directive[
+                    RGBColor[0, 0.5, 1], 
+                    AbsoluteThickness[1]], BaseStyle -> {FontFamily -> Dynamic[
+                    CurrentValue[{StyleHints, "CodeFont"}]], FontSize -> 12, 
+                    FontWeight -> Bold, FontColor -> GrayLevel[0.2]}, 
+                    StripOnInput -> False], Editable -> False, 
+                    ShowStringCharacters -> False, StripOnInput -> False], 
+                    CSSTools`CSSSelector[
+                    Association[
+                    "String" -> "h1 ", 
+                    "Sequence" -> {
+                    "SimpleSelectorSequence" -> {
+                    "Type" -> Association[
+                    "Namespace" -> Missing["NotFound"], "Name" -> "h1"]}}, 
+                    "Specificity" -> {0, 0, 0, 1}]]], FontFamily -> 
+                   "Source Code Pro", FontSize -> 13, ShowStringCharacters -> 
+                   True]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[1109963717][
+                  GeneralUtilities`Slice[
+                   Key["Selector"]]], "Mouse"], 
+                ImageSize -> {{60, Full}, Automatic}, 
+                Alignment -> {Left, Baseline}]}, {
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Targets\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Targets\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 1109963717][{
+                    Key["Targets"]}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[1109963717][
+                  GeneralUtilities`Slice[
+                   Key["Targets"]]], "Mouse"], Background -> GrayLevel[0.95], 
+                Alignment -> {Left, Center}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Style[{2, 3, 2, 3, 2}, ShowStringCharacters -> False], 
+                    Style[
+                    Style[{2, 3, 2, 3, 2}, ShowStringCharacters -> False], 
+                    FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 1109963717][{
+                    Key["Targets"], 1}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[1109963717][
+                  GeneralUtilities`Slice[
+                   Key["Targets"], 1]], "Mouse"]]}, {
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Pane[
+                    RawBoxes[
+                    StyleBox["\"Block\"", FontColor -> GrayLevel[0.4]]], {{
+                    20, Full}, 15}], 
+                    Style[
+                    Pane[
+                    RawBoxes[
+                    StyleBox[
+                    "\"Block\"", FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], {{20, Full}, 15}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 1109963717][{
+                    Key["Block"]}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[1109963717][
+                  GeneralUtilities`Slice[
+                   Key["Block"]]], "Mouse"], Background -> GrayLevel[0.95], 
+                Alignment -> {Left, Baseline}], 
+               Item[
+                Annotation[
+                 EventHandler[
+                  MouseAppearance[
+                   Mouseover[
+                    Row[{"  { ", 
+                    Subscript["\[Ellipsis]", 2], " }  "}], 
+                    Style[
+                    Row[{"  { ", 
+                    Subscript["\[Ellipsis]", 2], " }  "}], FontColor -> 
+                    RGBColor[
+                    0.27450980392156865`, 0.5372549019607843, 
+                    0.792156862745098]]], "LinkHand"], {"MouseClicked", 1} :> 
+                  TypeSystem`NestedGrid`PackagePrivate`updateState[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`$grid$$, 1109963717][{
+                    Key["Block"]}]], 
+                 TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[1109963717][
+                  GeneralUtilities`Slice[
+                   Key["Block"]]], "Mouse"], BaseStyle -> {
+                  GrayLevel[0.5]}]}}, BaseStyle -> {ContextMenu -> {
+                 MenuItem["Copy position to clipboard", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentPosition[
+                   TypeSystem`NestedGrid`PackagePrivate`copyClip]], 
+                  MenuEvaluator -> Automatic], 
+                 MenuItem["Copy data to clipboard", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentData[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`copyClip]], 
+                  MenuEvaluator -> Automatic], Delimiter, 
+                 MenuItem["Paste position in new cell", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentPosition[
+                   TypeSystem`NestedGrid`PackagePrivate`cellPaste]], 
+                  MenuEvaluator -> Automatic], 
+                 MenuItem["Paste data in new cell", 
+                  KernelExecute[
+                   TypeSystem`NestedGrid`PackagePrivate`toCurrentData[
+                   TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                    TypeSystem`NestedGrid`PackagePrivate`cellPaste]], 
+                  MenuEvaluator -> Automatic]}, FontFamily -> "Verdana", 
+               FontSize -> 12}, Alignment -> Left, RowMinHeight -> 1.5, 
+             Dividers -> All, FrameStyle -> GrayLevel[0.85], 
+             BaseStyle -> {FontFamily -> "Verdana", FontSize -> 12}], 
+            LineBreakWithin -> False, ContextMenu -> {}, NumberMarks -> False,
+             ShowAutoStyles -> False]], 
+         TypeSystem`NestedGrid`PackagePrivate`initialQ = True, 
+         TypeSystem`NestedGrid`PackagePrivate`self = $Failed}, 
+        Dynamic[
+         TypeSystem`NestedGrid`PackagePrivate`setupViewPath[
+         TypeSystem`NestedGrid`PackagePrivate`$path$$, If[
+            Not[TypeSystem`NestedGrid`PackagePrivate`initialQ], 
+            
+            Module[{TypeSystem`NestedGrid`PackagePrivate`tmpGrid$ = $Failed, 
+              TypeSystem`NestedGrid`PackagePrivate`tmpData$ = 
+              TypeSystem`NestedGrid`PackagePrivate`LookupCacheValue[
+                TypeSystem`NestedGrid`PackagePrivate`$state$$["Data"]]}, 
+             TypeSystem`NestedGrid`PackagePrivate`tmpGrid$ = 
+              If[TypeSystem`NestedGrid`PackagePrivate`tmpData$ === 
+                TypeSystem`NestedGrid`PackagePrivate`$NotCached, 
+                TypeSystem`NestedGrid`PackagePrivate`renderedGrid, 
+                TypeSystem`NestedGrid`PackagePrivate`renderGrid[
+                TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+                 TypeSystem`NestedGrid`PackagePrivate`$grid$$, 1109963717][
+                TypeSystem`NestedGrid`PackagePrivate`tmpData$]]; If[
+               Not[
+                FailureQ[TypeSystem`NestedGrid`PackagePrivate`tmpGrid$]], 
+               TypeSystem`NestedGrid`PackagePrivate`renderedGrid = 
+               TypeSystem`NestedGrid`PackagePrivate`tmpGrid$]; Null]]; 
+          TypeSystem`NestedGrid`PackagePrivate`initialQ = False; 
+          TypeSystem`NestedGrid`PackagePrivate`$pos$$; If[
+            FailureQ[TypeSystem`NestedGrid`PackagePrivate`renderedGrid], 
+            TypeSystem`SparseGrid[
+             TypeSystem`H["(data no longer present)"]], 
+            If[GeneralUtilities`$DebugMode, 
+             Row[{TypeSystem`NestedGrid`PackagePrivate`renderedGrid, "  ", 
+               TypeSystem`NestedGrid`PackagePrivate`formatState[
+               TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+                TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+                TypeSystem`NestedGrid`PackagePrivate`$pos$$]}], 
+             TypeSystem`NestedGrid`PackagePrivate`renderedGrid]]], 
+         TrackedSymbols :> {TypeSystem`NestedGrid`PackagePrivate`$pos$$}], 
+        DynamicModuleValues :> {}], 
+      TypeSystem`NestedGrid`PackagePrivate`$posCell$$, 
+      TypeSystem`NestedGrid`PackagePrivate`$topBar$$ = Dynamic[
+        TypeSystem`NestedGrid`PackagePrivate`alignBar[
+        TypeSystem`NestedGrid`PackagePrivate`$state$$][
+         TypeSystem`NestedGrid`PackagePrivate`makeFramedBar[
+          TypeSystem`PackageScope`Pathbar[
+          TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+           TypeSystem`NestedGrid`PackagePrivate`updateState[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$path$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$pos$$, 
+            TypeSystem`NestedGrid`PackagePrivate`$grid$$, 1109963717]]]], 
+        TrackedSymbols :> {TypeSystem`NestedGrid`PackagePrivate`$path$$}], 
+      TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$ = Framed[
+        Dynamic[
+         Replace[
+          MouseAnnotation[Null], {
+          TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[1109963717][Null] -> 
+           "", TypeSystem`NestedGrid`PackagePrivate`$SliceMarker[1109963717][
+             Pattern[TypeSystem`NestedGrid`PackagePrivate`path, 
+              Blank[]]] :> (
+            TypeSystem`NestedGrid`PackagePrivate`$lastPath = 
+             TypeSystem`NestedGrid`PackagePrivate`path; 
+            TypeSystem`NestedGrid`PackagePrivate`makePathTrail[
+             TypeSystem`NestedGrid`PackagePrivate`path, 
+              TypeSystem`NestedGrid`PackagePrivate`makePathElements]), Null :> 
+           Spacer[10], Blank[] :> Spacer[10]}], TrackedSymbols :> {}], 
+        FrameStyle -> None, ImageMargins -> 0, FrameMargins -> 0, Alignment -> 
+        Top, ImageSize -> {Automatic, 14}]}, 
+     DynamicBox[
+      ToBoxes[
+       Column[
+        If[TypeSystem`NestedGrid`PackagePrivate`$path$$ == {}, {
+          TypeSystem`NestedGrid`PackagePrivate`displayScrollBar[
+          TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$pos$$], 
+          TypeSystem`NestedGrid`PackagePrivate`onDesktopShow[
+           TypeSystem`NestedGrid`PackagePrivate`alignBar[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$][
+           TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$]]}, {
+         TypeSystem`NestedGrid`PackagePrivate`$topBar$$, 
+          TypeSystem`NestedGrid`PackagePrivate`displayScrollBar[
+          TypeSystem`NestedGrid`PackagePrivate`$grid$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+           TypeSystem`NestedGrid`PackagePrivate`$pos$$], 
+          TypeSystem`NestedGrid`PackagePrivate`onDesktopShow[
+           TypeSystem`NestedGrid`PackagePrivate`alignBar[
+           TypeSystem`NestedGrid`PackagePrivate`$state$$][
+           TypeSystem`NestedGrid`PackagePrivate`$bottomBar$$]]}], Spacings -> 
+        If[
+         TypeSystem`NestedGrid`PackagePrivate`$path$$ == {}, 
+          0, {{}, {0, 0.05, 0}}]], StandardForm], 
+      ImageSizeCache -> {147., {46., 52.}}, 
+      TrackedSymbols :> {
+       TypeSystem`NestedGrid`PackagePrivate`$state$$, 
+        TypeSystem`NestedGrid`PackagePrivate`$grid$$}], 
+     BaseStyle -> {LineBreakWithin -> False}, Deinitialization :> 
+     TypeSystem`NestedGrid`PackagePrivate`deleteState[
+      TypeSystem`NestedGrid`PackagePrivate`$state$$], 
+     DynamicModuleValues :> {}, Initialization :> 
+     Block[{$ContextPath = $ContextPath}, 
+       Needs["TypeSystem`"]]], Deploy, DefaultBaseStyle -> "Deploy"]},
+  "CopyTag",
+  DisplayFunction->(#& ),
+  InterpretationFunction->("Dataset[<>]"& )]], "Output",
+ CellChangeTimes->{3.7746067147072654`*^9, 3.7772272060136056`*^9},
+ CellLabel->"Out[15]=",
+ CellID->758052690,ExpressionUUID->"c5d4814f-79d6-4fd5-9044-6a8bbeb3a732"]
+}, Open  ]],
+
+Cell["\<\
+It also has a parent element that may also contribute to the computed styles.\
+\>", "ExampleText",
+ CellChangeTimes->{3.774606796265876*^9, 3.7746070868957977`*^9},
+ CellID->431498689,ExpressionUUID->"8feb6943-b815-4130-9611-95b0cfddaa3e"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"parentTarget", "=", 
+   RowBox[{"Normal", "[", 
+    RowBox[{
+     RowBox[{"ds", "[", 
+      RowBox[{"[", 
+       RowBox[{"3", ",", "\"\<Targets\>\""}], "]"}], "]"}], "[", 
+     RowBox[{"[", 
+      RowBox[{"1", ",", 
+       RowBox[{";;", 
+        RowBox[{"-", "3"}]}]}], "]"}], "]"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"rulesWithParentTarget", "=", 
+   RowBox[{"Extract", "[", 
+    RowBox[{"ds", ",", 
+     RowBox[{
+      RowBox[{"Position", "[", 
+       RowBox[{"ds", ",", "parentTarget"}], "]"}], "[", 
+      RowBox[{"[", 
+       RowBox[{"All", ",", 
+        RowBox[{";;", 
+         RowBox[{"-", "3"}]}]}], "]"}], "]"}]}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"rulesWithParentTarget", "[", 
+  RowBox[{"[", 
+   RowBox[{
+   "All", ",", "\"\<Block\>\"", ",", "All", ",", "\"\<Interpretation\>\""}], 
+   "]"}], "]"}]}], "Input",
+ CellChangeTimes->{3.777227276564243*^9},
+ CellLabel->"In[16]:=",
+ CellID->39443008,ExpressionUUID->"fde45109-546c-4447-b836-117f6e58d335"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"\[LeftAssociation]", 
+     RowBox[{
+      RowBox[{"BackgroundAppearanceOptions", "\[Rule]", 
+       RowBox[{"Missing", "[", "\<\"Not supported.\"\>", "]"}]}], ",", 
+      RowBox[{"BackgroundAppearance", "\[Rule]", 
+       GraphicsBox[
+        TagBox[RasterBox[CompressedData["
+1:eJzt2GdzVVUUgOGA44wf/Qn6yYq9ID30XgKht4SEiCVoggL23nvXX2su59zN
+7LXOjj/AZ+adDDADJPeeu/daz4Oz16eurp2YmFi+b+XL1MzNyaWlmdvH71/5
+zfTi8rWFxfm5fYs35hfml9bP3rPyhw+sfLl178TE6NdrHtow0MMbU5uqHilt
+Hu7RLXVbY4+Vtg33+GTd9ti6rh3NnthZtyv2ZNfu4Z7ak9pb9XRp33DP7E8d
+qHq2dHC45w7VHY49Xzoy3AtHU8eqXixNDbf+eN2J2Eul6eE2nKw7FdvYdXq4
+TWdSZ2Obu86lzo/akrtQtbV0se5S37bc5arJ0kzdbN/20JXYjtJc3XzfztDV
+2K7SQt3LfbtD12J7ul7pWnu3V/v2hl6r2ld6PbU4an/uetWB0hupN0cdzC1V
+HSot193oO5x7q+pI6e26m31HQ7dix7pup97pmwq9Gzv+XqP3+06EPqia/rDd
+R30nQx9Xnfqk0ad9p3OfVZ35vN0Xo87mvqw691Wjr/vOh76JXfi20Xd9F0Pf
+xy790OjHvsuhn2IzPzf6ZdRs7teqK7+1+33UXO6Pqvk/G/3VdzX0d2zhn/8o
+/5Xwb5b/q/XNhO85/1DdD7vKqxFet/zCdi946+3Ib1x4Z8s73nok8sMTnq7y
+1LUey/wAhye8PPmtj0b4BOWPWPfRW+WzGT7F+WNeToDWERFOknDOlPNnlTMq
+nGbhrCtnYOuQzMdpOG/LOTxwRN85uvORHs78chfEO2J8d4Q7JV865T6K99T4
+/gr3Wr74ugtx4KIc36Hhbs2Xb3cpD1zW43s83O/h9i9TwXhOWHO3O4NEHjDC
+BFImkzixjCeZPOSEKahMR3FqGk9TedAKk1iZ0OLkNp7owqSXR8EyJcbpcTxV
+hmkzj6PdmDowvt4Za/O4m0fi1vDcjdZ55A4zeWt0L7N9HvvDXtBaH8p+EfaO
+vJi0Vpiy4+T1J+xHrTWq7Flh/8oLWmuVK7te2AHzkthaJ7tlMy+hYUtdZZ/t
+Ft68CIdNubVQl407L+NhW28t9WXrDxqQuWBQFTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn
+4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNw
+Bs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgD
+Z+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEz
+cAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4
+A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyB
+M3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZ
+OANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4Ayc
+gTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7A
+GTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AM
+nIEzcAbOwBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbO
+wBk4A2fgDJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fg
+DJyBM3AGzsAZOANn4AycgTNwBs7AGTgDZ+AMnIEzcAbOwBk4A2fgDJyBM3AG
+zsAZOANn4AycgTNwhv+rM/wL3KL6dw==
+          "], {{0, 800}, {1400, 0}}, {0, 255},
+          ColorFunction->RGBColor],
+         BoxForm`ImageTag[
+         "Byte", ColorSpace -> "RGB", Interleaving -> True, MetaInformation -> 
+          Association[
+           "XMP" -> Association[
+             "DublinCoreSchema" -> Association["Format" -> "image/png"], 
+              "BasicSchema" -> 
+              Association[
+               "CreateDate" -> 
+                DateObject[{2011, 9, 23, 20, 14, 5.}, "Instant", 
+                  "Gregorian", -5.], "CreatorTool" -> 
+                "Adobe Fireworks CS5 11.0.0.484 Windows", "ModifyDate" -> 
+                DateObject[{2011, 9, 23, 20, 14, 24.}, "Instant", 
+                  "Gregorian", -5.]]], "Comments" -> 
+            Association[
+             "Creation Time" -> 
+              DateObject[{2019, 9, 11, 16, 46, 44.18873`9.39788638911063}, 
+                "Instant", "Gregorian", -5.], "Software" -> 
+              "Adobe Fireworks CS5"]]],
+         Selectable->False],
+        DefaultBaseStyle->"ImageGraphics",
+        ImageSizeRaw->{1400, 800},
+        PlotRange->{{0, 1400}, {0, 800}}]}], ",", 
+      RowBox[{"Background", "\[Rule]", 
+       InterpretationBox[
+        ButtonBox[
+         TooltipBox[
+          GraphicsBox[{
+            {GrayLevel[0], RectangleBox[{0, 0}]}, 
+            {GrayLevel[0], RectangleBox[{1, -1}]}, 
+            {RGBColor[0, 0, 
+              Rational[139, 255]], RectangleBox[{0, -1}, {2, 1}]}},
+           AspectRatio->1,
+           DefaultBaseStyle->"ColorSwatchGraphics",
+           Frame->True,
+           FrameStyle->RGBColor[0., 0., 0.3633986928104575],
+           FrameTicks->None,
+           
+           ImageSize->
+            Dynamic[{
+             Automatic, 1.35 CurrentValue["FontCapHeight"]/
+              AbsoluteCurrentValue[Magnification]}],
+           PlotRangePadding->None],
+          StyleBox[
+           RowBox[{"RGBColor", "[", 
+             RowBox[{"0", ",", "0", ",", 
+               FractionBox["139", "255"]}], "]"}], NumberMarks -> False]],
+         Appearance->None,
+         BaseStyle->{},
+         BaselinePosition->Baseline,
+         ButtonFunction:>With[{Typeset`box$ = EvaluationBox[]}, 
+           If[
+            Not[
+             AbsoluteCurrentValue["Deployed"]], 
+            SelectionMove[Typeset`box$, All, Expression]; 
+            FrontEnd`Private`$ColorSelectorInitialAlpha = 1; 
+            FrontEnd`Private`$ColorSelectorInitialColor = RGBColor[0, 0, 
+               Rational[139, 255]]; 
+            FrontEnd`Private`$ColorSelectorUseMakeBoxes = True; 
+            MathLink`CallFrontEnd[
+              FrontEnd`AttachCell[Typeset`box$, 
+               FrontEndResource["RGBColorValueSelector"], {
+               0, {Left, Bottom}}, {Left, Top}, 
+               "ClosingActions" -> {
+                "SelectionDeparture", "ParentChanged", "EvaluatorQuit"}]]]],
+         DefaultBaseStyle->{},
+         Evaluator->Automatic,
+         Method->"Preemptive"],
+        RGBColor[0, 0, 
+         Rational[139, 255]],
+        Editable->False,
+        Selectable->False]}]}], "\[RightAssociation]"}], ",", 
+    RowBox[{"\[LeftAssociation]", 
+     RowBox[{"FontColor", "\[Rule]", 
+      InterpretationBox[
+       ButtonBox[
+        TooltipBox[
+         GraphicsBox[{
+           {GrayLevel[0], RectangleBox[{0, 0}]}, 
+           {GrayLevel[0], RectangleBox[{1, -1}]}, 
+           {RGBColor[
+             Rational[223, 255], 
+             Rational[227, 255], 
+             Rational[2, 5]], RectangleBox[{0, -1}, {2, 1}]}},
+          AspectRatio->1,
+          DefaultBaseStyle->"ColorSwatchGraphics",
+          Frame->True,
+          
+          FrameStyle->RGBColor[
+           0.5830065359477125, 0.5934640522875817, 0.26666666666666666`],
+          FrameTicks->None,
+          
+          ImageSize->
+           Dynamic[{
+            Automatic, 1.35 CurrentValue["FontCapHeight"]/
+             AbsoluteCurrentValue[Magnification]}],
+          PlotRangePadding->None],
+         StyleBox[
+          RowBox[{"RGBColor", "[", 
+            RowBox[{
+              FractionBox["223", "255"], ",", 
+              FractionBox["227", "255"], ",", 
+              FractionBox["2", "5"]}], "]"}], NumberMarks -> False]],
+        Appearance->None,
+        BaseStyle->{},
+        BaselinePosition->Baseline,
+        ButtonFunction:>With[{Typeset`box$ = EvaluationBox[]}, 
+          If[
+           Not[
+            AbsoluteCurrentValue["Deployed"]], 
+           SelectionMove[Typeset`box$, All, Expression]; 
+           FrontEnd`Private`$ColorSelectorInitialAlpha = 1; 
+           FrontEnd`Private`$ColorSelectorInitialColor = RGBColor[
+              Rational[223, 255], 
+              Rational[227, 255], 
+              Rational[2, 5]]; 
+           FrontEnd`Private`$ColorSelectorUseMakeBoxes = True; 
+           MathLink`CallFrontEnd[
+             FrontEnd`AttachCell[Typeset`box$, 
+              FrontEndResource["RGBColorValueSelector"], {
+              0, {Left, Bottom}}, {Left, Top}, 
+              "ClosingActions" -> {
+               "SelectionDeparture", "ParentChanged", "EvaluatorQuit"}]]]],
+        DefaultBaseStyle->{},
+        Evaluator->Automatic,
+        Method->"Preemptive"],
+       RGBColor[
+        Rational[223, 255], 
+        Rational[227, 255], 
+        Rational[2, 5]],
+       Editable->False,
+       Selectable->False]}], "\[RightAssociation]"}]}], "}"}], 
+  "}"}]], "Output",
+ CellChangeTimes->{3.774606867187927*^9, 3.777227277454982*^9},
+ CellLabel->"Out[18]=",
+ CellID->68387310,ExpressionUUID->"8029ab50-6096-437c-904d-ac0c08ce816c"]
+}, Open  ]],
+
+Cell[TextData[{
+ "In this case ",
+ ButtonBox["FontColor",
+  BaseStyle->"Link",
+  ButtonData->"paclet:ref/FontColor"],
+ " is inheritable. Use ",
+ ButtonBox["CSSInheritance",
+  BaseStyle->"Link",
+  ButtonData->"paclet:CSSTools/ref/CSSInheritance"],
+ " to also include inherited styles at the target element."
+}], "ExampleText",
+ CellChangeTimes->{
+  3.774606900737062*^9, {3.7746070881963987`*^9, 3.7746070939435315`*^9}},
+ CellID->264811443,ExpressionUUID->"f9e75b1c-0c71-4be8-806c-0349e657a510"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"CSSInheritance", "[", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"2", ",", "3", ",", "2", ",", "3", ",", "2"}], "}"}], ",", "Cell",
+    ",", "ds"}], "]"}]], "Input",
+ CellChangeTimes->{{3.7772272883922234`*^9, 3.777227288907851*^9}},
+ CellLabel->"In[19]:=",
+ CellID->92948257,ExpressionUUID->"227a62cb-68c5-41ef-ae67-31603e37df08"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"FontColor", "\[Rule]", 
+    InterpretationBox[
+     ButtonBox[
+      TooltipBox[
+       GraphicsBox[{
+         {GrayLevel[0], RectangleBox[{0, 0}]}, 
+         {GrayLevel[0], RectangleBox[{1, -1}]}, 
+         {RGBColor[
+           Rational[223, 255], 
+           Rational[227, 255], 
+           Rational[2, 5]], RectangleBox[{0, -1}, {2, 1}]}},
+        AspectRatio->1,
+        DefaultBaseStyle->"ColorSwatchGraphics",
+        Frame->True,
+        FrameStyle->RGBColor[
+         0.5830065359477125, 0.5934640522875817, 0.26666666666666666`],
+        FrameTicks->None,
+        ImageSize->
+         Dynamic[{
+          Automatic, 1.35 CurrentValue["FontCapHeight"]/AbsoluteCurrentValue[
+           Magnification]}],
+        PlotRangePadding->None],
+       StyleBox[
+        RowBox[{"RGBColor", "[", 
+          RowBox[{
+            FractionBox["223", "255"], ",", 
+            FractionBox["227", "255"], ",", 
+            FractionBox["2", "5"]}], "]"}], NumberMarks -> False]],
+      Appearance->None,
+      BaseStyle->{},
+      BaselinePosition->Baseline,
+      ButtonFunction:>With[{Typeset`box$ = EvaluationBox[]}, 
+        If[
+         Not[
+          AbsoluteCurrentValue["Deployed"]], 
+         SelectionMove[Typeset`box$, All, Expression]; 
+         FrontEnd`Private`$ColorSelectorInitialAlpha = 1; 
+         FrontEnd`Private`$ColorSelectorInitialColor = RGBColor[
+            Rational[223, 255], 
+            Rational[227, 255], 
+            Rational[2, 5]]; 
+         FrontEnd`Private`$ColorSelectorUseMakeBoxes = True; 
+         MathLink`CallFrontEnd[
+           FrontEnd`AttachCell[Typeset`box$, 
+            FrontEndResource["RGBColorValueSelector"], {0, {Left, Bottom}}, {
+            Left, Top}, 
+            "ClosingActions" -> {
+             "SelectionDeparture", "ParentChanged", "EvaluatorQuit"}]]]],
+      DefaultBaseStyle->{},
+      Evaluator->Automatic,
+      Method->"Preemptive"],
+     RGBColor[
+      Rational[223, 255], 
+      Rational[227, 255], 
+      Rational[2, 5]],
+     Editable->False,
+     Selectable->False]}], ",", 
+   RowBox[{"FontSize", "\[Rule]", "24.`"}], ",", 
+   RowBox[{"FontWeight", "\[Rule]", "Bold"}]}], "}"}]], "Output",
+ CellChangeTimes->{3.7746069058533936`*^9, 3.777227289730652*^9},
+ CellLabel->"Out[19]=",
+ CellID->941792545,ExpressionUUID->"dad2c9c7-2ed8-42d8-829b-d4f6f5ba4ea6"]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["More Examples", "ExtendedExamplesSection",
+ CellTags->"ExtendedExamples",
+ CellID->1854448968,ExpressionUUID->"0d3f63c4-7663-4175-91cc-28647cf0a8f5"],
+
+Cell[BoxData[
+ InterpretationBox[Cell[
+  "Scope", "ExampleSection",ExpressionUUID->
+   "531d8f4e-a27a-488a-ae6d-de6d83dfd6c8"],
+  $Line = 0; Null]], "ExampleSection",
+ CellID->1293636265,ExpressionUUID->"874da3e6-0fba-4558-9aee-5fac871fe569"],
+
+Cell[BoxData[
+ InterpretationBox[Cell[
+  "Generalizations & Extensions", "ExampleSection",ExpressionUUID->
+   "b0e920ec-5b25-4198-a144-528b133bd423"],
+  $Line = 0; Null]], "ExampleSection",
+ CellID->1020263627,ExpressionUUID->"111a9e3b-9f81-42af-81d7-cc9f1a84a414"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ InterpretationBox[Cell[
+  "Options", "ExampleSection",ExpressionUUID->
+   "8bd7cbb5-1cfb-46c4-8503-0aa6f02552ee"],
+  $Line = 0; Null]], "ExampleSection",
+ CellID->2061341341,ExpressionUUID->"97a6ba58-3a38-48e7-bd9a-3daac7c8a596"],
+
+Cell[BoxData[
+ InterpretationBox[Cell[
+  "XXXX", "ExampleSubsection",ExpressionUUID->
+   "b5063a1a-efc3-4b02-914d-15b7553dc9be"],
+  $Line = 0; Null]], "ExampleSubsection",
+ CellID->1757724783,ExpressionUUID->"ea6cc2c2-f5fb-417d-b506-eee3e82083b8"],
+
+Cell[BoxData[
+ InterpretationBox[Cell[
+  "XXXX", "ExampleSubsection",ExpressionUUID->
+   "6a4c912f-e3a3-42d9-b181-27daef0af15d"],
+  $Line = 0; Null]], "ExampleSubsection",
+ CellID->1295379749,ExpressionUUID->"ce542387-77cd-4a41-a855-ba8e6f0a8d35"]
+}, Closed]],
+
+Cell[BoxData[
+ InterpretationBox[Cell[
+  "Applications", "ExampleSection",ExpressionUUID->
+   "841735cb-6c35-4213-92c3-5bf1b2aec81f"],
+  $Line = 0; Null]], "ExampleSection",
+ CellID->258228157,ExpressionUUID->"51a848d1-6166-47f6-ad00-cb6a7becbf3b"],
+
+Cell[BoxData[
+ InterpretationBox[Cell[
+  "Properties & Relations", "ExampleSection",ExpressionUUID->
+   "fab73134-686e-4d51-beed-fe65d20d6f76"],
+  $Line = 0; Null]], "ExampleSection",
+ CellID->2123667759,ExpressionUUID->"6ddf16c4-4e29-4394-89c4-f136db1f615c"],
+
+Cell[BoxData[
+ InterpretationBox[Cell[
+  "Possible Issues", "ExampleSection",ExpressionUUID->
+   "f7bfd31f-834e-416e-9643-e061f8bdb26a"],
+  $Line = 0; Null]], "ExampleSection",
+ CellID->1305812373,ExpressionUUID->"a11348b6-32dd-4efa-8e6f-5635c923a036"],
+
+Cell[BoxData[
+ InterpretationBox[Cell[
+  "Interactive Examples", "ExampleSection",ExpressionUUID->
+   "f63013bf-4955-4e1e-9e0a-78af39af1bc8"],
+  $Line = 0; Null]], "ExampleSection",
+ CellID->1653164318,ExpressionUUID->"a1540f0a-5d74-4b0f-96a5-0ae51fdea9c7"],
+
+Cell[BoxData[
+ InterpretationBox[Cell[
+  "Neat Examples", "ExampleSection",ExpressionUUID->
+   "352dffe7-8e5b-4d90-a104-35f2ed8815c8"],
+  $Line = 0; Null]], "ExampleSection",
+ CellID->589267740,ExpressionUUID->"78610fb4-7f5b-4a5e-a908-d227f70ac1d1"]
+}, Open  ]]
+},
+WindowSize->{958, 988},
+WindowMargins->{{Automatic, -1927}, {Automatic, 0}},
+CellContext->"Global`",
+FrontEndVersion->"12.0 for Microsoft Windows (64-bit) (April 8, 2019)",
+StyleDefinitions->FrontEnd`FileName[{"Wolfram"}, "FunctionPageStyles.nb", 
+  CharacterEncoding -> "UTF-8"]
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{
+ "ExtendedExamples"->{
+  Cell[70086, 1465, 155, 2, 54, "ExtendedExamplesSection",ExpressionUUID->"0d3f63c4-7663-4175-91cc-28647cf0a8f5",
+   CellTags->"ExtendedExamples",
+   CellID->1854448968]}
+ }
+*)
+(*CellTagsIndex
+CellTagsIndex->{
+ {"ExtendedExamples", 73233, 1555}
+ }
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 600, 14, 22, "History",ExpressionUUID->"d65da6c0-1789-4d33-bb87-02d8f9452dec",
+ CellID->1247902091],
+Cell[CellGroupData[{
+Cell[1183, 38, 123, 1, 27, "CategorizationSection",ExpressionUUID->"dba8c2bf-bdc6-4f5b-ac59-ded035447953",
+ CellID->1122911449],
+Cell[1309, 41, 134, 2, 70, "Categorization",ExpressionUUID->"612aa2d7-158d-4411-8b9b-aa6a6214544f",
+ CellID->686433507],
+Cell[1446, 45, 136, 2, 70, "Categorization",ExpressionUUID->"eae9b717-6285-416a-8e81-0fb4f1a9c0db",
+ CellID->605800465],
+Cell[1585, 49, 133, 2, 70, "Categorization",ExpressionUUID->"360f096b-6486-433d-b92a-55002257acac",
+ CellID->468444828],
+Cell[1721, 53, 127, 1, 70, "Categorization",ExpressionUUID->"3c314a23-1d9b-42e4-b538-e2e21c066e7f"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[1885, 59, 110, 1, 17, "KeywordsSection",ExpressionUUID->"29b1c55e-5000-4b12-a842-34f384e928a0",
+ CellID->477174294],
+Cell[1998, 62, 100, 1, 70, "Keywords",ExpressionUUID->"f32362df-9ddd-4cbb-ada2-66621b3d1f1d",
+ CellID->1164421360]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[2135, 68, 120, 1, 17, "TemplatesSection",ExpressionUUID->"627942b2-f1a6-41f9-9d13-07487a8db027",
+ CellID->1872225408],
+Cell[2258, 71, 149, 2, 70, "Template",ExpressionUUID->"302fc04f-86d1-40e6-9b98-9e4ce072692e",
+ CellID->1562036412],
+Cell[2410, 75, 137, 2, 70, "Template",ExpressionUUID->"1b00437e-5fd5-43ff-b02e-b5242c24eee3",
+ CellID->158391909],
+Cell[2550, 79, 136, 2, 70, "Template",ExpressionUUID->"43e1d796-b2d4-42fd-85f0-e3e0304f59eb",
+ CellID->1360575930],
+Cell[2689, 83, 137, 2, 70, "Template",ExpressionUUID->"877549c0-c175-425f-925a-146d9a8c7fa1",
+ CellID->793782254]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[2863, 90, 108, 1, 17, "DetailsSection",ExpressionUUID->"7af24f51-e14b-4867-9b11-9d2715a02a1a",
+ CellID->307771771],
+Cell[2974, 93, 118, 2, 70, "Details",ExpressionUUID->"276e18f6-da69-4cd0-a988-fb8eaad9ba44",
+ CellID->670882175],
+Cell[3095, 97, 124, 2, 70, "Details",ExpressionUUID->"0baac9b1-57bb-4f23-a031-6dcda5642096",
+ CellID->350963985],
+Cell[3222, 101, 119, 2, 70, "Details",ExpressionUUID->"c35fc0e8-7f21-4fdf-8e9e-eb51cc5edbc5",
+ CellID->8391405],
+Cell[3344, 105, 124, 2, 70, "Details",ExpressionUUID->"0943dfbd-e3dd-4e3f-85d6-eaef93c4f5e0",
+ CellID->3610269],
+Cell[3471, 109, 116, 2, 70, "Details",ExpressionUUID->"6c4c68ac-4341-4d93-ad80-c175c75de97a",
+ CellID->401364205],
+Cell[3590, 113, 116, 2, 70, "Details",ExpressionUUID->"d04d8ddd-9709-45e4-8ff2-c89ddbb200ee",
+ CellID->350204745],
+Cell[3709, 117, 118, 2, 70, "Details",ExpressionUUID->"0efce3bf-7806-4250-a140-a59f36c33c88",
+ CellID->732958810],
+Cell[3830, 121, 133, 2, 70, "Details",ExpressionUUID->"9bd9282a-2463-428e-a87b-56d3bd60c1b0",
+ CellID->222905350],
+Cell[3966, 125, 122, 2, 70, "Details",ExpressionUUID->"2f1257d4-c6fe-4d0b-ab8e-6a9d7385ee70",
+ CellID->240026365]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[4125, 132, 112, 1, 62, "ObjectName",ExpressionUUID->"688d75bc-340d-4da7-b5a6-9049681387e6",
+ CellID->1224892054],
+Cell[4240, 135, 702, 16, 72, "Usage",ExpressionUUID->"f6a997b2-2caa-448b-a7f2-a8e22d9996ae",
+ CellID->982511436],
+Cell[4945, 153, 299, 6, 23, "Notes",ExpressionUUID->"e201c564-9da0-4d96-a7ce-9452937878d0",
+ CellID->8321735],
+Cell[5247, 161, 615, 11, 67, "Notes",ExpressionUUID->"330f87e6-18e3-46c7-bd58-56f3115ad629",
+ CellID->1067943069],
+Cell[5865, 174, 456, 10, 37, "Notes",ExpressionUUID->"0e0e1e18-db88-4d8d-8802-6c614ad2c083",
+ CellID->71056514],
+Cell[6324, 186, 282, 5, 37, "Notes",ExpressionUUID->"5ce3c761-e740-4f90-b747-66f666580373",
+ CellID->326496822]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[6643, 196, 112, 1, 44, "TutorialsSection",ExpressionUUID->"f8652376-a5ab-41af-85a8-e24094ba1249",
+ CellID->250839057],
+Cell[6758, 199, 263, 4, 16, "Tutorials",ExpressionUUID->"c0b26dc5-122d-411c-8a8b-9705e037d52e",
+ CellID->341631938]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[7058, 208, 138, 1, 31, "RelatedDemonstrationsSection",ExpressionUUID->"e7a4fe18-64fc-47ae-a34c-1ea525741e9c",
+ CellID->1268215905],
+Cell[7199, 211, 113, 1, 16, "RelatedDemonstrations",ExpressionUUID->"4556fdc6-614c-4798-a642-f9e506b6f25e",
+ CellID->1129518860]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[7349, 217, 120, 1, 31, "RelatedLinksSection",ExpressionUUID->"545c0584-ad4f-4101-b994-079eda410c33",
+ CellID->1584193535],
+Cell[7472, 220, 104, 1, 16, "RelatedLinks",ExpressionUUID->"72801f10-3bff-4874-9753-040a5d52e34b",
+ CellID->1038487239]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[7613, 226, 110, 1, 31, "SeeAlsoSection",ExpressionUUID->"582da6ae-2f12-4e93-a087-f36de51dd83e",
+ CellID->1255426704],
+Cell[7726, 229, 236, 4, 16, "SeeAlso",ExpressionUUID->"5bf4b678-f755-43be-9088-5de5fad65d09",
+ CellID->929782353]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[7999, 238, 112, 1, 31, "MoreAboutSection",ExpressionUUID->"120e9287-f300-4cfe-94fa-9113019f61d5",
+ CellID->38303248],
+Cell[8114, 241, 259, 4, 16, "MoreAbout",ExpressionUUID->"4e0617e5-b1d5-424f-8792-6b1336be7619",
+ CellID->1665078683]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[8410, 250, 411, 11, 68, "PrimaryExamplesSection",ExpressionUUID->"91f8d3d9-0987-4660-ae4d-54db0eb374ef",
+ CellID->880084151],
+Cell[8824, 263, 172, 3, 25, "Input",ExpressionUUID->"28829a2b-9a63-424f-a833-65695f075faf",
+ CellID->12271288],
+Cell[8999, 268, 208, 2, 20, "ExampleText",ExpressionUUID->"73187e9c-c5ca-437f-847e-ae34a6e7213f",
+ CellID->14111362],
+Cell[9210, 272, 799, 20, 98, "Input",ExpressionUUID->"5b90204f-3f00-4180-aa18-7a638f8cbe27",
+ CellID->357691610],
+Cell[10012, 294, 168, 2, 20, "ExampleText",ExpressionUUID->"360b4a77-bccc-4153-9083-08292c6de943",
+ CellID->72447410],
+Cell[10183, 298, 357, 9, 25, "Input",ExpressionUUID->"fd9da4c4-ab76-4207-ba13-3065cad0b15c",
+ CellID->372680361],
+Cell[10543, 309, 267, 5, 20, "ExampleText",ExpressionUUID->"237f621d-c14c-4f3b-8445-56a3c3b40044",
+ CellID->594693738],
+Cell[CellGroupData[{
+Cell[10835, 318, 247, 5, 25, "Input",ExpressionUUID->"2eab8c5c-28ae-49dd-9c3e-1fb13f5a3dbc",
+ CellID->422662971],
+Cell[11085, 325, 18722, 360, 110, "Output",ExpressionUUID->"c5d4814f-79d6-4fd5-9044-6a8bbeb3a732",
+ CellID->758052690]
+}, Open  ]],
+Cell[29822, 688, 249, 4, 20, "ExampleText",ExpressionUUID->"8feb6943-b815-4130-9611-95b0cfddaa3e",
+ CellID->431498689],
+Cell[CellGroupData[{
+Cell[30096, 696, 1045, 32, 80, "Input",ExpressionUUID->"fde45109-546c-4447-b836-117f6e58d335",
+ CellID->39443008],
+Cell[31144, 730, 35625, 635, 201, "Output",ExpressionUUID->"8029ab50-6096-437c-904d-ac0c08ce816c",
+ CellID->68387310]
+}, Open  ]],
+Cell[66784, 1368, 495, 13, 33, "ExampleText",ExpressionUUID->"f9e75b1c-0c71-4be8-806c-0349e657a510",
+ CellID->264811443],
+Cell[CellGroupData[{
+Cell[67304, 1385, 353, 8, 25, "Input",ExpressionUUID->"227a62cb-68c5-41ef-ae67-31603e37df08",
+ CellID->92948257],
+Cell[67660, 1395, 2377, 64, 24, "Output",ExpressionUUID->"dad2c9c7-2ed8-42d8-829b-d4f6f5ba4ea6",
+ CellID->941792545]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[70086, 1465, 155, 2, 54, "ExtendedExamplesSection",ExpressionUUID->"0d3f63c4-7663-4175-91cc-28647cf0a8f5",
+ CellTags->"ExtendedExamples",
+ CellID->1854448968],
+Cell[70244, 1469, 242, 5, 31, "ExampleSection",ExpressionUUID->"874da3e6-0fba-4558-9aee-5fac871fe569",
+ CellID->1293636265],
+Cell[70489, 1476, 265, 5, 19, "ExampleSection",ExpressionUUID->"111a9e3b-9f81-42af-81d7-cc9f1a84a414",
+ CellID->1020263627],
+Cell[CellGroupData[{
+Cell[70779, 1485, 244, 5, 19, "ExampleSection",ExpressionUUID->"97a6ba58-3a38-48e7-bd9a-3daac7c8a596",
+ CellID->2061341341],
+Cell[71026, 1492, 247, 5, 70, "ExampleSubsection",ExpressionUUID->"ea6cc2c2-f5fb-417d-b506-eee3e82083b8",
+ CellID->1757724783],
+Cell[71276, 1499, 247, 5, 70, "ExampleSubsection",ExpressionUUID->"ce542387-77cd-4a41-a855-ba8e6f0a8d35",
+ CellID->1295379749]
+}, Closed]],
+Cell[71538, 1507, 248, 5, 19, "ExampleSection",ExpressionUUID->"51a848d1-6166-47f6-ad00-cb6a7becbf3b",
+ CellID->258228157],
+Cell[71789, 1514, 259, 5, 19, "ExampleSection",ExpressionUUID->"6ddf16c4-4e29-4394-89c4-f136db1f615c",
+ CellID->2123667759],
+Cell[72051, 1521, 252, 5, 19, "ExampleSection",ExpressionUUID->"a11348b6-32dd-4efa-8e6f-5635c923a036",
+ CellID->1305812373],
+Cell[72306, 1528, 257, 5, 19, "ExampleSection",ExpressionUUID->"a1540f0a-5d74-4b0f-96a5-0ae51fdea9c7",
+ CellID->1653164318],
+Cell[72566, 1535, 249, 5, 19, "ExampleSection",ExpressionUUID->"78610fb4-7f5b-4a5e-a908-d227f70ac1d1",
+ CellID->589267740]
+}, Open  ]]
+}
+]
+*)
+
