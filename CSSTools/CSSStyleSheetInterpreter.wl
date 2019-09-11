@@ -597,7 +597,9 @@ expectedBlockKeys     = {"Property", "Value", "Important", "Condition"};
 expectedBlockKeysFull = {"Property", "Value", "Important", "Interpretation", "Condition"};
 
 
+validCSSBlockQ[{}(*block can be empty*)] := True
 validCSSBlockQ[data:{__Association}]     := AllTrue[Keys /@ data, MatchQ[expectedBlockKeys]]
+validCSSBlockFullQ[{}]                   := True
 validCSSBlockFullQ[data:{__Association}] := AllTrue[Keys /@ data, MatchQ[expectedBlockKeysFull]]
 
 validCSSDataRawQ[data:{__Association}]  := And[AllTrue[Keys /@ data, MatchQ[expectedMainKeys]],     validCSSBlockQ[Flatten @ data[[All, "Block"]]]]
@@ -810,7 +812,11 @@ modifyValueToDirective = (* value modification function for assembleWithConditio
 	]
 
 assemble[
-	inputProp_?StringQ /; StringStartsQ[StringTrim @ inputProp, "border", IgnoreCase -> True], 
+	Condition[
+		inputProp_?StringQ,
+		And[
+			StringStartsQ[StringTrim @ inputProp, "border", IgnoreCase -> True],
+			!StringMatchQ[StringTrim @ inputProp, "border-spacing" | "border-collapse", IgnoreCase -> True]]], 
 	scope_, 
 	CSSBlockData_
 ] :=
@@ -1064,8 +1070,9 @@ assemble[
 (* general case 
 	It looks at all the interpretations in a block of declarations (assumed sorted by importance, specificity, and already filtered for validity) 
 	and takes only those that match the given FE option. The rest are deleted. 
-	Assuming the sorting has put the most important option at the top, only the first element is taken. *)
-assembleByFEOption[FEopt_, CSSBlockData_?validCSSBlockFullQ] := FEopt -> First[DeleteMissing[#[FEopt]& /@ CSSBlockData[[All, "Interpretation"]]], Automatic]
+	Assuming the sorting has put the most important option at the top, only the first element is taken. 
+	'Normal' is used to convert suboption associations into lists e.g. FontVariations -> <|"CapsType" -> ...|> *)
+assembleByFEOption[FEopt_, CSSBlockData_?validCSSBlockFullQ] := FEopt -> First[Normal @ DeleteMissing[#[FEopt]& /@ CSSBlockData[[All, "Interpretation"]]], Automatic]
 
 
 (* Assembling @page declarations into FE options:
@@ -1171,11 +1178,14 @@ CSSCascade[{}, scope_, CSSData_, selectorList_, opts:OptionsPattern[]] := {}
 CSSCascade[
 	inputProps:_?StringQ | {__?StringQ} | All, 
 	scope:(Cell | Notebook | Box | All | None | _?validBoxesQ | {__?validBoxesQ}), 
-	CSSData_?validCSSDataQ, 
+	CSSData_?validCSSDataQ | {}, 
 	inputSelectorList:_?(Function[CSSSelectorQ[#] || StringQ[#]]) | {__?(Function[CSSSelectorQ[#] || StringQ[#]])} | All, 
 	opts:OptionsPattern[]
 ] :=
 	Module[{props, selectorList, atRules, sel, dataSubset, specificities, declarations, resolvedOptions},
+		(* check for empty data *)
+		If[CSSData === {}, Return @ {}];
+		
 		(* expand any inputs *)
 		props = 
 			StringTrim @ ToLowerCase @ 
@@ -1237,7 +1247,7 @@ CSSCascade[
 					,
 					declarations
 				];
-						
+		
 		(* assemble declarations into FE options *)
 		resolvedOptions = Flatten[assemble[#, scope, declarations]& /@ props];
 		Flatten @ 
@@ -1424,46 +1434,58 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 	3. with all inheritance resolved, recalculate the style at the XMLObject position *)
 
 (* normalize Dataset position input *)
-ResolveCSSInheritance[position_Dataset, CSSData_] := ResolveCSSInheritance[Normal @ position, CSSData]
+ResolveCSSInheritance[position_Dataset, scope_, CSSData_] := ResolveCSSInheritance[Normal @ position, scope, CSSData]
+ResolveCSSInheritance[position_, scope_, CSSData_Dataset] := ResolveCSSInheritance[position, scope, Normal @ CSSData]
 
-(* normalize CSS Dataset input *)
-ResolveCSSInheritance[position_, CSSData_Dataset] := ResolveCSSInheritance[position, Normal @ CSSData]
-
-ResolveCSSInheritance[position:{___?IntegerQ}, CSSData_?validCSSDataFullQ] :=
-	Module[{lineage, data = CSSData, a, temp, temp2, i, inheritableProps},
-		(* order data by specificity *)
-		data = data[[Ordering[Through[data[[All, "Selector"]]["Specificity"]]]]];
+(* main function *)
+ResolveCSSInheritance[position:{___?IntegerQ}, scope_, CSSData_?validCSSDataFullQ] :=
+	Module[{lineage, CSSDataSubset, i, inheritableProps, previous, current},
+		(* get the position of all ancestors *)
+		lineage = parents[position];
 		
-		(* *)
-		lineage = Append[parents[position], position];
-		a = <|Map[# -> <|"All" -> None, "Inherited" -> None|>&, lineage]|>;
+		(* Perform inheritance at each ancestor:
+			1. perform CSS cascade to get computed value of all inheritable properties
+			2. for any properties that do not have values, get them from the previous ancestor if possible 
+			3. repeat at each generation until a final set of properties is obtained *)
+		current = <|"Selector" -> CSSSelector["dummy"], "Targets" -> {}, "Block" -> {}|>;
 		Do[
+			(* get recent ancestor's inheritable declarations *)
+			previous = current;
+			
 			(* get all CSS data entries that target the input position *)
-			temp = Pick[data, MemberQ[#, i]& /@ data[[All, "Targets"]]];
+			CSSDataSubset = Pick[CSSData, MemberQ[#, i]& /@ CSSData[[All, "Targets"]]];
 			
-			(* select from CSS data subset those that have inheritable properties *)
-			inheritableProps = Union @ Flatten @ temp[[All, "Block", All, "Property"]];
+			(* order the subset by specificity and prepend the subset with the recent ancestor's result *)
+			CSSDataSubset = CSSDataSubset[[Ordering[Through[CSSDataSubset[[All, "Selector"]]["Specificity"]]]]];
+			CSSDataSubset = Prepend[CSSDataSubset, previous];
+			
+			(* select from this CSS data subset those declarations that have inheritable properties *)
+			inheritableProps = Union @ Flatten @ CSSDataSubset[[All, "Block", All, "Property"]];
 			inheritableProps = Pick[inheritableProps, MemberQ[inheritedProperties[], #] & /@ inheritableProps];
-			temp = Pick[temp, MemberQ[#[["Block", All, "Property"]], Alternatives @@ inheritableProps] & /@ temp];
 			
-			(* resolve the CSS cascade for the inheritable properties *)
-			temp = Flatten @ temp[[All, "Block", All, {"Important", "Property", "Interpretation"}]];
-			
-			(* prepend all inherited properties from ancestors, removing possible duplicated inheritance *)
-			temp2 = Join @@ Values @ a[[Key /@ parents[i], "Inherited"]];
-			a[[Key[i], "All"]] = With[{values = Join[temp2, temp]}, Reverse @ DeleteDuplicates @ Reverse @ values];
-			
-			(* pass on any inheritable properties, but reset their importance so they don't overwrite later important props *)
-			a[[Key[i], "Inherited"]] = Select[a[[Key[i], "All"]], MemberQ[inheritedProperties[], #Property]&];
-			With[{values = a[[Key[i], "Inherited", All, "Important"]]}, 
-				a[[Key[i], "Inherited", All, "Important"]] = ConstantArray[False, Length[values]]
-			];,
+			(* Build the current generation's dummy ruleset:
+				In "Interpretation", perform the cascade but ignore specificity since we already ordered by it earlier.
+				Convert the list of options back into the expected associations. 
+				This is easy since none of the current options have non-standard suboptions like "Left"/"Right"/"Bottom"/"Top" or "Min"/"Max". *)
+			current = 
+				<|
+					"Selector" -> CSSSelector["dummy"], 
+					"Targets"  -> {}, 
+					"Block" -> 
+						Flatten[{
+							<|
+								"Property" -> #, "Value" -> None, "Important" -> False, 
+								"Interpretation" -> CSSCascade[#, scope, CSSDataSubset, All, "IgnoreSpecificity" -> True] //. HoldPattern[{x__Rule}] :> With[{v = <|x|>}, v /; True], 
+								"Condition" -> None
+							|>& /@ inheritableProps}]|>;
+			,
 			{i, lineage}];
 			
-		(* return computed properties, putting important properties last *)
-		Join[
-			Select[a[[Key @ position, "All"]], #Important == False&][[All, "Interpretation"]], 
-			Select[a[[Key @ position, "All"]], #Important == True& ][[All, "Interpretation"]]]
+		(* perform cascade on the final generation *)
+		CSSDataSubset = Pick[CSSData, MemberQ[#, position]& /@ CSSData[[All, "Targets"]]];
+		CSSDataSubset = CSSDataSubset[[Ordering[Through[CSSDataSubset[[All, "Selector"]]["Specificity"]]]]];
+		CSSDataSubset = Prepend[CSSDataSubset, current];
+		CSSCascade[All, scope, CSSDataSubset, All, "IgnoreSpecificity" -> True]
 	]
 	
 ResolveCSSInheritance[position:{___?IntegerQ}, _] := 
