@@ -10,7 +10,8 @@ Paclet[
     Creator -> "Kevin Daily",
     Extensions -> 
         {
-            {"Documentation", Language -> "English"}
+            {"Documentation", Language -> "English"},
+          	{"Kernel", Root -> ".", Context -> "CSSTools`"}
         }
 ]
 
