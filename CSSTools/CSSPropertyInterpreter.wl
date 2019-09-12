@@ -1127,20 +1127,11 @@ parseLength[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?Num
 			_,    Failure["UnexpectedParse", <|"Message" -> "Unrecognized length unit."|>]
 		]
 	]
-parseZero[___] := Failure["UnexpectedParse", <|"Message" -> "Expected CSS token of dimension type."|>]
 
 
-parseLengthNonRelative[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["em", t]:= val 
+parseLengthNonRelative[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["em", t] := val 
 parseLengthNonRelative[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["ex", t] := val/2
 parseLengthNonRelative[___] := Failure["UnexpectedParse", <|"Message" -> "Expected CSS token of dimension type \"em\" or \"ex\"."|>]
-
-
-negativeQ[n_, prop_String, default_] :=
-	Which[
-		FailureQ[n],         n, 
-		TrueQ @ Negative[n], negativeLengthFailure @ prop, 
-		True,                default
-	]
 
 
 (* ::Subsection::Closed:: *)

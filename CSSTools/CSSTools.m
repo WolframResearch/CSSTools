@@ -53,7 +53,7 @@ ImportExport`RegisterImport[
 		(* Interpreted is the same as default *)
 		"Interpreted" :> (("Interpreted" -> With[{d = CSSTools`CSSStyleSheetInterpreter`Private`InterpretedCSS[#]}, If[FailureQ[d], d, Dataset @ d]])&), 
 		"RawData" :> (("RawData" -> With[{d = CSSTools`CSSStyleSheetInterpreter`Private`RawCSS[#]}, If[FailureQ[d], d, Dataset @ d]])&),
-		"Stylesheet" :> ProcessToStylesheet,
+		"Stylesheet" :> (("Stylesheet" -> CSSTools`CSSStyleSheetInterpreter`Private`ProcessToStylesheet[#])&),
 		((With[{d = CSSTools`CSSStyleSheetInterpreter`Private`InterpretedCSS[#]}, If[FailureQ[d], d, Dataset @ d]])&)},
 	{},
 	"AvailableElements" -> {"Elements", "RawData", "Interpreted", "Stylesheet"}]

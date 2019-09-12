@@ -15,7 +15,6 @@ notebookLevelOptions;
 validCSSBlockFullQ;
 assemble;
 assembleByFEOption;
-getSideFromLRBTDirective;
 $Debug;
 
 (* CSSTools`
@@ -1409,7 +1408,7 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 				<|
 					"Selector" -> CSSSelector[<|"String" -> None, "Sequence" -> {}, "Specificity" -> {1, 0, 0, 0}|>], 
 					"Targets"  -> {#1}, 
-					"Block"    ->  consumeDeclarationBlock @ CSSTokenize @ #2|>&, 
+					"Block"    -> consumeDeclarationBlock @ CSSTokenize @ #2|>&, 
 				{directStylePositions, directStyleContent}];
 		
 		(* combine all CSS sources based on position in XMLObject *)
@@ -1418,6 +1417,8 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 				Part[
 					Join[externalSSContent, internalSSContent, directStyleContent],
 					Ordering @ Join[externalSSPositions, internalSSPositions, directStylePositions]];
+		
+		(* reset Directory[] and return extracted CSS *)
 		SetDirectory[currentDir];
 		Dataset @ all		
 	]
