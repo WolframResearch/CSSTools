@@ -568,7 +568,7 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 					valueTokens = If[decPos < valuePosition, {}, decTokens[[valuePosition ;; decPos]]]
 				},
 				<|
-					"Property"       -> prop, 
+					"Property"       -> ToLowerCase @ prop, 
 					"Value"          -> CSSUntokenize @ valueTokens,
 					"Important"      -> important,
 					"Interpretation" -> valueTokens,
