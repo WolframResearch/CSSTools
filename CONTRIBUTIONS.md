@@ -142,6 +142,7 @@ The [CSS Paged Media Module Level 3](https://www.w3.org/TR/css-page-3/) adds new
     
     _Somewhere within CSSPagedMedia3.wl_  
         
+        ...
         consumeProperty[prop:"bleed", tokens:{__?CSSTokenQ}] := 
         	Module[{pos = 1, l = Length[tokens], value},
         		If[l > 1, Return @ tooManyTokensFailure @ tokens];
@@ -162,6 +163,7 @@ The [CSS Paged Media Module Level 3](https://www.w3.org/TR/css-page-3/) adds new
 
     _Somewhere within CSSPagedMedia3.wl_  
 
+        ...
         If[!AssociationQ[CSSPropertyData], CSSPropertyData = <||>];
         AssociateTo[CSSPropertyData, 
         	{
@@ -175,13 +177,44 @@ The [CSS Paged Media Module Level 3](https://www.w3.org/TR/css-page-3/) adds new
 
 The method of parsing of new properties is largely up to the contributer, but we encourage certain features.
 
-A. follow the existing specification 
-B. return a descriptive `Failure` object if parsing fails for any reason
-C. return `Missing["Not supported."]` if the Wolfram Desktop front end can not currently use this feature
+1. follow the existing specification 
+
+2. return a descriptive `Failure` object if parsing fails for any reason
+
+3. return `Missing["Not supported."]` if the Wolfram Desktop front end can not currently use this feature
 
 
 ## Details of the tokenizer
 
+The tokenizer follows CSS Syntax Module Level 3 but also does a small amount of parsing. In particular, brackets like `[]`, `{}` and `()` are matched into block tokens with children.
+
+The tokenizer is loaded with 
+```
+Needs["CSSTools`CSSTokenizer`"]
+```
+There are two functions that provide the forward and reverse tokenizing: `CSSTokenize` and `CSSUntokenize`. `CSSTokenize` operates on a string and creates a flat list of tokens. The tokens have the head `CSSToken` and contain a single argument: an association that indicates their structure. For example:
+```
+In[] := tokens = CSSTokenize["h1    {color:\\red}"]
+Out[] = {
+  CSSToken[<|"Type" -> "ident", "String" -> "h1", "RawString" -> "h1"|>], 
+  CSSToken[<|"Type" -> "whitespace", "String" -> " "|>], 
+  CSSToken[<|"Type" -> "{}", "Children" -> {
+    CSSToken[<|"Type" -> "ident", "String" -> "color", "RawString" -> "color"|>], 
+    CSSToken[<|"Type" -> "colon", "String" -> ":"|>], 
+    CSSToken[<|"Type" -> "ident", "String" -> "red", "RawString" -> "\\red"|>]}|>]}
+```
+The `"RawString"` key is used to store the unmodified original string, while the `"String"` key contains a "normalized" version of the string e.g. any escaped characters converted.
+
+Use `CSSUntokenize` to go back to a string:
+```
+In[] := CSSUntokenize[tokens]
+Out[] = "h1 {color:\\red}" 
+```
+Following the CSS syntax module specification, a round-trip of `CSSUntokenize[CSSTokenize[...]` is not guaranteed to return the same initial string. The reason is that some characters like whitespace can be simplified without loss of information. However, `CSSTokenize[CSSUntokenize[CSSTokenize[...]]` must be the same as the original set of tokens.
+```
+In[] := tokens === CSSTokenize[CSSUntokenize[tokens]]
+Out[] = True
+```
 To assist parsing of tokens functions like `CSSTokenQ`, `TokenTypeIs` and `AdvancePosAndSkipWhitespace` exist in the CSSTokenizer.wl package. These utility functions were not used in this simpler example. 
 
 In the above example the functions `tooManyTokensFailure` and `parseLength` were used and come from the CSSPropretyInterpreter.wl package (publicly exposed).
