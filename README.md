@@ -44,4 +44,4 @@ CSSTools is implemented completely in the Wolfram Language. It might have been b
 
 ### ...and where's it going?
 
-The hope is for CSSTools to be further developed by community support. Using the tokenizer and its related functions, additional properties should be straightforward to add to the package. See [CONTRIBUTING.md](CONTRIBUTING.md) for a walkthrough of how to contribute new translations to CSSTools.
+The hope is for CSSTools to be further developed by community support. Using the tokenizer and its related functions, additional properties should be straightforward to add to the package. See [CONTRIBUTIONS.md](CONTRIBUTIONS.md) for a walkthrough of how to contribute new translations to CSSTools.
