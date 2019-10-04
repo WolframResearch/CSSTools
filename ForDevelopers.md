@@ -27,7 +27,7 @@ Additional packages are named after the corresponding CSS module. They are inten
 The other three files are always loaded first in order to define the core functionality. Additional packages are loaded after and modify or add to the core functions.
 
 
-## <a href="details-of-the-tokenizer">Details of the tokenizer</a>
+## <a name="details-of-the-tokenizer"></a>Details of the tokenizer
 
 The tokenizer follows CSS Syntax Module Level 3. It also allows "ident" tokens to start with "--" for possible future use of [CSS Custom Properties for Cascading Variables Module Level 1](https://www.w3.org/TR/css-variables-1/). The tokenizer also does a small amount of parsing. In particular, brackets like `[]`, `{}` and `()` are matched into block tokens. These block tokens have a key "Children" whose value is a flat list of CSS tokens that are within the scope of the block. 
 
@@ -61,7 +61,7 @@ Out[] = True
 To assist parsing of tokens functions like `CSSTokenQ`, `TokenTypeIs` and `AdvancePosAndSkipWhitespace` exist in the CSSTokenizer.wl package. These utility functions were not used in this simpler example. 
 
 
-## <a href="example-of-modifying-an-existing-parser">Example of Modifying an Existing Parser</a>
+## <a name="example-of-modifying-an-existing-parser"></a>Example of Modifying an Existing Parser
 
 The color definitions from CSS Level 2 Revision 1 are limited in comparison with Colors Module Level 4. We extend its definitions by creating a new package: "CSSColors4.wl". Its functionality is extended by following these steps:
 
@@ -163,7 +163,7 @@ The color definitions from CSS Level 2 Revision 1 are limited in comparison with
         ...
 
 
-## <a href="example-of-adding-a-new-property">Example of Adding a New Property</a>
+## <a name="example-of-adding-a-new-property"></a>Example of Adding a New Property
 
 The [CSS Paged Media Module Level 3](https://www.w3.org/TR/css-page-3/) adds new page-specific properties 'size', 'marks', 'bleed' and 'page'. Though these printing properties are not all fully supported in the Wolfram Desktop, any new properties should still be developed to validate the input CSS. The following steps show how to add the 'bleed' property to the existing set of parsed CSS properties.
 
