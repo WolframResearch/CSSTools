@@ -3,17 +3,17 @@
 (*** Wolfram Notebook File ***)
 (* http://www.wolfram.com/nb *)
 
-(* CreatedBy='Mathematica 11.3' *)
+(* CreatedBy='Mathematica 12.0' *)
 
 (*CacheID: 234*)
 (* Internal cache information:
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     12272,        348]
+NotebookDataLength[     12273,        348]
 NotebookOptionsPosition[      8299,        265]
-NotebookOutlinePosition[     10109,        308]
-CellTagsIndexPosition[     10066,        305]
+NotebookOutlinePosition[     10110,        308]
+CellTagsIndexPosition[     10067,        305]
 WindowTitle->CSSTools
 WindowFrame->Normal*)
 
@@ -109,7 +109,7 @@ CSSTools.html"], StandardForm]], "Input", TextClipboardType -> "PlainText"]},
            URL[
             StringJoin[
              If[
-              TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$6984], 
+              TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$6099], 
               "http://reference.wolfram.com/system-modeler/", 
               "http://reference.wolfram.com/language/"], 
              "CSSTools/guide/CSSTools", ".html"]], None}]}]},
@@ -277,7 +277,7 @@ TaggingRules->{
          BaseStyle -> {"Link", "DockedLinkTrail"}]}]}}, ColumnAlignments -> 
     Left], "ExampleCounter" -> 1, "NeedPlatMsgIn" -> None, "RootCaptions" -> 
   "", "Metadata" -> {
-   "built" -> "{2019, 10, 1, 14, 57, 8.9248373}", 
+   "built" -> "{2019, 10, 4, 13, 55, 13.6687838}", 
     "history" -> {"0.0", "", "", ""}, "context" -> "CSSTools`", 
     "keywords" -> {}, "specialkeywords" -> {}, 
     "tutorialcollectionlinks" -> {}, "index" -> True, "label" -> 
@@ -289,10 +289,10 @@ HTML and XML. Wolfram Desktop also uses stylesheets, though the \
 specifications differ. This package provides tools for importing and \
 processing CSS to be used within Wolfram Desktop's stylesheet system.", 
     "synonyms" -> {}, "tabletags" -> 
-    DocumentationBuild`Make`Private`tabletaggingrules$6902, "title" -> 
+    DocumentationBuild`Make`Private`tabletaggingrules$6017, "title" -> 
     "CSSTools", "titlemodifier" -> "", "windowtitle" -> "CSSTools", "type" -> 
     "Guide", "uri" -> "CSSTools/guide/CSSTools"}},
-FrontEndVersion->"11.3 for Microsoft Windows (64-bit) (March 6, 2018)",
+FrontEndVersion->"12.0 for Microsoft Windows (64-bit) (April 8, 2019)",
 StyleDefinitions->FrontEnd`FileName[{"Wolfram"}, "Reference.nb", 
   CharacterEncoding -> "UTF-8"]
 ]
@@ -307,7 +307,7 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[580, 21, 4132, 100, 70, "AnchorBarGrid",ExpressionUUID->"9d11c80d-76e9-4a78-a85c-3f99fe5f1b3c",
+Cell[580, 21, 4132, 100, 70, "AnchorBarGrid",ExpressionUUID->"8b523e15-ca92-4dc9-8875-629d5d0fca35",
  CellID->1],
 Cell[CellGroupData[{
 Cell[4737, 125, 50, 1, 70, "GuideTitle",ExpressionUUID->"a2dfbf4b-a400-497d-b964-cad8f8e0772e",
@@ -316,8 +316,8 @@ Cell[4790, 128, 401, 7, 70, "GuideAbstract",ExpressionUUID->"b9255c52-39e9-48e0-
  CellID->2001916300]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[5228, 140, 137, 6, 70, "GuideReferenceSection",ExpressionUUID->"a9e2108a-6a18-417b-9c08-a00f270ecdee"],
-Cell[5368, 148, 31, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"eed72dc0-d350-4104-8c97-1383e924a20c"],
+Cell[5228, 140, 137, 6, 70, "GuideReferenceSection",ExpressionUUID->"049fb4bf-9574-4af3-9be0-e0b4777d67d8"],
+Cell[5368, 148, 31, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"e4eff896-664a-4306-9ea3-00850cac696e"],
 Cell[CellGroupData[{
 Cell[5424, 152, 69, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"8d817216-d113-4b36-bc3d-a0f25f4d05de",
  CellID->811494718],
@@ -349,7 +349,7 @@ Cell[7911, 249, 334, 10, 70, "GuideText",ExpressionUUID->"3d3dc613-bae0-45a3-970
  CellID->2444546]
 }, Open  ]]
 }, Open  ]],
-Cell[8272, 263, 23, 0, 70, "FooterCell",ExpressionUUID->"d8a1bcab-73db-4f67-8c46-ec429b74665b"]
+Cell[8272, 263, 23, 0, 70, "FooterCell",ExpressionUUID->"c7c53140-15cb-4bda-b37a-cffd364a1a70"]
 }
 ]
 *)

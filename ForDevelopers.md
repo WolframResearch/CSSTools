@@ -1,5 +1,13 @@
-
 # Contributing to CSSTools
+
+## Table of Contents
+[Overview](#overview)
+[Details of the tokenizer](#details-of-the-tokenizer)
+[Example of Modifying an Existing Parser](#example-of-modifying-an-existing-parser)
+[Example of Adding a New Property](#example-of-adding-a-new-property)
+
+
+## Overview
 
 CSSTools consists of packages that are designed to follow CSS module organization. The core packages include:
 
@@ -12,9 +20,41 @@ CSSTools consists of packages that are designed to follow CSS module organizatio
 
 Additional packages are named after the corresponding CSS module. They are intended to modify existing functionality within the core packages.
 
-The tokenizer is not loaded when CSSTools loads but can be accessed via ``Needs[CSSTools`CSSTokenizer`]``.
-
 The other three files are always loaded first in order to define the core functionality. Additional packages are loaded after and modify or add to the core functions.
+
+
+## Details of the tokenizer
+
+The tokenizer follows CSS Syntax Module Level 3. It also allows "ident" tokens to start with "--" for possible future use of [CSS Custom Properties for Cascading Variables Module Level 1](https://www.w3.org/TR/css-variables-1/). The tokenizer also does a small amount of parsing. In particular, brackets like `[]`, `{}` and `()` are matched into block tokens. These block tokens have a key "Children" whose value is a flat list of CSS tokens that are within the scope of the block. 
+
+The tokenizer is not loaded when CSSTools loads but can be accessed via 
+```
+Needs["CSSTools`CSSTokenizer`"]
+```
+There are two functions that provide the tokenizing and the serialization: `CSSTokenize` and `CSSUntokenize`. `CSSTokenize` operates on a string and creates a flat list of tokens. Individual tokens have the head `CSSToken` and contain a single argument: an association that indicates their structure. For example:
+```
+In[] := tokens = CSSTokenize["h1    {color:\\red}"]
+Out[] = {
+  CSSToken[<|"Type" -> "ident", "String" -> "h1", "RawString" -> "h1"|>], 
+  CSSToken[<|"Type" -> "whitespace", "String" -> " "|>], 
+  CSSToken[<|"Type" -> "{}", "Children" -> {
+    CSSToken[<|"Type" -> "ident", "String" -> "color", "RawString" -> "color"|>], 
+    CSSToken[<|"Type" -> "colon", "String" -> ":"|>], 
+    CSSToken[<|"Type" -> "ident", "String" -> "red", "RawString" -> "\\red"|>]}|>]}
+```
+The `"RawString"` key is used to store the unmodified original string, while the `"String"` key contains a "normalized" version of the string e.g. any escaped characters converted.
+
+Use `CSSUntokenize` to serialize the tokens back into a string:
+```
+In[] := CSSUntokenize[tokens]
+Out[] = "h1 {color:\\red}" 
+```
+Following the CSS syntax module specification, a round-trip of `CSSUntokenize[CSSTokenize[...]` is not guaranteed to return the same initial string. The reason is that some characters like whitespace can be simplified without loss of information. However, `CSSTokenize[CSSUntokenize[CSSTokenize[...]]` must be the same as the original set of tokens.
+```
+In[] := tokens === CSSTokenize[CSSUntokenize[tokens]]
+Out[] = True
+```
+To assist parsing of tokens functions like `CSSTokenQ`, `TokenTypeIs` and `AdvancePosAndSkipWhitespace` exist in the CSSTokenizer.wl package. These utility functions were not used in this simpler example. 
 
 
 ## Example of Modifying an Existing Parser
@@ -23,7 +63,7 @@ The color definitions from CSS Level 2 Revision 1 are limited in comparison with
 
 1. The parser function `parseSingleColor` defined in CSSPropretyInterpreter.wl is made public by moving its name before the ``Begin["`Private`"]`` section.  
 
-    _tart of CSSPropretyInterpreter.wl_  
+    _Start of CSSPropretyInterpreter.wl_  
         
         (* Wolfram Language Package *)
         
@@ -41,9 +81,12 @@ The color definitions from CSS Level 2 Revision 1 are limited in comparison with
         ...
         
 2. Create a new package CSSColors4.wl where in this new package
-	A. keep the context within CSSTools
-	B. load the tokenizer as we will be processing CSS tokens
-	C. load the property interpreter to modify `parseSingleColor`: 
+	  
+	  A. keep the context within CSSTools
+	  
+	  B. load the tokenizer as we will be processing CSS tokens
+	  
+	  C. load the property interpreter to modify `parseSingleColor`: 
     
     _Start of CSSColors4.wl_  
 
@@ -96,7 +139,7 @@ The color definitions from CSS Level 2 Revision 1 are limited in comparison with
 		        "ident",    parseSingleColorKeyWord[prop, token["String"]],
 		        "hash",     parseSingleColorHex[prop, token["String"]],
 		        "function", parseSingleColorFunction[prop, token],
-        		_,          unrecognizedValueFailure @ prop]
+        		 _,          unrecognizedValueFailure @ prop]
         ...
 
 6. Add the package to CSSTools.m after the loading of the main packages: ``Get["CSSTools`CSSColors4`"];``
@@ -114,6 +157,7 @@ The color definitions from CSS Level 2 Revision 1 are limited in comparison with
         Get["CSSTools`CSSPagedMedia3`"]           (* redefines @page token consumer (first defined in CSSStyleSheetInterpreter) *)
         Get["CSSTools`CSSMediaQueries4`"]         (* redefines consumeMediaQuery    (first defined in CSSStyleSheetInterpreter) *)
         ...
+
 
 ## Example of Adding a New Property
 
@@ -158,7 +202,9 @@ The [CSS Paged Media Module Level 3](https://www.w3.org/TR/css-page-3/) adds new
         		If[FailureQ[value], value, Missing["Not supported."]]
         	]
         ...
-
+        
+    In the above code the functions `tooManyTokensFailure` and `parseLength` were used and come from the CSSPropretyInterpreter.wl package (publicly exposed).
+  
 3. Add to the CSSPropertyData to define the initial and inherited CSS values.
 
     _Somewhere within CSSPagedMedia3.wl_  
@@ -184,37 +230,3 @@ The method of parsing of new properties is largely up to the contributer, but we
 3. return `Missing["Not supported."]` if the Wolfram Desktop front end can not currently use this feature
 
 
-## Details of the tokenizer
-
-The tokenizer follows CSS Syntax Module Level 3 but also does a small amount of parsing. In particular, brackets like `[]`, `{}` and `()` are matched into block tokens with children.
-
-The tokenizer is loaded with 
-```
-Needs["CSSTools`CSSTokenizer`"]
-```
-There are two functions that provide the forward and reverse tokenizing: `CSSTokenize` and `CSSUntokenize`. `CSSTokenize` operates on a string and creates a flat list of tokens. The tokens have the head `CSSToken` and contain a single argument: an association that indicates their structure. For example:
-```
-In[] := tokens = CSSTokenize["h1    {color:\\red}"]
-Out[] = {
-  CSSToken[<|"Type" -> "ident", "String" -> "h1", "RawString" -> "h1"|>], 
-  CSSToken[<|"Type" -> "whitespace", "String" -> " "|>], 
-  CSSToken[<|"Type" -> "{}", "Children" -> {
-    CSSToken[<|"Type" -> "ident", "String" -> "color", "RawString" -> "color"|>], 
-    CSSToken[<|"Type" -> "colon", "String" -> ":"|>], 
-    CSSToken[<|"Type" -> "ident", "String" -> "red", "RawString" -> "\\red"|>]}|>]}
-```
-The `"RawString"` key is used to store the unmodified original string, while the `"String"` key contains a "normalized" version of the string e.g. any escaped characters converted.
-
-Use `CSSUntokenize` to go back to a string:
-```
-In[] := CSSUntokenize[tokens]
-Out[] = "h1 {color:\\red}" 
-```
-Following the CSS syntax module specification, a round-trip of `CSSUntokenize[CSSTokenize[...]` is not guaranteed to return the same initial string. The reason is that some characters like whitespace can be simplified without loss of information. However, `CSSTokenize[CSSUntokenize[CSSTokenize[...]]` must be the same as the original set of tokens.
-```
-In[] := tokens === CSSTokenize[CSSUntokenize[tokens]]
-Out[] = True
-```
-To assist parsing of tokens functions like `CSSTokenQ`, `TokenTypeIs` and `AdvancePosAndSkipWhitespace` exist in the CSSTokenizer.wl package. These utility functions were not used in this simpler example. 
-
-In the above example the functions `tooManyTokensFailure` and `parseLength` were used and come from the CSSPropretyInterpreter.wl package (publicly exposed).
