@@ -4,7 +4,7 @@
 
 Paclet[
     Name -> "CSSTools",
-    Version -> "1.0.1",
+    Version -> "1.0.2",
     MathematicaVersion -> "11+",
     Description -> "Import and process CSS into Wolfram Language options.",
     Creator -> "Kevin Daily",

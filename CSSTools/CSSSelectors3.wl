@@ -1455,7 +1455,7 @@ CSSSelector /: MakeBoxes[s:CSSSelector[a_?AssociationQ], StandardForm] :=
 					ImageMargins -> 2,
 					FrameMargins -> {{5, 5}, {2, 2}},
 					FrameStyle -> Directive[RGBColor[0, 0.5, 1], AbsoluteThickness[1]],
-					BaseStyle -> {FontFamily -> Dynamic[CurrentValue[{StyleHints, "CodeFont"}]], FontSize -> 12, FontWeight -> Bold, FontColor -> GrayLevel[0.2]}],
+					BaseStyle -> {FontFamily -> Dynamic[CurrentValue[{StyleHints, "CodeFont"}]], FontWeight -> Bold, FontColor -> GrayLevel[0.2]}],
 				Editable -> False,
 				ShowStringCharacters -> False], 
 			s]]
