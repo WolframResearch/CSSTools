@@ -1550,7 +1550,7 @@ ProcessToStylesheet[filepath_String, opts___] :=
 		(* get all selectors preserving order, but favor the last entry of any duplicates *)
 		uniqueSelectors = Reverse @ DeleteDuplicates[Reverse @ raw[[All, "Selector"]]];
 		
-		allProcessed = CSSCascade[All, All, raw, uniqueSelectors];
+		allProcessed = CSSCascade[All, All, raw, #]& /@ uniqueSelectors;
 		(*TODO: convert options like FrameMargins to actual styles ala FrameBoxOptions -> {FrameMargins -> _}*)
 		"Stylesheet" -> 
 			NotebookPut @ 
