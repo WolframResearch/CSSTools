@@ -106,7 +106,7 @@ The color definitions from CSS Level 2 Revision 1 are limited in comparison with
 
 3. Create new private functions that extend the functionality.
 
-    _Somewhere within CSSPropretyInterpreter.wl after ``Begin["`Private`"]``_  
+    _Somewhere within CSSColors4.wl after ``Begin["`Private`"]``_  
         
         ...
         parseSingleColorKeyWord[prop_String, keyword_String] := ...
@@ -118,7 +118,7 @@ The color definitions from CSS Level 2 Revision 1 are limited in comparison with
 
 4. Modify as necessary existing functions such as the `CSSPropertyData` (also publicly exposed):
 
-    _Somewhere within CSSPropretyInterpreter.wl after ``Begin["`Private`"]``_  
+    _Somewhere within CSSColors4.wl after ``Begin["`Private`"]``_  
         
         ...
         If[!AssociationQ[CSSPropertyData], CSSPropertyData = <||>];
@@ -133,7 +133,7 @@ The color definitions from CSS Level 2 Revision 1 are limited in comparison with
 
 5. Add a new definition for `parseSingleColor`.
 
-    _Somewhere within CSSPropretyInterpreter.wl after ``Begin["`Private`"]``_  
+    _Somewhere within CSSColors4.wl after ``Begin["`Private`"]``_  
 
         ...
         (* new interpreters *)
