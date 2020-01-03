@@ -217,48 +217,69 @@ If[!AssociationQ[CSSPropertyData], CSSPropertyData = <||>];
 AssociateTo[CSSPropertyData, {
 	"background" -> <|
 		"Inherited" -> False,
-		"CSSInitialValue" -> "N/A",  (* shorthand property for background-attachment/color/image/position/repeat*)
+		"CSSInitialValue" -> "N/A",  (* shorthand property for background-attachment/color/image/position/repeat *)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|Background -> Inherited|>,
-			"initial" -> <|Background -> None|>|>|>,
+			"initial" -> <|Background -> None|>|>,
+		"Animatable" -> True,
+		"Values" -> {"scroll", "fixed", "<color>", "transparent", "<funciri>", "none", "<percentage>", "<length>", "left", "right", "center", "top", "bottom", "repeat", "repeat-x", "repeat-y", "no-repeat"},
+		"AppliesTo" -> All|>,
 	"background-attachment" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "scroll",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>,
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"scroll", "fixed"},
+		"AppliesTo" -> All|>,
 	"background-color" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "transparent",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|Background -> Inherited|>,
-			"initial" -> <|Background -> None|>|>|>,
+			"initial" -> <|Background -> None|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<color>", "transparent"},
+		"AppliesTo" -> All|>,
 	"background-image" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|System`BackgroundAppearance -> Inherited|>,
-			"initial" -> <|System`BackgroundAppearance -> None|>|>|>, 
+			"initial" -> <|System`BackgroundAppearance -> None|>|>,
+		"Animatable" -> False,
+		"Values" -> {"<funciri>", "none"},
+		"AppliesTo" -> All|>,
 	"background-position" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0% 0%",
 		"InterpretedGlobalValues" -> <|
 			(* Technically WL value should be {0,0}, but FE only supports keywords. *)
 			"inherit" -> <|System`BackgroundAppearanceOptions -> Inherited|>,
-			"initial" -> <|System`BackgroundAppearanceOptions -> "NoRepeat"|>|>|>, 
+			"initial" -> <|System`BackgroundAppearanceOptions -> "NoRepeat"|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<percentage>", "<length>", "left", "right", "center", "top", "bottom"},
+		"AppliesTo" -> All|>,
 	"background-repeat" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "repeat",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|System`BackgroundAppearanceOptions -> Inherited|>,
-			"initial" -> <|System`BackgroundAppearanceOptions -> "Repeat"|>|>|>, 
+			"initial" -> <|System`BackgroundAppearanceOptions -> "Repeat"|>|>,
+		"Animatable" -> False,
+		"Values" -> {"repeat", "repeat-x", "repeat-y", "no-repeat"},
+		"AppliesTo" -> All|>,
 	"border-collapse" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "separate",
 		"InterpretedGlobalValues" -> <|
 			(* FE only follows the 'collapse' model within Grid but does not provide a modifiable option. *)
 			"inherit" -> <||>,
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"collapse", "separate"},
+		"AppliesTo" -> {"table", "inline-table"}|>,
 	"border-color" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor", (* shorthand property, sets all 4 border sides *)
@@ -268,7 +289,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Color" -> Inherited|>]|>,
 			"initial" -> <|
 				FrameStyle     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>], 
-				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>]|>|>|>, 
+				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>]|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<color>", "transparent"},
+		"AppliesTo" -> All|>,
 	"border-top-color" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
@@ -278,7 +302,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameStyle -> <|"Top" -> <|"Color" -> Inherited|>|>|>,
 			"initial" -> <|
 				FrameStyle     -> <|"Top" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>, 
-				CellFrameStyle -> <|"Top" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>|>, 
+				CellFrameStyle -> <|"Top" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<color>", "transparent"},
+		"AppliesTo" -> All|>,
 	"border-right-color" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
@@ -288,7 +315,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameStyle -> <|"Right" -> <|"Color" -> Inherited|>|>|>,
 			"initial" -> <|
 				FrameStyle     -> <|"Right" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>, 
-				CellFrameStyle -> <|"Right" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>|>,
+				CellFrameStyle -> <|"Right" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<color>", "transparent"},
+		"AppliesTo" -> All|>,
 	"border-bottom-color" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
@@ -298,7 +328,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameStyle -> <|"Bottom" -> <|"Color" -> Inherited|>|>|>,
 			"initial" -> <|
 				FrameStyle     -> <|"Bottom" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>, 
-				CellFrameStyle -> <|"Bottom" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>|>,
+				CellFrameStyle -> <|"Bottom" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<color>", "transparent"},
+		"AppliesTo" -> All|>,
 	"border-left-color" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
@@ -308,7 +341,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameStyle -> <|"Left" -> <|"Color" -> Inherited|>|>|>,
 			"initial" -> <|
 				FrameStyle     -> <|"Left" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>, 
-				CellFrameStyle -> <|"Left" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>|>,
+				CellFrameStyle -> <|"Left" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<color>", "transparent"},
+		"AppliesTo" -> All|>,
 	"border-style" -> <| (* AKA dashing *)
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none", (* shorthand property, sets all 4 sides *)
@@ -318,7 +354,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Style" -> Inherited|>]|>,
 			"initial" -> <|
 				FrameStyle     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Style" -> None|>], 
-				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Style" -> None|>]|>|>|>, 
+				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Style" -> None|>]|>|>,
+		"Animatable" -> False,
+		"Values" -> {"none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"},
+		"AppliesTo" -> All|>,
 	"border-top-style" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
@@ -328,7 +367,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameStyle -> <|"Top" -> <|"Style" -> Inherited|>|>|>,
 			"initial" -> <|
 				FrameStyle     -> <|"Top" -> <|"Style" -> None|>|>, 
-				CellFrameStyle -> <|"Top" -> <|"Style" -> None|>|>|>|>|>, 
+				CellFrameStyle -> <|"Top" -> <|"Style" -> None|>|>|>|>,
+		"Animatable" -> False,
+		"Values" -> {"none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"},
+		"AppliesTo" -> All|>,
 	"border-right-style" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
@@ -338,7 +380,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameStyle -> <|"Right" -> <|"Style" -> Inherited|>|>|>,
 			"initial" -> <|
 				FrameStyle     -> <|"Right" -> <|"Style" -> None|>|>, 
-				CellFrameStyle -> <|"Right" -> <|"Style" -> None|>|>|>|>|>,
+				CellFrameStyle -> <|"Right" -> <|"Style" -> None|>|>|>|>,
+		"Animatable" -> False,
+		"Values" -> {"none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"},
+		"AppliesTo" -> All|>,
 	"border-bottom-style" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
@@ -348,7 +393,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameStyle -> <|"Bottom" -> <|"Style" -> Inherited|>|>|>,
 			"initial" -> <|
 				FrameStyle     -> <|"Bottom" -> <|"Style" -> None|>|>, 
-				CellFrameStyle -> <|"Bottom" -> <|"Style" -> None|>|>|>|>|>,
+				CellFrameStyle -> <|"Bottom" -> <|"Style" -> None|>|>|>|>,
+		"Animatable" -> False,
+		"Values" -> {"none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"},
+		"AppliesTo" -> All|>,
 	"border-left-style" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
@@ -358,7 +406,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameStyle -> <|"Left" -> <|"Style" -> Inherited|>|>|>,
 			"initial" -> <|
 				FrameStyle     -> <|"Left" -> <|"Style" -> None|>|>, 
-				CellFrameStyle -> <|"Left" -> <|"Style" -> None|>|>|>|>|>,
+				CellFrameStyle -> <|"Left" -> <|"Style" -> None|>|>|>|>,
+		"Animatable" -> False,
+		"Values" -> {"none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"},
+		"AppliesTo" -> All|>,
 	"border-width" -> <| (* AKA thickness *)
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium", (* shorthand property, sets all 4 border sides *)
@@ -368,7 +419,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrame  -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Width" -> Inherited|>]|>,
 			"initial" -> <|
 				FrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Width" -> Thickness[Medium]|>], 
-				CellFrame  -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Width" -> 2|>]|>|>|>, 
+				CellFrame  -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Width" -> 2|>]|>|>,
+		"Animatable" -> True,
+		"Values" -> {"thin", "medium", "thick", "<length>"},
+		"AppliesTo" -> All|>,
 	"border-top-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
@@ -378,7 +432,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrame  -> <|"Top" -> <|"Width" -> Inherited|>|>|>,
 			"initial" -> <|
 				FrameStyle -> <|"Top" -> <|"Width" -> Thickness[Medium]|>|>, 
-				CellFrame  -> <|"Top" -> <|"Width" -> 2|>|>|>|>|>, 
+				CellFrame  -> <|"Top" -> <|"Width" -> 2|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"thin", "medium", "thick", "<length>"},
+		"AppliesTo" -> All|>,
 	"border-right-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
@@ -388,7 +445,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrame  -> <|"Right" -> <|"Width" -> Inherited|>|>|>,
 			"initial" -> <|
 				FrameStyle -> <|"Right" -> <|"Width" -> Thickness[Medium]|>|>, 
-				CellFrame  -> <|"Right" -> <|"Width" -> 2|>|>|>|>|>,
+				CellFrame  -> <|"Right" -> <|"Width" -> 2|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"thin", "medium", "thick", "<length>"},
+		"AppliesTo" -> All|>,
 	"border-bottom-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
@@ -398,7 +458,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrame  -> <|"Bottom" -> <|"Width" -> Inherited|>|>|>,
 			"initial" -> <|
 				FrameStyle -> <|"Bottom" -> <|"Width" -> Thickness[Medium]|>|>, 
-				CellFrame  -> <|"Bottom" -> <|"Width" -> 2|>|>|>|>|>,
+				CellFrame  -> <|"Bottom" -> <|"Width" -> 2|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"thin", "medium", "thick", "<length>"},
+		"AppliesTo" -> All|>,
 	"border-left-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
@@ -408,7 +471,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrame  -> <|"Left" -> <|"Width" -> Inherited|>|>|>,
 			"initial" -> <|
 				FrameStyle -> <|"Left" -> <|"Width" -> Thickness[Medium]|>|>, 
-				CellFrame  -> <|"Left" -> <|"Width" -> 2|>|>|>|>|>,
+				CellFrame  -> <|"Left" -> <|"Width" -> 2|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"thin", "medium", "thick", "<length>"},
+		"AppliesTo" -> All|>,
 	"border" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand property, sets all 4 border sides color/style/width*)
@@ -427,7 +493,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameStyle -> 
 					AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|
 						"Color" -> Dynamic @ CurrentValue[FontColor], 
-						"Style" -> None|>]|>|>|>, 
+						"Style" -> None|>]|>|>,
+		"Animatable" -> True,
+		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
+		"AppliesTo" -> All|>,
 	"border-top" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
@@ -439,7 +508,10 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|
 				FrameStyle     -> <|"Top" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None, "Width" -> Thickness[Medium]|>|>, 
 				CellFrame      -> <|"Top" -> <|"Width" -> 2|>|>,
-				CellFrameStyle -> <|"Top" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>|>, 
+				CellFrameStyle -> <|"Top" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
+		"AppliesTo" -> All|>,
 	"border-right" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
@@ -451,7 +523,10 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|
 				FrameStyle     -> <|"Right" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None, "Width" -> Thickness[Medium]|>|>, 
 				CellFrame      -> <|"Right" -> <|"Width" -> 2|>|>,
-				CellFrameStyle -> <|"Right" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>|>, 
+				CellFrameStyle -> <|"Right" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
+		"AppliesTo" -> All|>,
 	"border-bottom" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
@@ -463,7 +538,10 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|
 				FrameStyle     -> <|"Bottom" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None, "Width" -> Thickness[Medium]|>|>, 
 				CellFrame      -> <|"Bottom" -> <|"Width" -> 2|>|>,
-				CellFrameStyle -> <|"Bottom" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>|>, 
+				CellFrameStyle -> <|"Bottom" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
+		"AppliesTo" -> All|>,
 	"border-left" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
@@ -475,92 +553,137 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|
 				FrameStyle     -> <|"Left" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None, "Width" -> Thickness[Medium]|>|>, 
 				CellFrame      -> <|"Left" -> <|"Width" -> 2|>|>,
-				CellFrameStyle -> <|"Left" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>|>,
+				CellFrameStyle -> <|"Left" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
+		"AppliesTo" -> All|>,
 	"border-spacing" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|Spacings -> Inherited|>,
-			"initial" -> <|Spacings -> 0|>|>|>,
+			"initial" -> <|Spacings -> 0|>|>,
+		"Animatable" -> False,
+		"Values" -> {"<length>"},
+		"AppliesTo" -> {"table", "inline-table"}|>,
 	"bottom" -> <|(* no equivalent FE option *)
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|Alignment -> {Automatic, Inherited}|>, 
-			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>|>, 
+			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>,
+		"Animatable" -> True,
+		"Values" -> {"auto", "<length>", "<percentage>"},
+		"AppliesTo" -> {"positioned elements"}|>,
 	"caption-side" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "top",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <||>, (* no equivalent FE option *)
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"top", "bottom"},
+		"AppliesTo" -> {"table-caption elements"}|>,
 	"clear" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <||>, (* no equivalent FE option *)
-			"initial" -> Missing["Not supported."]|>|>,		
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"none", "left", "right", "both"},
+		"AppliesTo" -> {"block-level elements"}|>,		
 	"clip" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <||>, (* no equivalent FE option *)
-			"initial" -> Missing["Not supported."]|>|>,
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> True,
+		"Values" -> {"<shape>", "auto"},
+		"AppliesTo" -> {"absolutely positioned elements"}|>,
 	"color" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "N/A", (* depends on user agent aka WD *)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|FontColor -> Inherited|>,
-			"initial" -> <|FontColor -> Black|>|>|>,(* no set CSS specification|>, so use reasonable setting *)
+			"initial" -> <|FontColor -> Black|>|>,(* no set CSS specification|>, so use reasonable setting *)
+		"Animatable" -> True,
+		"Values" -> {"<color>"},
+		"AppliesTo" -> All|>,
 	"content" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|DisplayFunction -> Inherited|>,
-			"initial" -> <|DisplayFunction -> Function[Identity]|>|>|>,    
+			"initial" -> <|DisplayFunction -> Function[Identity]|>|>,
+		"Animatable" -> False,
+		"Values" -> {"normal", "none", "<string>", "<funciri>", "<counter>", "attr()", "open-quote", "close-quote", "no-open-quote", "no-close-quote"},
+		"AppliesTo" -> {":before", ":after"}|>,
 	"counter-increment" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|CounterIncrements -> Inherited|>,
-			"initial" -> <|CounterIncrements -> {}|>|>|>,
+			"initial" -> <|CounterIncrements -> {}|>|>,
+		"Animatable" -> False,
+		"Values" -> {"none", "<identifier>", "<integer>"},
+		"AppliesTo" -> All|>,
 	"counter-reset" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 		
 			"inherit" -> <|CounterAssignments -> Inherited|>,
-			"initial" -> <|CounterAssignments -> {}|>|>|>,   
+			"initial" -> <|CounterAssignments -> {}|>|>,
+		"Animatable" -> False,
+		"Values" -> {"none", "<identifier>", "<integer>"},
+		"AppliesTo" -> All|>,
 	"cursor" -> <|(* no FE option to control mouse appearance *)
 		"Inherited" -> True,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <||>,
-			"initial" -> <|"MouseAppearance" -> (TagBox[#, MouseAppearanceTag["Arrow"]]&)|>|>|>, 
+			"initial" -> <|"MouseAppearance" -> (TagBox[#, MouseAppearanceTag["Arrow"]]&)|>|>,
+		"Animatable" -> False,
+		"Values" -> {"<funciri>", "auto", "crosshair", "default", "pointer", "move", "e-resize", "ne-resize", "nw-resize", "n-resize", "se-resize", "sw-resize", "s-resize", "w-resize", "text", "wait", "help", "progress"},
+		"AppliesTo" -> All|>,
 	"direction" -> <|(* so far FE only has left-to-right *)
 		"Inherited" -> True,
 		"CSSInitialValue" -> "ltr",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 
-	"display" -> <|
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"ltr", "rtl"},
+		"AppliesTo" -> All|>,
+	"display" -> <|(* can set Style[_, Visible->False]*)
 		"Inherited" -> False,
 		"CSSInitialValue" -> "inline",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"inline", "block", "list-item", "inline-block", "table", "inline-table", "table-row-group", "table-header-group", "table-footer-group", "table-row", "table-column-group", "table-column", "table-cell", "table-caption", "none"},
+		"AppliesTo" -> All|>,
 	"empty-cells" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "show",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 	
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"show", "hide"},
+		"AppliesTo" -> {"table-cell elements"}|>,
 	"float" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"left", "right", "none"},
+		"AppliesTo" -> All|>,
 	"font" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "N/A", (* shorthand property *)
@@ -578,85 +701,127 @@ AssociateTo[CSSPropertyData, {
 				FontSlant      -> Plain,
 				FontVariations -> <|"CapsType" -> "Normal"|>,
 				FontWeight     -> Plain,
-				LineSpacing    -> {1.2, 0}|>|>|>, 
+				LineSpacing    -> {1.2, 0}|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<family-name>", "<length>", "<percentage>", "normal", "italic", "oblique", "bold", "bolder", "lighter", "100", "200", "300", "400", "500", "600", "700", "800", "900", "small-caps", "caption", "icon", "menu", "message-box", "small-caption", "status-bar", "serif", "sans-serif", "cursive", "fantasy", "monospace", "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large", "smaller", "larger"},
+		"AppliesTo" -> All|>,
 	"font-family" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "N/A", (* depends on user agent aka WD *)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|FontFamily -> Inherited|>,
-			"initial" -> <|FontFamily -> Dynamic @ CurrentValue[$FrontEnd, {StyleDefinitions, "Text", FontFamily}, "Arial"]|>|>|>, 
+			"initial" -> <|FontFamily -> Dynamic @ CurrentValue[$FrontEnd, {StyleDefinitions, "Text", FontFamily}, "Arial"]|>|>,
+		"Animatable" -> False,
+		"Values" -> {},
+		"AppliesTo" -> All|>,
 	"font-size" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "medium",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|FontSize -> Inherited|>,
-			"initial" -> <|FontSize -> Medium|>|>|>,   
+			"initial" -> <|FontSize -> Medium|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>", "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large", "smaller", "larger"},
+		"AppliesTo" -> All|>,
 	"font-style" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|FontSlant -> Inherited|>,
-			"initial" -> <|FontSlant -> Plain|>|>|>,    
+			"initial" -> <|FontSlant -> Plain|>|>,
+		"Animatable" -> False,
+		"Values" -> {"normal", "italic", "oblique"},
+		"AppliesTo" -> All|>,
 	"font-variant" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|FontVariations -> <|"CapsType" -> Inherited|>|>,
-			"initial" -> <|FontVariations -> <|"CapsType" -> "Normal"|>|>|>|>, 
+			"initial" -> <|FontVariations -> <|"CapsType" -> "Normal"|>|>|>,
+		"Animatable" -> False,
+		"Values" -> {"normal", "small-caps"},
+		"AppliesTo" -> All|>,
 	"font-weight" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|FontWeight -> Inherited|>,
-			"initial" -> <|FontWeight -> Plain|>|>|>, 
+			"initial" -> <|FontWeight -> Plain|>|>,
+		"Animatable" -> True,
+		"Values" -> {"normal", "bold", "bolder", "lighter", "100", "200", "300", "400", "500", "600", "700", "800", "900"},
+		"AppliesTo" -> All|>,
 	"height" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|ImageSize -> <|"Height" -> <|"Min" -> Inherited, "Max" -> Inherited|>|>|>,
-			"initial" -> <|ImageSize -> <|"Height" -> <|"Min" -> Automatic, "Max" -> Automatic|>|>|>|>|>, 
+			"initial" -> <|ImageSize -> <|"Height" -> <|"Min" -> Automatic, "Max" -> Automatic|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>", "auto"},
+		"AppliesTo" -> All|>,
 	"left" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|Alignment -> {Inherited, Automatic}|>,
-			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>|>, 
+			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>", "auto"},
+		"AppliesTo" -> {"positioned elements"}|>,
 	"letter-spacing" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|FontTracking -> Inherited|>,
-			"initial" -> <|FontTracking -> "Plain"|>|>|>, 
+			"initial" -> <|FontTracking -> "Plain"|>|>,
+		"Animatable" -> True,
+		"Values" -> {"normal", "<length>"},
+		"AppliesTo" -> All|>,
 	"line-height" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|LineSpacing -> Inherited|>,
-			"initial" -> <|LineSpacing -> {1.2, 0}|>|>|>, 
+			"initial" -> <|LineSpacing -> {1.2, 0}|>|>,
+		"Animatable" -> True,
+		"Values" -> {"normal", "<number>", "<length>", "<percentage>"},
+		"AppliesTo" -> All|>,
 	"list-style" -> <|(* short-hand for list-style-image/position/type *)
 		"Inherited" -> True,
 		"CSSInitialValue" -> "N/A", (* shorthand property *)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|CellDingbat -> Inherited|>,
-			"initial" -> <|CellDingbat -> "\[FilledCircle]"|>|>|>, 
+			"initial" -> <|CellDingbat -> "\[FilledCircle]"|>|>,
+		"Animatable" -> False,
+		"Values" -> {"inside", "outside", "none", "<funciri>", "disc", "circle", "square", "decimal", "decimal-leading-zero", "lower-roman", "upper-roman", "lower-greek", "lower-latin", "upper-latin", "armenian", "georgian", "lower-alpha", "upper-alpha"},
+		"AppliesTo" -> {"list-item"}|>,
 	"list-style-image" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|CellDingbat -> Inherited|>,
-			"initial" -> <|CellDingbat -> None|>|>|>,
+			"initial" -> <|CellDingbat -> None|>|>,
+		"Animatable" -> False,
+		"Values" -> {"none", "<funciri>"},
+		"AppliesTo" -> {"list-item"}|>,
 	"list-style-position" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "outside",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>,
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"inside", "outside"},
+		"AppliesTo" -> {"list-item"}|>,
 	"list-style-type" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "disc",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|CellDingbat -> Inherited|>,
-			"initial" -> <|CellDingbat -> "\[FilledCircle]"|>|>|>,
+			"initial" -> <|CellDingbat -> "\[FilledCircle]"|>|>,
+		"Animatable" -> False,
+		"Values" -> {"none", "disc", "circle", "square", "decimal", "decimal-leading-zero", "lower-roman", "upper-roman", "lower-greek", "lower-latin", "upper-latin", "armenian", "georgian", "lower-alpha", "upper-alpha"},
+		"AppliesTo" -> {"list-item"}|>,
 	"margin" -> <|(* shorthand property, sets all 4 margins *)
 		"Inherited" -> False,
 		"CSSInitialValue" -> "N/A", 
@@ -668,7 +833,10 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|
 				ImageMargins    -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0],
 				CellMargins     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0],
-				PrintingOptions -> <|"PrintingMargins" -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0]|>|>|>|>, 
+				PrintingOptions -> <|"PrintingMargins" -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0]|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>", "auto"},
+		"AppliesTo" -> All|>,
 	"margin-top" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -680,7 +848,10 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|
 				ImageMargins    -> <|"Top" -> 0|>,
 				CellMargins     -> <|"Top" -> 0|>,
-				PrintingOptions -> <|"PrintingMargins" -> <|"Top" -> 0|>|>|>|>|>,
+				PrintingOptions -> <|"PrintingMargins" -> <|"Top" -> 0|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>", "auto"},
+		"AppliesTo" -> All|>,
 	"margin-right" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -692,7 +863,10 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|
 				ImageMargins    -> <|"Right" -> 0|>,
 				CellMargins     -> <|"Right" -> 0|>,
-				PrintingOptions -> <|"PrintingMargins" -> <|"Right" -> 0|>|>|>|>|>,
+				PrintingOptions -> <|"PrintingMargins" -> <|"Right" -> 0|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>", "auto"},
+		"AppliesTo" -> All|>,
 	"margin-bottom" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -704,7 +878,10 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|
 				ImageMargins    -> <|"Bottom" -> 0|>,
 				CellMargins     -> <|"Bottom" -> 0|>,
-				PrintingOptions -> <|"PrintingMargins" -> <|"Bottom" -> 0|>|>|>|>|>,
+				PrintingOptions -> <|"PrintingMargins" -> <|"Bottom" -> 0|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>", "auto"},
+		"AppliesTo" -> All|>,
 	"margin-left" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -716,67 +893,100 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|
 				ImageMargins    -> <|"Left" -> 0|>,
 				CellMargins     -> <|"Left" -> 0|>,
-				PrintingOptions -> <|"PrintingMargins" -> <|"Left" -> 0|>|>|>|>|>,
+				PrintingOptions -> <|"PrintingMargins" -> <|"Left" -> 0|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>", "auto"},
+		"AppliesTo" -> All|>,
 	"max-height" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|ImageSize -> <|"Height" -> <|"Max" -> Inherited|>|>|>,
-			"initial" -> <|ImageSize -> <|"Height" -> <|"Max" -> Automatic|>|>|>|>|>,
+			"initial" -> <|ImageSize -> <|"Height" -> <|"Max" -> Automatic|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"none", "<length>", "<percentage>"},
+		"AppliesTo" -> All|>,
 	"max-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|ImageSize -> <|"Width" -> <|"Max" -> Inherited|>|>|>,
-			"initial" -> <|ImageSize -> <|"Width" -> <|"Max" -> Automatic|>|>|>|>|>,
+			"initial" -> <|ImageSize -> <|"Width" -> <|"Max" -> Automatic|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"none", "<length>", "<percentage>"},
+		"AppliesTo" -> All|>,
 	"min-height" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|ImageSize -> <|"Height" -> <|"Min" -> Inherited|>|>|>,
-			"initial" -> <|ImageSize -> <|"Height" -> <|"Min" -> 0|>|>|>|>|>,
+			"initial" -> <|ImageSize -> <|"Height" -> <|"Min" -> 0|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>"},
+		"AppliesTo" -> All|>,
 	"min-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|ImageSize -> <|"Width" -> <|"Min" -> Inherited|>|>|>,
-			"initial" -> <|ImageSize -> <|"Width" -> <|"Min" -> 0|>|>|>|>|>,
+			"initial" -> <|ImageSize -> <|"Width" -> <|"Min" -> 0|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>"},
+		"AppliesTo" -> All|>,
 	"orphans" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "2",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"<integer>"},
+		"AppliesTo" -> {"block container elements"}|>,
 	"outline" -> <|(* shorthand property, sets color/style/width, FE does not support outlines *)
 		"Inherited" -> False,
 		"CSSInitialValue" -> "N/A", 
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> True,
+		"Values" -> {"<color>", "invert", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "thin", "medium", "thick", "<length>"},
+		"AppliesTo" -> All|>,
 	"outline-color" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "invert",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> True,
+		"Values" -> {"<color>", "invert"},
+		"AppliesTo" -> All|>,
 	"outline-style" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"},
+		"AppliesTo" -> All|>,
 	"outline-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> True,
+		"Values" -> {"thin", "medium", "thick", "<length>"},
+		"AppliesTo" -> All|>,
 	"overflow" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "visible",(* not supported in FE*)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|ImageSizeAction -> Inherited|>,
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"visible", "hidden", "scroll", "auto"},
+		"AppliesTo" -> {"block containers"}|>,
 	"padding" -> <|(* shorthand property, sets all 4 sides *)
 		"Inherited" -> False,
 		"CSSInitialValue" -> "N/A", 
@@ -786,7 +996,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameMargins -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited]|>,
 			"initial" -> <|
 				FrameMargins     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0],
-				CellFrameMargins -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0]|>|>|>, 
+				CellFrameMargins -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0]|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>"},
+		"AppliesTo" -> All|>,
 	"padding-top" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -796,7 +1009,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameMargins -> <|"Top" -> Inherited|>|>,
 			"initial" -> <|
 				FrameMargins     -> <|"Top" -> 0|>,
-				CellFrameMargins -> <|"Top" -> 0|>|>|>|>,
+				CellFrameMargins -> <|"Top" -> 0|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>"},
+		"AppliesTo" -> All|>,
 	"padding-bottom" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -806,7 +1022,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameMargins -> <|"Bottom" -> Inherited|>|>,
 			"initial" -> <|
 				FrameMargins     -> <|"Bottom" -> 0|>,
-				CellFrameMargins -> <|"Bottom" -> 0|>|>|>|>,
+				CellFrameMargins -> <|"Bottom" -> 0|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>"},
+		"AppliesTo" -> All|>,
 	"padding-left" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -816,7 +1035,10 @@ AssociateTo[CSSPropertyData, {
 				CellFrameMargins -> <|"Left" -> Inherited|>|>,
 			"initial" -> <|
 				FrameMargins     -> <|"Left" -> 0|>,
-				CellFrameMargins -> <|"Left" -> 0|>|>|>|>,
+				CellFrameMargins -> <|"Left" -> 0|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>"},
+		"AppliesTo" -> All|>,
 	"padding-right" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -826,19 +1048,28 @@ AssociateTo[CSSPropertyData, {
 				CellFrameMargins -> <|"Right" -> Inherited|>|>,
 			"initial" -> <|
 				FrameMargins     -> <|"Right" -> 0|>,
-				CellFrameMargins -> <|"Right" -> 0|>|>|>|>,
+				CellFrameMargins -> <|"Right" -> 0|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>"},
+		"AppliesTo" -> All|>,
 	"page-break-after" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|PageBreakBelow -> Inherited|>,
-			"initial" -> <|PageBreakBelow -> Automatic|>|>|>, 
+			"initial" -> <|PageBreakBelow -> Automatic|>|>,
+		"Animatable" -> False,
+		"Values" -> {"<length>", "<percentage>"},
+		"AppliesTo" -> {"block-level elements"}|>,
 	"page-break-before" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|PageBreakAbove -> Inherited|>,
-			"initial" -> <|PageBreakAbove -> Automatic|>|>|>, 
+			"initial" -> <|PageBreakAbove -> Automatic|>|>,
+		"Animatable" -> False,
+		"Values" -> {"<length>", "<percentage>"},
+		"AppliesTo" -> {"block-level elements"}|>,
 	"page-break-inside" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
@@ -848,43 +1079,64 @@ AssociateTo[CSSPropertyData, {
 				GroupPageBreakWithin -> Inherited|>,
 			"initial" -> <|
 				PageBreakWithin      -> Automatic,
-				GroupPageBreakWithin -> Automatic|>|>|>, 
+				GroupPageBreakWithin -> Automatic|>|>,
+		"Animatable" -> False,
+		"Values" -> {"<length>", "<percentage>"},
+		"AppliesTo" -> {"block-level elements"}|>,
 	"position" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "static",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"static", "relative", "absolute", "fixed"},
+		"AppliesTo" -> All|>,
 	"quotes" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "N/A", (* depends on user agent aka WD *)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>,  
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"<string>", "none"},
+		"AppliesTo" -> All|>,
 	"right" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|Alignment -> {Inherited, Automatic}|>,
-			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>|>, 
+			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>", "auto"},
+		"AppliesTo" -> {"positioned elements"}|>,
 	"table-layout" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 		
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"auto", "fixed"},
+		"AppliesTo" -> {"table", "inline-table"}|>, 		
 	"text-align" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "N/A", (* a nameless value that acts as 'left' if 'direction' is 'ltr', 'right' if 'direction' is 'rtl' *)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|TextAlignment -> Inherited|>,
-			"initial" -> <|TextAlignment -> Automatic|>|>|>, 
+			"initial" -> <|TextAlignment -> Automatic|>|>,
+		"Animatable" -> False,
+		"Values" -> {"left", "center", "right", "justify"},
+		"AppliesTo" -> {"block containers"}|>,
 	"text-decoration" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|FontVariations -> Inherited|>,
-			"initial" -> <|FontVariations -> <||>|>|>|>,       
+			"initial" -> <|FontVariations -> <||>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"none", "underline", "overline", "line-through", "blink"},
+		"AppliesTo" -> All|>,
 	"text-indent" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "0",
@@ -894,25 +1146,37 @@ AssociateTo[CSSPropertyData, {
 				ParagraphIndent -> Inherited|>,
 			"initial" -> <|
 				LineIndent      -> 0,
-				ParagraphIndent -> 0|>|>|>,
+				ParagraphIndent -> 0|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>"},
+		"AppliesTo" -> {"block containers"}|>,
 	"text-transform" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|FontVariations -> <|"CapsType" -> Inherited|>|>,
-			"initial" -> <|FontVariations -> <|"CapsType" -> "Normal"|>|>|>|>,  
+			"initial" -> <|FontVariations -> <|"CapsType" -> "Normal"|>|>|>,
+		"Animatable" -> False,
+		"Values" -> {"capitalize", "uppercase", "lowercase", "none"},
+		"AppliesTo" -> All|>,
 	"top" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|Alignment -> {Automatic, Inherited}|>,
-			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>|>, 
+			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>"},
+		"AppliesTo" -> {"positioned elements"}|>,
 	"unicode-bidi" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"normal", "embed", "bidi-override"},
+		"AppliesTo" -> All|>,
 	"vertical-align" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "baseline",
@@ -922,43 +1186,64 @@ AssociateTo[CSSPropertyData, {
 				CellBaseline     -> Inherited|>,
 			"initial" -> <|
 				BaselinePosition -> Baseline -> Baseline,
-				CellBaseline     -> Center|>|>|>,  
+				CellBaseline     -> Center|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<percentage>", "<length>", "baseline", "sub", "super", "top", "text-top", "middle", "bottom", "text-bottom"},
+		"AppliesTo" -> {"inline-level", "table-cell"}|>,
 	"visibility" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "visible",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|ShowContents -> Inherited|>,
-			"initial" -> <|ShowContents -> True|>|>|>, 
+			"initial" -> <|ShowContents -> True|>|>,
+		"Animatable" -> True,
+		"Values" -> {"visible", "hidden", "collapse"},
+		"AppliesTo" -> All|>,
 	"white-space" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"normal", "pre", "nowrap", "pre-wrap", "pre-line"},
+		"AppliesTo" -> All|>,
 	"widows" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "2",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> False,
+		"Values" -> {"<integer>"},
+		"AppliesTo" -> {"block container elements"}|>,
 	"width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|ImageSize -> <|"Width" -> <|"Min" -> Inherited, "Max" -> Inherited|>|>|>,
-			"initial" -> <|ImageSize -> <|"Width" -> <|"Min" -> Automatic, "Max" -> Automatic|>|>|>|>|>, 
+			"initial" -> <|ImageSize -> <|"Width" -> <|"Min" -> Automatic, "Max" -> Automatic|>|>|>|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "<percentage>", "auto"},
+		"AppliesTo" -> All|>,
 	"word-spacing" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>, 
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> True,
+		"Values" -> {"<length>", "normal"},
+		"AppliesTo" -> All|>,
 	"z-index" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> Missing["Not supported."],
-			"initial" -> Missing["Not supported."]|>|>
+			"initial" -> Missing["Not supported."]|>,
+		"Animatable" -> True,
+		"Values" -> {"<integer>", "auto"},
+		"AppliesTo" -> {"positioned elements"}|>
 }];
 
 
@@ -971,6 +1256,7 @@ parseAngle[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?Nu
 parseAngle[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["grad", t] := val*360/400
 parseAngle[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["rad",  t] := val*360/2/Pi
 parseAngle[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["turn", t] := val*360
+parseAngle[___] := Failure["UnexpectedParse", <|"Message" -> "Expected CSS token of angle type."|>]
 
 
 (* ::Subsection::Closed:: *)

@@ -44,6 +44,7 @@ Get["CSSTools`CSSStyleSheetInterpreter`"] (* defines basic stylesheet token cons
 Get["CSSTools`CSSColors4`"];              (* redefines parseSingleColor     (first defined in CSSPropertyInterpreter) *)
 Get["CSSTools`CSSPagedMedia3`"]           (* redefines @page token consumer (first defined in CSSStyleSheetInterpreter) *)
 Get["CSSTools`CSSMediaQueries4`"]         (* redefines consumeMediaQuery    (first defined in CSSStyleSheetInterpreter) *)
+Get["CSSTools`SVG11`"]                    (* adds consumeProperty definitions for SVG 1.1 *)
 
 
 ImportExport`RegisterImport[
