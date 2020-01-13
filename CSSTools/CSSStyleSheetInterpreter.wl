@@ -16,6 +16,7 @@ validCSSBlockFullQ;
 assemble;
 assembleByFEOption;
 $Debug;
+inheritedPropertyRules;
 
 (* CSSTools`
 	---> defines wrappers like CSSHeightMax *)
@@ -568,7 +569,7 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 					valueTokens = If[decPos < valuePosition, {}, decTokens[[valuePosition ;; decPos]]]
 				},
 				<|
-					"Property"       -> ToLowerCase @ prop, 
+					"Property"       -> prop,
 					"Value"          -> CSSUntokenize @ valueTokens,
 					"Important"      -> important,
 					"Interpretation" -> valueTokens,
@@ -708,11 +709,13 @@ assembleWithConditions[CSSBlockData_?validCSSBlockFullQ, option_, Hold[subKeys__
 	]
 
 ClearAll[assemble];
+Options[assemble] = {"PropertyIsCaseSensitive" -> False};
+
 (* Assembling general CSS properties into FE options. This is the most general case. *)
-assemble[prop_?StringQ, scope_, CSSBlockData_] :=
+assemble[prop_?StringQ, scope_, CSSBlockData_, opts:OptionsPattern[]] :=
 	Module[{validBlockData, optionNames},
 		(* only look at declarations that match 'prop' *)
-		validBlockData = Select[CSSBlockData, StringMatchQ[#Property, prop, IgnoreCase -> True]&];
+		validBlockData = Select[CSSBlockData, StringMatchQ[#Property, prop, IgnoreCase -> Not[TrueQ @ OptionValue["PropertyIsCaseSensitive"]]]&];
 		(* filter FE options in the remaining declaration interpretations to the set scope *)
 		optionNames = filterOptionNames[scope, validBlockData];
 		(* run the FE option assembly function *)
@@ -756,12 +759,15 @@ assembleLRBT[prop_?StringQ, LRBTList_] :=
 assemble[
 	inputProp_?StringQ /; StringStartsQ[StringTrim @ inputProp, "background", IgnoreCase -> True], 
 	scope_, 
-	CSSBlockData_
+	CSSBlockData_, 
+	opts:OptionsPattern[]
 ] :=
 	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp},
 		(* check whether input is a valid background long-form properties *)
-		If[!MatchQ[prop, "background" | "background-attachment" | "background-color" | "background-image" | "background-position" | "background-repeat"], 
-			Return @ Failure["BadProp", <|"Message" -> "Unrecognized background property.", "Prop" -> prop|>]];
+		If[!StringMatchQ[prop, "background" | "background-attachment" | "background-color" | "background-image" | "background-position" | "background-repeat"], 
+			Return @ Failure["BadProp", <|"Message" -> "Unrecognized background property.", "Prop" -> inputProp|>]];
+			
+		If[TrueQ @ OptionValue["PropertyIsCaseSensitive"], Message[CSSCascade::case, inputProp]];
 		
 		(* only look at declarations that match 'prop', including relevant shorthand properties *)
 		(* always include 'background' shorthand *)
@@ -817,18 +823,21 @@ assemble[
 			StringStartsQ[StringTrim @ inputProp, "border", IgnoreCase -> True],
 			!StringMatchQ[StringTrim @ inputProp, "border-spacing" | "border-collapse", IgnoreCase -> True]]], 
 	scope_, 
-	CSSBlockData_
+	CSSBlockData_, 
+	opts:OptionsPattern[]
 ] :=
 	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp},
 		(* check whether input is a valid border long-form properties *)
-		If[!MatchQ[prop, 
+		If[!StringMatchQ[prop, 
 				"border" | "border-top" | "border-bottom" | "border-right" | "border-left" |
 				"border-color" | "border-style" | "border-width" |
 				"border-top-style"    | "border-top-width"    | "border-top-color" |
 				"border-bottom-style" | "border-bottom-width" | "border-bottom-color" |
 				"border-left-style"   | "border-left-width"   | "border-left-color" |
 				"border-right-style"  | "border-right-width"  | "border-right-color"], 
-			Return @ Failure["BadProp", <|"Message" -> "Unrecognized border property.", "Prop" -> prop|>]];
+			Return @ Failure["BadProp", <|"Message" -> "Unrecognized border property.", "Prop" -> inputProp|>]];
+		
+		If[TrueQ @ OptionValue["PropertyIsCaseSensitive"], Message[CSSCascade::case, inputProp]];
 		
 		(* only look at declarations that match 'prop', including relevant shorthand properties *)
 		(* always include 'border' shorthand; include matched side shorthand; include any color/style/width shorthand *)
@@ -836,17 +845,17 @@ assemble[
 			Select[
 				CSSBlockData, 
 				Which[
-					StringMatchQ[prop, "border"],
-						StringStartsQ[#Property, "border"] (* If only asking for 'border', include every border property. *)
+					StringMatchQ[prop, "border"], (* If only asking for 'border', include every border property. *)
+						StringStartsQ[#Property, "border"] 
 					,
-					StringMatchQ[prop, "border-style"],
-						StringStartsQ[#Property, "border"] && StringEndsQ[#Property, "style"] (* If only asking for 'border-style', include every border style property. *)
+					StringMatchQ[prop, "border-style"], (* If only asking for 'border-style', include every border style property. *)
+						StringStartsQ[#Property, "border"] && StringEndsQ[#Property, "style"] 
 					,
-					StringMatchQ[prop, "border-width"],
-						StringStartsQ[#Property, "border"] && StringEndsQ[#Property, "width"] (* If only asking for 'border-width', include every border width property. *)
+					StringMatchQ[prop, "border-width"], (* If only asking for 'border-width', include every border width property. *)
+						StringStartsQ[#Property, "border"] && StringEndsQ[#Property, "width"] 
 					,
-					StringMatchQ[prop, "border-color"],
-						StringStartsQ[#Property, "border"] && StringEndsQ[#Property, "color"] (* If only asking for 'border-color', include every border color property. *)
+					StringMatchQ[prop, "border-color"], (* If only asking for 'border-color', include every border color property. *)
+						StringStartsQ[#Property, "border"] && StringEndsQ[#Property, "color"] 
 					,
 					True,
 						Or[
@@ -889,12 +898,15 @@ assemble[
 assemble[
 	inputProp_?StringQ /; StringStartsQ[StringTrim @ inputProp, "font", IgnoreCase -> True], 
 	scope_, 
-	CSSBlockData_
+	CSSBlockData_, 
+	opts:OptionsPattern[]
 ] :=
 	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp},
 		(* check whether input is a valid font long-form properties *)
-		If[!MatchQ[prop, "font" | "font-family" | "font-size" | "font-style" | "font-variant" | "font-weight"], 
-			Return @ Failure["BadProp", <|"Message" -> "Unrecognized font property.", "Prop" -> prop|>]];
+		If[!StringMatchQ[prop, "font" | "font-family" | "font-size" | "font-style" | "font-variant" | "font-weight"], 
+			Return @ Failure["BadProp", <|"Message" -> "Unrecognized font property.", "Prop" -> inputProp|>]];
+		
+		If[TrueQ @ OptionValue["PropertyIsCaseSensitive"], Message[CSSCascade::case, inputProp]];
 		
 		(* only look at declarations that match 'prop', including relevant shorthand properties *)
 		(* always include 'font' shorthand *)
@@ -928,12 +940,15 @@ assemble[
 assemble[
 	inputProp_?StringQ /; StringStartsQ[StringTrim @ inputProp, "list", IgnoreCase -> True], 
 	scope_, 
-	CSSBlockData_
+	CSSBlockData_, 
+	opts:OptionsPattern[]
 ] :=
 	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp},
 		(* check whether input is a valid list-style long-form properties *)
-		If[!MatchQ[prop, "list-style" | "list-style-image" | "list-style-position" | "list-style-type"], 
-			Return @ Failure["BadProp", <|"Message" -> "Unrecognized ist-style property.", "Prop" -> prop|>]];
+		If[!StringMatchQ[prop, "list-style" | "list-style-image" | "list-style-position" | "list-style-type"], 
+			Return @ Failure["BadProp", <|"Message" -> "Unrecognized ist-style property.", "Prop" -> inputProp|>]];
+		
+		If[TrueQ @ OptionValue["PropertyIsCaseSensitive"], Message[CSSCascade::case, inputProp]];
 		
 		(* only look at declarations that match 'prop', including relevant shorthand properties *)
 		(* always include 'list-style' shorthand *)
@@ -968,13 +983,16 @@ marginOptionQ[___] := False
 assemble[
 	inputProp_?StringQ /; StringStartsQ[StringTrim @ inputProp, "margin" | "padding", IgnoreCase -> True], 
 	scope_, 
-	CSSBlockData_
+	CSSBlockData_, 
+	opts:OptionsPattern[]
 ] :=
 	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp, mainProp},
 		(* check whether input is a valid margin/padding long-form properties *)
 		mainProp = If[StringStartsQ[prop, "margin"], "margin", "padding"];
-		If[!MatchQ[prop, Alternatives[#, # <> "-top", # <> "-bottom", # <> "-right", # <> "-left"]& @ mainProp], 
+		If[!StringMatchQ[prop, Alternatives[#, # <> "-top", # <> "-bottom", # <> "-right", # <> "-left"]& @ mainProp], 
 			Return @ Failure["BadProp", <|"MessageTemplate" -> "Unrecognized `main` property.", "MessageParameters" -> <|"main" -> mainProp|>, "Prop" -> prop|>]];
+		
+		If[TrueQ @ OptionValue["PropertyIsCaseSensitive"], Message[CSSCascade::case, inputProp]];
 		
 		(* only look at declarations that match 'prop', including relevant shorthand properties *)
 		(* always include 'margin'/'padding' shorthand *)
@@ -1020,13 +1038,16 @@ sizeOptionQ[___] := False
 assemble[
 	inputProp_?StringQ /; StringEndsQ[StringTrim @ inputProp, "height" | "width", IgnoreCase -> True], 
 	scope_, 
-	CSSBlockData_
+	CSSBlockData_, 
+	opts:OptionsPattern[]
 ] :=
 	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp, mainProp},
 		(* check whether input is a valid margin/padding long-form properties *)
 		mainProp = If[StringEndsQ[prop, "height"], "height", "width"];
-		If[!MatchQ[prop, Alternatives[#, "min-" <> #, "max-" <> #]& @ mainProp], 
+		If[!StringMatchQ[prop, Alternatives[#, "min-" <> #, "max-" <> #]& @ mainProp], 
 			Return @ Failure["BadProp", <|"MessageTemplate" -> "Unrecognized `main` property.", "MessageParameters" -> <|"main" -> mainProp|>, "Prop" -> prop|>]];
+		
+		If[TrueQ @ OptionValue["PropertyIsCaseSensitive"], Message[CSSCascade::case, inputProp]];
 		
 		(* only look at declarations that match 'prop'; always include all height/width properties *)
 		validBlockData = Select[CSSBlockData, StringEndsQ[#Property, mainProp]&];
@@ -1125,7 +1146,8 @@ H	transitions
 3. In case of equality, the specificity of a value is considered to choose one or the other.
 
 How then do we resolve the cascade in WL code? 
-Because of the imported CSS data, it behaves is if all rules come from a single style sheet (origin).
+There is also no CSS user agent stylesheet because the WL frontend does not have a native CSS stylesheet. 
+Also, because of the imported CSS data, it behaves as if all rules come from a single style sheet (origin).
 Thus rule (1) only has one SS source but multiple selectors within the SS can be simultaneously active.
 This is tricky with @media conditions since these conditions are not immediately resolved by the FE.
 Rule (2), due to only one origin, is only a bisected sorting of declarations by importance.
@@ -1159,13 +1181,15 @@ Resolving this cascade is perhaps not exactly conformant with the CSS spec becau
 	2. order the selectors based on specificity and importance (if those options are on)
 	3. merge resulting list of interpreted options 
 Arg1: scope
-	CSS lacks scope in that all most properties can apply to all boxes.
+	CSS lacks scope in that all/most properties can apply to all boxes.
 	WD has options that apply to specific levels e.g. Cell/Notebook/Box/All. 
 	This argument can also take a list of boxes e.g. ActionMenuBox or a list of box generators e.g. ActionMenu.
 Arg2:  
 *)	
 ClearAll[CSSCascade];
-Options[CSSCascade] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False};
+Options[CSSCascade] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False, "PropertyIsCaseSensitive" -> False};
+
+CSSCascade::case = "A case-sensitive property matches the shorthand property `1`. Some case-sensitive values may be overwritten during shorthand expansion.";
 
 (* normalize Dataset input *)
 CSSCascade[props_, scope_, CSSData_Dataset, selectorList_, opts:OptionsPattern[]] := 
@@ -1187,7 +1211,7 @@ CSSCascade[
 		
 		(* expand any inputs *)
 		props = 
-			StringTrim @ ToLowerCase @ 
+			StringTrim @ If[Not[TrueQ @ OptionValue["PropertyIsCaseSensitive"]], ToLowerCase, Identity] @ 
 				Which[
 					MatchQ[inputProps, All],     Union @ Flatten @ CSSData[[All, "Block", All, "Property"]], 
 					MatchQ[inputProps, _?ListQ], Union @ Flatten @ inputProps,
@@ -1205,7 +1229,7 @@ CSSCascade[
 		(* upgrade any string selectors to CSSSelector objects *)
 		(* match against the tokenized selector sequence, which should be unique *)
 		sel = Select[selectorList, ((StringQ[#] && !StringStartsQ[#, "@"]) || MatchQ[#, _CSSSelector])&];
-		sel = Replace[selectorList, s_?StringQ :> CSSSelector[s], {1}];
+		sel = Replace[sel, s_?StringQ :> CSSSelector[s], {1}];
 		If[AnyTrue[sel, _?FailureQ], Return @ FirstCase[sel, _?FailureQ]];
 		dataSubset = 
  			Select[
@@ -1247,8 +1271,30 @@ CSSCascade[
 					declarations
 				];
 		
+		(* 
+			Some CSS Modules introduce the concept where property values "resolve at compute time" aka computed-value time. 
+			If these property values were properly detected, then resolve them here. 
+			After all replacements, attempt to use consumeProperty.
+			
+			CSS Custom Properties: 
+				* introduces var() function 
+				* use replaceVarFunctionsInDeclarationList to replace var() instances *)
+		If[DownValues[CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList] =!= {}, 
+			declarations = CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList[declarations];
+			
+			Module[{itemsToResolve},
+				itemsToResolve = Flatten @ Position[declarations[[All, "Interpretation", "CSSResolveValueAtComputeTime"]], _Association?AssociationQ, 1];
+				Do[
+					declarations[[i, "Interpretation"]] = 
+						consumeProperty[
+							declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "Property"]], 
+							CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]]],
+					{i, itemsToResolve}]
+			]
+		];
+		
 		(* assemble declarations into FE options *)
-		resolvedOptions = Flatten[assemble[#, scope, declarations]& /@ props];
+		resolvedOptions = Flatten[assemble[#, scope, declarations, "PropertyIsCaseSensitive" -> OptionValue["PropertyIsCaseSensitive"]]& /@ props];
 		Flatten @ 
 			Which[
 				MatchQ[scope, Box | All],
@@ -1434,13 +1480,16 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 	2. starting from the most ancient ancestor, calculate the styles of each ancestor, including inherited properties
 	3. with all inheritance resolved, recalculate the style at the XMLObject position *)
 
+ClearAll[CSSInheritance];
+Options[CSSInheritance] = {"PropertyIsCaseSensitive" -> False};
+
 (* normalize Dataset position input *)
-CSSInheritance[position_Dataset, scope_, CSSData_] := CSSInheritance[Normal @ position, scope, CSSData]
-CSSInheritance[position_, scope_, CSSData_Dataset] := CSSInheritance[position, scope, Normal @ CSSData]
+CSSInheritance[position_Dataset, scope_, CSSData_, opts:OptionsPattern[]] := CSSInheritance[Normal @ position, scope, CSSData, opts]
+CSSInheritance[position_, scope_, CSSData_Dataset, opts:OptionsPattern[]] := CSSInheritance[position, scope, Normal @ CSSData, opts]
 
 (* main function *)
-CSSInheritance[position:{___?IntegerQ}, scope_, CSSData_?validCSSDataFullQ] :=
-	Module[{lineage, CSSDataSubset, i, inheritableProps, previous, current},
+CSSInheritance[position:{___?IntegerQ}, scope_, CSSData_?validCSSDataFullQ, opts:OptionsPattern[]] :=
+	Module[{lineage, CSSDataSubset, i, inheritableProps, previous, current, case = OptionValue["PropertyIsCaseSensitive"]},
 		(* get the position of all ancestors *)
 		lineage = parents[position];
 		
@@ -1462,7 +1511,7 @@ CSSInheritance[position:{___?IntegerQ}, scope_, CSSData_?validCSSDataFullQ] :=
 			
 			(* select from this CSS data subset those declarations that have inheritable properties *)
 			inheritableProps = Union @ Flatten @ CSSDataSubset[[All, "Block", All, "Property"]];
-			inheritableProps = Pick[inheritableProps, MemberQ[inheritedProperties[], #] & /@ inheritableProps];
+			inheritableProps = Pick[inheritableProps, (Or @@ Through[inheritedPropertyRules[#]])& /@ inheritableProps];
 			
 			(* Build the current generation's dummy ruleset:
 				In "Interpretation", perform the cascade but ignore specificity since we already ordered by it earlier.
@@ -1476,7 +1525,7 @@ CSSInheritance[position:{___?IntegerQ}, scope_, CSSData_?validCSSDataFullQ] :=
 						Flatten[{
 							<|
 								"Property" -> #, "Value" -> None, "Important" -> False, 
-								"Interpretation" -> CSSCascade[#, scope, CSSDataSubset, All, "IgnoreSpecificity" -> True] //. HoldPattern[{x__Rule}] :> With[{v = <|x|>}, v /; True], 
+								"Interpretation" -> CSSCascade[#, scope, CSSDataSubset, All, "IgnoreSpecificity" -> True, "PropertyIsCaseSensitive" -> case] //. HoldPattern[{x__Rule}] :> With[{v = <|x|>}, v /; True], 
 								"Condition" -> None
 							|>& /@ inheritableProps}]|>;
 			,
@@ -1486,7 +1535,7 @@ CSSInheritance[position:{___?IntegerQ}, scope_, CSSData_?validCSSDataFullQ] :=
 		CSSDataSubset = Pick[CSSData, MemberQ[#, position]& /@ CSSData[[All, "Targets"]]];
 		CSSDataSubset = CSSDataSubset[[Ordering[Through[CSSDataSubset[[All, "Selector"]]["Specificity"]]]]];
 		CSSDataSubset = Prepend[CSSDataSubset, current];
-		CSSCascade[All, scope, CSSDataSubset, All, "IgnoreSpecificity" -> True]
+		CSSCascade[All, scope, CSSDataSubset, All, "IgnoreSpecificity" -> True, "PropertyIsCaseSensitive" -> case]
 	]
 	
 CSSInheritance[position:{___?IntegerQ}, _] := 
@@ -1496,6 +1545,7 @@ CSSInheritance[position:{___?IntegerQ}, _] :=
 parents[x:{__Integer}] := Most @ Reverse @ NestWhileList[Drop[#, -2]&, x, Length[#] > 2&]
 
 inheritedProperties[] := Pick[Keys @ #, Values @ #]& @ CSSPropertyData[[All, "Inherited"]];
+inheritedPropertyRules = {MemberQ[inheritedProperties[], #]&};
 
 
 (* ::Subsection::Closed:: *)

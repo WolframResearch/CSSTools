@@ -22,6 +22,7 @@ SetUsage[TokenStringIs,    "TokenStringIs[string$, CSSToken$] gives True if the 
 SetUsage[TokenStringIsNot, "TokenStringIsNot[string$, CSSToken$] gives True if the string content of the CSS token does not match string$; case is ignored and escape sequences normalized."];
 SetUsage[TokenUnitIs,      "TokenUnitIs[string$, CSSToken$] gives True if the unit content of the CSS token matches string$; case is ignored and escape sequences normalized."];
 SetUsage[TokenUnitIsNot,   "TokenUnitIsNot[string$, CSSToken$] gives True if the unit content of the CSS token does not match string$; case is ignored and escape sequences normalized."];
+SetUsage[TokenPatternString, "TokenPatternString[string$, type$] is a CSSToken pattern of CSSToken type type$ and the case-insensitive string string$."]
 
 SetUsage[AdvancePosAndSkipWhitespace,      "AdvancePosAndSkipWhitespace[pos$, l$, CSSTokens$] increments pos$, then increments pos$ further if any whitespace tokens are detected."];
 SetUsage[RetreatPosAndSkipWhitespace,      "RetreatPosAndSkipWhitespace[pos$, l$, CSSTokens$] decrements pos$, then decrements pos$ further if any whitespace tokens are detected."];
@@ -211,7 +212,7 @@ tokenizeFlat[x_String] :=
 				s:RegularExpression @ RE["at-keyword-token"] :> 
 					CSSToken[<|
 						"Type"      -> "at-keyword", 
-						"String"    -> CSSNormalizeEscapes @ ToLowerCase @ StringDrop[s, 1],
+						"String"    -> CSSNormalizeEscapes @ StringDrop[s, 1],
 						"RawString" -> StringDrop[s, 1]|>],
 				s:RegularExpression @ RE["url-token"] :> 
 					With[{v = stripURL @ s},
@@ -233,7 +234,7 @@ tokenizeFlat[x_String] :=
 					CSSToken[<|
 						"Type"      -> "function", 
 						"RawString" -> StringDrop[s, -1],
-						"String"    -> CSSNormalizeEscapes @ ToLowerCase @ StringDrop[s, -1]|>],
+						"String"    -> CSSNormalizeEscapes @ StringDrop[s, -1]|>],
 				s:RegularExpression @ RE["hash-token"] :> 
 					With[{v = idHash @ StringDrop[s, 1]},
 						CSSToken[<|
@@ -266,7 +267,7 @@ tokenizeFlat[x_String] :=
 					With[{n = tokenizeNumber @ num},
 						CSSToken[<|
 							"Type"      -> "percentage", 
-							"String"    -> CSSNormalizeEscapes @ ToLowerCase @ n[[1]],
+							"String"    -> CSSNormalizeEscapes @ n[[1]],
 							"RawString" -> n[[1]],
 							"Value"     -> n[[2]],
 							"ValueType" -> n[[3]]|>]],
@@ -274,17 +275,17 @@ tokenizeFlat[x_String] :=
 					With[{n = tokenizeNumber @ num},
 						CSSToken[<|
 							"Type"      -> "dimension", 
-							"String"    -> CSSNormalizeEscapes @ ToLowerCase @ n[[1]],
+							"String"    -> CSSNormalizeEscapes @ n[[1]],
 							"RawString" -> n[[1]],
 							"Value"     -> n[[2]],
 							"ValueType" -> n[[3]],
-							"Unit"      -> CSSNormalizeEscapes @ ToLowerCase @ unit,
+							"Unit"      -> CSSNormalizeEscapes @ unit,
 							"RawUnit"   -> unit|>]],
 				num:RegularExpression[RE["numSCI"]] :> 
 					With[{n = tokenizeNumber @ num},
 						CSSToken[<|
 							"Type"      -> "number", 
-							"String"    -> CSSNormalizeEscapes @ ToLowerCase @ n[[1]],
+							"String"    -> CSSNormalizeEscapes @ n[[1]],
 							"RawString" -> n[[1]],
 							"Value"     -> n[[2]],
 							"ValueType" -> n[[3]]|>]],
@@ -293,7 +294,7 @@ tokenizeFlat[x_String] :=
 					With[{p = tokenizePercentage @ s},
 						CSSToken[<|
 							"Type"      -> "percentage", 
-							"String"    -> CSSNormalizeEscapes @ ToLowerCase @ p[[1]],
+							"String"    -> CSSNormalizeEscapes @ p[[1]],
 							"RawString" -> p[[1]],
 							"Value"     -> p[[2]],
 							"ValueType" -> p[[3]]|>]],
@@ -301,17 +302,17 @@ tokenizeFlat[x_String] :=
 					With[{d = tokenizeDimension @ s},
 						CSSToken[<|
 							"Type"      -> "dimension", 
-							"String"    -> CSSNormalizeEscapes @ ToLowerCase @ d[[1]],
+							"String"    -> CSSNormalizeEscapes @ d[[1]],
 							"RawString" -> d[[1]],
 							"Value"     -> d[[2]],
 							"ValueType" -> d[[3]],
-							"Unit"      -> CSSNormalizeEscapes @ ToLowerCase @ d[[4]],
+							"Unit"      -> CSSNormalizeEscapes @ d[[4]],
 							"RawUnit"   -> d[[4]]|>]],
 				s:RegularExpression @ RE["num"] :> 
 					With[{n = tokenizeNumber@ s},
 						CSSToken[<|
 							"Type"      -> "number", 
-							"String"    -> CSSNormalizeEscapes @ ToLowerCase @ n[[1]],
+							"String"    -> CSSNormalizeEscapes @ n[[1]],
 							"RawString" -> n[[1]],
 							"Value"     -> n[[2]],
 							"ValueType" -> n[[3]]|>]],
@@ -510,7 +511,7 @@ nestTokens[inputTokens:{__?CSSTokenQ}] :=
 										,
 										CSSToken[<|
 											"Type"      -> "function",
-											"String"    -> CSSNormalizeEscapes @ ToLowerCase @ brackets[[depth, 1]]["String"],  
+											"String"    -> CSSNormalizeEscapes @ brackets[[depth, 1]]["String"],  
 											"RawString" -> brackets[[depth, 1]]["String"],  
 											"Children"  -> tokens[[brackets[[depth, 2]] + 1 ;; pos - 1]]|>]];
 								Do[tokens[[i]] = CSSToken[<|"Type" -> "error", "String" -> "REMOVE"|>], {i, brackets[[depth, 2]] + 1, pos, 1}];
@@ -580,7 +581,7 @@ nestTokens[inputTokens:{__?CSSTokenQ}] :=
 							"function", 
 								CSSToken[<|
 									"Type"      -> "function", 
-									"String"    -> CSSNormalizeEscapes @ ToLowerCase @ tokens[[brackets[[depth, 2]]]]["String"], 
+									"String"    -> CSSNormalizeEscapes @ tokens[[brackets[[depth, 2]]]]["String"], 
 									"RawString" -> tokens[[brackets[[depth, 2]]]]["String"], 
 									"Children"  -> tokens[[brackets[[depth, 2]] + 1 ;; ]]|>]]];
 			Do[tokens[[i]] = CSSToken[<|"Type" -> "error", "String" -> "REMOVE"|>], {i, brackets[[depth, 2]] + 1, pos, 1}];
@@ -741,6 +742,8 @@ TokenUnitIs[s_,    CSSToken[KeyValuePattern["Unit" -> t_?StringQ]]] :=  StringMa
 TokenUnitIsNot[s_, CSSToken[KeyValuePattern["Unit" -> t_?StringQ]]] := !StringMatchQ[t, s, IgnoreCase -> True]
 TokenUnitIs[___] := False
 TokenUnitIsNot[___] := False
+
+TokenPatternString[s_String?StringQ, type_] := CSSToken[KeyValuePattern[{"Type" -> type, "String" -> _String?(StringQ[#] && StringMatchQ[#, s, IgnoreCase -> True]&)}]]
 
 (* 
 	The utilities are assumed to be used within "consume" functions where pos, l, and tokens are defined. 
