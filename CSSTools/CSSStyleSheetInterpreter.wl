@@ -578,7 +578,11 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 		If[TrueQ @ $RawImport, 
 			KeyDropFrom[declaration, "Interpretation"]
 			,
-			AssociateTo[declaration, "Interpretation" -> consumeProperty[declaration["Property"], declaration["Interpretation"]]]
+			AssociateTo[
+				declaration, 
+				"Interpretation" -> 
+					With[{p = declaration["Property"]},
+						consumeProperty[If[StringStartsQ[p, "--"], p, ToLowerCase @ p], declaration["Interpretation"]]]]
 		]		
 	]
 
