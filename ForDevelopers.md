@@ -197,7 +197,7 @@ The [CSS Paged Media Module Level 3](https://www.w3.org/TR/css-page-3/) adds new
         		value = 
         			Switch[tokens[[pos]]["Type"],
         				"ident", 
-        					Switch[ToLowerCase @ tokens[[pos]]["String"],
+        					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
         						"auto", Missing["Not supported."], (* Computes to 6pt if marks has crop and to zero otherwise. *)
         						_,      unrecognizedKeyWordFailure @ prop
         					],

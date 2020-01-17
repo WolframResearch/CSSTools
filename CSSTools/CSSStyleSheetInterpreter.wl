@@ -342,7 +342,7 @@ consumeMediaQuery[tokens:{___?CSSTokenQ}] :=
 		(* first token should be the media type *)
 		Switch[tokens[[pos]]["Type"],
 			"ident", 
-				Switch[ToLowerCase @ tokens[[pos]]["String"],
+				Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 					"all",        None,
 					"braille",    Missing["Not supported."],
 					"embossed",   Missing["Not supported."],
@@ -397,7 +397,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 				];
 				pos++; (* skip colon *)
 				If[TokenTypeIs["ident", tokens[[pos]]],
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"left",  Left,
 						"right", Right,
 						"first", Missing["Not supported."],
@@ -582,7 +582,7 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 				declaration, 
 				"Interpretation" -> 
 					With[{p = declaration["Property"]},
-						consumeProperty[If[StringStartsQ[p, "--"], p, ToLowerCase @ p], declaration["Interpretation"]]]]
+						consumeProperty[If[StringStartsQ[p, "--"], p, CSSNormalizeEscapes @ ToLowerCase @ p], declaration["Interpretation"]]]]
 		]		
 	]
 
@@ -766,7 +766,7 @@ assemble[
 	CSSBlockData_, 
 	opts:OptionsPattern[]
 ] :=
-	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp},
+	Module[{validBlockData, optionNames, temp, prop = StringTrim @ CSSNormalizeEscapes @ ToLowerCase @ inputProp},
 		(* check whether input is a valid background long-form properties *)
 		If[!StringMatchQ[prop, "background" | "background-attachment" | "background-color" | "background-image" | "background-position" | "background-repeat"], 
 			Return @ Failure["BadProp", <|"Message" -> "Unrecognized background property.", "Prop" -> inputProp|>]];
@@ -830,7 +830,7 @@ assemble[
 	CSSBlockData_, 
 	opts:OptionsPattern[]
 ] :=
-	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp},
+	Module[{validBlockData, optionNames, temp, prop = StringTrim @ CSSNormalizeEscapes @ ToLowerCase @ inputProp},
 		(* check whether input is a valid border long-form properties *)
 		If[!StringMatchQ[prop, 
 				"border" | "border-top" | "border-bottom" | "border-right" | "border-left" |
@@ -905,7 +905,7 @@ assemble[
 	CSSBlockData_, 
 	opts:OptionsPattern[]
 ] :=
-	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp},
+	Module[{validBlockData, optionNames, temp, prop = StringTrim @ CSSNormalizeEscapes @ ToLowerCase @ inputProp},
 		(* check whether input is a valid font long-form properties *)
 		If[!StringMatchQ[prop, "font" | "font-family" | "font-size" | "font-style" | "font-variant" | "font-weight"], 
 			Return @ Failure["BadProp", <|"Message" -> "Unrecognized font property.", "Prop" -> inputProp|>]];
@@ -947,7 +947,7 @@ assemble[
 	CSSBlockData_, 
 	opts:OptionsPattern[]
 ] :=
-	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp},
+	Module[{validBlockData, optionNames, temp, prop = StringTrim @ CSSNormalizeEscapes @ ToLowerCase @ inputProp},
 		(* check whether input is a valid list-style long-form properties *)
 		If[!StringMatchQ[prop, "list-style" | "list-style-image" | "list-style-position" | "list-style-type"], 
 			Return @ Failure["BadProp", <|"Message" -> "Unrecognized ist-style property.", "Prop" -> inputProp|>]];
@@ -990,7 +990,7 @@ assemble[
 	CSSBlockData_, 
 	opts:OptionsPattern[]
 ] :=
-	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp, mainProp},
+	Module[{validBlockData, optionNames, temp, prop = StringTrim @ CSSNormalizeEscapes @ ToLowerCase @ inputProp, mainProp},
 		(* check whether input is a valid margin/padding long-form properties *)
 		mainProp = If[StringStartsQ[prop, "margin"], "margin", "padding"];
 		If[!StringMatchQ[prop, Alternatives[#, # <> "-top", # <> "-bottom", # <> "-right", # <> "-left"]& @ mainProp], 
@@ -1045,7 +1045,7 @@ assemble[
 	CSSBlockData_, 
 	opts:OptionsPattern[]
 ] :=
-	Module[{validBlockData, optionNames, temp, prop = StringTrim @ ToLowerCase @ inputProp, mainProp},
+	Module[{validBlockData, optionNames, temp, prop = StringTrim @ CSSNormalizeEscapes @ ToLowerCase @ inputProp, mainProp},
 		(* check whether input is a valid margin/padding long-form properties *)
 		mainProp = If[StringEndsQ[prop, "height"], "height", "width"];
 		If[!StringMatchQ[prop, Alternatives[#, "min-" <> #, "max-" <> #]& @ mainProp], 
@@ -1215,7 +1215,7 @@ CSSCascade[
 		
 		(* expand any inputs *)
 		props = 
-			StringTrim @ If[Not[TrueQ @ OptionValue["PropertyIsCaseSensitive"]], ToLowerCase, Identity] @ 
+			StringTrim @ If[Not[TrueQ @ OptionValue["PropertyIsCaseSensitive"]], CSSNormalizeEscapes[ToLowerCase[#]]&, Identity] @ 
 				Which[
 					MatchQ[inputProps, All],     Union @ Flatten @ CSSData[[All, "Block", All, "Property"]], 
 					MatchQ[inputProps, _?ListQ], Union @ Flatten @ inputProps,

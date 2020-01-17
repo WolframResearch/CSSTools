@@ -632,7 +632,7 @@ consumeProperty[prop:"alignment-baseline", tokens_?CSSTokenQ] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"baseline" | "auto", Baseline -> Baseline,
 						"sub",          Baseline -> Bottom,
 						"super",        Baseline -> Axis, (* maybe not the best approximation *)
@@ -667,7 +667,7 @@ consumeProperty[prop:"clip-path", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"none", None,
 						_,      unrecognizedKeyWordFailure @ prop
 					],
@@ -684,7 +684,7 @@ consumeProperty[prop:"clip-rule", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"nonzero", "NonZero",
 						"evenodd", "EvenOdd",
 						_,         unrecognizedKeyWordFailure @ prop
@@ -704,7 +704,7 @@ consumeProperty[prop:"color-interpolation", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto",      RGBColor,
 						"srgb",      RGBColor, (* default FE colorspace *)
 						"linearrgb", XYZColor,
@@ -722,7 +722,7 @@ consumeProperty[prop:"color-interpolation-filters", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto",      XYZColor, 
 						"srgb",      RGBColor, 
 						"linearrgb", XYZColor,
@@ -743,7 +743,7 @@ consumeProperty[prop:"color-profile", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto", Automatic, 
 						"srgb", "RGB", 
 						_,      (*TODO: parse @color-profile*)"NAME"(*Import[tokens[[pos]]["String"], "ICC"]*)				
@@ -762,7 +762,7 @@ consumeProperty[prop:"color-rendering", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto",            Automatic, 
 						"optimizespeed",   "Speed",
 						"optimizequality", "Quality",
@@ -787,7 +787,7 @@ consumeProperty[prop:"dominant-baseline", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto",             Automatic, 
 						"use-script",       Baseline, 
 						"no-change",        Inherited,
@@ -842,7 +842,7 @@ consumeProperty[prop:"fill-rule", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"nonzero", "NonZero",
 						"evenodd", "EvenOdd", 
 						_,         unrecognizedKeyWordFailure @ prop				
@@ -860,7 +860,7 @@ consumeProperty[prop:"filter", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"none", None, 
 						_,      unrecognizedKeyWordFailure @ prop				
 					],
@@ -908,7 +908,7 @@ consumeProperty[prop:"font-size-adjust", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"none", None, 
 						_,      unrecognizedKeyWordFailure @ prop				
 					],
@@ -929,7 +929,7 @@ consumeProperty[prop:"font-stretch", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"ultra-condensed", "Narrow",        (* CSSFM4 50% *)
 						"extra-condensed", "Narrow",        (* CSSFM4 62.5% *)
 						"condensed",       "Condensed",     (* CSSFM4 75% *)
@@ -970,7 +970,7 @@ consumeProperty[prop:"glyph-orientation-vertical", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto", Automatic,
 						_,      unrecognizedKeyWordFailure @ prop
 					],
@@ -987,7 +987,7 @@ consumeProperty[prop:"image-rendering", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto",            Automatic,
 						"optimizespeed",   "Speed",
 						"optimizequality", "Quality",
@@ -1006,7 +1006,7 @@ consumeProperty[prop:"kerning", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto", Automatic,
 						_,      unrecognizedKeyWordFailure @ prop
 					],
@@ -1036,7 +1036,7 @@ parseSingleMarker[prop_String, tokens:{__?CSSTokenQ}] :=
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos]]["Type"],
 			"ident",
-				Switch[ToLowerCase @ tokens[[pos]]["String"],
+				Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 					"none", None, 
 					_,      unrecognizedKeyWordFailure @ prop				
 				],
@@ -1077,7 +1077,7 @@ consumeProperty[prop:"mask", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"none", None, 
 						_,      unrecognizedKeyWordFailure @ prop				
 					],
@@ -1109,7 +1109,7 @@ consumeProperty[prop:"pointer-events", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"visiblePainted", Automatic,
 						"visiblefill",    "VisibleFill",
 						"visiblestroke",  "VisibleStroke",
@@ -1133,7 +1133,7 @@ consumeProperty[prop:"shape-rendering", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto",               Automatic,
 						"optimizespeed",      "OptimizeSpeed",
 						"cripsedges",         "CrispEdges",
@@ -1216,7 +1216,7 @@ consumeProperty[prop:"stroke-linecap", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"butt",   CapForm["Butt"],
 						"round",  CapForm["Round"],
 						"square", CapForm["Square"],
@@ -1233,7 +1233,7 @@ consumeProperty[prop:"stroke-linejoin", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"miter", JoinForm["Miter"],
 						"round", JoinForm["Round"],
 						"bevel", JoinForm["Bevel"],
@@ -1286,7 +1286,7 @@ consumeProperty[prop:"text-anchor", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"start",  "Start",
 						"middle", "Middle",
 						"end",    "End",
@@ -1307,7 +1307,7 @@ consumeProperty[prop:"text-rendering", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto",               Automatic,
 						"optimizespeed",      "OptimizeSpeed",
 						"optimizelegibility", "OptimizeLegibility",
@@ -1331,7 +1331,7 @@ consumeProperty[prop:"writing-mode", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"lr-tb" | "lr", "LeftToRight",
 						"rl-tb" | "rl", "RightToLeft",
 						"tb-rl" | "tb", "TopToBottom",

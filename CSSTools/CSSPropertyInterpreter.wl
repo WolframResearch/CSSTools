@@ -1468,7 +1468,7 @@ parseURI[uri_String] :=
 				StringMatchQ[start, StartOfString ~~ "data:" ~~ ___ ~~ EndOfString, IgnoreCase -> True],
 					start = StringReplace[start, StartOfString ~~ "data:" ~~ x___ ~~ EndOfString :> x];
 					rest = URLDecode @ rest;
-					Switch[ToLowerCase @ start,
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ start,
 						"" | "text/plain", ImportString[rest, "String"],
 						"text/css",        ImportString[rest, "String"],
 						"text/html",       ImportString[rest, "HTML"],
@@ -1821,7 +1821,7 @@ consumeProperty[prop:"border-collapse", tokens:{__?CSSTokenQ}] :=
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		Switch[tokens[[pos]]["Type"],
 			"ident", 
-				Switch[ToLowerCase @ tokens[[pos]]["String"],
+				Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 					"separate", Missing["Not supported."],
 					"collapse", <||>, (* this is all Mathematica supports *)
 					_,          unrecognizedKeyWordFailure @ prop
@@ -2093,7 +2093,7 @@ consumeProperty[prop:"clip", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto", Missing["Not supported."],
 						_,      unrecognizedKeyWordFailure @ prop
 					],
@@ -2131,7 +2131,7 @@ consumeProperty[prop:"content", tokens:{__?CSSTokenQ}] :=
 			value = 
 				Switch[tokens[[pos]]["Type"],
 					"ident", 
-						Switch[ToLowerCase @ tokens[[pos]]["String"],
+						Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 							"normal",         If[pos > 1, Return @ tooManyTokensFailure @ tokens, Normal],
 							"none",           If[pos > 1, Return @ tooManyTokensFailure @ tokens, None],
 							"open-quote",     Missing["Not supported."],
@@ -2175,7 +2175,7 @@ consumeProperty[prop:"counter-increment", tokens:{__?CSSTokenQ}] :=
 		While[pos <= l,
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"none", 
 							If[l > 1,  (* none must be the only identifier if it is used *)
 								Return @ illegalIdentifierFailure @ tokens[[pos]]["String"]
@@ -2215,7 +2215,7 @@ consumeProperty[prop:"counter-reset", tokens:{__?CSSTokenQ}] :=
 		While[pos <= l,
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"none", 
 							If[l > 1, 
 								Return @ illegalIdentifierFailure @ tokens[[pos]]["String"]
@@ -2410,7 +2410,7 @@ consumeProperty[prop:"quotes", tokens:{__?CSSTokenQ}] :=
 		While[pos <= l,
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"none", 
 							If[l > 1, 
 								Return @ illegalIdentifierFailure @ tokens[[pos]]["String"]
@@ -2445,7 +2445,7 @@ consumeProperty[prop:"cursor", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto",          Automatic,
 						"copy",          "DragAndDrop",
 						"crosshair",     "Crosshair",
@@ -2484,7 +2484,7 @@ consumeProperty[prop:"display", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"inline",             Automatic, (* wrap in Cell[]? *)
 						"block",              Automatic,
 						"list-item",          Automatic,
@@ -2521,7 +2521,7 @@ consumeProperty[prop:"float", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"left",  Automatic,
 						"right", Automatic,
 						"none",  Automatic,
@@ -2539,7 +2539,7 @@ consumeProperty[prop:"clear", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"left",    Automatic,
 						"right",   Automatic,
 						"both",    Automatic,
@@ -2574,7 +2574,7 @@ consumeProperty[prop:"font", tokens:{__?CSSTokenQ}] :=
 		If[l == 1, (* if only one token is present, then it should be a keyword that represents a system font (or font style?) *)
 			If[TokenTypeIs["ident", tokens[[pos]]],
 				v = 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"caption" | "icon" | "menu" | "small-caption", 
 							AssociateTo[value, FontFamily -> Dynamic @ CurrentValue["ControlsFontFamily"]];
 							AssociateTo[value, FontSize   -> Dynamic @ CurrentValue["ControlsFontSize"]];,
@@ -2734,7 +2734,7 @@ consumeProperty[prop:"font-size", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"larger",   Larger,
 						"smaller",  Smaller,
 						"xx-small", Tiny (*6*),
@@ -2765,7 +2765,7 @@ consumeProperty[prop:"font-style", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"normal",  Plain,
 						"italic",  Italic,
 						"oblique", "Oblique",
@@ -2788,7 +2788,7 @@ consumeProperty[prop:"font-variant", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"normal",     "Normal",
 						"small-caps", "SmallCaps",
 						_,            unrecognizedKeyWordFailure @ prop
@@ -2813,7 +2813,7 @@ consumeProperty[prop:"font-weight", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"normal"|"book"|"plain"|"regular"|"roman", Plain,
 						"bold", Bold,
 						"medium", "Medium",
@@ -2920,7 +2920,7 @@ consumeProperty[prop:"line-height", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"normal", {1.2, 0},
 						_,        unrecognizedKeyWordFailure @ prop
 					],
@@ -3020,7 +3020,7 @@ consumeProperty[prop:"outline-color", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"invert", CellFrameColor -> Dynamic[If[CurrentValue["MouseOver"], ColorNegate @ CurrentValue[CellFrameColor], Inherited]],
 						_,        unrecognizedKeyWordFailure @ prop
 					],
@@ -3125,7 +3125,7 @@ consumeProperty[prop:"overflow", tokens:{__?CSSTokenQ}] :=
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos]]["Type"],
 			"ident",
-				Switch[ToLowerCase @ tokens[[pos]]["String"],
+				Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 					"visible", Missing["Not supported."],
 					"hidden",  <|ImageSizeAction -> "Clip", Scrollbars -> False|>,
 					"scroll",  <|ImageSizeAction -> "Clip", Scrollbars -> True|>,
@@ -3227,7 +3227,7 @@ consumeProperty[prop:("page-break-after" | "page-break-before"), tokens:{__?CSST
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto",   Automatic,
 						"always", True,
 						"avoid",  False,
@@ -3255,7 +3255,7 @@ consumeProperty[prop:"page-break-inside", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto",  Automatic, 
 						"avoid", False,
 						_,       unrecognizedKeyWordFailure @ prop
@@ -3287,7 +3287,7 @@ consumeProperty[prop:"position", tokens:{__?CSSTokenQ}] :=
 		value =
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"static",   Automatic, (* normal layout, ignoring any left/right/top/bottom offsets *)
 						"relative", Automatic, (* normal layout, offset relative to normal position and floats above "siblings" *)
 						"absolute", Automatic, (* non-normal layout, attached cell attached to a parent box with absolute offset *)
@@ -3306,7 +3306,7 @@ consumeProperty[prop:"left" | "right" | "top" | "bottom", tokens:{__?CSSTokenQ}]
 		value =
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto", Automatic,
 						_,      unrecognizedKeyWordFailure @ prop
 					],
@@ -3347,7 +3347,7 @@ consumeProperty[prop:"caption-side", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"top",    Automatic,
 						"bottom", Automatic,
 						_,        unrecognizedKeyWordFailure @ prop
@@ -3369,7 +3369,7 @@ consumeProperty[prop:"empty-cells", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"show", Automatic,
 						"hide", Automatic,
 						_,      unrecognizedKeyWordFailure @ prop
@@ -3391,7 +3391,7 @@ consumeProperty[prop:"table-layout", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto",  Automatic,
 						"fixed", Automatic,
 						_,       unrecognizedKeyWordFailure @ prop
@@ -3416,7 +3416,7 @@ consumeProperty[prop:"direction", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"ltr", Automatic,
 						"rtl", Missing["Not supported."],
 						_,     unrecognizedKeyWordFailure @ prop
@@ -3437,7 +3437,7 @@ consumeProperty[prop:"text-align", tokens:{__?CSSTokenQ}] :=
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos]]["Type"],
 			"ident",
-				Switch[ToLowerCase @ tokens[[pos]]["String"],
+				Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 					"left",    <|TextAlignment -> Left|>,
 					"right",   <|TextAlignment -> Right|>,
 					"center",  <|TextAlignment -> Center|>,
@@ -3483,7 +3483,7 @@ consumeProperty[prop:"text-decoration", tokens:{__?CSSTokenQ}] :=
 			value =
 				Switch[tokens[[pos]]["Type"],
 					"ident",
-						Switch[ToLowerCase @ tokens[[pos]]["String"],
+						Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 							"none",         If[pos > 1, tooManyTokensFailure @ "none", Nothing],
 							"underline",    "Underline" -> True,
 							"overline",     "Overline" -> Missing["Not supported."], (* OverBar is a function, not an option in WL *)
@@ -3509,7 +3509,7 @@ consumeProperty[prop:"text-transform", tokens:{__?CSSTokenQ}] :=
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos]]["Type"],
 			"ident",
-				Switch[ToLowerCase @ tokens[[pos]]["String"],
+				Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 					"capitalize", Missing["Not supported."], (* Not by the FE at least, but see WL Capitalize[..., "AllWords"] *)
 					"uppercase",  <|FontVariations -> <|"CapsType" -> "AllCaps"|>|>,
 					"lowercase",  <|FontVariations -> <|"CapsType" -> "AllLower"|>|>,
@@ -3536,7 +3536,7 @@ consumeProperty[prop:"letter-spacing", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"normal", "Plain",
 						_,        unrecognizedKeyWordFailure @ prop
 					],
@@ -3558,7 +3558,7 @@ consumeProperty[prop:"font-stretch", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"ultra-condensed", "Narrow",        (* CSSFM4 50% *)
 						"extra-condensed", "Narrow",        (* CSSFM4 62.5% *)
 						"condensed",       "Condensed",     (* CSSFM4 75% *)
@@ -3587,7 +3587,7 @@ consumeProperty[prop:"unicode-bidi", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"normal",        Automatic,
 						"embed",         Missing["Not supported."],
 						"bidi-override", Missing["Not supported."],
@@ -3613,7 +3613,7 @@ consumeProperty[prop:"word-spacing", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"normal", "Plain",
 						_,        unrecognizedKeyWordFailure @ prop
 					],
@@ -3634,7 +3634,7 @@ consumeProperty[prop:"white-space", tokens:{__?CSSTokenQ}] :=
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos]]["Type"],
 			"ident",
-				Switch[ToLowerCase @ tokens[[pos]]["String"],
+				Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 					"normal",   Missing["Not supported."],
 					"pre",      Missing["Not supported."],
 					"nowrap",   Missing["Not supported."],
@@ -3737,7 +3737,7 @@ consumeProperty[prop:"visibility", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"visible",  True,
 						"hidden",   False,
 						"collapse", False,
@@ -3763,7 +3763,7 @@ consumeProperty[prop:"z-index", tokens:{__?CSSTokenQ}] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"auto", Automatic,
 						_,      unrecognizedKeyWordFailure @ prop
 					],

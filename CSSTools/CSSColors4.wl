@@ -19,9 +19,9 @@ Needs["CSSTools`CSSPropertyInterpreter`"]
 Begin["`Private`"]; (* Begin Private Context *) 
 
 
-(* Keywords tokenize to ident tokens. As other parts of CSS must maintain case, ToLowerCase is applied here as opposed to during tokenization. *)
+(* Keywords tokenize to ident tokens. As other parts of CSS must maintain case, CSSNormalizeEscapes @ ToLowerCase is applied here as opposed to during tokenization. *)
 parseSingleColorKeyWord[prop_String, keyword_String] := 
-	Switch[ToLowerCase @ keyword,
+	Switch[CSSNormalizeEscapes @ ToLowerCase @ keyword,
 		"currentcolor",   Dynamic @ CurrentValue[FontColor], 
 		"transparent",    None, (* interpreted as GrayLevel[0, 0] by Interpreter["Color"] *)
 		"aliceblue",      RGBColor[Rational[16, 17], Rational[248, 255], 1], 
@@ -245,7 +245,7 @@ hslPattern[] :=
 
 
 parseSingleColorFunction[prop_String, token_?CSSTokenQ] :=
-	Module[{relevantTokens, function = token["RawString"]},
+	Module[{relevantTokens, function = token["String"]},
 		(* relevantTokens drops the token's type and string, and removes all whitespace tokens *)
 		relevantTokens = DeleteCases[token["Children"], CSSToken[KeyValuePattern["Type" -> "whitespace"]], {1}];
 		Which[

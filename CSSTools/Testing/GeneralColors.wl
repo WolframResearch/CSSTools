@@ -4,42 +4,6 @@
 (*General Color Tests*)
 
 
-(* ::Subsection::Closed:: *)
-(*Generate Tests*)
-
-
-(* ::Input:: *)
-(*(* Original test data. Null results are expected failures. *)*)
-(*generalColorTests={{"",Null},{" /* hey */\n",Null},{"4",Null},{"top",Null},{"/**/transparent",None},{"transparent",None},{" transparent\n",None},{"TransParent",None},{"currentColor","currentColor"},{"CURRENTcolor","currentColor"},{"current-Color",Null},{"black",{0,0,0}},{"white",{1,1,1}},{"fuchsia",{1,0,1}},{"cyan",{0,1,1}},{"CyAn",{0,1,1}},{"#",Null},{"#f",Null},{"#ff",Null},{"#fff",{1,1,1}},{"#ffg",Null},{"#ffff",{1,1,1,1}},{"#fffg",Null},{"#fffff",Null},{"#ffffff",{1,1,1}},{"#fffffg",Null},{"#fffffff",Null},{"#ffffffff",{1,1,1,1}},{"#fffffffg",Null},{"#fffffffff",Null},{"#FFCc99",{1,0.8`,0.6`}},{"#369",{0.2`,0.4`,0.6`}},{"rgb(00, 51, 102)",{0,0.2`,0.4`}},{"r\\gb(00, 51, 102)",{0,0.2`,0.4`}},{"r\\67 b(00, 51, 102)",{0,0.2`,0.4`}},{"RGB(153, 204, 255)",{0.6`,0.8`,1}},{"rgB(0, 0, 0)",{0,0,0}},{"rgB(0, 51, 255)",{0,0.2`,1}},{"rgb(0,51,255)",{0,0.2`,1}},{"rgb(0\t,  51 ,255)",{0,0.2`,1}},{"rgb(/* R */0, /* G */51, /* B */255)",{0,0.2`,1}},{"rgb(-51, 306, 0)",{-0.2`,1.2`,0}},{"rgb(42%, 3%, 50%)",{0.42`,0.03`,0.5`}},{"RGB(100%, 100%, 100%)",{1,1,1}},{"rgB(0%, 0%, 0%)",{0,0,0}},{"rgB(10%, 20%, 30%)",{0.1`,0.2`,0.3`}},{"rgb(10%,20%,30%)",{0.1`,0.2`,0.3`}},{"rgb(10%\t,  20% ,30%)",{0.1`,0.2`,0.3`}},{"rgb(/* R */ 10%, /* G */ 20%, /* B */ 30%)",{0.1`,0.2`,0.3`}},{"rgb(-12%, 110%, 1400%)",{-0.12`,1.1`,14}},{"rgb(10%, 50%, 0)",Null},{"rgb(255, 50%, 0%)",Null},{"rgb(0, 0 0)",Null},{"rgb(0, 0, 0deg)",Null},{"rgb(0, 0, light)",Null},{"rgb()",Null},{"rgb(0)",Null},{"rgb(0, 0)",Null},{"rgb(0, 0, 0, 0)",Null},{"rgb(0%)",Null},{"rgb(0%, 0%)",Null},{"rgb(0%, 0%, 0%, 0%)",Null},{"rgb(0%, 0%, 0%, 0)",Null},{"rgba(0, 0, 0, 0)",{0,0,0,0}},{"rgba(204, 0, 102, 0.3)",{0.8`,0,0.4`,0.3`}},{"RGBA(255, 255, 255, 0)",{1,1,1,0}},{"rgBA(0, 51, 255, 1)",{0,0.2`,1,1}},{"rgba(0, 51, 255, 1.1)",{0,0.2`,1,1}},{"rgba(0, 51, 255, 37)",{0,0.2`,1,1}},{"rgba(0, 51, 255, 0.42)",{0,0.2`,1,0.42`}},{"rgba(0, 51, 255, 0)",{0,0.2`,1,0}},{"rgba(0, 51, 255, -0.1)",{0,0.2`,1,0}},{"rgba(0, 51, 255, -139)",{0,0.2`,1,0}},{"rgba(42%, 3%, 50%, 0.3)",{0.42`,0.03`,0.5`,0.3`}},{"RGBA(100%, 100%, 100%, 0)",{1,1,1,0}},{"rgBA(0%, 20%, 100%, 1)",{0,0.2`,1,1}},{"rgba(0%, 20%, 100%, 1.1)",{0,0.2`,1,1}},{"rgba(0%, 20%, 100%, 37)",{0,0.2`,1,1}},{"rgba(0%, 20%, 100%, 0.42)",{0,0.2`,1,0.42`}},{"rgba(0%, 20%, 100%, 0)",{0,0.2`,1,0}},{"rgba(0%, 20%, 100%, -0.1)",{0,0.2`,1,0}},{"rgba(0%, 20%, 100%, -139)",{0,0.2`,1,0}},{"rgba(255, 255, 255, 0%)",Null},{"rgba(10%, 50%, 0, 1)",Null},{"rgba(255, 50%, 0%, 1)",Null},{"rgba(0, 0, 0 0)",Null},{"rgba(0, 0, 0, 0deg)",Null},{"rgba(0, 0, 0, light)",Null},{"rgba()",Null},{"rgba(0)",Null},{"rgba(0, 0, 0)",Null},{"rgba(0, 0, 0, 0, 0)",Null},{"rgba(0%)",Null},{"rgba(0%, 0%)",Null},{"rgba(0%, 0%, 0%)",Null},{"rgba(0%, 0%, 0%, 0%)",Null},{"rgba(0%, 0%, 0%, 0%, 0%)",Null},{"HSL(0, 0%, 0%)",{0,0,0}},{"hsL(0, 100%, 50%)",{1,0,0}},{"hsl(60, 100%, 37.5%)",{0.75`,0.75`,0}},{"hsl(780, 100%, 37.5%)",{0.75`,0.75`,0}},{"hsl(-300, 100%, 37.5%)",{0.75`,0.75`,0}},{"hsl(300, 50%, 50%)",{0.75`,0.25`,0.75`}},{"hsl(10, 50%, 0)",Null},{"hsl(50%, 50%, 0%)",Null},{"hsl(0, 0% 0%)",Null},{"hsl(30deg, 100%, 100%)",Null},{"hsl(0, 0%, light)",Null},{"hsl()",Null},{"hsl(0)",Null},{"hsl(0, 0%)",Null},{"hsl(0, 0%, 0%, 0%)",Null},{"HSLA(-300, 100%, 37.5%, 1)",{0.75`,0.75`,0,1}},{"hsLA(-300, 100%, 37.5%, 12)",{0.75`,0.75`,0,1}},{"hsla(-300, 100%, 37.5%, 0.2)",{0.75`,0.75`,0,0.2`}},{"hsla(-300, 100%, 37.5%, 0)",{0.75`,0.75`,0,0}},{"hsla(-300, 100%, 37.5%, -3)",{0.75`,0.75`,0,0}},{"hsla(10, 50%, 0, 1)",Null},{"hsla(50%, 50%, 0%, 1)",Null},{"hsla(0, 0% 0%, 1)",Null},{"hsla(30deg, 100%, 100%, 1)",Null},{"hsla(0, 0%, light, 1)",Null},{"hsla()",Null},{"hsla(0)",Null},{"hsla(0, 0%)",Null},{"hsla(0, 0%, 0%, 50%)",Null},{"hsla(0, 0%, 0%, 1, 0%)",Null},{"cmyk(0, 0, 0, 0)",Null}};*)
-
-
-(* ::Input:: *)
-(*MapThread[*)
-(*	(CellPrint[*)
-(*		ExpressionCell[*)
-(*			If[Head[#2] === Failure, Defer[TestMatch[#1, _Failure]], Defer[NTest[#1, #2]]],*)
-(*			"Code",*)
-(*			CellAutoOverwrite -> False,*)
-(*			GeneratedCell -> False]*)
-(*])&, *)
-(*{*)
-(*	Table[*)
-(*		With[{t = generalColorTests[[i, 1]]}, *)
-(*			Defer[*)
-(*				With[{val =CSSTools`CSSPropertyInterpreter`parseSingleColor["color", First[CSSTools`CSSTokenizer`CSSTokenize @ t, {}]]},*)
-(*					If[FailureQ[val] || val === None  || Head[val] === Dynamic, val, List @@ ColorConvert[val, "RGB"]]]]], *)
-(*		{i, Length[generalColorTests]}], *)
-(*	Table[*)
-(*		With[{t = generalColorTests[[i, 1]]}, *)
-(*			With[{val = CSSTools`CSSPropertyInterpreter`parseSingleColor["color", First[CSSTools`CSSTokenizer`CSSTokenize @ t, {}]]},*)
-(*				If[FailureQ[val] || val === None  || Head[val] === Dynamic, val, List @@ ColorConvert[val, "RGB"]]]],*)
-(*		{i, Length[generalColorTests]}]}]*)
-
-
-(* ::Subsection::Closed:: *)
-(*Tests*)
-
-
 Get["CSSTools`CSSTools`"];
 Get["CSSTools`CSSTokenizer`"];
 

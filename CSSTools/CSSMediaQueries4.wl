@@ -120,7 +120,7 @@ consumeMediaType[pos_, l_, tokens_] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"ident",
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"all",    Hold[True],
 						"print",  Hold[CurrentValue[InputNotebook[], ScreenStyleEnvironment] === "Printout"],
 						"screen", Hold[CurrentValue[InputNotebook[], ScreenStyleEnvironment] =!= "Printout"],
@@ -487,7 +487,7 @@ consumeMediaFeaturePlain[tokens:{__?CSSTokenQ}] :=
 	Module[{pos = 1, l = Length[tokens], name, value, s},
 		TrimWhitespaceTokens[pos, l, tokens];
 		If[TokenTypeIs["ident", tokens[[pos]]],
-			s = ToLowerCase @ tokens[[pos]]["String"];
+			s = CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"];
 			If[isMediaFeatureName[s] || StringStartsQ[s, "min-" | "max-"],
 				name = s;
 				AdvancePosAndSkipWhitespace[pos, l, tokens]
@@ -531,7 +531,7 @@ consumeMediaFeatureBoolean[tokens:{__?CSSTokenQ}] :=
 			TokenTypeIs["ident", tokens[[pos]]],
 				If[!StringStartsQ[tokens[[pos]]["String"], "min-" | "max-", IgnoreCase -> True],
 					If[isMediaFeatureName[tokens[[pos]]["String"]],
-						value = mediaFeatureBoolean[ToLowerCase @ tokens[[pos]]["String"]]
+						value = mediaFeatureBoolean[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"]]
 						,
 						Throw @ 
 							Failure["BadMFBoolean", <|
@@ -667,7 +667,7 @@ consumeMediaFeature[name:"orientation", tokens:{__?CSSTokenQ}] :=
 	Module[{pos = 1, l = Length[tokens]},
 		TrimWhitespaceTokens[pos, l, tokens];
 		If[TokenTypeIs["ident", tokens[[pos]]],
-			Switch[ToLowerCase @ tokens[[pos]]["String"],
+			Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 				"portrait",  Hold[CurrentValue[InputNotebook[], {WindowSize, 1}] <= CurrentValue[InputNotebook[], {WindowSize, 2}]],
 				"landscape", Hold[CurrentValue[InputNotebook[], {WindowSize, 1}] >  CurrentValue[InputNotebook[], {WindowSize, 2}]],
 				_,           Throw @ Failure["BadMFValue", <|"Message" -> "Orientation must be portrait or landscape keyword."|>] 

@@ -479,7 +479,7 @@ consumePseudoElementSelector[pos_, l_, tokens_] :=
 	Module[{value},
 		If[TokenTypeIs["colon", tokens[[pos]]], pos++];
 		If[TokenTypeIs["colon", tokens[[pos]]], pos++];
-		value = "PseudoElement" -> <|"Name" -> ToLowerCase @ tokens[[pos]]["String"]|>;
+		value = "PseudoElement" -> <|"Name" -> CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"]|>;
 		pos++;
 		value
 	]
@@ -496,7 +496,7 @@ consumePseudoClassSelector[pos_, l_, tokens_, namespaces_, Hold[specificity_]] :
 		value =
 			Switch[tokens[[pos]]["Type"],
 				"ident",    
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						Alternatives[
 							"link", "visited", "hover", "active", "focus", "target",
 							"enabled", "disabled", "checked", "indeterminate", "root",
@@ -504,13 +504,13 @@ consumePseudoClassSelector[pos_, l_, tokens_, namespaces_, Hold[specificity_]] :
 							"only-child", "only-of-type", "empty"
 						],
 							specificity["b"]++;
-							"PseudoClass" -> <|"Name" -> ToLowerCase @ tokens[[pos]]["String"]|>,
+							"PseudoClass" -> <|"Name" -> CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"]|>,
 						_, 
 							Throw @ Failure["BadPseudoClass", <|"Message"  -> "Unrecognized pseudo class selector."|>]
 					]
 				,
 				"function", 
-					Switch[ToLowerCase @ tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"lang", 
 							specificity["b"]++;
 							"PseudoClass" -> <|
@@ -522,7 +522,7 @@ consumePseudoClassSelector[pos_, l_, tokens_, namespaces_, Hold[specificity_]] :
 						],
 							specificity["b"]++;
 							"PseudoClass" -> <|
-								"Name" -> ToLowerCase @ tokens[[pos]]["String"], 
+								"Name" -> CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"], 
 								"ANB"  -> consumeANB[tokens[[pos]]["Children"]]|>
 						,
 						"not", consumeNegationPseudoClass[tokens[[pos]]["Children"], namespaces, Hold[specificity]]
