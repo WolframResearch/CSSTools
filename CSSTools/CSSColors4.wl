@@ -277,8 +277,10 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "black", (* CSS 2.1 did not define this *)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> FontColor -> Inherited,
-			"initial" -> FontColor -> Black|>|>}]
-			
+			"initial" -> FontColor -> Black|>,
+		"Animatable" -> True,
+		"Values" -> {"<color>"},
+		"AppliesTo" -> All|>}]
 			
 (* ::Subsection:: *)
 (*Color*)

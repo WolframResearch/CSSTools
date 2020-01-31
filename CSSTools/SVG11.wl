@@ -97,12 +97,12 @@ SVGPresentationAttributesData = <|
 		"AppliesTo" -> {graphicsElements (* within a clipPath element *)}|>,
  	"color" -> <|
 		"Inherited" -> True,
-		"CSSInitialValue" -> "depends on user agent",
+		"CSSInitialValue" -> "black", (* depends on user agent; we choose black *)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|FontColor -> Dynamic @ CurrentValue[FontColor]|>,
 			"initial" -> <|FontColor -> Dynamic @ CurrentValue[FontColor]|>|>,
 		"Animatable" -> True,
-		"Values" -> "<color>",
+		"Values" -> {"<color>"},
 		"AppliesTo" -> All (* svg 2 recommendation *)|>,
  	"color-interpolation" -> <|
 		"Inherited" -> True,
@@ -266,10 +266,10 @@ SVGPresentationAttributesData = <|
 		"AppliesTo" -> {textContentElements}|>,
  	"font-family" -> <|
 		"Inherited" -> True,
-		"CSSInitialValue" -> "depends on user agent",
+		"CSSInitialValue" -> "arial", (* depends on user agent; we choose arial *)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|FontFamily -> Inherited|>,
-			"initial" -> <|FontFamily -> Dynamic @ CurrentValue[$FrontEnd, {StyleDefinitions, "Text", FontFamily}, "Arial"]|>|>,
+			"initial" -> <|FontFamily -> "Arial"|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<family-name>", "serif", "sans-serif", "cursive", "fantasy", "monospace"},
 		"AppliesTo" -> {textContentElements}|>,
@@ -626,7 +626,7 @@ AssociateTo[CSSPropertyData, SVGPresentationAttributesData];
 	Lengths and percentages are w.r.t. the baseline of the surrounding element.
 	Percentages are relative to the font-size i.e. 100% is one line-height upward.
 *)
-consumeProperty[prop:"alignment-baseline", tokens_?CSSTokenQ] :=
+consumeProperty[prop:"alignment-baseline", tokens_?CSSTokenQ, opts:OptionsPattern[]] :=
 	Module[{pos = 1, (*l = Length[tokens], *)value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -655,13 +655,13 @@ consumeProperty[prop:"alignment-baseline", tokens_?CSSTokenQ] :=
 
 
 (* baseline-shift is going to be deprecated in favor of vertical-align *)
-consumeProperty[prop:"baseline-shift", tokens:{__?CSSTokenQ}] := consumeProperty["vertical-align", tokens]
+consumeProperty[prop:"baseline-shift", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := consumeProperty["vertical-align", tokens]
 
 
 (* "clip" is already handled in CSSPropertyInterpreter.wl and is mostly deprecated *)
 
 
-consumeProperty[prop:"clip-path", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"clip-path", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -678,7 +678,7 @@ consumeProperty[prop:"clip-path", tokens:{__?CSSTokenQ}] :=
 	]
 	
 	
-consumeProperty[prop:"clip-rule", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"clip-rule", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -698,7 +698,7 @@ consumeProperty[prop:"clip-rule", tokens:{__?CSSTokenQ}] :=
 (* "color" is already handled in CSSPropertyInterpreter.wl *)
 
 
-consumeProperty[prop:"color-interpolation", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"color-interpolation", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -716,7 +716,7 @@ consumeProperty[prop:"color-interpolation", tokens:{__?CSSTokenQ}] :=
 	]
 
 
-consumeProperty[prop:"color-interpolation-filters", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"color-interpolation-filters", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -737,7 +737,7 @@ consumeProperty[prop:"color-interpolation-filters", tokens:{__?CSSTokenQ}] :=
 (* DEPRECATED in CSS Color Module Level 3
 	A named color profile is supposed to be defined in an @color-profile rule in the CSS file.
 	Most imported images have the color profile already specified or embedded. *)
-consumeProperty[prop:"color-profile", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"color-profile", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -756,7 +756,7 @@ consumeProperty[prop:"color-profile", tokens:{__?CSSTokenQ}] :=
 	
 
 (* If "Quality" then perform color correction in the given ColorSpace, otherwise use default RGB. *)
-consumeProperty[prop:"color-rendering", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"color-rendering", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -781,7 +781,7 @@ consumeProperty[prop:"color-rendering", tokens:{__?CSSTokenQ}] :=
 	SVG 1.1 includes "marker" and "compact" values, but those are not part of CSS 2.1 *)
 	
 	
-consumeProperty[prop:"dominant-baseline", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"dominant-baseline", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -809,10 +809,10 @@ consumeProperty[prop:"dominant-baseline", tokens:{__?CSSTokenQ}] :=
 
 
 (* don't put a lot of effort into this as no one but IE10 supports it*)
-consumeProperty[prop:"enable-background", tokens:{__?CSSTokenQ}] := Missing["Deprecated."]
+consumeProperty[prop:"enable-background", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := Missing["Deprecated."]
 	
 
-consumeProperty[prop:"fill", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"fill", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -824,7 +824,7 @@ consumeProperty[prop:"fill", tokens:{__?CSSTokenQ}] :=
 	]
 	
 	
-consumeProperty[prop:"fill-opacity", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"fill-opacity", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -836,7 +836,7 @@ consumeProperty[prop:"fill-opacity", tokens:{__?CSSTokenQ}] :=
 	]
 	
 
-consumeProperty[prop:"fill-rule", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"fill-rule", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -854,7 +854,7 @@ consumeProperty[prop:"fill-rule", tokens:{__?CSSTokenQ}] :=
 	
 
 (* Filter effects are like blur, coloring, etc. that WL can apply via an Image transform applied to a raster. *)
-consumeProperty[prop:"filter", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"filter", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -872,7 +872,7 @@ consumeProperty[prop:"filter", tokens:{__?CSSTokenQ}] :=
 	
 
 (* only applies to feFlood elements *)
-consumeProperty[prop:"flood-color", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"flood-color", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleColor[prop, tokens[[pos]]];
@@ -881,7 +881,7 @@ consumeProperty[prop:"flood-color", tokens:{__?CSSTokenQ}] :=
 
 
 (* only applies to feFlood elements *)
-consumeProperty[prop:"flood-opacity", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"flood-opacity", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -902,7 +902,7 @@ consumeProperty[prop:"flood-opacity", tokens:{__?CSSTokenQ}] :=
 
 
 (* this is not part of the CSS 2.1 specification *)
-consumeProperty[prop:"font-size-adjust", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"font-size-adjust", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -923,7 +923,7 @@ consumeProperty[prop:"font-size-adjust", tokens:{__?CSSTokenQ}] :=
 	This was originally in CSS 2, but removed in CSS 2.1 due to lack of UA support.
 	Added back in Level 3. CSS Fonts Module Level 4 supports percentages as well.
 	Mathematica supports both level 3 and 4 features in FontTracking. *)
-consumeProperty[prop:"font-stretch", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"font-stretch", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -951,7 +951,7 @@ consumeProperty[prop:"font-stretch", tokens:{__?CSSTokenQ}] :=
 	
 
 (* deprecated in SVG 2 *)
-consumeProperty[prop:"glyph-orientation-horizontal", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"glyph-orientation-horizontal", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -964,7 +964,7 @@ consumeProperty[prop:"glyph-orientation-horizontal", tokens:{__?CSSTokenQ}] :=
 	
 
 (* deprecated in SVG 2 *)
-consumeProperty[prop:"glyph-orientation-vertical", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"glyph-orientation-vertical", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -981,7 +981,7 @@ consumeProperty[prop:"glyph-orientation-vertical", tokens:{__?CSSTokenQ}] :=
 	]
 	
 	
-consumeProperty[prop:"image-rendering", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"image-rendering", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1000,7 +1000,7 @@ consumeProperty[prop:"image-rendering", tokens:{__?CSSTokenQ}] :=
 	
 	
 (* deprecated in SVG 2 *)
-consumeProperty[prop:"kerning", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"kerning", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1022,7 +1022,7 @@ consumeProperty[prop:"kerning", tokens:{__?CSSTokenQ}] :=
 
 
 (* only used in primitives feDiffuseLighting and feSpecularLighting *)
-consumeProperty[prop:"lighting-color", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"lighting-color", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleColor[prop, tokens[[pos]]];
@@ -1046,32 +1046,32 @@ parseSingleMarker[prop_String, tokens:{__?CSSTokenQ}] :=
 	]
 
 
-consumeProperty[prop:"marker-end", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"marker-end", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{value},
 		value = parseSingleMarker[prop, tokens];
 		If[FailureQ[value], value, <|"SVGMarkerEnd" -> value|>]
 	]
 
-consumeProperty[prop:"marker-mid", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"marker-mid", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{value},
 		value = parseSingleMarker[prop, tokens];
 		If[FailureQ[value], value, <|"SVGMarkerMid" -> value|>]
 	]
 
-consumeProperty[prop:"marker-start", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"marker-start", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{value},
 		value = parseSingleMarker[prop, tokens];
 		If[FailureQ[value], value, <|"SVGMarkerStart" -> value|>]
 	]
 
-consumeProperty[prop:"marker", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"marker", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{value},
 		value = parseSingleMarker[prop, tokens];
 		If[FailureQ[value], value, <|"SVGMarkerEnd" -> value, "SVGMarkerMid" -> value, "SVGMarkerStart" -> value|>]
 	]
 
 
-consumeProperty[prop:"mask", tokens:{__?CSSTokenQ}] :=
+consumeProperty[prop:"mask", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] :=
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1088,7 +1088,7 @@ consumeProperty[prop:"mask", tokens:{__?CSSTokenQ}] :=
 	]
 	
 	
-consumeProperty[prop:"opacity", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"opacity", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1103,7 +1103,7 @@ consumeProperty[prop:"opacity", tokens:{__?CSSTokenQ}] :=
 (* "overflow" is already handled in CSSPropertyInterpreter.wl *)
 
 	
-consumeProperty[prop:"pointer-events", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"pointer-events", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1127,7 +1127,7 @@ consumeProperty[prop:"pointer-events", tokens:{__?CSSTokenQ}] :=
 	]
 	
 	
-consumeProperty[prop:"shape-rendering", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"shape-rendering", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1147,7 +1147,7 @@ consumeProperty[prop:"shape-rendering", tokens:{__?CSSTokenQ}] :=
 	
 	
 (* only used in 'stop' elements *)
-consumeProperty[prop:"stop-color", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"stop-color", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleColor[prop, tokens[[pos]]];
@@ -1156,7 +1156,7 @@ consumeProperty[prop:"stop-color", tokens:{__?CSSTokenQ}] :=
 	
 	
 (* only used in 'stop' elements *)
-consumeProperty[prop:"stop-opacity", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"stop-opacity", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1168,7 +1168,7 @@ consumeProperty[prop:"stop-opacity", tokens:{__?CSSTokenQ}] :=
 	]
 	
 	
-consumeProperty[prop:"stroke", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"stroke", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleColor[prop, tokens[[pos]]];
@@ -1176,7 +1176,7 @@ consumeProperty[prop:"stroke", tokens:{__?CSSTokenQ}] :=
 	]
 
 
-consumeProperty[prop:"stroke-dasharray", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"stroke-dasharray", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		If[l == 1 && TokenTypeIs["ident", tokens[[pos]]],
 			Return @ If[TokenStringIs["none", tokens[[pos]]], <|"SVGStrokeDashArray" -> {}|>], unrecognizedKeyWordFailure @ prop]; 
@@ -1197,7 +1197,7 @@ parseSingleDashArray[prop_String, token_?CSSTokenQ] :=
 		_,            unrecognizedValueFailure @ prop
 	]
 	
-consumeProperty[prop:"stroke-dashoffset", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"stroke-dashoffset", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1210,7 +1210,7 @@ consumeProperty[prop:"stroke-dashoffset", tokens:{__?CSSTokenQ}] :=
 		If[FailureQ[value], value, <|"SVGStrokeDashOffset" -> value|>]
 	]
 	
-consumeProperty[prop:"stroke-linecap", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"stroke-linecap", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1227,7 +1227,7 @@ consumeProperty[prop:"stroke-linecap", tokens:{__?CSSTokenQ}] :=
 		If[FailureQ[value], value, <|"SVGStrokeLineCap" -> value|>]
 	]
 	
-consumeProperty[prop:"stroke-linejoin", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"stroke-linejoin", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1244,7 +1244,7 @@ consumeProperty[prop:"stroke-linejoin", tokens:{__?CSSTokenQ}] :=
 		If[FailureQ[value], value, <|"SVGStrokeLineJoin" -> value|>]
 	]
 	
-consumeProperty[prop:"stroke-miterlimit", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"stroke-miterlimit", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1255,7 +1255,7 @@ consumeProperty[prop:"stroke-miterlimit", tokens:{__?CSSTokenQ}] :=
 		If[FailureQ[value], value, <|"SVGStrokeMiterLimit" -> value|>]
 	]
 	
-consumeProperty[prop:"stroke-opacity", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"stroke-opacity", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1266,7 +1266,7 @@ consumeProperty[prop:"stroke-opacity", tokens:{__?CSSTokenQ}] :=
 		If[FailureQ[value], value, <|"SVGStrokeOpacity" -> Opacity[Clip[value, {0, 1}]]|>]
 	]
 	
-consumeProperty[prop:"stroke-width", tokens:{__?CSSTokenQ}] :=
+consumeProperty[prop:"stroke-width", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] :=
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1280,7 +1280,7 @@ consumeProperty[prop:"stroke-width", tokens:{__?CSSTokenQ}] :=
 	]
 	
 	
-consumeProperty[prop:"text-anchor", tokens:{__?CSSTokenQ}] :=
+consumeProperty[prop:"text-anchor", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] :=
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1301,7 +1301,7 @@ consumeProperty[prop:"text-anchor", tokens:{__?CSSTokenQ}] :=
 (* "text-decoration" is already handled in CSSPropertyInterpreter.wl *)
 	
 
-consumeProperty[prop:"text-rendering", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"text-rendering", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -1325,7 +1325,7 @@ consumeProperty[prop:"text-rendering", tokens:{__?CSSTokenQ}] :=
 (* "word-spacing" is already handled in CSSPropertyInterpreter.wl *)
 
 
-consumeProperty[prop:"writing-mode", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"writing-mode", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 

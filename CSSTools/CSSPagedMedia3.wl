@@ -158,7 +158,7 @@ $ValidPageMargins = {
 
 SetAttributes[{consumeAtPageRule}, HoldFirst];
 
-consumeAtPageRule[pos_, l_, tokens_] := 
+consumeAtPageRule[pos_, l_, tokens_, namespaces_] := 
 	Module[{selectorsStart, selectorsEnd, pageSelectors, block},
 		(* check for valid start of @page token sequence *)
 		If[TokenTypeIsNot["at-keyword", tokens[[pos]]] || TokenStringIsNot["page", tokens[[pos]]],
@@ -182,7 +182,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 			];
 		
 		(* consume @page block *)
-		block = consumeAtPageBlock[tokens[[pos]]["Children"], pageSelectors];
+		block = consumeAtPageBlock[tokens[[pos]]["Children"], pageSelectors, namespaces];
 		block[[All, "Condition"]] = Hold[CurrentValue[InputNotebook[], ScreenStyleEnvironment] === "Printout"];
 		<|
 			"Selector" -> "@page" <> If[NumericQ[selectorsStart], " " <> CSSUntokenize @ tokens[[selectorsStart ;; selectorsEnd]], ""],
@@ -191,7 +191,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 
 
 (* The @page {...} block contains either additional page-margin at-rules or generic rules *)
-consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
+consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_, namespaces_] :=
 	Module[{pos = 1, l = Length[tokens], atMarginStart, atMarginEnd, dec, decStart, decEnd, declarations = {}},
 		(* skip any initial whitespace *)
 		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
@@ -200,14 +200,14 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 				(* page-margin at-rule *)
 				TokenTypeIs["at-keyword", tokens[[pos]]] && TokenStringIs[Alternatives @@ $ValidPageMargins, tokens[[pos]]], 
 					atMarginStart = atMarginEnd = pos; AdvancePosToNextBlock[atMarginEnd, l, tokens];
-					dec = consumeAtPageMarginRule[tokens[[atMarginStart ;; atMarginEnd]], scope];
+					dec = consumeAtPageMarginRule[tokens[[atMarginStart ;; atMarginEnd]], scope, namespaces];
 					If[!FailureQ[dec], AppendTo[declarations, dec]];
 					pos = atMarginEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
 				,
 				(* CSS 2.1 property or new @Page properties size, marks, bleed, and page*)
 				TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs[Alternatives @@ Join[$ApplicableCSSPageProperties, {"size", "marks", "bleed", "page"}], tokens[[pos]]],
 					decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
-					dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
+					dec = consumeDeclaration[tokens[[decStart ;; decEnd]], namespaces];
 					If[TrueQ @ $Debug, Echo[dec, "@page declaration"]];
 					If[!FailureQ[dec], 
 						Which[
@@ -291,7 +291,7 @@ convertMarginsToPrintingOptions[declaration_?AssociationQ, scope_] :=
 	Per CSS, a page-margin box is generated if and only if the computed value of its content property is not 'none'.
 	The FE leaves the cell content blank so overlaying an empty cell has no visible effect.
 *)
-consumeAtPageMarginRule[tokens:{___?CSSTokenQ}, scope_] := 
+consumeAtPageMarginRule[tokens:{___?CSSTokenQ}, scope_, namespaces_] := 
 	Module[{pos = 1, l = Length[tokens], horizontal, vertical, location},
 		(* check for valid start of margin at-rule token sequence *)
 		If[TokenTypeIsNot["at-keyword", tokens[[pos]]] || TokenStringIsNot[Alternatives @@ $ValidPageMargins, tokens[[pos]]],
@@ -317,7 +317,7 @@ consumeAtPageMarginRule[tokens:{___?CSSTokenQ}, scope_] :=
 			AdvancePosToNextBlock[pos, l, tokens]; AdvancePosAndSkipWhitespace[pos, l, tokens]; 
 			Return @ {}
 		];
-		consumeAtPageMarginBlock[tokens[[pos]]["Children"], scope, "@" <> location, horizontal, vertical]
+		consumeAtPageMarginBlock[tokens[[pos]]["Children"], scope, "@" <> location, horizontal, vertical, namespaces]
 	]
 
 
@@ -326,7 +326,7 @@ consumeAtPageMarginRule[tokens:{___?CSSTokenQ}, scope_] :=
 	However, these rules must be converted into Cell[...] expressions, 
 	then passed on to the declaration format e.g.
 		<|..., Interpretation->PageHeaders->Left[Cell[...]]|> *)
-consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}, scope_, location_String, horizontal_, vertical_] :=
+consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}, scope_, location_String, horizontal_, vertical_, namespaces_] :=
 	Module[{pos = 1, l = Length[tokens], dec, decStart, decEnd, declarations = {}, interpretation},
 		(* skip any initial whitespace *)
 		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
@@ -335,7 +335,7 @@ consumeAtPageMarginBlock[tokens:{___?CSSTokenQ}, scope_, location_String, horizo
 			(* only a subset of CSS 2.1 properties are valid *)
 			If[TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs[Alternatives @@ $ApplicableCSSPageMarginProperties, tokens[[pos]]],
 				decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
-				dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
+				dec = consumeDeclaration[tokens[[decStart ;; decEnd]], namespaces];
 				If[!FailureQ[dec], AppendTo[declarations, dec]];
 				pos = decEnd; AdvancePosAndSkipWhitespace[pos, l, tokens];
 				,
@@ -502,7 +502,7 @@ assembleByFEOption[opt:(PageHeaders | PageFooters), CSSBlockData_?validCSSBlockF
 		WL: PrintingOptions -> {"PageSize" -> {<<width>>, <<height>>}} where size is in points (72 points per inch)		
 	Normally these two are the same size, but they don't have to be. 
 	AFAICT the CSS does not control the size of the page box, only the paper box. *)
-consumeProperty[prop:"size", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"size", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], paperSizes, paperOrientations, value1 = {}, value2 = {}},
 		paperSizes = {"a5", "a4", "a3", "b5", "b4", "jis-b5", "jis-b4", "letter", "legal", "ledger"};
 		paperOrientations = {"landscape", "portrait"};
@@ -598,7 +598,7 @@ convertDPItoPrintersPoints[Dynamic[val_]] := Dynamic[val]
 	The FE does not support the 'cross' CSS value. 
 	The FE does support 'crop', but only draws the crop marks in the upper-left corner. 
 	Because cross and crop can be specified together, ignore the cross value unless there is a parsing error.*)
-consumeProperty[prop:"marks", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"marks", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		Switch[tokens[[pos]]["Type"],
 			"ident",
@@ -637,7 +637,7 @@ consumeProperty[prop:"marks", tokens:{__?CSSTokenQ}] :=
 (*Bleed*)
 
 
-consumeProperty[prop:"bleed", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"bleed", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -661,7 +661,7 @@ consumeProperty[prop:"bleed", tokens:{__?CSSTokenQ}] :=
 	The named page is case-sensitive, but the FE does not support named pages. 
 	If this did work, then a named @page rule's declarations would apply, possibly introducing a page break.
 	The only way to do this in WL (if at all) is via post-processing. *)
-consumeProperty[prop:"page", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"page", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 

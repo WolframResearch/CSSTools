@@ -53,7 +53,7 @@ DownValues[consumeProperty] =
 		{
 			(* corner case of no property value is a valid custom property definition *)
 			HoldPattern[
-				Condition[consumeProperty[prop_String, {}],	StringQ[prop] && StringStartsQ[prop, "--"]]
+				Condition[consumeProperty[prop_String, {}, opts:OptionsPattern[]], StringQ[prop] && StringStartsQ[prop, "--"]]
 			] :>
 				<|"CSSCustomPropertyDefinition" -> <|
 					"Name"  -> prop, 
@@ -61,7 +61,7 @@ DownValues[consumeProperty] =
 					
 			(* normal custom property definition *)
 			HoldPattern[
-				Condition[consumeProperty[prop_String, tokens:{__?CSSTokenQ}], StringQ[prop] && StringStartsQ[prop, "--"]]
+				Condition[consumeProperty[prop_String, tokens:{__?CSSTokenQ}, opts:OptionsPattern[]], StringQ[prop] && StringStartsQ[prop, "--"]]
 			] :> 
 				<|"CSSCustomPropertyDefinition" -> <|
 					"Name"  -> prop, 
@@ -78,7 +78,7 @@ DownValues[consumeProperty] =
 						
 			(* any use of var() must be resolved at compute time (CSSInheritance) unless a parse error is detected *)
 			HoldPattern[
-				Condition[consumeProperty[prop_String, tokens:{__?CSSTokenQ}], !FreeQ[tokens, TokenPatternString["var", "function"]]]
+				Condition[consumeProperty[prop_String, tokens:{__?CSSTokenQ}, opts:OptionsPattern[]], !FreeQ[tokens, TokenPatternString["var", "function"]]]
 			] :>
 				Module[{varCheck, failPosition},
 					varCheck = parseVarFunctionToken[#, {}]& /@ Extract[tokens, Position[tokens, TokenPatternString["var", "function"]]];
@@ -87,8 +87,9 @@ DownValues[consumeProperty] =
 						Extract[varCheck, failPosition]
 						,
 						<|"CSSResolveValueAtComputeTime" -> <|
-							"String" -> CSSUntokenize[tokens],
-							"Property" -> prop|>|>
+							"String"     -> CSSUntokenize[tokens],
+							"Property"   -> prop,
+							"Namespaces" -> OptionValue["Namespaces"]|>|>
 					]
 				]},
 		DownValues[consumeProperty]]
@@ -186,7 +187,7 @@ parseVarFunctionToken[token_?CSSTokenQ, replacements_] :=
 
 (* check for recursive definitions; return cycles/self-loops if any found *)
 customPropertyDefinitionCycles[replacements:{Rule[_?StringQ, _?StringQ]...}] :=
-	Module[{reps, newRules, graph},
+	Module[{reps, newRules},
 		(* find all var() token instances in the custom property replacement rules; get the names; ignore Failures as these should be removed during other parsing *)
 		reps = CSSTokenize /@ replacements[[All, 2]];
 		newRules = Map[getCustomPropertyNameFromVarFunction, Extract[#, Position[#, TokenPatternString["var", "function"]]]]& /@ reps;
@@ -199,7 +200,7 @@ customPropertyDefinitionCycles[replacements:{Rule[_?StringQ, _?StringQ]...}] :=
 	]
 
 replaceVarFunctionWithTokens[tokensInput:{__?CSSTokenQ}, replacements_] :=
-	Module[{cycles, tokens = tokensInput, varPosition, varToken, varCheck, name, failPosition},
+	Module[{cycles, tokens = tokensInput, varPosition, varToken, varCheck, name, l},
 		(* get any cyclic dependencies in the replacement rules *)
 		cycles = customPropertyDefinitionCycles[replacements];
 		
@@ -236,7 +237,6 @@ replaceVarFunctionsInDeclarationList[declarationsInput_?ListQ] :=
 			,
 			{i, itemsToResolve}];
 		declarations
-		
 	]
 
 	

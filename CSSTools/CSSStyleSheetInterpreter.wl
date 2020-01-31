@@ -21,7 +21,7 @@ inheritedPropertyRules;
 (* CSSTools`
 	---> defines wrappers like CSSHeightMax *)
 (* Selectors3` 
-	---> defines CSSSelector function, consumeCSSSelector *)
+	---> defines CSSSelector function, consumeCSSSelector, convertXMLPositionToCSSTarget *)
 (* CSSTokenizer`
 	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs
 	---> token position modifiers e.g. AdvancePosAndSkipWhitespace *)
@@ -72,8 +72,7 @@ Begin["`Private`"];
 	
 	The tokenizer and token accessor functions are defined in CSSTools`CSSTokenizer.
 	<<token>>["Type"]       canonical token type e.g. "ident", "dimension", etc.
-	<<token>>["String"]     canonical string i.e. lower case and escape sequences are translated e.g. "\30 Red" --> "0red"
-	<<token>>["RawString"]  original unaltered string
+	<<token>>["String"]     original unaltered string
 	<<token>>["Value"]      dimension value (already an interpreted number)
 	<<token>>["Unit"]       canonical dimension unit i.e. lower case and escape sequences are translated e.g. "px"
 	
@@ -101,15 +100,16 @@ consumeStyleSheet[tokens:{__?CSSTokenQ}] :=
 		(* check for @import rules *)
 		While[TokenTypeIs["at-keyword", tokens[[pos]]] && TokenStringIs["import", tokens[[pos]]], 
 			AppendTo[imports, consumeAtImportKeyword[pos, l, tokens]];
-			If[TrueQ @ $Debug, Echo[pos, "position after @import check"]];
 		];
 		imports = Join @@ imports;
+		If[TrueQ @ $Debug, Echo[pos, "position after @import check"]];
 		
 		(* check for @namespace rules *)
 		(* These must appear after the @charset and @import rules and before rule sets *)
-		While[TokenTypeIs["at-keyword"] && TokenStringIs["namespace"], 
+		While[TokenTypeIs["at-keyword", tokens[[pos]]] && TokenStringIs["namespace", tokens[[pos]]], 
 			AppendTo[namespaces, consumeAtNamespaceKeyword[pos, l, tokens]]
 		];
+		If[TrueQ @ $Debug, Echo[namespaces, "detected namespaces"]];
 		If[AnyTrue[namespaces, FailureQ], Return @ FirstCase[namespaces, _Failure, Failure["BadNamespace", <||>]]];
 		(* Having duplicate default namespaces or dupliate prefixes is nonconforming, but not an error. Remove them. *)
 		namespaces = Reverse @ DeleteDuplicatesBy[Reverse @ namespaces, #Default&];
@@ -243,7 +243,7 @@ consumeAtNamespaceKeyword[pos_, l_, tokens_] :=
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
 		(* ident token after @namespace is optional. If missing, the declared namespace is the default namespace. *)
 		If[TokenTypeIs["ident", tokens[[pos]]], 
-			prefix = tokens[[pos]]["RawString"]; (* case-sensitive *)
+			prefix = tokens[[pos]]["String"]; (* case-sensitive *)
 			AdvancePosAndSkipWhitespace[pos, l, tokens]
 			,
 			prefix = None; default = True;
@@ -256,7 +256,7 @@ consumeAtNamespaceKeyword[pos_, l_, tokens_] :=
 		];
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
 		(* token sequence must close with a semi-colon *)
-		If[TokenTypeIsNot["delim", tokens[[pos]]] || TokenStringIsNot[";", tokens[[pos]]], 
+		If[TokenTypeIsNot["semicolon", tokens[[pos]]] || TokenStringIsNot[";", tokens[[pos]]], 
 			Return @ Failure["BadNamespace", <|"Message" -> "Namespace declaration has missing semicolon."|>]
 		];
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
@@ -283,7 +283,7 @@ consumeAtRule[pos_, l_, tokens_, namespaces_] :=
 			{}, 
 			
 		(* @page *)
-		TokenStringIs["page", tokens[[pos]]], consumeAtPageRule[pos, l, tokens],
+		TokenStringIs["page", tokens[[pos]]], consumeAtPageRule[pos, l, tokens, namespaces],
 			
 		(* @media *)
 		TokenStringIs["media", tokens[[pos]]], 
@@ -376,7 +376,7 @@ consumeAtMediaBlock[tokens:{___?CSSTokenQ}, namespaces_] :=
 (*@page*)
 
 
-consumeAtPageRule[pos_, l_, tokens_] := 
+consumeAtPageRule[pos_, l_, tokens_, namespaces_] := 
 	Module[{pageSelectors, block},
 		(* check for valid start of @page token sequence *)
 		If[TokenTypeIsNot["at-keyword", tokens[[pos]]] || TokenStringIsNot["page", tokens[[pos]]],
@@ -415,7 +415,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 		];
 		
 		(* consume @page block *)
-		block = consumeAtPageBlock[tokens[[pos]]["Children"], pageSelectors];
+		block = consumeAtPageBlock[tokens[[pos]]["Children"], pageSelectors, namespaces];
 		block[[All, "Condition"]] = Hold[CurrentValue[InputNotebook[], ScreenStyleEnvironment] === "Printout"];
 		<|
 			"Selector" -> "@page",
@@ -424,7 +424,7 @@ consumeAtPageRule[pos_, l_, tokens_] :=
 
 
 (* The @page {...} block contains only margin rules; CSS 2.1 does not allow specifying page size *)
-consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
+consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_, namespaces_] :=
 	Module[{pos = 1, l = Length[tokens], dec, decStart, decEnd, declarations = {}},
 		(* skip any initial whitespace *)
 		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]]; 
@@ -432,7 +432,7 @@ consumeAtPageBlock[tokens:{___?CSSTokenQ}, scope_] :=
 		While[pos <= l,
 			If[TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs["margin" | "margin-top" | "margin-bottom" | "margin-left" | "margin-right", tokens[[pos]]],
 				decStart = decEnd = pos; AdvancePosToNextSemicolon[decEnd, l, tokens];
-				dec = consumeDeclaration[tokens[[decStart ;; decEnd]]];
+				dec = consumeDeclaration[tokens[[decStart ;; decEnd]], namespaces];
 				If[!FailureQ[dec], 
 					dec = convertMarginsToPrintingOptions[dec, scope];
 					AppendTo[declarations, dec]
@@ -495,20 +495,21 @@ consumeRuleset[pos_, l_, tokens_, namespaces_] :=
 	Module[{selectorStartPos = pos, ruleset},
 		AdvancePosToNextBlock[pos, l, tokens];
 		If[TrueQ @ $Debug, Echo[{pos, tokens}, "pos + tokens"]];
+		If[TrueQ @ $Debug, Echo[namespaces, "namespaces"]];
 		ruleset = 
 			<|
 				"Selector" -> consumeCSSSelector[tokens[[selectorStartPos ;; pos - 1]], namespaces], 
 				(* The block token is already encapsulated CSSToken[<|"Type" -> {}, "Children" -> {CSSTokens...}|>] *)
-				"Block" -> consumeDeclarationBlock @ If[Length[tokens[[pos]]["Children"]] > 1, tokens[[pos]]["Children"], {}]|>; 
+				"Block" -> consumeDeclarationBlock[If[Length[tokens[[pos]]["Children"]] > 1, tokens[[pos]]["Children"], {}], namespaces]|>; 
 		(* return the formatted ruleset, but first make sure to skip the block *)
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
 		ruleset
 	]
 
 
-consumeDeclarationBlock[{}] := {} 
+consumeDeclarationBlock[{}, _] := {} 
 
-consumeDeclarationBlock[blockTokens:{__?CSSTokenQ}] :=
+consumeDeclarationBlock[blockTokens:{__?CSSTokenQ}, namespaces_] :=
 	Module[{blockPos = 1, blockLength = Length[blockTokens], lDeclarations, i = 1, decStart, dec, validDeclarations},
 		(* skip any initial whitespace *)
 		If[TokenTypeIs["whitespace", blockTokens[[blockPos]]], AdvancePosAndSkipWhitespace[blockPos, blockLength, blockTokens]]; 
@@ -521,7 +522,7 @@ consumeDeclarationBlock[blockTokens:{__?CSSTokenQ}] :=
 		validDeclarations = ConstantArray[0, lDeclarations];
 		While[blockPos < blockLength && i <= lDeclarations,
 			decStart = blockPos; AdvancePosToNextSemicolon[blockPos, blockLength, blockTokens];
-			dec = consumeDeclaration[blockTokens[[decStart ;; blockPos]]];
+			dec = consumeDeclaration[blockTokens[[decStart ;; blockPos]], namespaces];
 			If[!FailureQ[dec], validDeclarations[[i++]] = dec];
 			(* skip over semi-colon *)
 			AdvancePosAndSkipWhitespace[blockPos, blockLength, blockTokens]
@@ -532,8 +533,8 @@ consumeDeclarationBlock[blockTokens:{__?CSSTokenQ}] :=
 
 
 (* a declaration is "prop:val" or "prop:val !important" with optional semicolon if it is the last declaration *)
-consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
-	Module[{decPos = 1, decLength = Length[decTokens], propertyPosition, valuePosition, important = False, declaration},
+consumeDeclaration[decTokens:{__?CSSTokenQ}, namespaces_] :=
+	Module[{decPos = 1, decLength = Length[decTokens], propertyPosition, valuePosition, endPosition, important = False, declaration},
 		(* check for bad property *)
 		If[TokenTypeIsNot["ident", decTokens[[decPos]]], Return @ $Failed];
 		propertyPosition = decPos; AdvancePosAndSkipWhitespace[decPos, decLength, decTokens];
@@ -554,10 +555,14 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 		];
 		
 		(* check for !important token sequence *)
+		endPosition = decPos;
 		If[TokenTypeIs["ident", decTokens[[decPos]]] && TokenStringIs["important", decTokens[[decPos]]], 
 			RetreatPosAndSkipWhitespace[decPos, decLength, decTokens];
 			If[TokenTypeIs["delim", decTokens[[decPos]]] && TokenStringIs["!", decTokens[[decPos]]], 
 				important = True; RetreatPosAndSkipWhitespace[decPos, decLength, decTokens]
+				,
+				(* else leave all trailing tokens alone *)
+				decPos = endPosition;
 			]
 		];
 		
@@ -582,7 +587,10 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}] :=
 				declaration, 
 				"Interpretation" -> 
 					With[{p = declaration["Property"]},
-						consumeProperty[If[StringStartsQ[p, "--"], p, CSSNormalizeEscapes @ ToLowerCase @ p], declaration["Interpretation"]]]]
+						consumeProperty[
+							If[StringStartsQ[p, "--"], p, CSSNormalizeEscapes @ ToLowerCase @ p], 
+							declaration["Interpretation"], 
+							"Namespaces" -> namespaces]]]
 		]		
 	]
 
@@ -678,6 +686,21 @@ movePseudoOptionsIntoBoxOptions[allOptions_, boxes:{__?validBoxesQ}] :=
 				_ -> {}, 
 				{1}]]	
 	]	
+	
+filterOptionNames[scope_, CSSBlockData_] :=
+	Module[{optionNames},
+		optionNames = Union @ Flatten[Keys /@ CSSBlockData[[All, "Interpretation"]]];
+		optionNames =
+			Select[
+				optionNames, 
+				Switch[scope, 
+					_?validBoxesQ,    !MemberQ[optionsToAvoidAtBoxLevel, #]&,
+					{__?validBoxesQ}, !MemberQ[optionsToAvoidAtBoxLevel, #]&,
+					Cell,              MemberQ[cellLevelOptions, #]&, 
+					Notebook,          MemberQ[notebookLevelOptions, #]&,
+					Box,              !MemberQ[optionsToAvoidAtBoxLevel, #]&,
+					All | None,        True&]]
+	]
 
 
 (* ::Subsection::Closed:: *)
@@ -1209,72 +1232,19 @@ CSSCascade[
 	inputSelectorList:_?(Function[CSSSelectorQ[#] || StringQ[#]]) | {__?(Function[CSSSelectorQ[#] || StringQ[#]])} | All, 
 	opts:OptionsPattern[]
 ] :=
-	Module[{props, selectorList, atRules, sel, dataSubset, specificities, declarations, resolvedOptions},
-		(* check for empty data *)
-		If[CSSData === {}, Return @ {}];
-		
+	Module[{props, declarations, resolvedOptions},
 		(* expand any inputs *)
 		props = 
-			StringTrim @ If[Not[TrueQ @ OptionValue["PropertyIsCaseSensitive"]], CSSNormalizeEscapes[ToLowerCase[#]]&, Identity] @ 
+			StringTrim @ If[Not[TrueQ @ OptionValue["PropertyIsCaseSensitive"]], CSSNormalizeEscapes[ToLowerCase[#]], Identity[#]]& /@ 
 				Which[
 					MatchQ[inputProps, All],     Union @ Flatten @ CSSData[[All, "Block", All, "Property"]], 
 					MatchQ[inputProps, _?ListQ], Union @ Flatten @ inputProps,
 					True,                        Union @ Flatten @ {inputProps}
 				];
-		selectorList = 
-			Which[
-				MatchQ[inputSelectorList, All],     CSSData[[All, "Selector"]],
-				MatchQ[inputSelectorList, _?ListQ], inputSelectorList,
-				True,                               {inputSelectorList}
-			];
 		
-		(* start by filtering the data by the given list of selectors; ordering is maintained *)
-		(* exceptions: @page rules *)
-		(* upgrade any string selectors to CSSSelector objects *)
-		(* match against the tokenized selector sequence, which should be unique *)
-		sel = Select[selectorList, ((StringQ[#] && !StringStartsQ[#, "@"]) || MatchQ[#, _CSSSelector])&];
-		sel = Replace[sel, s_?StringQ :> CSSSelector[s], {1}];
-		If[AnyTrue[sel, _?FailureQ], Return @ FirstCase[sel, _?FailureQ]];
-		dataSubset = 
- 			Select[
- 				CSSData, 
-  				MatchQ[#Selector["Sequence"], Alternatives @@ Through[sel["Sequence"]]] &];
-  		
-  		(* gather all declarations, ordered by specificity unless that process is switched off *)
-		If[TrueQ @ OptionValue["IgnoreSpecificity"],
-			(* if ignoring specificity, then leave the user-supplied selector list alone *)
-			declarations = Flatten @ dataSubset[[All, "Block"]]
-			,
-			(* otherwise sort based on specificity but maintain order of duplicates; this is what should happen based on the CSS specification *)
-			specificities = Through[dataSubset[[All, "Selector"]]["Specificity"]];
-			declarations = Flatten @ dataSubset[[Ordering[specificities]]][[All, "Block"]];
-		];
-		
-		(* add @page declarations; they should only apply at Notebook scope *)
-		(* FIXME: in paged module 3 the pages have their own specificity. Page specificity has not been implemented *)
-  		atRules = Select[selectorList, StringQ[#] && StringStartsQ[#, "@"]&];
-  		If[MemberQ[atRules, s_ /; StringStartsQ[s, "@page"]],
-  			dataSubset = Select[CSSData, MatchQ[#Selector, s_?StringQ /; StringStartsQ[s, "@page"]]&];
-  			declarations = Join[Flatten @ dataSubset[[All, "Block"]], declarations]
-  		];
-  		
-  		(* Remove props that failed to parse or are unsupported. *)
-  		declarations = Select[declarations, Not[FailureQ[#Interpretation] || MissingQ[#Interpretation]]&];
-  		
-		(* 
-			Following CSS cascade spec, move !important CSS properties to the end 
-			since they should override all other properties, but maintain their ordering. 
-			Then reverse the order so most important declaration is now first (so we can later scan through the list from the start). *)
-		declarations = 
-			Reverse @ Flatten @ 
-				If[Not[TrueQ @ OptionValue["IgnoreImportance"]],
-					Join[
-						Select[declarations, #Important == False&], 
-						Select[declarations, #Important == True&]]
-					,
-					declarations
-				];
-		
+		(* perform cascade algorithm to produce ordered list of declarations *)
+		declarations = cssCascadeDeclarations[scope, CSSData, inputSelectorList, opts];
+			
 		(* 
 			Some CSS Modules introduce the concept where property values "resolve at compute time" aka computed-value time. 
 			If these property values were properly detected, then resolve them here. 
@@ -1282,9 +1252,18 @@ CSSCascade[
 			
 			CSS Custom Properties: 
 				* introduces var() function 
-				* use replaceVarFunctionsInDeclarationList to replace var() instances *)
+				* use replaceVarFunctionsInDeclarationList to replace var() instances 
+		
+			CSS Values and Units:
+				* introduces calc() and attr() functions 
+		*)
+				
 		If[DownValues[CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList] =!= {}, 
-			declarations = CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList[declarations];
+			
+			(* custom properties must resolve first *)
+			If[DownValues[CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList] =!= {},
+				declarations = CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList[declarations]
+			];
 			
 			Module[{itemsToResolve},
 				itemsToResolve = Flatten @ Position[declarations[[All, "Interpretation", "CSSResolveValueAtComputeTime"]], _Association?AssociationQ, 1];
@@ -1314,21 +1293,82 @@ CSSCascade[props_, scope_, ___] /; !MatchQ[scope, (Cell | Notebook | Box | All |
 	Failure["BadScope", <|"Message" -> "Second argument expected as All, Notebook, Cell, Box or box generator."|>]
 CSSCascade[props_, scope_, CSSData_ /; !validCSSDataQ[CSSData], ___] := 
 	Failure["BadCSSData", <|"Message" -> "CSS data appears invalid."|>]
-
-
-filterOptionNames[scope_, CSSBlockData_] :=
-	Module[{optionNames},
-		optionNames = Union @ Flatten[Keys /@ CSSBlockData[[All, "Interpretation"]]];
-		optionNames =
-			Select[
-				optionNames, 
-				Switch[scope, 
-					_?validBoxesQ,    !MemberQ[optionsToAvoidAtBoxLevel, #]&,
-					{__?validBoxesQ}, !MemberQ[optionsToAvoidAtBoxLevel, #]&,
-					Cell,              MemberQ[cellLevelOptions, #]&, 
-					Notebook,          MemberQ[notebookLevelOptions, #]&,
-					Box,              !MemberQ[optionsToAvoidAtBoxLevel, #]&,
-					All | None,        True&]]
+	
+(* main cascade steps *)
+Options[cssCascadeDeclarations] = Options[CSSCascade];
+cssCascadeDeclarations[
+	scope:(Cell | Notebook | Box | All | None | _?validBoxesQ | {__?validBoxesQ}), 
+	CSSData_?validCSSDataQ | {}, 
+	inputSelectorList:_?(Function[CSSSelectorQ[#] || StringQ[#]]) | {__?(Function[CSSSelectorQ[#] || StringQ[#]])} | All, 
+	opts:OptionsPattern[]
+] :=
+	Module[{selectorList, atRules, sel, dataSubset, specificities, declarations},
+		(* check for empty data *)
+		If[CSSData === {}, Return @ {}];
+		
+		selectorList = 
+			Which[
+				MatchQ[inputSelectorList, All],     CSSData[[All, "Selector"]],
+				MatchQ[inputSelectorList, _?ListQ], inputSelectorList,
+				True,                               {inputSelectorList}
+			];
+		
+		(* start by filtering the data by the given list of selectors; ordering is maintained *)
+		(* exceptions: @page rules *)
+		(* upgrade any string selectors to CSSSelector objects *)
+		(* match against the tokenized selector sequence, which should be unique *)
+		sel = Select[selectorList, ((StringQ[#] && !StringStartsQ[#, "@"]) || MatchQ[#, _CSSSelector])&];
+		sel = Replace[sel, s_?StringQ :> CSSSelector[s], {1}];
+		If[AnyTrue[sel, _?FailureQ], Return @ FirstCase[sel, _?FailureQ]];
+		dataSubset = 
+ 			Select[
+ 				CSSData, 
+  				MatchQ[#Selector["Sequence"], Alternatives @@ Through[sel["Sequence"]]] &];
+  				
+  		(* expand property shorthands; maintain importance and any conditions *)
+  		declarations = Flatten @ dataSubset[[All, "Block"]];
+  		
+  		
+  		(* gather all declarations, ordered by specificity unless that process is switched off *)
+		If[TrueQ @ OptionValue["IgnoreSpecificity"],
+			(* if ignoring specificity, then leave the user-supplied selector list alone *)
+			declarations = Flatten @ dataSubset[[All, "Block"]]
+			,
+			(* otherwise sort based on specificity but maintain order of duplicates; this is what should happen based on the CSS specification *)
+			specificities = Through[dataSubset[[All, "Selector"]]["Specificity"]];
+			declarations = Flatten @ dataSubset[[Ordering[specificities]]][[All, "Block"]];
+		];
+		
+		(* add @page declarations; they should only apply at Notebook scope *)
+		(* FIXME: in paged module 3 the pages have their own specificity. Page specificity has not been implemented *)
+  		atRules = Select[selectorList, StringQ[#] && StringStartsQ[#, "@"]&];
+  		If[MemberQ[atRules, s_ /; StringStartsQ[s, "@page"]],
+  			dataSubset = Select[CSSData, MatchQ[#Selector, s_?StringQ /; StringStartsQ[s, "@page"]]&];
+  			declarations = Join[Flatten @ dataSubset[[All, "Block"]], declarations]
+  		];
+  		
+  		(* Remove properties that failed to parse or are unsupported. *)
+  		(*declarations = Select[declarations, Not[FailureQ[#Interpretation] || MissingQ[#Interpretation]]&];*)
+  		
+  		(* Move !important CSS properties to the end but maintain specificty ordering amongst regular and important properties. *)
+  		declarations = 
+  			Flatten @ 
+				If[Not[TrueQ @ OptionValue["IgnoreImportance"]],
+					Join[
+						Select[declarations, #Important == False&], 
+						Select[declarations, #Important == True&]]
+					,
+					declarations
+				];
+				
+		(* 
+			At this point the declarations should be ordered in increasing importance and specificity, with the last entry of any ties coming later.
+			Said differently, for a given property search from the end of the list. The first entry found is the most important, specific, or the tie breaker. *)
+		(* 
+			Reverse the order so the to-be-used declaration is now first. 
+			We can't delete duplicates because some declarations may not apply due to a Condition. 
+			Said differently, if a Condition is not met, then that declaration is removed from the cascade entirely. *)
+		Reverse @ declarations
 	]
 
 
@@ -1405,7 +1445,7 @@ CSSTargets[doc:XMLObject["Document"][___], CSSData_?validCSSDataQ, wrapInDataset
 				"Selector" -> #1["Selector"], 
 				"Targets"  -> #2, 
 				"Block"    -> #1["Block"]|>&,
-			{CSSData, CSSTargets[doc, CSSData[[All, "Selector"]]]}] (* defined in CSSSelectors3 *)
+			{CSSData, CSSTargets[doc, #]& /@ CSSData[[All, "Selector"]]}] (* defined in CSSSelectors3 *)
 	]
 		
 CSSTargets[_, CSSData_?validCSSDataQ, ___]      := Failure["BadDocument", <|"Message" -> "Invalid XML document."|>]
@@ -1457,8 +1497,14 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 			MapThread[
 				<|
 					"Selector" -> CSSSelector[<|"String" -> None, "Sequence" -> {}, "Specificity" -> {1, 0, 0, 0}|>], 
-					"Targets"  -> {#1}, 
-					"Block"    -> consumeDeclarationBlock @ CSSTokenize @ #2|>&, 
+					"Targets"  -> 
+						(* TODO: this is so bad. These Block'ed variables should not be necessary. What should be done is
+						CSSSelectors re-worked to pass the document as a variable instead of lazy Block'ing. 
+						Moreover the namespace functions should be pulled into their own module namely CSS Namespaces Module Level 3 *)
+						Block[{CSSTools`CSSSelectors3`Private`$Document = doc, CSSTools`CSSSelectors3`Private`$DocumentNamespaces}, 
+							CSSTools`CSSSelectors3`Private`$DocumentNamespaces = getDocumentNamespaces[CSSTools`CSSSelectors3`Private`$Document];
+							{convertXMLPositionToCSSTarget[#1]}], 
+					"Block"    -> consumeDeclarationBlock[CSSTokenize @ #2, {}]|>&, 
 				{directStylePositions, directStyleContent}];
 		
 		(* combine all CSS sources based on position in XMLObject *)
@@ -1487,13 +1533,12 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 ClearAll[CSSInheritance];
 Options[CSSInheritance] = {"PropertyIsCaseSensitive" -> False};
 
-(* normalize Dataset position input *)
-CSSInheritance[position_Dataset, scope_, CSSData_, opts:OptionsPattern[]] := CSSInheritance[Normal @ position, scope, CSSData, opts]
-CSSInheritance[position_, scope_, CSSData_Dataset, opts:OptionsPattern[]] := CSSInheritance[position, scope, Normal @ CSSData, opts]
+(* upgrade single CSSTarget object to list *)
+CSSInheritance[target_CSSTarget, scope_, CSSData_, opts:OptionsPattern[]] := CSSInheritance[{target}, scope, Normal @ CSSData, opts]
 
 (* main function *)
-CSSInheritance[position:{___?IntegerQ}, scope_, CSSData_?validCSSDataFullQ, opts:OptionsPattern[]] :=
-	Module[{lineage, CSSDataSubset, i, inheritableProps, previous, current, case = OptionValue["PropertyIsCaseSensitive"]},
+CSSInheritance[targets:{___?CSSTargetQ}, scope_, CSSData_?validCSSDataQ, opts:OptionsPattern[]] :=
+	Module[{lineage, CSSDataSubset, i, inheritableProps, previous, current, allPreviousDeclarations, case = OptionValue["PropertyIsCaseSensitive"]},
 		(* get the position of all ancestors *)
 		lineage = parents[position];
 		
@@ -1502,12 +1547,48 @@ CSSInheritance[position:{___?IntegerQ}, scope_, CSSData_?validCSSDataFullQ, opts
 			2. for any properties that do not have values, get them from the previous ancestor if possible 
 			3. repeat at each generation until a final set of properties is obtained *)
 		current = <|"Selector" -> CSSSelector["dummy"], "Targets" -> {}, "Block" -> {}|>;
+		allPreviousDeclarations = current; (* starting at the root there won't be any inheritable definitions *)
 		Do[
 			(* get recent ancestor's inheritable declarations *)
 			previous = current;
 			
 			(* get all CSS data entries that target the input position *)
-			CSSDataSubset = Pick[CSSData, MemberQ[#, i]& /@ CSSData[[All, "Targets"]]];
+			CSSDataSubset = Pick[CSSData, MemberQ[#, i]& /@ (Through[#["Position"]]& /@ CSSData[[All, "Targets"]])];
+			
+			(* compute all values at this generation *)
+			allPreviousDeclarations = CSSDataSubset;
+			If[DownValues[CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList] =!= {}, 
+			
+			(* custom properties must resolve first *)
+			If[DownValues[CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList] =!= {},
+				declarations = CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList[declarations]
+			];
+			
+			Module[{itemsToResolve},
+				itemsToResolve = Flatten @ Position[declarations[[All, "Interpretation", "CSSResolveValueAtComputeTime"]], _Association?AssociationQ, 1];
+				Do[
+					declarations[[i, "Interpretation"]] = 
+						consumeProperty[
+							declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "Property"]], 
+							CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]]],
+					{i, itemsToResolve}]
+			]
+		];
+			
+			(* TODO: resolve all attr() functions based on *)
+			(*If[DownValues[CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsInDeclarationList] =!= {}, 
+				declarations = CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsInDeclarationList[declarations];
+				
+				Module[{itemsToResolve},
+					itemsToResolve = Flatten @ Position[declarations[[All, "Interpretation", "CSSResolveValueAtComputeTime"]], _Association?AssociationQ, 1];
+					Do[
+						declarations[[i, "Interpretation"]] = 
+							consumeProperty[
+								declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "Property"]], 
+								CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]]],
+						{i, itemsToResolve}]
+				]
+			];*)
 			
 			(* order the subset by specificity and prepend the subset with the recent ancestor's result *)
 			CSSDataSubset = CSSDataSubset[[Ordering[Through[CSSDataSubset[[All, "Selector"]]["Specificity"]]]]];
@@ -1517,10 +1598,14 @@ CSSInheritance[position:{___?IntegerQ}, scope_, CSSData_?validCSSDataFullQ, opts
 			inheritableProps = Union @ Flatten @ CSSDataSubset[[All, "Block", All, "Property"]];
 			inheritableProps = Pick[inheritableProps, (Or @@ Through[inheritedPropertyRules[#]])& /@ inheritableProps];
 			
+			(* perform cascade algorithm to produce ordered list of declarations *)
+			(*declarations = cssCascadeDeclarations[scope, CSSDataSubset, All, "IgnoreSpecificity" -> True, "PropertyIsCaseSensitive" -> case];*)
+			
 			(* Build the current generation's dummy ruleset:
-				In "Interpretation", perform the cascade but ignore specificity since we already ordered by it earlier.
-				Convert the list of options back into the expected associations. 
-				This is easy since none of the current options have non-standard suboptions like "Left"/"Right"/"Bottom"/"Top" or "Min"/"Max". *)
+				Perform the cascade on only the inheritable properties.
+				Importance is turned off since the cascade selects out only computed properties. (Inheritance of importance does not make sense.)  
+				Convert the list of options back into the expected associations.
+				This is easy since none of the current inheritable properties have non-standard suboptions like "Left"/"Right"/"Bottom"/"Top" or "Min"/"Max". *)
 			current = 
 				<|
 					"Selector" -> CSSSelector["dummy"], 
@@ -1576,7 +1661,7 @@ importText[path_String, encoding_:"UTF8ISOLatin1"] :=
 	
 ExternalCSS[filepath_String] := 
 	If[FailureQ[FindFile[filepath]],
-		Message[Import::nffil, "CSS extraction"]; $Failed
+		Message[Import::nffil, filepath, "CSS extraction"]; $Failed
 		,
 		With[{i = importText[filepath]}, If[FailureQ[i], $Failed, consumeStyleSheet @ CSSTokenize @ i]]
 	]

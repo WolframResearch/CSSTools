@@ -191,7 +191,7 @@ The [CSS Paged Media Module Level 3](https://www.w3.org/TR/css-page-3/) adds new
     _Somewhere within CSSPagedMedia3.wl_  
         
         ...
-        consumeProperty[prop:"bleed", tokens:{__?CSSTokenQ}] := 
+        consumeProperty[prop:"bleed", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
         	Module[{pos = 1, l = Length[tokens], value},
         		If[l > 1, Return @ tooManyTokensFailure @ tokens];
         		value = 

@@ -14,6 +14,7 @@ unrecognizedValueFailure;
 parseAngle;
 parseCounter;
 parseLength;
+parseLengthNonRelative;
 parseResolution;
 parseNumber;
 parseSingleColor;
@@ -201,6 +202,9 @@ unrecognizedValueFailure[prop_String] :=   Failure["UnexpectedParse", <|"Message
 unsupportedValueFailure[prop_String] :=    Failure["UnsupportedProp", <|"Property" -> prop|>]
 
 
+Options[consumeProperty] = {"Namespaces" -> {}};
+
+
 (* ::Subsection::Closed:: *)
 (*Property Data Table*)
 
@@ -219,8 +223,18 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "N/A",  (* shorthand property for background-attachment/color/image/position/repeat *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> <|Background -> Inherited|>,
-			"initial" -> <|Background -> None|>|>,
+			"inherit" -> {
+				<|"Property" -> "background-attachment", "Value" -> "inherit", "Interpretation" -> Missing["Not supported."]|>, 
+				<|"Property" -> "background-color",      "Value" -> "inherit", "Interpretation" -> <|Background -> Inherited|>|>, 
+				<|"Property" -> "background-image",      "Value" -> "inherit", "Interpretation" -> <|System`BackgroundAppearance -> Inherited|>|>, 
+				<|"Property" -> "background-position",   "Value" -> "inherit", "Interpretation" -> <|System`BackgroundAppearanceOptions -> Inherited|>|>, 
+				<|"Property" -> "background-repeat",     "Value" -> "inherit", "Interpretation" -> <|System`BackgroundAppearanceOptions -> Inherited|>|>},
+			"initial" -> {
+				<|"Property" -> "background-attachment", "Value" -> "initial", "Interpretation" -> Missing["Not supported."]|>, 
+				<|"Property" -> "background-color",      "Value" -> "initial", "Interpretation" -> <|Background -> None|>|>, 
+				<|"Property" -> "background-image",      "Value" -> "initial", "Interpretation" -> <|System`BackgroundAppearance -> None|>|>, 
+				<|"Property" -> "background-position",   "Value" -> "initial", "Interpretation" -> <|System`BackgroundAppearanceOptions -> "NoRepeat"|>|>, 
+				<|"Property" -> "background-repeat",     "Value" -> "initial", "Interpretation" -> <|System`BackgroundAppearanceOptions -> "Repeat"|>|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"scroll", "fixed", "<color>", "transparent", "<funciri>", "none", "<percentage>", "<length>", "left", "right", "center", "top", "bottom", "repeat", "repeat-x", "repeat-y", "no-repeat"},
 		"AppliesTo" -> All|>,
@@ -284,12 +298,16 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor", (* shorthand property, sets all 4 border sides *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> <|
-				FrameStyle     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Color" -> Inherited|>], 
-				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Color" -> Inherited|>]|>,
-			"initial" -> <|
-				FrameStyle     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>], 
-				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>]|>|>,
+			"inherit" -> {
+				<|"Property" -> "border-left-color",   "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-right-color",  "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-bottom-color", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-top-color",    "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>}, 
+			"initial" -> {
+				<|"Property" -> "border-left-color",   "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Dynamic @ CurrentValue[FontColor], CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>, 
+				<|"Property" -> "border-right-color",  "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Dynamic @ CurrentValue[FontColor], CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>, 
+				<|"Property" -> "border-bottom-color", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Dynamic @ CurrentValue[FontColor], CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>, 
+				<|"Property" -> "border-top-color",    "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Dynamic @ CurrentValue[FontColor], CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"<color>", "transparent"},
 		"AppliesTo" -> All|>,
@@ -298,11 +316,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameStyle     -> <|"Top" -> <|"Color" -> Inherited|>|>, 
-				CellFrameStyle -> <|"Top" -> <|"Color" -> Inherited|>|>|>,
+				FrameStyle     -> Inherited, 
+				CellFrameStyle -> Inherited|>,
 			"initial" -> <|
-				FrameStyle     -> <|"Top" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>, 
-				CellFrameStyle -> <|"Top" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>,
+				FrameStyle     -> Dynamic @ CurrentValue[FontColor], 
+				CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<color>", "transparent"},
 		"AppliesTo" -> All|>,
@@ -311,11 +329,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameStyle     -> <|"Right" -> <|"Color" -> Inherited|>|>, 
-				CellFrameStyle -> <|"Right" -> <|"Color" -> Inherited|>|>|>,
+				FrameStyle     -> Inherited, 
+				CellFrameStyle -> Inherited|>,
 			"initial" -> <|
-				FrameStyle     -> <|"Right" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>, 
-				CellFrameStyle -> <|"Right" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>,
+				FrameStyle     -> Dynamic @ CurrentValue[FontColor], 
+				CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<color>", "transparent"},
 		"AppliesTo" -> All|>,
@@ -324,11 +342,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameStyle     -> <|"Bottom" -> <|"Color" -> Inherited|>|>, 
-				CellFrameStyle -> <|"Bottom" -> <|"Color" -> Inherited|>|>|>,
+				FrameStyle     -> Inherited, 
+				CellFrameStyle -> Inherited|>,
 			"initial" -> <|
-				FrameStyle     -> <|"Bottom" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>, 
-				CellFrameStyle -> <|"Bottom" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>,
+				FrameStyle     -> Dynamic @ CurrentValue[FontColor], 
+				CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<color>", "transparent"},
 		"AppliesTo" -> All|>,
@@ -337,11 +355,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "currentColor", (* value of 'color' property*)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameStyle     -> <|"Left" -> <|"Color" -> Inherited|>|>, 
-				CellFrameStyle -> <|"Left" -> <|"Color" -> Inherited|>|>|>,
+				FrameStyle     -> Inherited, 
+				CellFrameStyle -> Inherited|>,
 			"initial" -> <|
-				FrameStyle     -> <|"Left" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>, 
-				CellFrameStyle -> <|"Left" -> <|"Color" -> Dynamic @ CurrentValue[FontColor]|>|>|>|>,
+				FrameStyle     -> Dynamic @ CurrentValue[FontColor], 
+				CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<color>", "transparent"},
 		"AppliesTo" -> All|>,
@@ -349,12 +367,16 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none", (* shorthand property, sets all 4 sides *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> <|
-				FrameStyle     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Style" -> Inherited|>], 
-				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Style" -> Inherited|>]|>,
-			"initial" -> <|
-				FrameStyle     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Style" -> None|>], 
-				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Style" -> None|>]|>|>,
+			"inherit" -> {
+				<|"Property" -> "border-left-style",   "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-right-style",  "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-bottom-style", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-top-style",    "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>},
+			"initial" -> {
+				<|"Property" -> "border-left-style",   "Value" -> "initial", "Interpretation" -> <|FrameStyle -> None, CellFrameStyle -> None|>|>, 
+				<|"Property" -> "border-right-style",  "Value" -> "initial", "Interpretation" -> <|FrameStyle -> None, CellFrameStyle -> None|>|>, 
+				<|"Property" -> "border-bottom-style", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> None, CellFrameStyle -> None|>|>, 
+				<|"Property" -> "border-top-style",    "Value" -> "initial", "Interpretation" -> <|FrameStyle -> None, CellFrameStyle -> None|>|>}|>,
 		"Animatable" -> False,
 		"Values" -> {"none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"},
 		"AppliesTo" -> All|>,
@@ -363,11 +385,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameStyle     -> <|"Top" -> <|"Style" -> Inherited|>|>, 
-				CellFrameStyle -> <|"Top" -> <|"Style" -> Inherited|>|>|>,
+				FrameStyle     -> Inherited, 
+				CellFrameStyle -> Inherited|>,
 			"initial" -> <|
-				FrameStyle     -> <|"Top" -> <|"Style" -> None|>|>, 
-				CellFrameStyle -> <|"Top" -> <|"Style" -> None|>|>|>|>,
+				FrameStyle     -> None, 
+				CellFrameStyle -> None|>|>,
 		"Animatable" -> False,
 		"Values" -> {"none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"},
 		"AppliesTo" -> All|>,
@@ -376,11 +398,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameStyle     -> <|"Right" -> <|"Style" -> Inherited|>|>, 
-				CellFrameStyle -> <|"Right" -> <|"Style" -> Inherited|>|>|>,
+				FrameStyle     -> Inherited, 
+				CellFrameStyle -> Inherited|>,
 			"initial" -> <|
-				FrameStyle     -> <|"Right" -> <|"Style" -> None|>|>, 
-				CellFrameStyle -> <|"Right" -> <|"Style" -> None|>|>|>|>,
+				FrameStyle     -> None, 
+				CellFrameStyle -> None|>|>,
 		"Animatable" -> False,
 		"Values" -> {"none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"},
 		"AppliesTo" -> All|>,
@@ -389,11 +411,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameStyle     -> <|"Bottom" -> <|"Style" -> Inherited|>|>, 
-				CellFrameStyle -> <|"Bottom" -> <|"Style" -> Inherited|>|>|>,
+				FrameStyle     -> Inherited, 
+				CellFrameStyle -> Inherited|>,
 			"initial" -> <|
-				FrameStyle     -> <|"Bottom" -> <|"Style" -> None|>|>, 
-				CellFrameStyle -> <|"Bottom" -> <|"Style" -> None|>|>|>|>,
+				FrameStyle     -> None, 
+				CellFrameStyle -> None|>|>,
 		"Animatable" -> False,
 		"Values" -> {"none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"},
 		"AppliesTo" -> All|>,
@@ -402,11 +424,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameStyle     -> <|"Left" -> <|"Style" -> Inherited|>|>, 
-				CellFrameStyle -> <|"Left" -> <|"Style" -> Inherited|>|>|>,
+				FrameStyle     -> Inherited, 
+				CellFrameStyle -> Inherited|>,
 			"initial" -> <|
-				FrameStyle     -> <|"Left" -> <|"Style" -> None|>|>, 
-				CellFrameStyle -> <|"Left" -> <|"Style" -> None|>|>|>|>,
+				FrameStyle     -> None, 
+				CellFrameStyle -> None|>|>,
 		"Animatable" -> False,
 		"Values" -> {"none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset"},
 		"AppliesTo" -> All|>,
@@ -414,13 +436,17 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium", (* shorthand property, sets all 4 border sides *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> <|
-				FrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Width" -> Inherited|>], 
-				CellFrame  -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Width" -> Inherited|>]|>,
-			"initial" -> <|
-				FrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Width" -> Thickness[Medium]|>], 
-				CellFrame  -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Width" -> 2|>]|>|>,
-		"Animatable" -> True,
+			"inherit" -> {
+				<|"Property" -> "border-left-width",   "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrame -> Inherited|>|>, 
+				<|"Property" -> "border-right-width",  "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrame -> Inherited|>|>, 
+				<|"Property" -> "border-bottom-width", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrame -> Inherited|>|>, 
+				<|"Property" -> "border-top-width",    "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrame -> Inherited|>|>},
+			"initial" -> {
+				<|"Property" -> "border-left-width",   "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>, 
+				<|"Property" -> "border-right-width",  "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>, 
+				<|"Property" -> "border-bottom-width", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>, 
+				<|"Property" -> "border-top-width",    "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>}|>,
+    	"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>"},
 		"AppliesTo" -> All|>,
 	"border-top-width" -> <|
@@ -428,11 +454,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "medium",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameStyle -> <|"Top" -> <|"Width" -> Inherited|>|>, 
-				CellFrame  -> <|"Top" -> <|"Width" -> Inherited|>|>|>,
+				FrameStyle -> Inherited, 
+				CellFrame  -> Inherited|>,
 			"initial" -> <|
-				FrameStyle -> <|"Top" -> <|"Width" -> Thickness[Medium]|>|>, 
-				CellFrame  -> <|"Top" -> <|"Width" -> 2|>|>|>|>,
+				FrameStyle -> Thickness[Medium], 
+				CellFrame  -> 2|>|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>"},
 		"AppliesTo" -> All|>,
@@ -441,11 +467,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "medium",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameStyle -> <|"Right" -> <|"Width" -> Inherited|>|>, 
-				CellFrame  -> <|"Right" -> <|"Width" -> Inherited|>|>|>,
+				FrameStyle -> Inherited, 
+				CellFrame  -> Inherited|>,
 			"initial" -> <|
-				FrameStyle -> <|"Right" -> <|"Width" -> Thickness[Medium]|>|>, 
-				CellFrame  -> <|"Right" -> <|"Width" -> 2|>|>|>|>,
+				FrameStyle -> Thickness[Medium], 
+				CellFrame  -> 2|>|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>"},
 		"AppliesTo" -> All|>,
@@ -454,11 +480,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "medium",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameStyle -> <|"Bottom" -> <|"Width" -> Inherited|>|>, 
-				CellFrame  -> <|"Bottom" -> <|"Width" -> Inherited|>|>|>,
+				FrameStyle -> Inherited, 
+				CellFrame  -> Inherited|>,
 			"initial" -> <|
-				FrameStyle -> <|"Bottom" -> <|"Width" -> Thickness[Medium]|>|>, 
-				CellFrame  -> <|"Bottom" -> <|"Width" -> 2|>|>|>|>,
+				FrameStyle -> Thickness[Medium], 
+				CellFrame  -> 2|>|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>"},
 		"AppliesTo" -> All|>,
@@ -467,11 +493,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "medium",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameStyle -> <|"Left" -> <|"Width" -> Inherited|>|>, 
-				CellFrame  -> <|"Left" -> <|"Width" -> Inherited|>|>|>,
+				FrameStyle -> Inherited, 
+				CellFrame  -> Inherited|>,
 			"initial" -> <|
-				FrameStyle -> <|"Left" -> <|"Width" -> Thickness[Medium]|>|>, 
-				CellFrame  -> <|"Left" -> <|"Width" -> 2|>|>|>|>,
+				FrameStyle -> Thickness[Medium], 
+				CellFrame  -> 2|>|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>"},
 		"AppliesTo" -> All|>,
@@ -479,21 +505,32 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand property, sets all 4 border sides color/style/width*)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> <|
-				FrameStyle     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Color" -> Inherited, "Style" -> Inherited, "Width" -> Inherited|>], 
-				CellFrame      -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Width" -> Inherited|>],
-				CellFrameStyle -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|"Color" -> Inherited, "Style" -> Inherited|>]|>,
-			"initial" -> <|
-				FrameStyle -> 
-					AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|
-						"Color" -> Dynamic @ CurrentValue[FontColor], 
-						"Style" -> None, 
-						"Width" -> Thickness[Medium]|>], 
-				CellFrame -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 2],
-				CellFrameStyle -> 
-					AssociationThread[{"Left", "Right", "Bottom", "Top"} -> <|
-						"Color" -> Dynamic @ CurrentValue[FontColor], 
-						"Style" -> None|>]|>|>,
+			"inherit" -> {
+				<|"Property" -> "border-left-color",   "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-right-color",  "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-bottom-color", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-top-color",    "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-left-style",   "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-right-style",  "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-bottom-style", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-top-style",    "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>,
+				<|"Property" -> "border-left-width",   "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrame -> Inherited|>|>, 
+				<|"Property" -> "border-right-width",  "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrame -> Inherited|>|>, 
+				<|"Property" -> "border-bottom-width", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrame -> Inherited|>|>, 
+				<|"Property" -> "border-top-width",    "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrame -> Inherited|>|>},
+			"initial" -> {
+				<|"Property" -> "border-left-color",   "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Dynamic @ CurrentValue[FontColor], CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>, 
+				<|"Property" -> "border-right-color",  "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Dynamic @ CurrentValue[FontColor], CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>, 
+				<|"Property" -> "border-bottom-color", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Dynamic @ CurrentValue[FontColor], CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>, 
+				<|"Property" -> "border-top-color",    "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Dynamic @ CurrentValue[FontColor], CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>,
+		 		<|"Property" -> "border-left-style",   "Value" -> "initial", "Interpretation" -> <|FrameStyle -> None, CellFrameStyle -> None|>|>, 
+				<|"Property" -> "border-right-style",  "Value" -> "initial", "Interpretation" -> <|FrameStyle -> None, CellFrameStyle -> None|>|>, 
+				<|"Property" -> "border-bottom-style", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> None, CellFrameStyle -> None|>|>, 
+				<|"Property" -> "border-top-style",    "Value" -> "initial", "Interpretation" -> <|FrameStyle -> None, CellFrameStyle -> None|>|>,
+				<|"Property" -> "border-left-width",   "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>, 
+				<|"Property" -> "border-right-width",  "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>, 
+				<|"Property" -> "border-bottom-width", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>, 
+				<|"Property" -> "border-top-width",    "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
 		"AppliesTo" -> All|>,
@@ -501,14 +538,14 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> <|
-				FrameStyle     -> <|"Top" -> <|"Color" -> Inherited, "Style" -> Inherited, "Width" -> Inherited|>|>, 
-				CellFrame      -> <|"Top" -> <|"Width" -> Inherited|>|>,
-				CellFrameStyle -> <|"Top" -> <|"Color" -> Inherited, "Style" -> Inherited|>|>|>,
-			"initial" -> <|
-				FrameStyle     -> <|"Top" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None, "Width" -> Thickness[Medium]|>|>, 
-				CellFrame      -> <|"Top" -> <|"Width" -> 2|>|>,
-				CellFrameStyle -> <|"Top" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>,
+			"inherit" -> {
+				<|"Property" -> "border-top-color", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-top-style", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>,
+				<|"Property" -> "border-top-width", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrame -> Inherited|>|>},
+			"initial" -> {
+				<|"Property" -> "border-top-color", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Dynamic @ CurrentValue[FontColor], CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>,
+		 		<|"Property" -> "border-top-style", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> None, CellFrameStyle -> None|>|>,
+				<|"Property" -> "border-top-width", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
 		"AppliesTo" -> All|>,
@@ -516,14 +553,14 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> <|
-				FrameStyle     -> <|"Right" -> <|"Color" -> Inherited, "Style" -> Inherited, "Width" -> Inherited|>|>, 
-				CellFrame      -> <|"Right" -> <|"Width" -> Inherited|>|>,
-				CellFrameStyle -> <|"Right" -> <|"Color" -> Inherited, "Style" -> Inherited|>|>|>,
-			"initial" -> <|
-				FrameStyle     -> <|"Right" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None, "Width" -> Thickness[Medium]|>|>, 
-				CellFrame      -> <|"Right" -> <|"Width" -> 2|>|>,
-				CellFrameStyle -> <|"Right" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>,
+			"inherit" -> {
+				<|"Property" -> "border-right-color", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-right-style", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>,
+				<|"Property" -> "border-right-width", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrame -> Inherited|>|>},
+			"initial" -> {
+				<|"Property" -> "border-right-color", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Dynamic @ CurrentValue[FontColor], CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>,
+		 		<|"Property" -> "border-right-style", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> None, CellFrameStyle -> None|>|>,
+				<|"Property" -> "border-right-width", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
 		"AppliesTo" -> All|>,
@@ -531,14 +568,14 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> <|
-				FrameStyle     -> <|"Bottom" -> <|"Color" -> Inherited, "Style" -> Inherited, "Width" -> Inherited|>|>, 
-				CellFrame      -> <|"Bottom" -> <|"Width" -> Inherited|>|>,
-				CellFrameStyle -> <|"Bottom" -> <|"Color" -> Inherited, "Style" -> Inherited|>|>|>,
-			"initial" -> <|
-				FrameStyle     -> <|"Bottom" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None, "Width" -> Thickness[Medium]|>|>, 
-				CellFrame      -> <|"Bottom" -> <|"Width" -> 2|>|>,
-				CellFrameStyle -> <|"Bottom" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>,
+			"inherit" -> {
+				<|"Property" -> "border-bottom-color", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-bottom-style", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>,
+				<|"Property" -> "border-bottom-width", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrame -> Inherited|>|>},
+			"initial" -> {
+				<|"Property" -> "border-bottom-color", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Dynamic @ CurrentValue[FontColor], CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>,
+		 		<|"Property" -> "border-bottom-style", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> None, CellFrameStyle -> None|>|>,
+				<|"Property" -> "border-bottom-width", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
 		"AppliesTo" -> All|>,
@@ -546,14 +583,14 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> <|
-				FrameStyle     -> <|"Left" -> <|"Color" -> Inherited, "Style" -> Inherited, "Width" -> Inherited|>|>, 
-				CellFrame      -> <|"Left" -> <|"Width" -> Inherited|>|>,
-				CellFrameStyle -> <|"Left" -> <|"Color" -> Inherited, "Style" -> Inherited|>|>|>,
-			"initial" -> <|
-				FrameStyle     -> <|"Left" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None, "Width" -> Thickness[Medium]|>|>, 
-				CellFrame      -> <|"Left" -> <|"Width" -> 2|>|>,
-				CellFrameStyle -> <|"Left" -> <|"Color" -> Dynamic @ CurrentValue[FontColor], "Style" -> None|>|>|>|>,
+			"inherit" -> {
+				<|"Property" -> "border-left-color", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>, 
+				<|"Property" -> "border-left-style", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrameStyle -> Inherited|>|>,
+				<|"Property" -> "border-left-width", "Value" -> "inherit", "Interpretation" -> <|FrameStyle -> Inherited, CellFrame -> Inherited|>|>},
+			"initial" -> {
+				<|"Property" -> "border-left-color", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Dynamic @ CurrentValue[FontColor], CellFrameStyle -> Dynamic @ CurrentValue[FontColor]|>|>,
+		 		<|"Property" -> "border-left-style", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> None, CellFrameStyle -> None|>|>,
+				<|"Property" -> "border-left-width", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
 		"AppliesTo" -> All|>,
@@ -688,31 +725,31 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> True,
 		"CSSInitialValue" -> "N/A", (* shorthand property *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> <|
-				FontFamily     -> Inherited,
-				FontSize       -> Inherited,
-				FontSlant      -> Inherited,
-				FontVariations -> <|"CapsType" -> Inherited|>,
-				FontWeight     -> Inherited,
-				LineSpacing    -> Inherited|>,
-			"initial" -> <|
-				FontFamily     -> Dynamic @ CurrentValue[$FrontEnd, {StyleDefinitions, "Text", FontFamily}, "Arial"],
-				FontSize       -> Medium,
-				FontSlant      -> Plain,
-				FontVariations -> <|"CapsType" -> "Normal"|>,
-				FontWeight     -> Plain,
-				LineSpacing    -> {1.2, 0}|>|>,
+			"inherit" -> {
+				<|"Property" -> "font-family",  "Value" -> "inherit", "Interpretation" -> <|FontFamily     -> Inherited|>|>,
+				<|"Property" -> "font-size",    "Value" -> "inherit", "Interpretation" -> <|FontSize       -> Inherited|>|>,
+				<|"Property" -> "font-style",   "Value" -> "inherit", "Interpretation" -> <|FontSlant      -> Inherited|>|>,
+				<|"Property" -> "font-variant", "Value" -> "inherit", "Interpretation" -> <|FontVariations -> <|"CapsType" -> Inherited|>|>|>,
+				<|"Property" -> "font-weight",  "Value" -> "inherit", "Interpretation" -> <|FontWeight     -> Inherited|>|>,
+				<|"Property" -> "line-height",  "Value" -> "inherit", "Interpretation" -> <|LineSpacing    -> Inherited|>|>}, 
+			"initial" -> {
+				<|"Property" -> "font-family",  "Value" -> "initial", "Interpretation" -> <|FontFamily     -> "Arial"|>|>,
+				<|"Property" -> "font-size",    "Value" -> "initial", "Interpretation" -> <|FontSize       -> Medium|>|>,
+				<|"Property" -> "font-style",   "Value" -> "initial", "Interpretation" -> <|FontSlant      -> Plain|>|>,
+				<|"Property" -> "font-variant", "Value" -> "initial", "Interpretation" -> <|FontVariations -> <|"CapsType" -> "Normal"|>|>|>,
+				<|"Property" -> "font-weight",  "Value" -> "initial", "Interpretation" -> <|FontWeight     -> Plain|>|>,
+				<|"Property" -> "line-height",  "Value" -> "initial", "Interpretation" -> <|LineSpacing    -> {1.2, 0}|>|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"<family-name>", "<length>", "<percentage>", "normal", "italic", "oblique", "bold", "bolder", "lighter", "100", "200", "300", "400", "500", "600", "700", "800", "900", "small-caps", "caption", "icon", "menu", "message-box", "small-caption", "status-bar", "serif", "sans-serif", "cursive", "fantasy", "monospace", "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large", "smaller", "larger"},
 		"AppliesTo" -> All|>,
 	"font-family" -> <|
 		"Inherited" -> True,
-		"CSSInitialValue" -> "N/A", (* depends on user agent aka WD *)
+		"CSSInitialValue" -> "arial", (* depends on user agent aka WD, we choose "Arial" *)
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|FontFamily -> Inherited|>,
-			"initial" -> <|FontFamily -> Dynamic @ CurrentValue[$FrontEnd, {StyleDefinitions, "Text", FontFamily}, "Arial"]|>|>,
+			"initial" -> <|FontFamily -> "Arial"|>|>,
 		"Animatable" -> False,
-		"Values" -> {},
+		"Values" -> {"<family-name>"},
 		"AppliesTo" -> All|>,
 	"font-size" -> <|
 		"Inherited" -> True,
@@ -790,14 +827,20 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> True,
 		"CSSInitialValue" -> "N/A", (* shorthand property *)
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> <|CellDingbat -> Inherited|>,
-			"initial" -> <|CellDingbat -> "\[FilledCircle]"|>|>,
+			"inherit" -> {
+				<|"Property" -> "list-style-image",    "Value" -> "inherit", "Interpretation" -> <|CellDingbat -> Inherited|>|>,
+				<|"Property" -> "list-style-position", "Value" -> "inherit", "Interpretation" -> Missing["Not supported."]|>,
+				<|"Property" -> "list-style-type",     "Value" -> "inherit", "Interpretation" -> <|CellDingbat -> Inherited|>|>}, 
+			"initial" -> {
+				<|"Property" -> "list-style-image",    "Value" -> "initial", "Interpretation" -> <|CellDingbat -> None|>|>,
+				<|"Property" -> "list-style-position", "Value" -> "initial", "Interpretation" -> Missing["Not supported."]|>,
+				<|"Property" -> "list-style-type",     "Value" -> "initial", "Interpretation" -> <|CellDingbat -> "\[FilledCircle]"|>|>}|>,
 		"Animatable" -> False,
 		"Values" -> {"inside", "outside", "none", "<funciri>", "disc", "circle", "square", "decimal", "decimal-leading-zero", "lower-roman", "upper-roman", "lower-greek", "lower-latin", "upper-latin", "armenian", "georgian", "lower-alpha", "upper-alpha"},
 		"AppliesTo" -> {"list-item"}|>,
 	"list-style-image" -> <|
 		"Inherited" -> True,
-		"CSSInitialValue" -> "",
+		"CSSInitialValue" -> "none",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|CellDingbat -> Inherited|>,
 			"initial" -> <|CellDingbat -> None|>|>,
@@ -946,6 +989,15 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "N/A", 
 		"InterpretedGlobalValues" -> <|
+			"inherit" -> {
+				<|"Property" -> "outline-color", "Value" -> "inherit", "Interpretation" -> Missing["Not supported."]|>, 
+				<|"Property" -> "outline-style", "Value" -> "inherit", "Interpretation" -> Missing["Not supported."]|>,
+				<|"Property" -> "outline-width", "Value" -> "inherit", "Interpretation" -> Missing["Not supported."]|>},
+    		"initial" -> {
+				<|"Property" -> "outline-color", "Value" -> "initial", "Interpretation" -> Missing["Not supported."]|>,
+		 		<|"Property" -> "outline-style", "Value" -> "initial", "Interpretation" -> Missing["Not supported."]|>,
+				<|"Property" -> "outline-width", "Value" -> "initial", "Interpretation" -> Missing["Not supported."]|>}|>,
+			<|
 			"inherit" -> Missing["Not supported."],
 			"initial" -> Missing["Not supported."]|>,
 		"Animatable" -> True,
@@ -991,12 +1043,16 @@ AssociateTo[CSSPropertyData, {
 		"Inherited" -> False,
 		"CSSInitialValue" -> "N/A", 
 		"InterpretedGlobalValues" -> <|
-			"inherit" -> <|
-				FrameMargins     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited],
-				CellFrameMargins -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> Inherited]|>,
-			"initial" -> <|
-				FrameMargins     -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0],
-				CellFrameMargins -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0]|>|>,
+			"inherit" -> {
+				<|"Property" -> "padding-left",   "Value" -> "inherit", "Interpretation" -> Inherited|>, 
+				<|"Property" -> "padding-right",  "Value" -> "inherit", "Interpretation" -> Inherited|>, 
+				<|"Property" -> "padding-bottom", "Value" -> "inherit", "Interpretation" -> Inherited|>, 
+				<|"Property" -> "padding-top",    "Value" -> "inherit", "Interpretation" -> Inherited|>},
+			"initial" -> {
+				<|"Property" -> "padding-left",   "Value" -> "initial", "Interpretation" -> 0|>, 
+				<|"Property" -> "padding-right",  "Value" -> "initial", "Interpretation" -> 0|>, 
+				<|"Property" -> "padding-bottom", "Value" -> "initial", "Interpretation" -> 0|>, 
+				<|"Property" -> "padding-top",    "Value" -> "initial", "Interpretation" -> 0|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>"},
 		"AppliesTo" -> All|>,
@@ -1005,11 +1061,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameMargins     -> <|"Top" -> Inherited|>,
-				CellFrameMargins -> <|"Top" -> Inherited|>|>,
+				FrameMargins     -> Inherited,
+				CellFrameMargins -> Inherited|>,
 			"initial" -> <|
-				FrameMargins     -> <|"Top" -> 0|>,
-				CellFrameMargins -> <|"Top" -> 0|>|>|>,
+				FrameMargins     -> 0,
+				CellFrameMargins -> 0|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>"},
 		"AppliesTo" -> All|>,
@@ -1018,11 +1074,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameMargins     -> <|"Bottom" -> Inherited|>,
-				CellFrameMargins -> <|"Bottom" -> Inherited|>|>,
+				FrameMargins     -> Inherited,
+				CellFrameMargins -> Inherited|>,
 			"initial" -> <|
-				FrameMargins     -> <|"Bottom" -> 0|>,
-				CellFrameMargins -> <|"Bottom" -> 0|>|>|>,
+				FrameMargins     -> 0,
+				CellFrameMargins -> 0|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>"},
 		"AppliesTo" -> All|>,
@@ -1031,11 +1087,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameMargins     -> <|"Left" -> Inherited|>,
-				CellFrameMargins -> <|"Left" -> Inherited|>|>,
+				FrameMargins     -> Inherited,
+				CellFrameMargins -> Inherited|>,
 			"initial" -> <|
-				FrameMargins     -> <|"Left" -> 0|>,
-				CellFrameMargins -> <|"Left" -> 0|>|>|>,
+				FrameMargins     -> 0,
+				CellFrameMargins -> 0|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>"},
 		"AppliesTo" -> All|>,
@@ -1044,11 +1100,11 @@ AssociateTo[CSSPropertyData, {
 		"CSSInitialValue" -> "0",
 		"InterpretedGlobalValues" -> <|
 			"inherit" -> <|
-				FrameMargins     -> <|"Right" -> Inherited|>,
-				CellFrameMargins -> <|"Right" -> Inherited|>|>,
+				FrameMargins     -> Inherited,
+				CellFrameMargins -> Inherited|>,
 			"initial" -> <|
-				FrameMargins     -> <|"Right" -> 0|>,
-				CellFrameMargins -> <|"Right" -> 0|>|>|>,
+				FrameMargins     -> 0,
+				CellFrameMargins -> 0|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>"},
 		"AppliesTo" -> All|>,
@@ -1255,7 +1311,6 @@ AssociateTo[CSSPropertyData, {
 parseAngle[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["deg",  t] := val
 parseAngle[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["grad", t] := val*360/400
 parseAngle[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["rad",  t] := val*360/2/Pi
-parseAngle[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["turn", t] := val*360
 parseAngle[___] := Failure["UnexpectedParse", <|"Message" -> "Expected CSS token of angle type."|>]
 
 
@@ -1376,6 +1431,14 @@ parseCounters[prop_String, tokens:{___?CSSTokenQ}] := Missing["Not supported."]
 
 
 (* ::Subsection::Closed:: *)
+(*<frequency>*)
+
+
+parseFrequency[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["hz",  t] := val
+parseFrequency[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["khz", t] := val*1000
+
+
+(* ::Subsection::Closed:: *)
 (*<integer> and <number>*)
 
 
@@ -1429,19 +1492,11 @@ parsePercentage[___] := Failure["UnexpectedParse", <|"Message" -> "Expected CSS 
 
 
 (* ::Subsection::Closed:: *)
-(*<resolution>*)
+(*<time>*)
 
 
-(* FE uses points to indicate DPI *)
-parseResolution[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> unit_}]]] :=
-	Module[{dpi = 96 (* fixed CSS value 1dppx = 96dpi *)},
-		Switch[unit, 
-			"dpi",  val,
-			"dpcm", val/2.54,
-			"dppx", val*dpi,
-			_,      Failure["UnexpectedParse", <|"Message" -> "Unrecognized dimension unit."|>]
-		]
-	]
+parseTime[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["s",  t] := val
+parseTime[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["ms", t] := val/1000
 
 
 (* ::Subsection::Closed:: *)
@@ -1498,13 +1553,13 @@ parseURI[uri_String] :=
 
 
 (* global values *)
-consumeProperty[prop_String, {t:CSSToken[KeyValuePattern[{"Type" -> "ident", "String" -> _?StringQ}]]}] /; TokenStringIs["inherit", t] := 
+consumeProperty[prop_String, {t:CSSToken[KeyValuePattern[{"Type" -> "ident", "String" -> _?StringQ}]]}, opts:OptionsPattern[]] /; TokenStringIs["inherit", t] := 
 	CSSPropertyData[prop, "InterpretedGlobalValues", "inherit"]
 	
-consumeProperty[prop_String, {t:CSSToken[KeyValuePattern[{"Type" -> "ident", "String" -> _?StringQ}]]}] /; TokenStringIs["initial", t] := 
+consumeProperty[prop_String, {t:CSSToken[KeyValuePattern[{"Type" -> "ident", "String" -> _?StringQ}]]}, opts:OptionsPattern[]] /; TokenStringIs["initial", t] := 
 	CSSPropertyData[prop, "InterpretedGlobalValues", "initial"]
 	
-consumeProperty[prop_String, {t:CSSToken[KeyValuePattern[{"Type" -> "ident", "String" -> _?StringQ}]]}] /; TokenStringIs["unset", t] := 
+consumeProperty[prop_String, {t:CSSToken[KeyValuePattern[{"Type" -> "ident", "String" -> _?StringQ}]]}, opts:OptionsPattern[]] /; TokenStringIs["unset", t] := 
 	If[CSSPropertyData[prop, "Inherited"], 
 		CSSPropertyData[prop, "InterpretedGlobalValues", "inherit"]
 		, 
@@ -1528,7 +1583,7 @@ consumeProperty[prop_String, {t:CSSToken[KeyValuePattern[{"Type" -> "ident", "St
 	We only support CSS 2.1 for now and it supports only a single value.
 	For temporary forward compatibility, we split the token sequence on any commas and take the first of the split sequence.
 *)
-consumeProperty[prop:"background", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"background", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{backgrounds, result},
 		backgrounds = DeleteCases[SplitBy[tokens, MatchQ[CSSToken[KeyValuePattern["Type" -> "comma"]]]], {CSSToken[KeyValuePattern["Type" -> "comma"]]}];
 		backgrounds = parseSingleBG[prop, #]& /@ backgrounds; 
@@ -1539,73 +1594,9 @@ consumeProperty[prop:"background", tokens:{__?CSSTokenQ}] :=
 			First @ result
 		]
 	]
-
-parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] := 
-	Module[
-		{
-			pos = 1, l = Length[tokens], value, start, startToken, 
-			values = <|
-				"a" -> CSSPropertyData["background-attachment"]["InterpretedGlobalValues", "initial"], (* Missing["Not supported."] *)
-				"c" -> First @ Values @ CSSPropertyData["background-color"]["InterpretedGlobalValues", "initial"],
-				"i" -> First @ Values @ CSSPropertyData["background-image"]["InterpretedGlobalValues", "initial"],
-				"p" -> First @ Values @ CSSPropertyData["background-position"]["InterpretedGlobalValues", "initial"],
-				"r" -> First @ Values @ CSSPropertyData["background-repeat"]["InterpretedGlobalValues", "initial"]|>,
-			hasAttachment = False, hasColor = False, hasImage = False, hasPosition = False, hasRepeat = False
-		},
-		While[pos <= l, 
-			Which[
-				TokenTypeIs["function", tokens[[pos]]], 
-					Switch[tokens[[pos]]["String"],
-						(* color *)
-						"rgb" | "rgba" | "hsl" | "hsla", 
-							If[hasColor, Return @ repeatedPropValueFailure @ "background-color"]; 
-							hasColor = True; values["c"] = parseSingleColor[prop, tokens[[pos]]];,
-						(*TODO support gradients *)
-						"linear-gradient" | "repeating-linear-gradient" | "radial-gradient" | "repeating-radial-gradient" | "conic-gradient", 
-							If[hasImage, Return @ repeatedPropValueFailure @ "background-image"];
-							hasImage = True; values["i"] = Missing["Not supported."];,
-						_,
-							Return @ invalidFunctionFailure @ tokens[[pos]]["String"]
-					],
-				
-				(* scroll or fixed keyword *)
-				!FailureQ[value = parseSingleBGAttachment[prop, tokens[[pos]]]],
-					If[hasAttachment, Return @ repeatedPropValueFailure @ "background-attachment"];
-					hasAttachment = True; values["a"] = value,
-					
-				(* color hex or color keyword *)
-				!FailureQ[value = parseSingleColor[prop, tokens[[pos]]]], (* color can also be hex or keyword *)
-					If[hasColor, Return @ repeatedPropValueFailure @ "background-color"];
-					hasColor = True; values["c"] = value,
-				
-				(* uri token or none keyword *)
-				!FailureQ[value = parseSingleBGImage[prop, tokens[[pos]]]], 
-					If[hasImage, Return @ repeatedPropValueFailure @ "background-image"];
-					hasImage = True; values["i"] = value,
-				
-				(* one of the keywords repeat | repeat-x | repeat-y | no-repeat *)
-				!FailureQ[value = parseSingleBGRepeat[prop, tokens[[pos]]]], 
-					If[hasRepeat, Return @ repeatedPropValueFailure @ "background-repeat"];
-					hasRepeat = True; values["r"] = value,
-				
-				(* one of the key words left | center | right | top | bottom, *)
-				!FailureQ[value = parseSingleBGPosition[prop, tokens[[pos]]]], 
-					If[hasPosition, Return @ repeatedPropValueFailure @ "background-position"];
-					hasPosition = True; values["p"] = {value, Center};
-					(* check for a pair of position values; they must be sequential *)
-					start = pos; startToken = tokens[[pos]]; AdvancePosAndSkipWhitespace[pos, l, tokens];
-					If[!FailureQ[value = parseSingleBGPosition[prop, tokens[[pos]]]], 
-						values["p"] = {values["p"][[1]], value}
-						,
-						pos = start (* if this next token leads to a parse failure, then reset the position *)
-					];
-					values["p"] = parseSingleBGPositionPair[values["p"], {startToken, tokens[[pos]]}],
-								
-				True, unrecognizedValueFailure @ prop						
-			];
-			AdvancePosAndSkipWhitespace[pos, l, tokens]
-		];
-		(* 
+	
+(* perhaps how to combine FE options:
+(* 
 			attachment: not supported, 
 			color: Background, 
 			image: System`BackgroundAppearance, 
@@ -1626,6 +1617,113 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 					System`BackgroundAppearance -> values["i"],
 					Background -> values["c"]|>
 		]
+*)
+
+fillInitialShortcutProperty[prop_?StringQ] := <|
+	"Property"       -> prop, 
+	"Value"          -> CSSPropertyData[prop, "CSSInitialValue"],
+	"Interpretation" -> CSSPropertyData[prop, "InterpretedGlobalValues", "initial"]|>
+
+parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] := 
+	Module[
+		{
+			pos = 1, l = Length[tokens], value, start, startToken, 
+			values = <|
+				"a" -> fillInitialShortcutProperty["background-attachment"], (* Missing["Not supported."] *)
+				"c" -> fillInitialShortcutProperty["background-color"],
+				"i" -> fillInitialShortcutProperty["background-image"],
+				"p" -> fillInitialShortcutProperty["background-position"],
+				"r" -> fillInitialShortcutProperty["background-repeat"]|>,
+			hasAttachment = False, hasColor = False, hasImage = False, hasPosition = False, hasRepeat = False
+		},
+		While[pos <= l, 
+			Which[
+				TokenTypeIs["function", tokens[[pos]]], 
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+						(* color *)
+						"rgb" | "rgba" | "hsl" | "hsla", 
+							If[hasColor, Return @ repeatedPropValueFailure @ "background-color"]; 
+							hasColor = True; 
+							values["c"] = <|
+								"Property"       -> "background-color",
+								"Value"          -> CSSUntokenize @ tokens[[pos]],
+								"Interpretation" -> parseSingleColor[prop, tokens[[pos]]]|>;,
+						(*TODO support gradients *)
+						"linear-gradient" | "repeating-linear-gradient" | "radial-gradient" | "repeating-radial-gradient" | "conic-gradient", 
+							If[hasImage, Return @ repeatedPropValueFailure @ "background-image"];
+							hasImage = True; 
+							values["i"] = <|
+								"Property"       -> "background-image",
+								"Value"          -> CSSUntokenize @ tokens[[pos]],
+								"Interpretation" -> Missing["Not supported."]|>;,
+						_,
+							Return @ invalidFunctionFailure @ tokens[[pos]]["String"]
+					],
+				
+				(* scroll or fixed keyword *)
+				!FailureQ[value = parseSingleBGAttachment[prop, tokens[[pos]]]],
+					If[hasAttachment, Return @ repeatedPropValueFailure @ "background-attachment"];
+					hasAttachment = True; 
+					values["a"] = <|
+						"Property"       -> "background-attachment",
+						"Value"          -> CSSUntokenize @ tokens[[pos]],
+						"Interpretation" -> value|>,
+					
+				(* color hex or color keyword *)
+				!FailureQ[value = parseSingleColor[prop, tokens[[pos]]]], (* color can also be hex or keyword *)
+					If[hasColor, Return @ repeatedPropValueFailure @ "background-color"];
+					hasColor = True; 
+					values["c"] = <|
+						"Property"       -> "background-color",
+						"Value"          -> CSSUntokenize @ tokens[[pos]],
+						"Interpretation" -> value|>,
+				
+				(* uri token or none keyword *)
+				value = parseSingleBGImage[prop, tokens[[pos]]];
+				Or[
+					!FailureQ[value],
+					FailureQ[value] && First[value] === "ImportFailure"
+				], 
+					If[hasImage, Return @ repeatedPropValueFailure @ "background-image"];
+					hasImage = True; 
+					values["i"] = <|
+						"Property"       -> "background-image",
+						"Value"          -> CSSUntokenize @ tokens[[pos]],
+						"Interpretation" -> value|>,
+				
+				(* one of the keywords repeat | repeat-x | repeat-y | no-repeat *)
+				!FailureQ[value = parseSingleBGRepeat[prop, tokens[[pos]]]], 
+					If[hasRepeat, Return @ repeatedPropValueFailure @ "background-repeat"];
+					hasRepeat = True; 
+					values["r"] = <|
+						"Property"       -> "background-repeat",
+						"Value"          -> CSSUntokenize @ tokens[[pos]],
+						"Interpretation" -> value|>,
+				
+				(* one of the key words left | center | right | top | bottom, *)
+				!FailureQ[value = parseSingleBGPosition[prop, tokens[[pos]]]], 
+					If[hasPosition, Return @ repeatedPropValueFailure @ "background-position"];
+					hasPosition = True; 
+					values["p"] = <|
+						"Property"       -> "background-position",
+						"Value"          -> CSSUntokenize @ tokens[[pos]],
+						"Interpretation" -> {value, Center}|>;
+					(* check for a pair of position values; they must be sequential *)
+					start = pos; startToken = tokens[[pos]]; AdvancePosAndSkipWhitespace[pos, l, tokens];
+					If[!FailureQ[value = parseSingleBGPosition[prop, tokens[[pos]]]], 
+						values["p"] = <|
+							"Property"       -> "background-position",
+							"Value"          -> CSSUntokenize @ tokens[[start ;; pos]],
+							"Interpretation" -> {values["p"][["Interpretation", 1]], value}|>
+						,
+						pos = start (* if this next token leads to a parse failure, then reset the position *)
+					],
+								
+				True, Return @ unrecognizedValueFailure @ prop						
+			];
+			AdvancePosAndSkipWhitespace[pos, l, tokens]
+		];
+		Values @ values
 ]
 
 
@@ -1636,7 +1734,7 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 (* 
 	In CSS Background and Borders 3, this prop can take multiple comma-separated backgrounds and the 'local' value.
 	We only support CSS 2.1 for now and it supports only a single value. *)
-consumeProperty[prop:"background-attachment", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"background-attachment", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBGAttachment[prop, tokens[[pos]]];
@@ -1662,7 +1760,7 @@ parseSingleBGAttachment[prop_String, token_?CSSTokenQ] :=
 (* 
 	Effectively the same as color, except a successful parse returns as a rule Background -> value.
 	Also 'currentColor' value needs to know the current value of 'color', instead of inherited from the parent.	*) 
-consumeProperty[prop:"background-color", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"background-color", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{value},
 		value = parseSingleColor[prop, First @ tokens];
 		If[FailureQ[value], value, <|Background -> value|>]
@@ -1676,7 +1774,7 @@ consumeProperty[prop:"background-color", tokens:{__?CSSTokenQ}] :=
 (* 
 	In CSS Background and Borders 3, this prop can take multiple comma-separated backgrounds and any CSS <image> data type.
 	We only support CSS 2.1 for now and it supports only a single value. *)
-consumeProperty[prop:"background-image", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"background-image", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{(*pos = 1, *)l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBGImage[prop, First @ tokens];
@@ -1691,7 +1789,7 @@ parseSingleBGImage[prop_String, token_?CSSTokenQ] :=
 				_,      unrecognizedKeyWordFailure @ prop
 			],
 		"function", 
-			Switch[token["String"],
+			Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
 				Alternatives[
 					"linear-gradient", "repeating-linear-gradient",
 					"radial-gradient", "repeating-radial-gradient", "conic-gradient"
@@ -1711,7 +1809,7 @@ parseSingleBGImage[prop_String, token_?CSSTokenQ] :=
 (* 
 	In CSS Background and Borders 3, this prop can take multiple comma-separated backgrounds and use a 4-value syntax.
 	We only support CSS 2.1 for now and it can take up to 2 values. *)
-consumeProperty[prop:"background-position", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"background-position", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value, values = {}},
 		While[pos <= l,
 			value = parseSingleBGPosition[prop, tokens[[pos]]];
@@ -1767,7 +1865,7 @@ parseSingleBGPositionPair[values:{__}, tokens:{__?CSSTokenQ}] :=
 (* 
 	In CSS Background and Borders 3, this prop can take multiple comma-separated backgrounds, use a 2-value syntax, and adds 'space' and 'round' keywords.
 	We only support CSS 2.1 for now and it can take only a single value. *)
-consumeProperty[prop:"background-repeat", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"background-repeat", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBGRepeat[prop, tokens[[pos]]];
@@ -1816,7 +1914,7 @@ parseSingleBGRepeat[prop_String, token_?CSSTokenQ] :=
 	FE only follows the 'collapse' model within Grid but and not provide a modifiable FE option. 
 	As it cannot be modified, we parse for correct syntax but only allow through the 'collapse' value.
 	The empty list return value of a successful parse is ignored during post-processing.*)
-consumeProperty[prop:"border-collapse", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"border-collapse", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		Switch[tokens[[pos]]["Type"],
@@ -1840,36 +1938,54 @@ consumeProperty[prop:"border-collapse", tokens:{__?CSSTokenQ}] :=
 	This requires post-processing of the parsed result. *)
 consumeProperty[
 	prop:"border-top-color" | "border-right-color" | "border-bottom-color" | "border-left-color", 
-	tokens:{__?CSSTokenQ}
+	tokens:{__?CSSTokenQ}, 
+	opts:OptionsPattern[]
 ] := 
-	Module[{pos = 1, l = Length[tokens], value, side},
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleColor[prop, tokens[[pos]]];
 		If[FailureQ[value], 
 			value
 			, 
-			side = Switch[prop, "border-top-color", "Top", "border-right-color", "Right", "border-bottom-color", "Bottom", "border-left-color", "Left"];
-			<|FrameStyle -> <|side -> <|"Color" -> value|>|>, CellFrameStyle -> <|side -> <|"Color" -> value|>|>|>
+			<|FrameStyle -> value, CellFrameStyle -> value|>
 		]
 	]	
 
 (* sets all 4 border/frame edges at once *)
-consumeProperty[prop:"border-color", tokens:{__?CSSTokenQ}] := 
-	Module[{pos = 1, l = Length[tokens], value, results = {}},
+consumeProperty[prop:"border-color", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
+	Module[{pos = 1, l = Length[tokens], value, rawResults = {}, results = {}},
 		While[pos <= l,
 			value = parseSingleColor[prop, tokens[[pos]]];
-			If[FailureQ[value], Return @ value, AppendTo[results, <|"Color" -> value|>]]; 
+			If[FailureQ[value], Return @ value, AppendTo[results, value]; AppendTo[rawResults, CSSUntokenize @ tokens[[pos]]]]; 
 			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
-		results =
-			Switch[Length[results],
-				1, <|"Left" -> results[[1]], "Right" -> results[[1]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
-				2, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
-				3, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>,
-				4, <|"Left" -> results[[4]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>,
-				_, tooManyTokensFailure @ tokens
-			];
-		<|FrameStyle -> results, CellFrameStyle -> results|>
+		Switch[Length[results],
+			1, 
+				{
+					<|"Property" -> "border-left-color",   "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>,
+					<|"Property" -> "border-right-color",  "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>,
+					<|"Property" -> "border-bottom-color", "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>,
+					<|"Property" -> "border-top-color",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>},
+			2, 
+				{
+					<|"Property" -> "border-left-color",   "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[2]]|>,
+					<|"Property" -> "border-right-color",  "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[2]]|>,
+					<|"Property" -> "border-bottom-color", "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>,
+					<|"Property" -> "border-top-color",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>},
+			3, 
+				{
+					<|"Property" -> "border-left-color",   "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[2]]|>,
+					<|"Property" -> "border-right-color",  "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[2]]|>,
+					<|"Property" -> "border-bottom-color", "Value" -> rawResults[[3]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[3]]|>,
+					<|"Property" -> "border-top-color",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>},
+			4, 
+				{
+					<|"Property" -> "border-left-color",   "Value" -> rawResults[[4]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[4]]|>,
+					<|"Property" -> "border-right-color",  "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[2]]|>,
+					<|"Property" -> "border-bottom-color", "Value" -> rawResults[[3]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[3]]|>,
+					<|"Property" -> "border-top-color",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>},
+			_, tooManyTokensFailure @ tokens
+		]
 	]
 
 
@@ -1885,7 +2001,7 @@ consumeProperty[prop:"border-color", tokens:{__?CSSTokenQ}] :=
 	Also WL Spacings applies to the outer margins as well, but 'border-spacing' is internal only.
 	Because each item is padded on either side, divide the result in half.
 *)
-consumeProperty[prop:"border-spacing", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"border-spacing", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value, results = {}},
 		While[pos <= l,
 			value = 
@@ -1922,32 +2038,52 @@ consumeProperty[prop:"border-spacing", tokens:{__?CSSTokenQ}] :=
 	This requires post-processing of the parsed result. *)
 consumeProperty[
 	prop:"border-top-style" | "border-right-style" | "border-bottom-style" | "border-left-style", 
-	tokens:{__?CSSTokenQ}
+	tokens:{__?CSSTokenQ}, 
+	opts:OptionsPattern[]
 ] := 
-	Module[{pos = 1, l = Length[tokens], value, side},
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBorderStyle[prop, tokens[[pos]]];
 		If[FailureQ[value], 
 			value
 			, 
-			side = Switch[prop, "border-top-style", "Top", "border-right-style", "Right", "border-bottom-style", "Bottom", "border-left-style", "Left"];
-			<|FrameStyle -> <|side -> <|"Style" -> value|>|>, CellFrameStyle -> <|side -> <|"Style" -> value|>|>|>
+			<|FrameStyle -> value, CellFrameStyle -> value|>
 		]
 	]
 	
 (* sets all 4 border/frame edges at once *)
-consumeProperty[prop:"border-style", tokens:{__?CSSTokenQ}] := 
-	Module[{pos = 1, l = Length[tokens], value, results = {}},
+consumeProperty[prop:"border-style", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
+	Module[{pos = 1, l = Length[tokens], value, rawResults = {}, results = {}},
 		While[pos <= l,
 			value = parseSingleBorderStyle[prop, tokens[[pos]]];
-			If[FailureQ[value], Return @ value, AppendTo[results, <|"Style" -> value|>]];
+			If[FailureQ[value], Return @ value, AppendTo[results, value]; AppendTo[rawResults, StringTrim @ CSSUntokenize @ tokens[[pos]]]];
 			AdvancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		Switch[Length[results],
-			1, <|# -> <|"Left" -> results[[1]], "Right" -> results[[1]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>& /@ {FrameStyle, CellFrameStyle}|>,
-			2, <|# -> <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>& /@ {FrameStyle, CellFrameStyle}|>,
-			3, <|# -> <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>& /@ {FrameStyle, CellFrameStyle}|>,
-			4, <|# -> <|"Left" -> results[[4]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>& /@ {FrameStyle, CellFrameStyle}|>,
+			1, 
+				{
+					<|"Property" -> "border-left-style",   "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>,
+					<|"Property" -> "border-right-style",  "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>,
+					<|"Property" -> "border-bottom-style", "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>,
+					<|"Property" -> "border-top-style",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>},
+			2, 
+				{
+					<|"Property" -> "border-left-style",   "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[2]]|>,
+					<|"Property" -> "border-right-style",  "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[2]]|>,
+					<|"Property" -> "border-bottom-style", "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>,
+					<|"Property" -> "border-top-style",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>},
+			3, 
+				{
+					<|"Property" -> "border-left-style",   "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[2]]|>,
+					<|"Property" -> "border-right-style",  "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[2]]|>,
+					<|"Property" -> "border-bottom-style", "Value" -> rawResults[[3]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[3]]|>,
+					<|"Property" -> "border-top-style",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>},
+			4, 
+				{
+					<|"Property" -> "border-left-style",   "Value" -> rawResults[[4]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[4]]|>,
+					<|"Property" -> "border-right-style",  "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[2]]|>,
+					<|"Property" -> "border-bottom-style", "Value" -> rawResults[[3]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[3]]|>,
+					<|"Property" -> "border-top-style",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrameStyle -> #|>& @ results[[1]]|>},
 			_, tooManyTokensFailure @ tokens
 		]
 	]
@@ -1977,39 +2113,55 @@ parseSingleBorderStyle[prop_String, token_?CSSTokenQ] :=
 	This requires post-processing of the parsed result. *)
 consumeProperty[
 	prop:"border-top-width" | "border-right-width" | "border-bottom-width" | "border-left-width", 
-	tokens:{__?CSSTokenQ}
+	tokens:{__?CSSTokenQ}, 
+	opts:OptionsPattern[]
 ] := 
-	Module[{pos = 1, l = Length[tokens], value, side},
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleBorderWidth[prop, tokens[[pos]]];
 		If[FailureQ[value], 
 			value
 			, 
-			side = Switch[prop, "border-top-width", "Top", "border-right-width", "Right", "border-bottom-width", "Bottom", "border-left-width", "Left"];
-			<|
-				FrameStyle -> <|side -> <|"Width" -> value|>|>, 
-				CellFrame  -> <|side -> <|"Width" -> convertToCellThickness @ value|>|>|>
+			<|FrameStyle -> value, CellFrame -> convertToCellThickness @ value|>
 		]
 	]
 	
 (* sets all 4 frame edge thickness at once *)
-consumeProperty[prop:"border-width", tokens:{__?CSSTokenQ}] := 
-	Module[{pos = 1, l = Length[tokens], value, results = {}},
+consumeProperty[prop:"border-width", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
+	Module[{pos = 1, l = Length[tokens], value, rawResults = {}, results = {}},
 		While[pos <= l,
 			value = parseSingleBorderWidth[prop, tokens[[pos]]];
-			If[FailureQ[value], Return @ value, AppendTo[results, <|"Width" -> value|>]];
+			If[FailureQ[value], Return @ value, AppendTo[results, value]; AppendTo[rawResults, StringTrim @ CSSUntokenize @ tokens[[pos]]]];
 			AdvancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		(* expand out results  to {{L,R},{B,T}} *)
-		results = 
-			Switch[Length[results],
-				1, <|"Left" -> results[[1]], "Right" -> results[[1]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
-				2, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
-				3, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>, 
-				4, <|"Left" -> results[[4]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>,
-				_, Return @ tooManyTokensFailure @ tokens
-			];
-		<|FrameStyle -> results, CellFrame -> Map[convertToCellThickness, results, {2}]|>
+		Switch[Length[results],
+			1, 
+				{
+					<|"Property" -> "border-left-style",   "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[1]]|>,
+					<|"Property" -> "border-right-style",  "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[1]]|>,
+					<|"Property" -> "border-bottom-style", "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[1]]|>,
+					<|"Property" -> "border-top-style",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[1]]|>},
+			2, 
+				{
+					<|"Property" -> "border-left-style",   "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[2]]|>,
+					<|"Property" -> "border-right-style",  "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[2]]|>,
+					<|"Property" -> "border-bottom-style", "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[1]]|>,
+					<|"Property" -> "border-top-style",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[1]]|>},
+			3, 
+				{
+					<|"Property" -> "border-left-style",   "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[2]]|>,
+					<|"Property" -> "border-right-style",  "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[2]]|>,
+					<|"Property" -> "border-bottom-style", "Value" -> rawResults[[3]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[3]]|>,
+					<|"Property" -> "border-top-style",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[1]]|>},
+			4, 
+				{
+					<|"Property" -> "border-left-style",   "Value" -> rawResults[[4]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[4]]|>,
+					<|"Property" -> "border-right-style",  "Value" -> rawResults[[2]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[2]]|>,
+					<|"Property" -> "border-bottom-style", "Value" -> rawResults[[3]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[3]]|>,
+					<|"Property" -> "border-top-style",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameStyle -> #, CellFrame -> convertToCellThickness @ #|>& @ results[[1]]|>},
+			_, tooManyTokensFailure @ tokens
+		]
 	]
 	
 (* WL FrameStyle thickness is best given as a calculated AbsoluteThickness for numerical values. *)
@@ -2041,43 +2193,53 @@ convertToCellThickness[x_] := Switch[x, AbsoluteThickness[_], First[x], Thicknes
 	'border' by itself sets all 4 edges to be the same. *)
 consumeProperty[
 	prop:"border" | "border-top" | "border-right" | "border-bottom" | "border-left", 
-	tokens:{__?CSSTokenQ}
+	tokens:{__?CSSTokenQ}, 
+	opts:OptionsPattern[]
 ] := 
-	Module[{pos = 1, l = Length[tokens], value, side, values, hasColor = False, hasStyle = False, hasWidth = False},
+	Module[{pos = 1, l = Length[tokens], value, side, values, rawValues, hasColor = False, hasStyle = False, hasWidth = False},
 		side = Switch[prop, "border-left", "Left", "border-right", "Right", "border-top", "Top", "border-bottom", "Bottom", _, "Top"];
 		values = <|
-			"c" -> CSSPropertyData[prop]["InterpretedGlobalValues", "initial"][FrameStyle, side, "Color"], 
-			"s" -> CSSPropertyData[prop]["InterpretedGlobalValues", "initial"][FrameStyle, side, "Style"], 
-			"w" -> CSSPropertyData[prop]["InterpretedGlobalValues", "initial"][FrameStyle, side, "Width"]|>;
+			"c" -> CSSPropertyData["border-top-color", "InterpretedGlobalValues", "initial", FrameStyle], 
+			"s" -> CSSPropertyData["border-top-style", "InterpretedGlobalValues", "initial", FrameStyle], 
+			"w" -> CSSPropertyData["border-top-width", "InterpretedGlobalValues", "initial", FrameStyle]|>;
+		rawValues = <|"c" -> "currentColor", "s" -> "none", "w" -> "medium"|>;
 		
 		While[pos <= l,
 			Which[
 				!FailureQ[value = parseSingleColor[prop, tokens[[pos]]]],
 					If[hasColor, Return @ repeatedPropValueFailure @ (prop <> "-color")];
-					hasColor = True; values["c"] = value,
+					hasColor = True; values["c"] = value; rawValues["c"] = CSSUntokenize @ tokens[[pos]],
 				
 				!FailureQ[value = parseSingleBorderStyle[prop, tokens[[pos]]]],
 					If[hasStyle, Return @ repeatedPropValueFailure @ (prop <> "-style")];
-					hasStyle = True; values["s"] = value,
+					hasStyle = True; values["s"] = value; rawValues["s"] = CSSUntokenize @ tokens[[pos]],
 					
 				!FailureQ[value = parseSingleBorderWidth[prop, tokens[[pos]]]],
 					If[hasWidth, Return @ repeatedPropValueFailure @ (prop <> "-width")];
-					hasWidth = True; values["w"] = value,
+					hasWidth = True; values["w"] = value; rawValues["w"] = CSSUntokenize @ tokens[[pos]],
 				
 				True, Return @ unrecognizedValueFailure @ prop						
 			];
 			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
 		If[prop === "border",
-			<|
-				FrameStyle     -> AssociationThread[{"Left", "Right", "Top", "Bottom"} -> <|"Color" -> values["c"], "Style" -> values["s"], "Width" -> values["w"]|>], 
-				CellFrameStyle -> AssociationThread[{"Left", "Right", "Top", "Bottom"} -> <|"Color" -> values["c"], "Style" -> values["s"]|>], 
-				CellFrame      -> AssociationThread[{"Left", "Right", "Top", "Bottom"} -> <|"Width" -> convertToCellThickness @ values["w"]|>]|>
-			,
-			<|
-				FrameStyle     -> <|side -> <|"Color" -> values["c"], "Style" -> values["s"], "Width" -> values["w"]|>|>, 
-				CellFrameStyle -> <|side -> <|"Color" -> values["c"], "Style" -> values["s"]|>|>, 
-				CellFrame      -> <|side -> <|"Width" -> convertToCellThickness @ values["w"]|>|>|>
+			{
+				<|"Property" -> "border-left-color",   "Value" -> rawValues["c"], "Interpretation" -> <|FrameStyle -> values["c"], CellFrameStyle -> values["c"]|>|>, 
+				<|"Property" -> "border-right-color",  "Value" -> rawValues["c"], "Interpretation" -> <|FrameStyle -> values["c"], CellFrameStyle -> values["c"]|>|>, 
+				<|"Property" -> "border-bottom-color", "Value" -> rawValues["c"], "Interpretation" -> <|FrameStyle -> values["c"], CellFrameStyle -> values["c"]|>|>, 
+				<|"Property" -> "border-top-color",    "Value" -> rawValues["c"], "Interpretation" -> <|FrameStyle -> values["c"], CellFrameStyle -> values["c"]|>|>, 
+				<|"Property" -> "border-left-style",   "Value" -> rawValues["s"], "Interpretation" -> <|FrameStyle -> values["s"], CellFrameStyle -> values["s"]|>|>, 
+				<|"Property" -> "border-right-style",  "Value" -> rawValues["s"], "Interpretation" -> <|FrameStyle -> values["s"], CellFrameStyle -> values["s"]|>|>, 
+				<|"Property" -> "border-bottom-style", "Value" -> rawValues["s"], "Interpretation" -> <|FrameStyle -> values["s"], CellFrameStyle -> values["s"]|>|>, 
+				<|"Property" -> "border-top-style",    "Value" -> rawValues["s"], "Interpretation" -> <|FrameStyle -> values["s"], CellFrameStyle -> values["s"]|>|>,
+				<|"Property" -> "border-left-width",   "Value" -> rawValues["w"], "Interpretation" -> <|FrameStyle -> values["w"], CellFrame -> convertToCellThickness @ values["w"]|>|>, 
+				<|"Property" -> "border-right-width",  "Value" -> rawValues["w"], "Interpretation" -> <|FrameStyle -> values["w"], CellFrame -> convertToCellThickness @ values["w"]|>|>, 
+				<|"Property" -> "border-bottom-width", "Value" -> rawValues["w"], "Interpretation" -> <|FrameStyle -> values["w"], CellFrame -> convertToCellThickness @ values["w"]|>|>, 
+				<|"Property" -> "border-top-width",    "Value" -> rawValues["w"], "Interpretation" -> <|FrameStyle -> values["w"], CellFrame -> convertToCellThickness @ values["w"]|>|>},
+			{
+				<|"Property" -> prop <> "-color", "Value" -> rawValues["c"], "Interpretation" -> <|FrameStyle -> values["c"], CellFrameStyle -> values["c"]|>|>, 
+				<|"Property" -> prop <> "-style", "Value" -> rawValues["s"], "Interpretation" -> <|FrameStyle -> values["s"], CellFrameStyle -> values["s"]|>|>, 
+				<|"Property" -> prop <> "-width", "Value" -> rawValues["w"], "Interpretation" -> <|FrameStyle -> values["w"], CellFrame -> convertToCellThickness @ values["w"]|>|>}
 		]
 	]
 
@@ -2087,7 +2249,7 @@ consumeProperty[
 
 
 (* deprecated, but we still mostly parse it for correctness *)
-consumeProperty[prop:"clip", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"clip", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -2109,7 +2271,7 @@ consumeProperty[prop:"clip", tokens:{__?CSSTokenQ}] :=
 
 
 (* color is represented by a single token, either a named color, hex e.g. #fff, or function *)
-consumeProperty[prop:"color", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"color", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	With[{value = parseSingleColor[prop, First @ tokens]},
 		If[FailureQ[value], value, <|FontColor -> value|>]]
 		
@@ -2125,7 +2287,7 @@ consumeProperty[prop:"color", tokens:{__?CSSTokenQ}] :=
 (* 
 	Used to add content before or after element, or add content to a page header/footer.
 	It's too restrictive to assign this to just Cells' CellDingbat or CellLabel. *)
-consumeProperty[prop:"content", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"content", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value, parsedValues = {}},
 		While[pos <= l,
 			value = 
@@ -2150,7 +2312,7 @@ consumeProperty[prop:"content", tokens:{__?CSSTokenQ}] :=
 							]
 						],
 					"function", 
-						Switch[tokens[[pos]]["String"],
+						Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 							"counter",  parseCounter[prop, tokens[[pos]]["Children"]],
 							"counters", parseCounters[prop, tokens[[pos]]["Children"]],
 							"attr",     (*TODO*)parseAttr[prop, tokens[[pos]]["Children"]],
@@ -2170,7 +2332,7 @@ consumeProperty[prop:"content", tokens:{__?CSSTokenQ}] :=
 
 
 (* In WL each style must be repeated n times to get an increment of n *)
-consumeProperty[prop:"counter-increment", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"counter-increment", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], v, values = {}, cPos, n},
 		While[pos <= l,
 			Switch[tokens[[pos]]["Type"],
@@ -2210,7 +2372,7 @@ consumeProperty[prop:"counter-increment", tokens:{__?CSSTokenQ}] :=
 (*counter-reset*)
 
 
-consumeProperty[prop:"counter-reset", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"counter-reset", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], v, values = {}, cPos},
 		While[pos <= l,
 			Switch[tokens[[pos]]["Type"],
@@ -2245,7 +2407,7 @@ consumeProperty[prop:"counter-reset", tokens:{__?CSSTokenQ}] :=
 (*list-style-image*)
 
 
-consumeProperty[prop:"list-style-image", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"list-style-image", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{(*pos = 1, *)l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStyleImage[prop, First @ tokens];
@@ -2280,7 +2442,7 @@ parseSingleListStyleImage[prop_String, token_?CSSTokenQ] :=
 	CellDingbat position is always outside the cell content and aligned with the first line of content.
 	Though the following validates the CSS, Mathematica does not include any position option.
 *)
-consumeProperty[prop:"list-style-position", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"list-style-position", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{(*pos = 1, *)l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStylePosition[prop, First @ tokens];
@@ -2303,7 +2465,7 @@ parseSingleListStylePosition[prop_String, token_?CSSTokenQ] :=
 (*list-style-type*)
 
 
-consumeProperty[prop:"list-style-type", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"list-style-type", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{(*pos = 1, *)l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleListStyleType[prop, First @ tokens];
@@ -2342,28 +2504,32 @@ parseSingleListStyleType[prop_String, token_?CSSTokenQ, style_String:"Item"] :=
 
 
 (* short-hand for list-style-image/position/type properties given in any order *)
-consumeProperty[prop:"list-style", tokens:{__?CSSTokenQ}] := 
-	Module[{pos = 1, l = Length[tokens], value, values, noneCount = 0, hasImage = False, hasPos = False, hasType = False},
+consumeProperty[prop:"list-style", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
+	Module[{pos = 1, l = Length[tokens], value, values, rawValues, noneCount = 0, hasImage = False, hasPos = False, hasType = False},
 		(* 
 			li-image, li-position, and li-type can appear in any order.
 			A value of 'none' sets whichever of li-type and li-image are not otherwise specified to 'none'. 
 			If both are specified, then an additional 'none' is an error.
 		*)
-		values = <|
-			"i" -> First @ Values @ CSSPropertyData["list-style-image"]["InterpretedGlobalValues", "initial"], 
-			"p" -> CSSPropertyData["list-style-position"]["InterpretedGlobalValues", "initial"], (* Missing["Not supported."] *) 
-			"t" -> First @ Values @ CSSPropertyData["list-style-type"]["InterpretedGlobalValues", "initial"]|>;
+		values = <|"i" -> None, "p" -> Missing["Not supported."], "t" -> "\[FilledCircle]"|>;
+		rawValues = <|"i" -> "none", "p" -> "outside", "t" -> "disc"|>;
+		
 		While[pos <= l,
 			Which[
 				(* check for 'none' keyword *)
 				TokenStringIs["none", tokens[[pos]]], noneCount++,					
 				
 				(* check for list-style-image *)
-				!FailureQ[value = parseSingleListStyleImage[prop, tokens[[pos]]]],
+				value = parseSingleBGImage[prop, tokens[[pos]]];
+				Or[
+					TokenTypeIs["url", tokens[[pos]]],
+					!FailureQ[value],
+					FailureQ[value] && First[value] === "ImportFailure"
+				], 
 					If[hasImage, 
 						Return @ repeatedPropValueFailure @ "image"
 						, 
-						values["i"] = value; hasImage = True
+						values["i"] = value; rawValues["i"] = CSSUntokenize @ tokens[[pos]]; hasImage = True
 					],
 					
 				(* check for list-style-position *)
@@ -2371,7 +2537,7 @@ consumeProperty[prop:"list-style", tokens:{__?CSSTokenQ}] :=
 					If[hasPos, 
 						Return @ repeatedPropValueFailure @ "position"
 						, 
-						values["p"] = value; hasPos = True
+						values["p"] = value; rawValues["p"] = CSSUntokenize @ tokens[[pos]]; hasPos = True
 					],
 					
 				(* check for list-style-type *)
@@ -2379,7 +2545,7 @@ consumeProperty[prop:"list-style", tokens:{__?CSSTokenQ}] :=
 					If[hasType, 
 						Return @ repeatedPropValueFailure @ "type"
 						, 
-						values["t"] = value; hasType = True
+						values["t"] = value; rawValues["t"] = CSSUntokenize @ tokens[[pos]]; hasType = True
 					],
 					
 				(* anything else is an error *)
@@ -2387,11 +2553,10 @@ consumeProperty[prop:"list-style", tokens:{__?CSSTokenQ}] :=
 			];
 			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
-		Which[
-			hasImage && hasType && noneCount > 0, repeatedPropValueFailure @ "none",
-			hasImage, <|CellDingbat -> values["i"]|>, (* default to Image if it could be found *)
-			hasType,  <|CellDingbat -> values["t"]|>,
-			True,     <|CellDingbat -> None|>]
+		{
+			<|"Property" -> "list-style-image",    "Value" -> rawValues["i"], "Interpretation" -> values["i"]|>,
+			<|"Property" -> "list-style-type",     "Value" -> rawValues["t"], "Interpretation" -> values["t"]|>,
+			<|"Property" -> "list-style-position", "Value" -> rawValues["p"], "Interpretation" -> values["p"]|>}
 	]
 
 
@@ -2405,7 +2570,7 @@ consumeProperty[prop:"list-style", tokens:{__?CSSTokenQ}] :=
 	There's also ShowStringCharacters, but this only hides/shows the double quote.
 	We treat this then as not available, but we validate the form anyway.
 *)
-consumeProperty[prop:"quotes", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"quotes", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], v, values = {}, cPos},
 		While[pos <= l,
 			Switch[tokens[[pos]]["Type"],
@@ -2439,7 +2604,7 @@ consumeProperty[prop:"quotes", tokens:{__?CSSTokenQ}] :=
 
 
 (* WL uses a TagBox[..., MouseAppearanceTag[""]] instead of an option to indicate mouse appearance *)
-consumeProperty[prop:"cursor", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"cursor", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -2478,7 +2643,7 @@ consumeProperty[prop:"cursor", tokens:{__?CSSTokenQ}] :=
 	WL automatically lays out blocks either inline or as nested boxes. 
 	If a Cell appears within TextData or BoxData then it is considered inline.
 *)
-consumeProperty[prop:"display", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"display", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -2515,7 +2680,7 @@ consumeProperty[prop:"display", tokens:{__?CSSTokenQ}] :=
 (* 
 	FE does not support the flow of boxes around other boxes. 
 	AttachedCell exists, but is too ephemeral. *)
-consumeProperty[prop:"float", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"float", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -2533,7 +2698,7 @@ consumeProperty[prop:"float", tokens:{__?CSSTokenQ}] :=
 	]
 
 
-consumeProperty[prop:"clear", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"clear", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -2565,27 +2730,35 @@ consumeProperty[prop:"clear", tokens:{__?CSSTokenQ}] :=
 	[['font-style' || 'font-variant' || 'font-weight' ]? 'font-size' [ / 'line-height' ]? 'font-family' ]
 	All font properties are reset to their initial values, then the listed properties are calculated.
 *)
-consumeProperty[prop:"font", tokens:{__?CSSTokenQ}] :=
+consumeProperty[prop:"font", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] :=
 	Module[{pos = 1, l = Length[tokens], v, value, temp, hasFontStyle = False, hasFontVariant = False, hasFontWeight = False},
 		(* reset font properties to initial values *)
-		value = CSSPropertyData["font"]["InterpretedGlobalValues", "initial"];
-		
+		value = <|
+			"st" -> fillInitialShortcutProperty["font-style"], 
+			"v"  -> fillInitialShortcutProperty["font-variant"],
+			"w"  -> fillInitialShortcutProperty["font-weight"],
+			"si" -> fillInitialShortcutProperty["font-size"],
+			"f"  -> fillInitialShortcutProperty["font-family"],
+			"l"  -> fillInitialShortcutProperty["line-height"]|>;
+			
 		(* parse and assign new font values *)
 		If[l == 1, (* if only one token is present, then it should be a keyword that represents a system font (or font style?) *)
 			If[TokenTypeIs["ident", tokens[[pos]]],
 				v = 
 					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"caption" | "icon" | "menu" | "small-caption", 
-							AssociateTo[value, FontFamily -> Dynamic @ CurrentValue["ControlsFontFamily"]];
-							AssociateTo[value, FontSize   -> Dynamic @ CurrentValue["ControlsFontSize"]];,
+							value["f"]  = <|"Property" -> "font-family", "Value" -> tokens[[pos]]["String"], "Interpretation" -> Dynamic @ CurrentValue["ControlsFontFamily"]|>;
+							value["si"] = <|"Property" -> "font-size",   "Value" -> tokens[[pos]]["String"], "Interpretation" -> Dynamic @ CurrentValue["ControlsFontSize"]|>;,
 						"message-box" | "status-bar", 
-							AssociateTo[value, FontFamily -> Dynamic @ CurrentValue["PanelFontFamily"]];
-							AssociateTo[value, FontSize   -> Dynamic @ CurrentValue["PanelFontSize"]];,
-						"italic" | "oblique", AssociateTo[value, consumeProperty["font-style", tokens]],
-						"small-caps",         AssociateTo[value, consumeProperty["font-variant", tokens]],
-						_,                    unrecognizedKeyWordFailure @ prop
+							value["f"]  = <|"Property" -> "font-family", "Value" -> tokens[[pos]]["String"], "Interpretation" -> Dynamic @ CurrentValue["PanelFontFamily"]|>;
+							value["si"] = <|"Property" -> "font-size",   "Value" -> tokens[[pos]]["String"], "Interpretation" -> Dynamic @ CurrentValue["PanelFontSize"]|>;,
+						"italic" | "oblique", 
+							value["st"] = <|"Property" -> "font-style",  "Value" -> tokens[[pos]]["String"], "Interpretation" -> consumeProperty["font-style", tokens, opts]|>;,
+						"small-caps",
+							value["v"] = <|"Property" -> "font-variant", "Value" -> tokens[[pos]]["String"], "Interpretation" -> consumeProperty["font-variant", tokens, opts]|>;,
+						_, unrecognizedKeyWordFailure @ prop
 					];
-				Return @ v
+				Return @ Values @ value
 				,
 				Return @ unrecognizedValueFailure @ prop
 			]
@@ -2597,28 +2770,31 @@ consumeProperty[prop:"font", tokens:{__?CSSTokenQ}] :=
 			Besides "normal" the keywords of each property are unique.
 			Keep checking for font-size as it indicates the end of style/variant/weight values.
 		*)
-		While[pos <= l && FailureQ[temp = consumeProperty["font-size", {tokens[[pos]]}]],
+		While[pos <= l && FailureQ[temp = consumeProperty["font-size", {tokens[[pos]]}, opts]],
 			If[Not[TokenTypeIs["ident", tokens[[pos]]] && TokenStringIs["normal", tokens[[pos]]]],
 				Which[
 					(* font-style *)
-					!FailureQ[v = consumeProperty["font-style", {tokens[[pos]]}]], 
+					!FailureQ[v = consumeProperty["font-style", {tokens[[pos]]}, opts]], 
 						If[hasFontStyle, Return @ repeatedPropValueFailure @ "font-style"
 							,
-							hasFontStyle = True; AssociateTo[value, v]
+							hasFontStyle = True; 
+							value["st"] = <|"Property" -> "font-style", "Value" -> CSSUntokenize @ tokens[[pos]], "Interpretation" -> v|>;
 						],
 						
 					(* font-weight *)
-					!FailureQ[v = consumeProperty["font-weight", {tokens[[pos]]}]], 
+					!FailureQ[v = consumeProperty["font-weight", {tokens[[pos]]}, opts]], 
 						If[hasFontWeight, Return @ repeatedPropValueFailure @ "font-weight"
 							,
-							hasFontWeight = True; AssociateTo[value, v] 
+							hasFontWeight = True; 
+							value["w"] = <|"Property" -> "font-weight", "Value" -> CSSUntokenize @ tokens[[pos]], "Interpretation" -> v|>;
 						],
 						
 					(* font-variant *)
-					!FailureQ[v = consumeProperty["font-variant", {tokens[[pos]]}]], 
+					!FailureQ[v = consumeProperty["font-variant", {tokens[[pos]]}, opts]], 
 						If[hasFontVariant, Return @ repeatedPropValueFailure @ "font-variant"
 							,
-							hasFontVariant = True; AssociateTo[value, v] 
+							hasFontVariant = True; 
+							value["v"] = <|"Property" -> "font-variant", "Value" -> CSSUntokenize @ tokens[[pos]], "Interpretation" -> v|>;
 						],
 						
 					True, Return @ unrecognizedValueFailure @ prop
@@ -2630,21 +2806,32 @@ consumeProperty[prop:"font", tokens:{__?CSSTokenQ}] :=
 		(* 
 			font-size must appear next; 
 			an optional line-height property can immediately follow font-size with a '/' in between (no whitespace allowed) *)
-		If[pos > l, Return @ noValueFailure["font-size"], AssociateTo[value, temp]; pos++];
+		If[pos > l, Return @ noValueFailure["font-size"], 
+			value["si"] = <|"Property" -> "font-size", "Value" -> CSSUntokenize @ tokens[[pos]], "Interpretation" -> temp|>; 
+			pos++
+		];
 		
 		(* check for optional line-height *)
 		If[pos > l, Return @ noValueFailure["font-family"]];
 		If[TokenTypeIs["delim", tokens[[pos]]] && TokenStringIs["/", tokens[[pos]]],
 			pos++; 
-			v = consumeProperty["line-height", {tokens[[pos]]}]; 
-			If[FailureQ[v], Return @ v, AssociateTo[value, v]; AdvancePosAndSkipWhitespace[pos, l, tokens]];
+			v = consumeProperty["line-height", {tokens[[pos]]}, opts]; 
+			If[FailureQ[v], 
+				Return @ v
+				, 
+				value["l"] = <|"Property" -> "font-family", "Value" -> CSSUntokenize @ tokens[[pos]], "Interpretation" -> v|>; 
+				AdvancePosAndSkipWhitespace[pos, l, tokens]];
 		];
 		
 		(* everything else must be a font-family *)
-		v = consumeProperty["font-family", tokens[[pos ;;]]];
-		If[FailureQ[v], Return @ v, AssociateTo[value, v]];
+		v = consumeProperty["font-family", tokens[[pos ;;]], opts];
+		If[FailureQ[v], 
+			Return @ v
+			, 
+			value["f"] = <|"Property" -> "font-family", "Value" -> StringTrim @ CSSUntokenize @ tokens[[pos ;;]], "Interpretation" -> v|>
+		];
 		
-		value
+		Values @ value
 	]
 
 
@@ -2652,7 +2839,7 @@ consumeProperty[prop:"font", tokens:{__?CSSTokenQ}] :=
 (*font-family*)
 
 
-consumeProperty[prop:"font-family", tokens:{__?CSSTokenQ}] :=
+consumeProperty[prop:"font-family", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] :=
 	Module[{fontTokens, parsed, result},
 		fontTokens = DeleteCases[SplitBy[tokens, MatchQ[CSSToken[KeyValuePattern["Type" -> "comma"]]]], {CSSToken[KeyValuePattern["Type" -> "comma"]]}];
 		parsed = parseSingleFontFamily /@ fontTokens;
@@ -2728,7 +2915,7 @@ parseFontFamilySingleIdent[s_String] :=
 (*font-size*)
 
 
-consumeProperty[prop:"font-size", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"font-size", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2759,7 +2946,7 @@ consumeProperty[prop:"font-size", tokens:{__?CSSTokenQ}] :=
 (*font-style*)
 
 
-consumeProperty[prop:"font-style", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"font-style", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2782,7 +2969,7 @@ consumeProperty[prop:"font-style", tokens:{__?CSSTokenQ}] :=
 
 
 (* In CSS Fonts Module Level 3 this becomes a shorthand for font-variation-* properties *)
-consumeProperty[prop:"font-variant", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"font-variant", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2807,7 +2994,7 @@ consumeProperty[prop:"font-variant", tokens:{__?CSSTokenQ}] :=
 	"lighter" and "bolder" are not supported.
 	Weight mappings come from https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight.
 *)
-consumeProperty[prop:"font-weight", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"font-weight", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2871,7 +3058,7 @@ parseSingleSize[prop_String, token_?CSSTokenQ] := parseSingleSize[prop, token] =
 	]
 	
 (* min-width and max-width override width property *)
-consumeProperty[prop:"width" | "max-width" | "min-width", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"width" | "max-width" | "min-width", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleSize[prop, tokens[[pos]]];
@@ -2888,7 +3075,7 @@ consumeProperty[prop:"width" | "max-width" | "min-width", tokens:{__?CSSTokenQ}]
 		]
 	]
 
-consumeProperty[prop:"height" | "max-height" | "min-height", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"height" | "max-height" | "min-height", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleSize[prop, tokens[[pos]]];
@@ -2914,7 +3101,7 @@ consumeProperty[prop:"height" | "max-height" | "min-height", tokens:{__?CSSToken
 	Similar to WL LineSpacing, but LineSpacing already takes FontSize into account.
 	Thus, we intercept 'em' and 'ex' before getting a dynamic FontSize and we keep 
 	the percentage from being wrapped in Scaled. *)
-consumeProperty[prop:"line-height", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"line-height", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -2949,37 +3136,51 @@ consumeProperty[prop:"line-height", tokens:{__?CSSTokenQ}] :=
 	CSS margins --> WL ImageMargins and CellMargins
 	CSS padding --> WL FrameMargins and CellFrameMargins
 *)
-consumeProperty[prop:"margin-top" | "margin-right" | "margin-bottom" | "margin-left", tokens:{__?CSSTokenQ}] := 
-	Module[{pos = 1, l = Length[tokens], side, value},
+consumeProperty[prop:"margin-top" | "margin-right" | "margin-bottom" | "margin-left", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSingleMargin[prop, tokens[[pos]]];
 		If[FailureQ[value], 
 			value
 			, 
-			side = Switch[prop, "margin-left", "Left", "margin-right", "Right", "margin-bottom", "Bottom", "margin-top", "Top"];
-			<|
-				ImageMargins    -> <|side -> value|>, 
-				CellMargins     -> <|side -> value|>, 
-				PrintingOptions -> <|"PrintingMargins" -> <|side -> value|>|>|>
+			<|ImageMargins ->value, CellMargins -> value, PrintingOptions -> <|"PrintingMargins" -> value|>|>
 		]
 	]
 		
-consumeProperty[prop:"margin", tokens:{__?CSSTokenQ}] := 
-	Module[{pos = 1, l = Length[tokens], value, results = {}},
+consumeProperty[prop:"margin", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
+	Module[{pos = 1, l = Length[tokens], value, rawResults = {}, results = {}},
 		While[pos <= l,
 			value = parseSingleMargin[prop, tokens[[pos]]];
-			If[FailureQ[value], Return @ value, AppendTo[results, value]]; 
+			If[FailureQ[value], Return @ value, AppendTo[results, value]; AppendTo[rawResults, CSSUntokenize @ tokens[[pos]]]]; 
 			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
-		results = 
-			Switch[Length[results],
-				1, <|"Left" -> results[[1]], "Right" -> results[[1]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
-				2, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
-				3, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>, 
-				4, <|"Left" -> results[[4]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>,
-				_, Return @ tooManyTokensFailure @ tokens
-			];
-		<|ImageMargins -> results, CellMargins -> results, PrintingOptions -> <|"PrintingMargins" -> results|>|>
+		Switch[Length[results],
+			1, 
+				{
+					<|"Property" -> "margin-left",   "Value" -> rawResults[[1]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[1]]|>,
+					<|"Property" -> "margin-right",  "Value" -> rawResults[[1]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[1]]|>,
+					<|"Property" -> "margin-bottom", "Value" -> rawResults[[1]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[1]]|>,
+					<|"Property" -> "margin-top",    "Value" -> rawResults[[1]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[1]]|>},
+			2, 
+				{
+					<|"Property" -> "margin-left",   "Value" -> rawResults[[2]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[2]]|>,
+					<|"Property" -> "margin-right",  "Value" -> rawResults[[2]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[2]]|>,
+					<|"Property" -> "margin-bottom", "Value" -> rawResults[[1]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[1]]|>,
+					<|"Property" -> "margin-top",    "Value" -> rawResults[[1]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[1]]|>},
+			3, 
+				{
+					<|"Property" -> "margin-left",   "Value" -> rawResults[[2]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[2]]|>,
+					<|"Property" -> "margin-right",  "Value" -> rawResults[[2]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[2]]|>,
+					<|"Property" -> "margin-bottom", "Value" -> rawResults[[3]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[3]]|>,
+					<|"Property" -> "margin-top",    "Value" -> rawResults[[1]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[1]]|>},
+			4, 
+				{
+					<|"Property" -> "margin-left",   "Value" -> rawResults[[4]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[4]]|>,
+					<|"Property" -> "margin-right",  "Value" -> rawResults[[2]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[2]]|>,
+					<|"Property" -> "margin-bottom", "Value" -> rawResults[[3]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[3]]|>,
+					<|"Property" -> "margin-top",    "Value" -> rawResults[[1]], "Interpretation" -> <|ImageMargins -> #, CellMargins -> #, PrintingOptions -> <|"PrintingMargins" -> #|>|>& @ results[[1]]|>},
+			_, tooManyTokensFailure @ tokens
+		]
 	]
 
 parseSingleMargin[prop_String, token_?CSSTokenQ] := parseSingleMargin[prop, token] = 
@@ -3014,7 +3215,7 @@ parseSingleMargin[prop_String, token_?CSSTokenQ] := parseSingleMargin[prop, toke
 (*outline-color*)
 
 
-consumeProperty[prop:"outline-color", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"outline-color", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = 
@@ -3025,7 +3226,7 @@ consumeProperty[prop:"outline-color", tokens:{__?CSSTokenQ}] :=
 						_,        unrecognizedKeyWordFailure @ prop
 					],
 				"function",
-					Switch[tokens[[pos]]["String"],
+					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 						"rgb" | "rgba" | "hsl" | "hsla", parseSingleColor[prop, tokens[[pos]]],
 						_,                               invalidFunctionFailure @ tokens[[pos]]["String"]
 					],
@@ -3040,7 +3241,7 @@ consumeProperty[prop:"outline-color", tokens:{__?CSSTokenQ}] :=
 
 
 (* only a solid border is allowed for cells; 'hidden' is not allowed here *)
-consumeProperty[prop:"outline-style", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"outline-style", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value =
@@ -3057,7 +3258,7 @@ consumeProperty[prop:"outline-style", tokens:{__?CSSTokenQ}] :=
 (*outline-width*)
 
 
-consumeProperty[prop:"outline-width", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"outline-width", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ prop];
 		value = parseSingleBorderWidth[prop, tokens[[pos]]];
@@ -3080,35 +3281,36 @@ consumeProperty[prop:"outline-width", tokens:{__?CSSTokenQ}] :=
 
 (* currently this is not supported *)
 (* Shorthand for outline-width/style/color. 'outline' always sets all 4 edges to be the same. *)
-consumeProperty[prop:"outline", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"outline", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[
 	{
 		pos = 1, l = Length[tokens], value, 
-		values = <|
-			"c" -> CSSPropertyData["outline-color"]["InterpretedGlobalValues", "initial"],   (* Missing["Not supported."] *)
-			"s" -> CSSPropertyData["outline-style"]["InterpretedGlobalValues", "initial"],   (* Missing["Not supported."] *)
-			"w" -> CSSPropertyData["outline-width"]["InterpretedGlobalValues", "initial"]|>, (* Missing["Not supported."] *)
+		values = <|"c" -> Missing["Not supported."], "s" -> Missing["Not supported."], "w" -> Missing["Not supported."]|>, 
+		rawValues = <|"c" -> "invert", "s" -> "none", "w" -> "medium"|>, 
 		hasColor = False, hasStyle = False, hasWidth = False
 	},
 		While[pos <= l,
 			Which[
 				!FailureQ[value = parseSingleColor[prop, tokens[[pos]]]],
 					If[hasColor, Return @ repeatedPropValueFailure @ (prop <> "-color")];
-					hasColor = True; values["c"] = value,
+					hasColor = True; values["c"] = value; rawValues["c"] = CSSUntokenize @ tokens[[pos]],
 				
 				!FailureQ[value = parseSingleBorderStyle[prop, tokens[[pos]]]],
 					If[hasStyle, Return @ repeatedPropValueFailure @ (prop <> "-style")];
-					hasStyle = True; values["s"] = value,
+					hasStyle = True; values["s"] = value; rawValues["s"] = CSSUntokenize @ tokens[[pos]],
 					
 				!FailureQ[value = parseSingleBorderWidth[prop, tokens[[pos]]]],
 					If[hasWidth, Return @ repeatedPropValueFailure @ (prop <> "-width")];
-					hasWidth = True; values["w"] = value,
+					hasWidth = True; values["w"] = value; rawValues["w"] = CSSUntokenize @ tokens[[pos]],
 				
 				True, unrecognizedValueFailure @ prop						
 			];
 			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
-		Missing["Not supported."]
+		{
+			<|"Property" -> "outline-width", "Value" -> rawValues["w"], "Interpretation" -> Missing["Not supported."]|>,
+			<|"Property" -> "outline-style", "Value" -> rawValues["s"], "Interpretation" -> Missing["Not supported."]|>,
+			<|"Property" -> "outline-color", "Value" -> rawValues["c"], "Interpretation" -> Missing["Not supported."]|>}
 	]
 
 
@@ -3120,7 +3322,7 @@ consumeProperty[prop:"outline", tokens:{__?CSSTokenQ}] :=
 	This would mostly be found with WL Pane expression as PaneBox supports scrollbars. 
 	Other boxes may support ImageSizeAction.
 *)
-consumeProperty[prop:"overflow", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"overflow", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos]]["Type"],
@@ -3147,35 +3349,53 @@ consumeProperty[prop:"overflow", tokens:{__?CSSTokenQ}] :=
 *)
 consumeProperty[
 	prop:"padding-top" | "padding-right" | "padding-bottom" | "padding-left", 
-	tokens:{__?CSSTokenQ}
+	tokens:{__?CSSTokenQ}, 
+	opts:OptionsPattern[]
 ] := 
-	Module[{pos = 1, l = Length[tokens], side, value},
+	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = parseSinglePadding[prop, tokens[[pos]]];
 		If[FailureQ[value], 
 			value
 			, 
-			side = Switch[prop, "padding-left", "Left", "padding-right", "Right", "padding-bottom", "Bottom", "padding-top", "Top"];
-			<|FrameMargins -> <|side -> value|>, CellFrameMargins -> <|side -> value|>|>
+			<|FrameMargins -> value, CellFrameMargins -> value|>
 		]
 	]
 		
-consumeProperty[prop:"padding", tokens:{__?CSSTokenQ}] := 
-	Module[{pos = 1, l = Length[tokens], value, results = {}},
+consumeProperty[prop:"padding", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
+	Module[{pos = 1, l = Length[tokens], value, rawResults = {}, results = {}},
 		While[pos <= l,
 			value = parseSinglePadding[prop, tokens[[pos]]];
-			If[FailureQ[value], Return @ value, AppendTo[results, value]]; 
+			If[FailureQ[value], Return @ value, AppendTo[results, value]; AppendTo[rawResults, CSSUntokenize @ tokens[[pos]]]]; 
 			AdvancePosAndSkipWhitespace[pos, l, tokens];
 		];
-		results = 
-			Switch[Length[results],
-				1, <|"Left" -> results[[1]], "Right" -> results[[1]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
-				2, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[1]], "Top" -> results[[1]]|>,
-				3, <|"Left" -> results[[2]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>, 
-				4, <|"Left" -> results[[4]], "Right" -> results[[2]], "Bottom" -> results[[3]], "Top" -> results[[1]]|>,
-				_, Return @ tooManyTokensFailure @ tokens
-			];
-		<|FrameMargins -> results, CellFrameMargins -> results|>
+		Switch[Length[results],
+			1, 
+				{
+					<|"Property" -> "padding-left",   "Value" -> rawResults[[1]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[1]]|>,
+					<|"Property" -> "padding-right",  "Value" -> rawResults[[1]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[1]]|>,
+					<|"Property" -> "padding-bottom", "Value" -> rawResults[[1]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[1]]|>,
+					<|"Property" -> "padding-top",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[1]]|>},
+			2, 
+				{
+					<|"Property" -> "padding-left",   "Value" -> rawResults[[2]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[2]]|>,
+					<|"Property" -> "padding-right",  "Value" -> rawResults[[2]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[2]]|>,
+					<|"Property" -> "padding-bottom", "Value" -> rawResults[[1]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[1]]|>,
+					<|"Property" -> "padding-top",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[1]]|>},
+			3, 
+				{
+					<|"Property" -> "padding-left",   "Value" -> rawResults[[2]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[2]]|>,
+					<|"Property" -> "padding-right",  "Value" -> rawResults[[2]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[2]]|>,
+					<|"Property" -> "padding-bottom", "Value" -> rawResults[[3]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[3]]|>,
+					<|"Property" -> "padding-top",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[1]]|>},
+			4, 
+				{
+					<|"Property" -> "padding-left",   "Value" -> rawResults[[4]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[4]]|>,
+					<|"Property" -> "padding-right",  "Value" -> rawResults[[2]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[2]]|>,
+					<|"Property" -> "padding-bottom", "Value" -> rawResults[[3]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[3]]|>,
+					<|"Property" -> "padding-top",    "Value" -> rawResults[[1]], "Interpretation" -> <|FrameMargins -> #, CellFrameMargins -> #|>& @ results[[1]]|>},
+			_, tooManyTokensFailure @ tokens
+		]
 	]
 
 
@@ -3200,7 +3420,7 @@ parseSinglePadding[prop_String, token_?CSSTokenQ] := (*parseSinglePadding[prop, 
 	FE uses LinebreakAdjustments with a blackbox algorithm. 
 	AFAIK there's no way to directly prevent orphans/widows.
 *)
-consumeProperty[prop:"orphans" | "widows", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"orphans" | "widows", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3221,7 +3441,7 @@ consumeProperty[prop:"orphans" | "widows", tokens:{__?CSSTokenQ}] :=
 (*page-break-after/before*)
 
 
-consumeProperty[prop:("page-break-after" | "page-break-before"), tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:("page-break-after" | "page-break-before"), tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3249,7 +3469,7 @@ consumeProperty[prop:("page-break-after" | "page-break-before"), tokens:{__?CSST
 (*page-break-inside*)
 
 
-consumeProperty[prop:"page-break-inside", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"page-break-inside", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3281,7 +3501,7 @@ consumeProperty[prop:"page-break-inside", tokens:{__?CSSTokenQ}] :=
 	Moreover, attached cells aren't an option, but rather a cell.
 	Perhaps can use NotebookDynamicExpression -> Dynamic[..., TrackedSymbols -> {}] where "..." includes a list of attached cells.
 *)
-consumeProperty[prop:"position", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"position", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value =
@@ -3300,7 +3520,7 @@ consumeProperty[prop:"position", tokens:{__?CSSTokenQ}] :=
 	]
 
 
-consumeProperty[prop:"left" | "right" | "top" | "bottom", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"left" | "right" | "top" | "bottom", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value =
@@ -3341,7 +3561,7 @@ consumeProperty[prop:"left" | "right" | "top" | "bottom", tokens:{__?CSSTokenQ}]
 
 
 (* WL Grid does not support an option to have a grid caption. *)
-consumeProperty[prop:"caption-side", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"caption-side", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3363,7 +3583,7 @@ consumeProperty[prop:"caption-side", tokens:{__?CSSTokenQ}] :=
 
 
 (* There is no WL equivalent because FE uses only 'border-collapse' in Grid.*)
-consumeProperty[prop:"empty-cells", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"empty-cells", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3385,7 +3605,7 @@ consumeProperty[prop:"empty-cells", tokens:{__?CSSTokenQ}] :=
 
 
 (* The FE does its own formatting passes depending on the column width settings and content. *)
-consumeProperty[prop:"table-layout", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"table-layout", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3410,7 +3630,7 @@ consumeProperty[prop:"table-layout", tokens:{__?CSSTokenQ}] :=
 (*direction*)
 
 
-consumeProperty[prop:"direction", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"direction", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3432,7 +3652,7 @@ consumeProperty[prop:"direction", tokens:{__?CSSTokenQ}] :=
 
 
 (* WL distinguishes between alignment and justification, but CSS does not *)
-consumeProperty[prop:"text-align", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"text-align", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos]]["Type"],
@@ -3453,7 +3673,7 @@ consumeProperty[prop:"text-align", tokens:{__?CSSTokenQ}] :=
 (*text-indent*)
 
 
-consumeProperty[prop:"text-indent", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"text-indent", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3477,7 +3697,7 @@ consumeProperty[prop:"text-indent", tokens:{__?CSSTokenQ}] :=
 
 (* WL distinguishes between alignment and justification, but CSS does not *)
 (* In CSS Text Decoration Module Level 3 this becomes a shorthand property for text-decoration-color/style/line *)
-consumeProperty[prop:"text-decoration", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"text-decoration", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value, values = {}},
 		While[pos <= l,
 			value =
@@ -3504,7 +3724,7 @@ consumeProperty[prop:"text-decoration", tokens:{__?CSSTokenQ}] :=
 (*text-transform*)
 
 
-consumeProperty[prop:"text-transform", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"text-transform", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos]]["Type"],
@@ -3530,7 +3750,7 @@ consumeProperty[prop:"text-transform", tokens:{__?CSSTokenQ}] :=
 	The FontTracking options gives some additional control, but appears to be mis-appropriated to CSS font-stretch.
 	Not to be confused with CSS font-stretch.
 *)
-consumeProperty[prop:"letter-spacing", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"letter-spacing", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3552,7 +3772,7 @@ consumeProperty[prop:"letter-spacing", tokens:{__?CSSTokenQ}] :=
 	Added back in Level 3. CSS Fonts Module Level 4 supports percentages as well.
 	Mathematica supports both level 3 and 4 features in FontTracking.
 *)
-consumeProperty[prop:"font-stretch", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"font-stretch", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3581,7 +3801,7 @@ consumeProperty[prop:"font-stretch", tokens:{__?CSSTokenQ}] :=
 (*unicode-bidi*)
 
 
-consumeProperty[prop:"unicode-bidi", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"unicode-bidi", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3607,7 +3827,7 @@ consumeProperty[prop:"unicode-bidi", tokens:{__?CSSTokenQ}] :=
 	General letter and word spacing is controlled by the Mathematica Front End. 
 	The CSS is still validated.
 *)
-consumeProperty[prop:"word-spacing", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"word-spacing", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3629,7 +3849,7 @@ consumeProperty[prop:"word-spacing", tokens:{__?CSSTokenQ}] :=
 
 
 (* Whitespace is controlled by the Mathematica Front End. The CSS is still validated. *)
-consumeProperty[prop:"white-space", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"white-space", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens]},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		Switch[tokens[[pos]]["Type"],
@@ -3658,7 +3878,7 @@ consumeProperty[prop:"white-space", tokens:{__?CSSTokenQ}] :=
 	Percentages are relative to the font-size i.e. 100% is one line-height upward.
 	CellBaseline is limited and always aligns the top of the inline cell to the Bottom/Top/Etc of the parent
 *)
-consumeProperty[prop:"vertical-align", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"vertical-align", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{value1, value2},
 		If[Length[tokens] > 1, Return @ tooManyTokensFailure @ tokens];
 		value1 = parseBaseline[prop, First @ tokens];
@@ -3731,7 +3951,7 @@ parseCellBaseline[prop:"vertical-align", token_?CSSTokenQ] := parseCellBaseline[
 	WL option ShowContents is only applicable within a StyleBox.
 	Often this is implemented using the Invisible function.
 *)
-consumeProperty[prop:"visibility", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"visibility", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3757,7 +3977,7 @@ consumeProperty[prop:"visibility", tokens:{__?CSSTokenQ}] :=
 	The FE does its own depth ordering of boxes. 
 	Attached cells are ordered by their creation order.
 *)
-consumeProperty[prop:"z-index", tokens:{__?CSSTokenQ}] := 
+consumeProperty[prop:"z-index", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] := 
 	Module[{pos = 1, l = Length[tokens], value},
 		If[l > 1, Return @ tooManyTokensFailure @ tokens];
 		value = 
@@ -3783,9 +4003,9 @@ consumeProperty[prop:"z-index", tokens:{__?CSSTokenQ}] :=
 (*FALL THROUGH *)
 
 
-consumeProperty[prop_String, {}] := noValueFailure @ prop
+consumeProperty[prop_String, {}, opts:OptionsPattern[]] := noValueFailure @ prop
 
-consumeProperty[prop_String, _] := unsupportedValueFailure @ prop
+consumeProperty[prop_String, _, opts:OptionsPattern[]] := unsupportedValueFailure @ prop
 
 
 End[] (* End Private Context *)

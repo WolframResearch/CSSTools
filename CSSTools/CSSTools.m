@@ -30,6 +30,10 @@ SetUsage[CSSSelector, "\
 CSSSelector[string$] parses string$ as a CSS selector. If valid it returns a CSSSelector object."];
 SetUsage[CSSSelectorQ, "\
 CSSSelectorQ[CSSSelector$] returns True if CSSSelector$ is a valid CSSSelector object."];
+SetUsage[CSSTarget, "\
+CSSTarget[string$] parses string$ as the target XML object of a CSS selector. If valid it returns a CSSTarget object."];
+SetUsage[CSSTargetQ, "\
+CSSTargetQ[CSSTarget$] returns True if CSSTarget$ is a valid CSSTarget object."];
 
 (* ==== required System` functions ==== *)
 System`CellFrameStyle; 
@@ -45,7 +49,8 @@ Get["CSSTools`CSSColors4`"];              (* redefines parseSingleColor     (fir
 Get["CSSTools`CSSPagedMedia3`"]           (* redefines @page token consumer (first defined in CSSStyleSheetInterpreter) *)
 Get["CSSTools`CSSMediaQueries4`"]         (* redefines consumeMediaQuery    (first defined in CSSStyleSheetInterpreter) *)
 Get["CSSTools`SVG11`"]                    (* adds consumeProperty definitions for SVG 1.1 *)
-Get["CSSTools`CSSCustomProperties1`"]     (* adds consumeProperty definitions for custom properties i.e. --* idents, and var() function *)
+Get["CSSTools`CSSValuesAndUnits3`"]       (* prepends consumeProperty definitions for values that contain attr() and calc() functions *)
+Get["CSSTools`CSSCustomProperties1`"]     (* prepends consumeProperty definitions for custom properties i.e. --* idents, and var() function *)
 
 
 ImportExport`RegisterImport[

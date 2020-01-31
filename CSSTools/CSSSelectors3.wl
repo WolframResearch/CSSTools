@@ -7,6 +7,8 @@
 BeginPackage["CSSTools`CSSSelectors3`", {"CSSTools`"}];
 
 consumeCSSSelector;
+convertXMLPositionToCSSTarget;
+getDocumentNamespaces; (* This should reall be pulled out into its own module CSS Namespaces Module Level 3 *)
 
 Needs["CSSTools`CSSTokenizer`"];  
 
@@ -200,7 +202,7 @@ SetAttributes[{consumeNamespace, consumeDefaultNamespace}, HoldFirst]
 consumeNamespace[pos_, l_, tokens_, namespaces_] := 
 	Module[{ns},
 		(* get case-sensitive namespace from declared namespaces *)
-		With[{s = tokens[[pos]]["RawString"]}, 
+		With[{s = tokens[[pos]]["String"]}, 
 			ns = FirstCase[namespaces, _?(Function[#Prefix === s])];
 			(* a selector with an undeclared namespace prefix is invalid *)
 			If[MissingQ[ns], 
@@ -238,7 +240,7 @@ consumeTypeOrUniversalSelector[pos_, l_, tokens_, namespace_, Hold[specificity_]
 					specificity["c"]++;
 					"Type" -> <|
 						"Namespace" -> namespace,
-						"Name"      -> tokens[[pos]]["RawString"]|>, (* doc language determines case, so leave this alone *)
+						"Name"      -> tokens[[pos]]["String"]|>, (* doc language determines case, so leave this alone *)
 				True,
 					Throw @  
 						Failure["BadSimpleSelector", <|
@@ -288,12 +290,9 @@ consumeAttributeSelector[tokens:{}, namespaces_] :=
 
 consumeAttributeSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 	Module[{pos, l, ns, attrib, match, value},
-		(* remove any trailing whitespace by adjusting token count *)
-		pos = Length[tokens];
-		If[TokenTypeIs["whitespace", tokens[[pos]]], RetreatPosAndSkipWhitespace[pos, l, tokens]];
-		l = pos; pos = 1;
-		(* skip any initial whitespace *)
-		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
+		pos = 1; l = Length[tokens];
+		TrimWhitespaceTokens[pos, l, tokens];
+		
 		(* consume initial ident with possible namespace *)
 		If[pos <= l, 
 			ns = 
@@ -308,7 +307,7 @@ consumeAttributeSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 		If[pos <= l,
 			attrib = 
 				If[TokenTypeIs["ident", tokens[[pos]]], 
-					tokens[[pos]]["RawString"] (* case depends on document language, so keep this as the raw string *)
+					tokens[[pos]]["String"] (* case depends on document language, so keep this as the raw string *)
 					,
 					Throw @ 
 						Failure["BadAttribute", <|
@@ -347,7 +346,7 @@ consumeAttributeSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 			If[pos <= l,
 				value =
 					Switch[tokens[[pos]]["Type"], (* case depends on document language, so keep this as the raw string *)
-						"ident",  tokens[[pos]]["RawString"],
+						"ident",  tokens[[pos]]["String"],
 						"string", tokens[[pos]]["String"],
 						_,        
 							Throw @ 
@@ -405,7 +404,7 @@ consumeClassSelector[pos_, l_, tokens_] :=
 				"Namespace" -> None,
 				"Name"      -> "class",
 				"Match"     -> "Include",
-				"Value"     -> tokens[[pos]]["RawString"]|>; (* case-sensitivity outside the scope of CSS *)
+				"Value"     -> tokens[[pos]]["String"]|>; (* case-sensitivity outside the scope of CSS *)
 		pos++;
 		value
 	]
@@ -446,7 +445,7 @@ consumeIDSelector[pos_, l_, tokens_] :=
 				"Namespace" -> All,
 				"Name"      -> "id",
 				"Match"     -> "Exact",
-				"Value"     -> tokens[[pos]]["RawString"]|>; (* case-sensitivity outside the scope of CSS *)
+				"Value"     -> tokens[[pos]]["String"]|>; (* case-sensitivity outside the scope of CSS *)
 		pos++;
 		value
 	]
@@ -617,15 +616,9 @@ consumeSingleSelector[{}, namespaces_] := Failure["BadSelector", <|"Message" -> 
 consumeSingleSelector[tokens:{__?CSSTokenQ}, namespaces_] :=
 	Catch @
 	Module[{pos, l, ns, value, specificity = <|"a" -> 0, "b" -> 0, "c" -> 0|>, objects = {}, sss = {}, inSimpleSelector = False},
-		(* trim any trailing whitespace (reduce the token count) *)
-		pos = Length[tokens];
-		If[TokenTypeIs["whitespace", tokens[[pos]]], RetreatPosAndSkipWhitespace[pos, l, tokens]];
-		l = pos; pos = 1;
-		
-		(* skip any initial whitespace *)
-		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
-		
-		
+		pos = 1; l = Length[tokens];
+		TrimWhitespaceTokens[pos, l, tokens];
+				
 		While[pos <= l,
 			Switch[tokens[[pos]]["Type"],
 				"ident",
@@ -1475,6 +1468,89 @@ CSSSelectorQ[___] := False
 
 
 (* ::Subsection::Closed:: *)
+(*CSSTarget*)
+
+
+(* CSSTarget:
+	Not to be confused with CSSTargets, CSSTarget is a symbolic representation of the XML element targetd by a selector.
+	Its main addition to XMLElement is the compactness of representation on screen and the "Position" key.
+	Any XML children are ignored. *)		
+
+
+(* ::Subsubsection::Closed:: *)
+(*Token access*)
+
+
+CSSTarget[a_?AssociationQ][key_] := a[key] 
+
+
+(* ::Subsubsection::Closed:: *)
+(*Constructor via a string (TODO)*)
+
+
+convertXMLAttributes[] := 
+	Replace[#, {
+			HoldPattern[{a_, b_} -> c_] :> b -> <|"Namespace" -> If[a === "", None, a], "Value" -> c|>,
+			HoldPattern[b_ -> c_] :> b -> <|"Namespace" -> None, "Value" -> c|>}]&
+
+convertXMLPositionToCSSTarget[position_] :=
+	Replace[
+		Extract[$Document, position], 
+		{
+				XMLElement[{ns1_, type_}, attributes_, _] :> 
+					CSSTarget[<|
+						"Type"       -> type, 
+						"Namespace"  -> ns1, 
+						"Position"   -> position, 
+						"Attributes" -> <|convertXMLAttributes[] /@ attributes|>|>],
+				XMLElement[type_, attributes_, _] :> 
+					CSSTarget[<|
+						"Type"       -> type,
+						"Namespace"  -> getNamespaceOfDocumentElement[position], 
+						"Position"   -> position, 
+						"Attributes" -> <|convertXMLAttributes[] /@ attributes|>|>]}]
+
+
+(* ::Subsubsection::Closed:: *)
+(*MakeBoxes*)
+
+
+CSSTarget /: MakeBoxes[s:CSSTarget[a_?AssociationQ], StandardForm] :=
+	ToBoxes[
+		Interpretation[
+			Style[
+				Tooltip[
+					Framed[
+						Row[{
+							Style["XML ", RGBColor[0.5, 0, 1], Selectable -> False], 
+							Style[If[StringQ[a["Type"]], StringTrim @ a["Type"], a["Type"]], Selectable -> True]}],
+						RoundingRadius -> 4, 
+						Background -> RGBColor[1, 0.9, 1],
+						ImageMargins -> 2,
+						FrameMargins -> {{5, 5}, {2, 2}},
+						FrameStyle -> Directive[RGBColor[0.5, 0, 1], AbsoluteThickness[1]],
+						BaseStyle -> {FontFamily -> Dynamic[CurrentValue[{StyleHints, "CodeFont"}]], FontWeight -> Bold, FontColor -> GrayLevel[0.2]}],
+					s["Position"]],
+				Editable -> False,
+				ShowStringCharacters -> False], 
+			s]]
+
+
+(* ::Subsection::Closed:: *)
+(*CSSSelectorQ*)
+
+
+CSSTarget /: CSSTargetQ[CSSTarget[a_?AssociationQ]] := 
+	And[
+		Length[a] === 4,
+		KeyExistsQ[a, "Type"],
+		KeyExistsQ[a, "Namespace"],
+		KeyExistsQ[a, "Position"],
+		KeyExistsQ[a, "Attributes"]]
+CSSTargetQ[___] := False
+
+
+(* ::Subsection::Closed:: *)
 (*CSSTargets*)
 
 
@@ -1503,7 +1579,7 @@ CSSTargets[doc:XMLObject["Document"][___], sel:{__?(Function[CSSSelectorQ[#] || 
 		
 		(* upgrade any strings to CSS selector objects and then process *)
 		sel2 = Replace[sel, s_?StringQ :> CSSSelector[s], {1}];
-		If[AnyTrue[sel2, _?FailureQ], Return @ FirstCase[sel2, _?FailureQ]];
+		If[AnyTrue[sel2, FailureQ], Return @ FirstCase[sel2, _?FailureQ]];
 		
 		$Document = doc;
 		
@@ -1523,10 +1599,11 @@ CSSTargets[doc:XMLObject["Document"][___], sel:{__?(Function[CSSSelectorQ[#] || 
 			];
 		$IgnoreCase = <|"Type" -> !type, "AttributeName" -> !name, "AttributeValue" -> !value|>;
 		
-		processFullSelector[sel2]
+		temp = processFullSelector[sel2];
+		convertXMLPositionToCSSTarget /@ Flatten[temp, 1]
 	]
 
-CSSTargets[_, sel:{__?CSSSelectorQ}, ___]       := Failure["BadDocument", <|"Message" -> "Invalid XML document."|>]
+CSSTargets[_, sel:{__?CSSSelectorQ}, ___] := Failure["BadDocument", <|"Message" -> "Invalid XML document."|>]
 
 
 (* ::Section::Closed:: *)
