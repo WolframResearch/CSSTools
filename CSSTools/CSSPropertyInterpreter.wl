@@ -18,6 +18,7 @@ parseLengthNonRelative;
 parseResolution;
 parseNumber;
 parseSingleColor;
+parseURI;
 
 
 Begin["`Private`"] (* Begin Private Context *) 
@@ -274,7 +275,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|System`BackgroundAppearanceOptions -> "NoRepeat"|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<percentage>", "<length>", "left", "right", "center", "top", "bottom"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> -Infinity|>,
 	"background-repeat" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "repeat",
@@ -448,7 +450,8 @@ AssociateTo[CSSPropertyData, {
 				<|"Property" -> "border-top-width",    "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>}|>,
     	"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"border-top-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
@@ -461,7 +464,8 @@ AssociateTo[CSSPropertyData, {
 				CellFrame  -> 2|>|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"border-right-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
@@ -474,7 +478,8 @@ AssociateTo[CSSPropertyData, {
 				CellFrame  -> 2|>|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"border-bottom-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
@@ -487,7 +492,8 @@ AssociateTo[CSSPropertyData, {
 				CellFrame  -> 2|>|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"border-left-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "medium",
@@ -500,7 +506,8 @@ AssociateTo[CSSPropertyData, {
 				CellFrame  -> 2|>|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"border" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand property, sets all 4 border sides color/style/width*)
@@ -533,7 +540,8 @@ AssociateTo[CSSPropertyData, {
 				<|"Property" -> "border-top-width",    "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"border-top" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
@@ -548,7 +556,8 @@ AssociateTo[CSSPropertyData, {
 				<|"Property" -> "border-top-width", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"border-right" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
@@ -563,7 +572,8 @@ AssociateTo[CSSPropertyData, {
 				<|"Property" -> "border-right-width", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"border-bottom" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
@@ -578,7 +588,8 @@ AssociateTo[CSSPropertyData, {
 				<|"Property" -> "border-bottom-width", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"border-left" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "currentColor none medium", (* shorthand border-top sets color/style/width *)
@@ -593,7 +604,8 @@ AssociateTo[CSSPropertyData, {
 				<|"Property" -> "border-left-width", "Value" -> "initial", "Interpretation" -> <|FrameStyle -> Thickness[Medium], CellFrame -> 2|>|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "<color>", "transparent"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"border-spacing" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "0",
@@ -602,7 +614,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|Spacings -> 0|>|>,
 		"Animatable" -> False,
 		"Values" -> {"<length>"},
-		"AppliesTo" -> {"table", "inline-table"}|>,
+		"AppliesTo" -> {"table", "inline-table"},
+		"NumericThreshold" -> 0|>,
 	"bottom" -> <|(* no equivalent FE option *)
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
@@ -611,7 +624,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>,
 		"Animatable" -> True,
 		"Values" -> {"auto", "<length>", "<percentage>"},
-		"AppliesTo" -> {"positioned elements"}|>,
+		"AppliesTo" -> {"positioned elements"},
+		"NumericThreshold" -> -Infinity|>,
 	"caption-side" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "top",
@@ -665,7 +679,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|CounterIncrements -> {}|>|>,
 		"Animatable" -> False,
 		"Values" -> {"none", "<identifier>", "<integer>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> -Infinity|>,
 	"counter-reset" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
@@ -675,7 +690,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|CounterAssignments -> {}|>|>,
 		"Animatable" -> False,
 		"Values" -> {"none", "<identifier>", "<integer>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> -Infinity|>,
 	"cursor" -> <|(* no FE option to control mouse appearance *)
 		"Inherited" -> True,
 		"CSSInitialValue" -> "auto",
@@ -759,7 +775,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|FontSize -> Medium|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>", "xx-small", "x-small", "small", "medium", "large", "x-large", "xx-large", "smaller", "larger"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"font-style" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
@@ -786,7 +803,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|FontWeight -> Plain|>|>,
 		"Animatable" -> True,
 		"Values" -> {"normal", "bold", "bolder", "lighter", "100", "200", "300", "400", "500", "600", "700", "800", "900"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 100|>,
 	"height" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
@@ -795,7 +813,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|ImageSize -> <|"Height" -> <|"Min" -> Automatic, "Max" -> Automatic|>|>|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>", "auto"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"left" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
@@ -804,7 +823,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>", "auto"},
-		"AppliesTo" -> {"positioned elements"}|>,
+		"AppliesTo" -> {"positioned elements"},
+		"NumericThreshold" -> -Infinity|>,
 	"letter-spacing" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
@@ -813,7 +833,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|FontTracking -> "Plain"|>|>,
 		"Animatable" -> True,
 		"Values" -> {"normal", "<length>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> -Infinity|>,
 	"line-height" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
@@ -822,7 +843,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|LineSpacing -> {1.2, 0}|>|>,
 		"Animatable" -> True,
 		"Values" -> {"normal", "<number>", "<length>", "<percentage>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"list-style" -> <|(* short-hand for list-style-image/position/type *)
 		"Inherited" -> True,
 		"CSSInitialValue" -> "N/A", (* shorthand property *)
@@ -879,7 +901,8 @@ AssociateTo[CSSPropertyData, {
 				PrintingOptions -> <|"PrintingMargins" -> AssociationThread[{"Left", "Right", "Bottom", "Top"} -> 0]|>|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>", "auto"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> -Infinity|>,
 	"margin-top" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -894,7 +917,8 @@ AssociateTo[CSSPropertyData, {
 				PrintingOptions -> <|"PrintingMargins" -> <|"Top" -> 0|>|>|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>", "auto"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> -Infinity|>,
 	"margin-right" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -909,7 +933,8 @@ AssociateTo[CSSPropertyData, {
 				PrintingOptions -> <|"PrintingMargins" -> <|"Right" -> 0|>|>|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>", "auto"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> -Infinity|>,
 	"margin-bottom" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -924,7 +949,8 @@ AssociateTo[CSSPropertyData, {
 				PrintingOptions -> <|"PrintingMargins" -> <|"Bottom" -> 0|>|>|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>", "auto"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> -Infinity|>,
 	"margin-left" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -939,7 +965,8 @@ AssociateTo[CSSPropertyData, {
 				PrintingOptions -> <|"PrintingMargins" -> <|"Left" -> 0|>|>|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>", "auto"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> -Infinity|>,
 	"max-height" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
@@ -948,7 +975,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|ImageSize -> <|"Height" -> <|"Max" -> Automatic|>|>|>|>,
 		"Animatable" -> True,
 		"Values" -> {"none", "<length>", "<percentage>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"max-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "none",
@@ -957,7 +985,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|ImageSize -> <|"Width" -> <|"Max" -> Automatic|>|>|>|>,
 		"Animatable" -> True,
 		"Values" -> {"none", "<length>", "<percentage>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"min-height" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -966,7 +995,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|ImageSize -> <|"Height" -> <|"Min" -> 0|>|>|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"min-width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -975,7 +1005,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|ImageSize -> <|"Width" -> <|"Min" -> 0|>|>|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"orphans" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "2",
@@ -1002,7 +1033,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> Missing["Not supported."]|>,
 		"Animatable" -> True,
 		"Values" -> {"<color>", "invert", "none", "hidden", "dotted", "dashed", "solid", "double", "groove", "ridge", "inset", "outset", "thin", "medium", "thick", "<length>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"outline-color" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "invert",
@@ -1029,7 +1061,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> Missing["Not supported."]|>,
 		"Animatable" -> True,
 		"Values" -> {"thin", "medium", "thick", "<length>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"overflow" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "visible",(* not supported in FE*)
@@ -1055,7 +1088,8 @@ AssociateTo[CSSPropertyData, {
 				<|"Property" -> "padding-top",    "Value" -> "initial", "Interpretation" -> 0|>}|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"padding-top" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -1068,7 +1102,8 @@ AssociateTo[CSSPropertyData, {
 				CellFrameMargins -> 0|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"padding-bottom" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -1081,7 +1116,8 @@ AssociateTo[CSSPropertyData, {
 				CellFrameMargins -> 0|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"padding-left" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -1094,7 +1130,8 @@ AssociateTo[CSSPropertyData, {
 				CellFrameMargins -> 0|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"padding-right" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "0",
@@ -1107,7 +1144,8 @@ AssociateTo[CSSPropertyData, {
 				CellFrameMargins -> 0|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"page-break-after" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
@@ -1115,7 +1153,7 @@ AssociateTo[CSSPropertyData, {
 			"inherit" -> <|PageBreakBelow -> Inherited|>,
 			"initial" -> <|PageBreakBelow -> Automatic|>|>,
 		"Animatable" -> False,
-		"Values" -> {"<length>", "<percentage>"},
+		"Values" -> {"auto", "always", "avoid", "left", "right"},
 		"AppliesTo" -> {"block-level elements"}|>,
 	"page-break-before" -> <|
 		"Inherited" -> False,
@@ -1124,7 +1162,7 @@ AssociateTo[CSSPropertyData, {
 			"inherit" -> <|PageBreakAbove -> Inherited|>,
 			"initial" -> <|PageBreakAbove -> Automatic|>|>,
 		"Animatable" -> False,
-		"Values" -> {"<length>", "<percentage>"},
+		"Values" -> {"auto", "always", "avoid", "left", "right"},
 		"AppliesTo" -> {"block-level elements"}|>,
 	"page-break-inside" -> <|
 		"Inherited" -> False,
@@ -1137,7 +1175,7 @@ AssociateTo[CSSPropertyData, {
 				PageBreakWithin      -> Automatic,
 				GroupPageBreakWithin -> Automatic|>|>,
 		"Animatable" -> False,
-		"Values" -> {"<length>", "<percentage>"},
+		"Values" -> {"auto", "avoid"},
 		"AppliesTo" -> {"block-level elements"}|>,
 	"position" -> <|
 		"Inherited" -> False,
@@ -1165,7 +1203,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>", "auto"},
-		"AppliesTo" -> {"positioned elements"}|>,
+		"AppliesTo" -> {"positioned elements"},
+		"NumericThreshold" -> -Infinity|>,
 	"table-layout" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
@@ -1205,7 +1244,8 @@ AssociateTo[CSSPropertyData, {
 				ParagraphIndent -> 0|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>"},
-		"AppliesTo" -> {"block containers"}|>,
+		"AppliesTo" -> {"block containers"},
+		"NumericThreshold" -> -Infinity|>,
 	"text-transform" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "none",
@@ -1223,7 +1263,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|Alignment -> {Automatic, Automatic}|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>"},
-		"AppliesTo" -> {"positioned elements"}|>,
+		"AppliesTo" -> {"positioned elements"},
+		"NumericThreshold" -> -Infinity|>,
 	"unicode-bidi" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "normal",
@@ -1245,7 +1286,8 @@ AssociateTo[CSSPropertyData, {
 				CellBaseline     -> Center|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<percentage>", "<length>", "baseline", "sub", "super", "top", "text-top", "middle", "bottom", "text-bottom"},
-		"AppliesTo" -> {"inline-level", "table-cell"}|>,
+		"AppliesTo" -> {"inline-level", "table-cell"},
+		"NumericThreshold" -> -Infinity|>,
 	"visibility" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "visible",
@@ -1272,7 +1314,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> Missing["Not supported."]|>,
 		"Animatable" -> False,
 		"Values" -> {"<integer>"},
-		"AppliesTo" -> {"block container elements"}|>,
+		"AppliesTo" -> {"block container elements"},
+		"NumericThreshold" -> 1|>,
 	"width" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
@@ -1281,7 +1324,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> <|ImageSize -> <|"Width" -> <|"Min" -> Automatic, "Max" -> Automatic|>|>|>|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "<percentage>", "auto"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> 0|>,
 	"word-spacing" -> <|
 		"Inherited" -> True,
 		"CSSInitialValue" -> "normal",
@@ -1290,7 +1334,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> Missing["Not supported."]|>,
 		"Animatable" -> True,
 		"Values" -> {"<length>", "normal"},
-		"AppliesTo" -> All|>,
+		"AppliesTo" -> All,
+		"NumericThreshold" -> -Infinity|>,
 	"z-index" -> <|
 		"Inherited" -> False,
 		"CSSInitialValue" -> "auto",
@@ -1299,7 +1344,8 @@ AssociateTo[CSSPropertyData, {
 			"initial" -> Missing["Not supported."]|>,
 		"Animatable" -> True,
 		"Values" -> {"<integer>", "auto"},
-		"AppliesTo" -> {"positioned elements"}|>
+		"AppliesTo" -> {"positioned elements"},
+		"NumericThreshold" -> -Infinity|>
 }];
 
 
@@ -1647,7 +1693,7 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 							values["c"] = <|
 								"Property"       -> "background-color",
 								"Value"          -> CSSUntokenize @ tokens[[pos]],
-								"Interpretation" -> parseSingleColor[prop, tokens[[pos]]]|>;,
+								"Interpretation" -> <|Background -> parseSingleColor[prop, tokens[[pos]]]|>|>;,
 						(*TODO support gradients *)
 						"linear-gradient" | "repeating-linear-gradient" | "radial-gradient" | "repeating-radial-gradient" | "conic-gradient", 
 							If[hasImage, Return @ repeatedPropValueFailure @ "background-image"];
@@ -1667,7 +1713,7 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 					values["a"] = <|
 						"Property"       -> "background-attachment",
 						"Value"          -> CSSUntokenize @ tokens[[pos]],
-						"Interpretation" -> value|>,
+						"Interpretation" -> value|>, (*Missing["Not supported."*)
 					
 				(* color hex or color keyword *)
 				!FailureQ[value = parseSingleColor[prop, tokens[[pos]]]], (* color can also be hex or keyword *)
@@ -1676,7 +1722,7 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 					values["c"] = <|
 						"Property"       -> "background-color",
 						"Value"          -> CSSUntokenize @ tokens[[pos]],
-						"Interpretation" -> value|>,
+						"Interpretation" -> <|Background -> value|>|>,
 				
 				(* uri token or none keyword *)
 				value = parseSingleBGImage[prop, tokens[[pos]]];
@@ -1689,7 +1735,7 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 					values["i"] = <|
 						"Property"       -> "background-image",
 						"Value"          -> CSSUntokenize @ tokens[[pos]],
-						"Interpretation" -> value|>,
+						"Interpretation" -> <|System`BackgroundAppearance -> value|>|>,
 				
 				(* one of the keywords repeat | repeat-x | repeat-y | no-repeat *)
 				!FailureQ[value = parseSingleBGRepeat[prop, tokens[[pos]]]], 
@@ -1698,7 +1744,7 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 					values["r"] = <|
 						"Property"       -> "background-repeat",
 						"Value"          -> CSSUntokenize @ tokens[[pos]],
-						"Interpretation" -> value|>,
+						"Interpretation" -> <|System`BackgroundAppearanceOptions -> value|>|>,
 				
 				(* one of the key words left | center | right | top | bottom, *)
 				!FailureQ[value = parseSingleBGPosition[prop, tokens[[pos]]]], 
@@ -1707,14 +1753,16 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 					values["p"] = <|
 						"Property"       -> "background-position",
 						"Value"          -> CSSUntokenize @ tokens[[pos]],
-						"Interpretation" -> {value, Center}|>;
+						"Interpretation" -> If[MissingQ[value], value, <|System`BackgroundAppearanceOptions -> {value, Center}|>]|>;
 					(* check for a pair of position values; they must be sequential *)
 					start = pos; startToken = tokens[[pos]]; AdvancePosAndSkipWhitespace[pos, l, tokens];
 					If[!FailureQ[value = parseSingleBGPosition[prop, tokens[[pos]]]], 
 						values["p"] = <|
 							"Property"       -> "background-position",
 							"Value"          -> CSSUntokenize @ tokens[[start ;; pos]],
-							"Interpretation" -> {values["p"][["Interpretation", 1]], value}|>
+							"Interpretation" -> (
+								value = parseSingleBGPositionPair[{values["p"][["Interpretation", 1, 1]], value}, tokens[[start ;; pos]]];
+								If[FailureQ[value] || MissingQ[value], value, <|System`BackgroundAppearanceOptions -> value|>])|>
 						,
 						pos = start (* if this next token leads to a parse failure, then reset the position *)
 					],
@@ -1817,7 +1865,7 @@ consumeProperty[prop:"background-position", tokens:{__?CSSTokenQ}, opts:OptionsP
 			AdvancePosAndSkipWhitespace[pos, l, tokens]
 		];
 		value = parseSingleBGPositionPair[values, tokens];		
-		If[FailureQ[value], value, <|System`BackgroundAppearanceOptions -> value|>]
+		If[FailureQ[value] || MissingQ[value], value, <|System`BackgroundAppearanceOptions -> value|>]
 	]
 
 parseSingleBGPosition[prop_String, token_?CSSTokenQ] :=
@@ -1849,7 +1897,8 @@ parseSingleBGPositionPair[values:{__}, tokens:{__?CSSTokenQ}] :=
 			Switch[values,
 				Alternatives[
 					{Top, Left}, {Left, Top}, 
-					{0, 0},	{0, Top}, {Left, 0}
+					{0 | Scaled[0], Top}, {Left, 0 | Scaled[0]},
+					{0 | Scaled[0], 0 | Scaled[0]}
 				],                              "NoRepeat",
 				{Center, Center},               "Center", 
 				_,                              Missing["Not supported."]
@@ -2511,7 +2560,7 @@ consumeProperty[prop:"list-style", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]]
 			A value of 'none' sets whichever of li-type and li-image are not otherwise specified to 'none'. 
 			If both are specified, then an additional 'none' is an error.
 		*)
-		values = <|"i" -> None, "p" -> Missing["Not supported."], "t" -> "\[FilledCircle]"|>;
+		values = <|"i" -> <|CellDingbat -> None|>, "p" -> Missing["Not supported."], "t" -> <|CellDingbat -> "\[FilledCircle]"|>|>;
 		rawValues = <|"i" -> "none", "p" -> "outside", "t" -> "disc"|>;
 		
 		While[pos <= l,
@@ -2529,7 +2578,7 @@ consumeProperty[prop:"list-style", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]]
 					If[hasImage, 
 						Return @ repeatedPropValueFailure @ "image"
 						, 
-						values["i"] = value; rawValues["i"] = CSSUntokenize @ tokens[[pos]]; hasImage = True
+						values["i"] = <|CellDingbat -> value|>; rawValues["i"] = CSSUntokenize @ tokens[[pos]]; hasImage = True
 					],
 					
 				(* check for list-style-position *)
@@ -2545,7 +2594,7 @@ consumeProperty[prop:"list-style", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]]
 					If[hasType, 
 						Return @ repeatedPropValueFailure @ "type"
 						, 
-						values["t"] = value; rawValues["t"] = CSSUntokenize @ tokens[[pos]]; hasType = True
+						values["t"] = <|CellDingbat -> value|>; rawValues["t"] = CSSUntokenize @ tokens[[pos]]; hasType = True
 					],
 					
 				(* anything else is an error *)

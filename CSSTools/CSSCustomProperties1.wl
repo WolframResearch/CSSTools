@@ -225,9 +225,10 @@ replaceVarFunctionWithTokens[tokensInput:{__?CSSTokenQ}, replacements_] :=
 	]
 	
 replaceVarFunctionsInDeclarationList[declarationsInput_?ListQ] :=
-	Module[{customPropertyDefinitions, itemsToResolve, declarations = declarationsInput},
-		customPropertyDefinitions = (#Name -> #Value)& /@ DeleteMissing[declarations[[All, "Interpretation", "CSSCustomPropertyDefinition"]]];
-		itemsToResolve = Flatten @ Position[declarations[[All, "Interpretation", "CSSResolveValueAtComputeTime"]], _Association?AssociationQ, 1];
+	Module[{check, customPropertyDefinitions, itemsToResolve, declarations = declarationsInput},
+		check = declarations[[All, "Interpretation"]];
+		customPropertyDefinitions = (#Name -> #Value)& /@ Flatten @ Values @ Pick[check, (AssociationQ[#] && KeyExistsQ[#, "CSSCustomPropertyDefinition"])& /@ check];
+		itemsToResolve = Flatten @ Position[(AssociationQ[#] && KeyExistsQ[#, "CSSResolveValueAtComputeTime"])& /@ check, True];
 		Do[
 			declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]] = 
 				CSSUntokenize @ 

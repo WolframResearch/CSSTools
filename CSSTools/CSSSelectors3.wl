@@ -1493,22 +1493,40 @@ convertXMLAttributes[] :=
 			HoldPattern[{a_, b_} -> c_] :> b -> <|"Namespace" -> If[a === "", None, a], "Value" -> c|>,
 			HoldPattern[b_ -> c_] :> b -> <|"Namespace" -> None, "Value" -> c|>}]&
 
-convertXMLPositionToCSSTarget[position_] :=
-	Replace[
-		Extract[$Document, position], 
-		{
-				XMLElement[{ns1_, type_}, attributes_, _] :> 
-					CSSTarget[<|
-						"Type"       -> type, 
-						"Namespace"  -> ns1, 
-						"Position"   -> position, 
-						"Attributes" -> <|convertXMLAttributes[] /@ attributes|>|>],
-				XMLElement[type_, attributes_, _] :> 
-					CSSTarget[<|
-						"Type"       -> type,
-						"Namespace"  -> getNamespaceOfDocumentElement[position], 
-						"Position"   -> position, 
-						"Attributes" -> <|convertXMLAttributes[] /@ attributes|>|>]}]
+
+(* ::Subsubsection:: *)
+(* Region Title *)
+convertXMLPositionToCSSTarget[position_, opts:OptionsPattern[CSSTargets]] :=
+	Module[{temp, t, name, value},
+		temp = OptionValue[CSSTargets, {opts}, "CaseSensitive"];
+		{t, name, value} =
+			Which[
+				temp === True,  {True, True, True},
+				temp === False, {False, False, False},
+				True, {"Type", "AttributeName", "AttributeValue"} /. OptionValue["CaseSensitive"] /. _String :> False
+			];
+		Replace[
+			Extract[$Document, position],
+			{
+					XMLElement[{ns1_, type_}, attributes_, _] :> 
+						CSSTarget[<|
+							"Type"       -> type, 
+							"Namespace"  -> ns1, 
+							"Position"   -> position, 
+							"Attributes" -> <|convertXMLAttributes[] /@ attributes|>,
+							"ID"         -> OptionValue["ID"],
+							"CaseSensitive" -> <|"Type" -> t, "AttributeName" -> name, "AttributeValue" -> value|>|>],
+					XMLElement[type_, attributes_, _] :> 
+						CSSTarget[<|
+							"Type"       -> type,
+							"Namespace"  -> getNamespaceOfDocumentElement[position], 
+							"Position"   -> position, 
+							"Attributes" -> <|convertXMLAttributes[] /@ attributes|>,
+							"ID"         -> OptionValue["ID"],
+							"CaseSensitive" -> <|"Type" -> t, "AttributeName" -> name, "AttributeValue" -> value|>|>]}]
+	]
+(* ::Subsubsection:: *)
+
 
 
 (* ::Subsubsection::Closed:: *)
@@ -1542,11 +1560,13 @@ CSSTarget /: MakeBoxes[s:CSSTarget[a_?AssociationQ], StandardForm] :=
 
 CSSTarget /: CSSTargetQ[CSSTarget[a_?AssociationQ]] := 
 	And[
-		Length[a] === 4,
+		Length[a] === 6,
 		KeyExistsQ[a, "Type"],
 		KeyExistsQ[a, "Namespace"],
 		KeyExistsQ[a, "Position"],
-		KeyExistsQ[a, "Attributes"]]
+		KeyExistsQ[a, "Attributes"],
+		KeyExistsQ[a, "ID"],
+		KeyExistsQ[a, "CaseSensitive"]]
 CSSTargetQ[___] := False
 
 
@@ -1600,7 +1620,7 @@ CSSTargets[doc:XMLObject["Document"][___], sel:{__?(Function[CSSSelectorQ[#] || 
 		$IgnoreCase = <|"Type" -> !type, "AttributeName" -> !name, "AttributeValue" -> !value|>;
 		
 		temp = processFullSelector[sel2];
-		convertXMLPositionToCSSTarget /@ Flatten[temp, 1]
+		convertXMLPositionToCSSTarget[#, opts]& /@ Flatten[temp, 1]
 	]
 
 CSSTargets[_, sel:{__?CSSSelectorQ}, ___] := Failure["BadDocument", <|"Message" -> "Invalid XML document."|>]
