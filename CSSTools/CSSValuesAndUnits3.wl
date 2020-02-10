@@ -581,6 +581,8 @@ replaceAttrFunctionsWithTokens[tokensInput:{__?CSSTokenQ}, element_?CSSTargetQ, 
 						(* element's attribute value failed to parse, so use attr() fallback value *)
 						temp = parseAttrFromType[attrCheck["Type"], attrCheck["Fallback"]];
 						If[FailureQ[temp], Return @ temp, attrValue = temp];
+						,
+						attrValue = temp
 					]
 					,
 					(* namespaces do not match so use fallback attr() value *)

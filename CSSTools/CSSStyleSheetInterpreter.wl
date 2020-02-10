@@ -1061,7 +1061,11 @@ assemble[
 			y -> 
 				Which[
 					StringMatchQ[prop, mainProp],        
-						temp = assembleWithConditions[validBlockData, y, Hold[#], #&]& /@ {"Left", "Right", "Bottom", "Top"};
+						temp = {
+							assembleWithConditions[Select[validBlockData, StringEndsQ[#Property, "left"]&],   y, Hold[], #&],
+							assembleWithConditions[Select[validBlockData, StringEndsQ[#Property, "right"]&],  y, Hold[], #&],
+							assembleWithConditions[Select[validBlockData, StringEndsQ[#Property, "bottom"]&], y, Hold[], #&],
+							assembleWithConditions[Select[validBlockData, StringEndsQ[#Property, "top"]&],    y, Hold[], #&]};
 						assembleLRBT[prop, temp],
 					True, 
 						index = Which[StringContainsQ[prop, "left"], 1, StringContainsQ[prop, "right"], 2, StringContainsQ[prop, "bottom"], 3, StringContainsQ[prop, "top"], 4]; 
@@ -1317,6 +1321,7 @@ shorthandProperties = {
 	"background",
 	"border", "border-top", "border-bottom", "border-left", "border-right", "border-style", "border-color", "border-width",
 	"font", "list-style", "margin", "outline", "padding"};
+	
 
 (* main cascade steps *)
 Options[cssCascadeDeclarations] = Options[CSSCascade];
@@ -1555,9 +1560,15 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 
 (* CSSInheritance
 	Based on the position in the XMLObject, 
-	1. look up all ancestors' positions
-	2. starting from the most ancient ancestor, calculate the styles of each ancestor, including inherited properties
-	3. with all inheritance resolved, recalculate the style at the XMLObject position *)
+	1. look up all ancestors's positions and start from the most ancient ancestor
+	2. get all declarations that apply to that ancestor using the CSS cascade algorithm
+	3. resolve compute-time property values
+	4. append inheritable properties from the previous generation to the current (ignore 'inherit' keyword)
+	5. repeat (2-4) for each generation
+	
+	In the final generation:
+	1. resolve any 'inherit' keywords 
+	2. assemble declarations into FE options *)
 
 ClearAll[CSSInheritance];
 Options[CSSInheritance] = {"PropertyIsCaseSensitive" -> False};
@@ -1567,9 +1578,12 @@ CSSInheritance[target_?CSSTargetQ, scope_, CSSData_Dataset, opts:OptionsPattern[
 
 (* main function *)
 CSSInheritance[target_?CSSTargetQ, scope_, CSSData_?validCSSDataQ, opts:OptionsPattern[]] :=
-	Module[{lineage, CSSDataSubset, i, inheritableProps, declarations, case = OptionValue["PropertyIsCaseSensitive"], element, itemsToResolve, generations},
+	Module[
+		{
+			lineage, CSSDataSubset, i, inheritableProps, declarations, case = OptionValue["PropertyIsCaseSensitive"], 
+			element, itemsToResolve, generations, resolvedOptions, props},
 		(* get the position of all ancestors *)
-		lineage = parents[target["Position"]];
+		lineage = Append[parents[target["Position"]], target["Position"]];
 		generations = Table[{<|"Property" -> "dummy", "Value" -> "dummy", "Interpretation" -> Missing["Not supported."], "Important" -> False, "Condition" -> None|>}, Length[lineage] + 1];
 		
 		(* Perform inheritance at each ancestor:
@@ -1621,11 +1635,31 @@ CSSInheritance[target_?CSSTargetQ, scope_, CSSData_?validCSSDataQ, opts:OptionsP
 			(* append the current generation's declarations with the previous generations's inheritable ones *)
 			inheritableProps = Union @ Flatten @ generations[[i]][[All, "Property"]];
 			inheritableProps = Pick[inheritableProps, (Or @@ Through[inheritedPropertyRules[#]])& /@ inheritableProps];
-			generations[[i+1]] = Join[declarations, Select[declarations, MatchQ[#Property, Alternatives @@ inheritableProps]&]];
+			generations[[i+1]] = Join[declarations, Select[generations[[i]], MatchQ[#Property, Alternatives @@ inheritableProps]&]];
 			,
-			{i, lineage}
+			{i, Length[lineage]}
 		];
-		Echo[generations]
+		
+		(* resolve any 'inherit' keywords of the last generation *)
+		itemsToResolve = Flatten @ Position[generations[[-1]], KeyValuePattern[{"Property" -> _, "Value" -> s_ /; StringQ[s] && StringMatchQ[s, "inherit", IgnoreCase -> True]}]];
+		Do[generations[[-1, i, "Interpretation"]] = resolveInheritKeyword[generations, generations[[-1, i, "Property"]], case], {i, itemsToResolve}];
+		
+		(* gather property names; combine LRBT shorthand properties *)
+		props = Union @ generations[[-1, All, "Property"]];
+		If[!case, props = Union @ ToLowerCase @ props];
+		props = Union @ StringReplace[props, {p:("border"|"margin"|"outline"|"padding"|"font"|"list-style"|"background") ~~ __ :> p}];
+		
+		(* assemble declarations into FE options *)
+		resolvedOptions = Flatten[assemble[#, scope, generations[[-1]], "PropertyIsCaseSensitive" -> case]& /@ props];
+		Flatten @ 
+			Which[
+				MatchQ[scope, Box | All],
+					movePseudoOptionsIntoBoxOptions[resolvedOptions, validBoxes],
+				MatchQ[scope, _?validBoxesQ | {__?validBoxesQ}],
+					movePseudoOptionsIntoBoxOptions[resolvedOptions, If[ListQ[scope], scope, {scope}] /. Thread[validBoxGenerators -> validBoxes]],
+				True,
+					resolvedOptions
+			]
 	]
 	
 CSSInheritance[position:{___?IntegerQ}, _] := 
@@ -1636,6 +1670,33 @@ parents[x:{__Integer}] := Most @ Reverse @ NestWhileList[Drop[#, -2]&, x, Length
 
 inheritedProperties[] := Pick[Keys @ #, Values @ #]& @ CSSPropertyData[[All, "Inherited"]];
 inheritedPropertyRules = {MemberQ[inheritedProperties[], #]&};
+
+resolveInheritKeyword[generations_?ListQ, prop_?StringQ, propIsCaseSensitive_] :=
+	Module[{l = Length[generations], value, i=-1},
+		value = 
+			FirstCase[
+				generations[[i]], 
+				KeyValuePattern[{"Property" -> s_ /; StringQ[s] && StringMatchQ[s, prop, IgnoreCase -> !propIsCaseSensitive], "Value" -> v_}] :> v,
+				None];
+		While[i > -l && StringQ[value] && StringMatchQ[value, "inherit", IgnoreCase -> True],
+			i--;
+			value = 
+				FirstCase[
+					generations[[i]], 
+					KeyValuePattern[{"Property" -> s_ /; StringQ[s] && StringMatchQ[s, prop, IgnoreCase -> !propIsCaseSensitive], "Value" -> v_}] :> v, 
+					None];
+		];
+		If[value === None, 
+			(* get initial value of property if inherit chain hits dead end *)
+			CSSPropertyData[[ToLowerCase @ prop, "InterpretedGlobalValues", "initial"]]
+			,
+			(* else get this generation's interpreted property value *)
+			FirstCase[
+				generations[[i]], 
+				KeyValuePattern[{"Property" -> s_ /; StringQ[s] && StringMatchQ[s, prop, IgnoreCase -> !propIsCaseSensitive], "Interpretation" -> v_}] :> v, 
+				None]
+		]
+	]
 
 
 (* ::Subsection::Closed:: *)
