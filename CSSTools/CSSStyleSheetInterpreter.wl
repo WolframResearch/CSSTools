@@ -1279,6 +1279,7 @@ CSSCascade[
 		
 			CSS Values and Units:
 				* introduces calc() and attr() functions 
+				* introduces rem dimension i.e. "root ems"; these can't resolve in CSSCascade and should instead scale with CurentValue[$FrontEnd, FontSize]
 		*)
 				
 		If[DownValues[CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList] =!= {}, 
@@ -1581,7 +1582,7 @@ CSSInheritance[target_?CSSTargetQ, scope_, CSSData_?validCSSDataQ, opts:OptionsP
 	Module[
 		{
 			lineage, CSSDataSubset, i, inheritableProps, declarations, case = OptionValue["PropertyIsCaseSensitive"], 
-			element, itemsToResolve, generations, resolvedOptions, props},
+			element, itemsToResolve, generations, resolvedOptions, props, temp, size, dim},
 		(* get the position of all ancestors *)
 		lineage = Append[parents[target["Position"]], target["Position"]];
 		generations = Table[{<|"Property" -> "dummy", "Value" -> "dummy", "Interpretation" -> Missing["Not supported."], "Important" -> False, "Condition" -> None|>}, Length[lineage] + 1];
@@ -1595,27 +1596,37 @@ CSSInheritance[target_?CSSTargetQ, scope_, CSSData_?validCSSDataQ, opts:OptionsP
 			CSSDataSubset = Pick[CSSData, MemberQ[#, lineage[[i]]]& /@ (Through[#["Position"]]& /@ CSSData[[All, "Targets"]])];
 			
 			(* compute all values at this generation *)
-			If[
-				Or[
-					DownValues[CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList] =!= {},
-					DownValues[CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsInDeclarationList] =!= {}
-				]
-				, 
+			(* custom properties must resolve first *)
+			If[DownValues[CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList] =!= {},
+				CSSDataSubset[[All, "Block"]] = CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList /@ CSSDataSubset[[All, "Block"]];
+			];
 			
-				(* custom properties must resolve first *)
-				If[DownValues[CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList] =!= {},
-					CSSDataSubset[[All, "Block"]] = CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList /@ CSSDataSubset[[All, "Block"]];
+			(* attr() functions resolve *)
+			If[DownValues[CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsInDeclarationList] =!= {},
+				Do[
+					element = First @ Select[CSSDataSubset[[j, "Targets"]], MatchQ[#["Position"], lineage[[i]]]&];
+					CSSDataSubset[[j, "Block"]] = CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsInDeclarationList[CSSDataSubset[[j, "Block"]], element];
+					,
+					{j, Length[CSSDataSubset]}
 				];
-				
-				(* attr() functions resolve *)
-				If[DownValues[CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsInDeclarationList] =!= {},
-					Do[
-						element = First @ Select[CSSDataSubset[[j, "Targets"]], MatchQ[#["Position"], lineage[[i]]]&];
-						CSSDataSubset[[j, "Block"]] = CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsInDeclarationList[CSSDataSubset[[j, "Block"]], element];
+			];
+			
+			(* rem dimensions resolve *)
+			If[DownValues[CSSTools`CSSValuesAndUnits3`Private`replaceRemDimensionsInDeclarationList] =!= {},
+				(* should not have @media queries to worry about in root element; just take the raw value of the FontSize if it exists *)
+				temp = Pick[CSSData, MemberQ[#, lineage[[1]]]& /@ (Through[#["Position"]]& /@ CSSData[[All, "Targets"]])];
+				temp = FirstCase[Flatten @ temp[[All, "Block"]], kvp:KeyValuePattern[{"Property" -> p_ /; (StringQ[p] && StringMatchQ[p, "font-size", IgnoreCase -> !case])}] :> kvp["Value"], None];
+				If[temp =!= None, 
+					temp = CSSTokenize[temp];
+					If[Length[temp] == 1, 
+						size = First[temp]["Value"]; dim = First[temp]["Unit"]
 						,
-						{j, Length[CSSDataSubset]}
+						size = dim = None;
 					];
+					,
+					size = dim = None;
 				];
+				CSSDataSubset[[All, "Block"]] = CSSTools`CSSValuesAndUnits3`Private`replaceRemDimensionsInDeclarationList[#, size, dim]& /@ CSSDataSubset[[All, "Block"]];
 			];
 			
 			(* perform cascade algorithm on all rules of this generation; reduces to list of declarations *)
@@ -1624,12 +1635,15 @@ CSSInheritance[target_?CSSTargetQ, scope_, CSSData_?validCSSDataQ, opts:OptionsP
 			
 			(* resolve any compute-time declarations of this generation *)	
 			itemsToResolve = Flatten @ Position[(AssociationQ[#] && KeyExistsQ[#, "CSSResolveValueAtComputeTime"])& /@ declarations[[All, "Interpretation"]], True];
-			Do[
-				declarations[[j, "Interpretation"]] = 
-					consumeProperty[
-						declarations[[j, "Interpretation", "CSSResolveValueAtComputeTime", "Property"]], 
-						CSSTokenize @ declarations[[j, "Interpretation", "CSSResolveValueAtComputeTime", "String"]]],
-				{j, itemsToResolve}
+			(* set the RemIsResolved flag to True in order to avoid the consumeProperty DownValue that pre-empts rem-containing property values *)
+			Block[{CSSTools`CSSValuesAndUnits3`Private`RemIsResolved = True},
+				Do[
+					declarations[[j, "Interpretation"]] = 
+						consumeProperty[
+							declarations[[j, "Interpretation", "CSSResolveValueAtComputeTime", "Property"]], 
+							CSSTokenize @ declarations[[j, "Interpretation", "CSSResolveValueAtComputeTime", "String"]]],
+					{j, itemsToResolve}
+				];
 			];
 			
 			(* append the current generation's declarations with the previous generations's inheritable ones *)

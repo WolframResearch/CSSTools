@@ -164,7 +164,21 @@ DownValues[consumeProperty] =
 							"Property"   -> prop,
 							"Namespaces" -> OptionValue["Namespaces"]|>|>
 					]
-				]},
+				],
+			
+			(* any use of rem units must be resolved at compute time as it involves the root element of the XML document *)
+			HoldPattern[
+				Condition[
+					consumeProperty[prop_String, tokens:{__?CSSTokenQ}, opts:OptionsPattern[]], 
+					And[
+						!TrueQ[RemIsResolved],
+						!FreeQ[tokens, CSSToken[KeyValuePattern[{"Type" -> "dimension", "Unit" -> _String?(StringQ[#] && StringMatchQ[CSSNormalizeEscapes @ #, "rem", IgnoreCase -> True]&)}]]]]]
+			] :>
+				<|"CSSResolveValueAtComputeTime" -> <|
+					"String"     -> CSSUntokenize[tokens],
+					"Property"   -> prop,
+					"Namespaces" -> OptionValue["Namespaces"]|>|>
+		},
 		DownValues[consumeProperty]]
 
 
@@ -181,20 +195,18 @@ parseLength[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?Num
 			If a relative length is given outside the 'font-size' property, then it's a function of the current FontSize.
 			The "ch" relative length is the advance measure of the "0" glyph. It cannot be determined easily in WL so we
 			assume left-to-right text and use the fallback of 1/2 the calculated font size.
-			
-			Viewport widths vh, vw, vmin, vmax
 		*)
 		Switch[CSSNormalizeEscapes @ ToLowerCase @ unit, 
 			(* relative units *)
 			"em",   If[inFontSize, val*Inherited,     With[{v = val}, Dynamic[v*CurrentValue[FontSize]]]],
 			"ex",   If[inFontSize, val*0.5*Inherited, With[{v = val}, Dynamic[v*CurrentValue["FontXHeight"]]]],
 			"ch",   If[inFontSize, val*0.5*Inherited, Dynamic[0.5*CurrentValue[FontSize]]],
-			"rem",  If[inFontSize, val*0.5*Inherited, Dynamic[0.5*CurrentValue[FontSize]]],
-			(* viewport units *)
-			"vw",   Null, (* TODO *)
-			"vh",   Null,
-			"vmin", Null,
-			"vmax", Null,
+			"rem",  With[{v = val}, Dynamic[v*CurrentValue[$FrontEnd, FontSize]]], (* fallback if not resolved at compute-value time *)
+			(* viewport units are a percentage of the window size *)
+			"vw",   With[{v = val}, Dynamic[Round[v/100*CurrentValue[{"WindowSize", 1}]]]], 
+			"vh",   With[{v = val}, Dynamic[Round[v/100*CurrentValue[{"WindowSize", 2}]]]],
+			"vmin", With[{v = val}, Dynamic[Round[v/100*Min[CurrentValue["WindowSize"]]]]],
+			"vmax", With[{v = val}, Dynamic[Round[v/100*Max[CurrentValue["WindowSize"]]]]],
 			(* absolute units *)
 			"in",   val*dpi,
 			"cm",   val*dpi/2.54,
@@ -545,12 +557,11 @@ parseAttrFromType[type_, value_] :=
 
 
 replaceAttrFunctionsWithTokens[tokensInput:{__?CSSTokenQ}, element_?CSSTargetQ, ssNamespaces_] :=
-	Module[{tokens = tokensInput, attrPosition, attrToken, attrCheck, attrNS, attrValue, l, elementAttributeNamePosition, elementAttributeNamespace, elementAttributeValue, temp},
+	Module[{tokens = tokensInput, attrPosition, attrToken, attrCheck, attrNS, attrValue, elementAttributeNamePosition, elementAttributeNamespace, elementAttributeValue, temp},
 		
 		(* replace attr() from the deepest instance to the most shallow and check for failures at each step *)
 		(* Position is sorted depth-first, which is good because we should substitute the deepest attr() instances first. *)
 		attrPosition = FirstPosition[tokens, TokenPatternString["attr", "function"], None];
-		l = Length[tokens];
 		While[attrPosition =!= None,
 			attrToken = Extract[tokens, attrPosition];
 			
@@ -593,7 +604,6 @@ replaceAttrFunctionsWithTokens[tokensInput:{__?CSSTokenQ}, element_?CSSTargetQ, 
 			
 			tokens = ReplacePart[tokens, attrPosition -> Unevaluated[Sequence @@ CSSTokenize[attrValue]]];
 			attrPosition = FirstPosition[tokens, TokenPatternString["attr", "function"], None];
-			l = Length[tokens];
 		];
 		tokens
 	];
@@ -614,8 +624,52 @@ replaceAttrFunctionsInDeclarationList[declarationsInput_?ListQ, element_?CSSTarg
 			{i, itemsToResolve}];
 		declarations
 	]
-
 	
+	
+(* ========== rem unit replacment ========== *)
+getPositionOfNearestRemDimensionToken[tokens_] := 
+	FirstPosition[
+		tokens, 
+		CSSToken[KeyValuePattern[{"Type" -> "dimension", "Unit" -> _String?(StringQ[#] && StringMatchQ[CSSNormalizeEscapes @ #, "rem", IgnoreCase -> True]&)}]],
+		None]
+
+replaceRemDimensionWithTokens[tokensInput:{__?CSSTokenQ}, rootFontSizeValue_, rootFontSizeDimension_] :=
+	Module[{tokens = tokensInput, remPosition, remToken},
+		(* If the root does not define FontSize, then wait to use fallback rem value when parsing lengths *)
+		If[rootFontSizeValue === None || rootFontSizeDimension === None, Return @ tokens];
+		
+		(* with a root FontSize, then replace throughout *)
+		remPosition = getPositionOfNearestRemDimensionToken[tokens];
+		While[remPosition =!= None,
+			remToken = Extract[tokens, remPosition];
+			remToken = 
+				Replace[
+					remToken, 
+					CSSToken[kvp:KeyValuePattern[{"Value" -> v_}]] :> 
+						With[{new = v*rootFontSizeValue}, 
+							CSSToken[<|kvp, "Unit" -> rootFontSizeDimension, "String" -> ToString[new], "Value" -> new, "ValueType" -> If[IntegerQ[new], "integer", "number"]|>]]];
+			
+			tokens = ReplacePart[tokens, remPosition -> remToken];
+			remPosition = getPositionOfNearestRemDimensionToken[tokens];
+		];
+		tokens
+	]
+	
+replaceRemDimensionsInDeclarationList[declarationsInput_?ListQ, rootFontSizeValue_, rootFontSizeDimension_] :=
+	Module[{check, itemsToResolve, declarations = declarationsInput},
+		check = declarations[[All, "Interpretation"]];
+		itemsToResolve = Flatten @ Position[(AssociationQ[#] && KeyExistsQ[#, "CSSResolveValueAtComputeTime"])& /@ check, True];
+		Do[
+			declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]] = 
+				CSSUntokenize @ 
+					replaceRemDimensionWithTokens[
+							CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]], 
+							rootFontSizeValue,
+							rootFontSizeDimension];
+			,
+			{i, itemsToResolve}];
+		declarations
+	]
 
 	
 	
