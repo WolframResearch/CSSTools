@@ -10,6 +10,10 @@ Get["CSSTools`CSSTools`"];
 Get["CSSTools`CSSTokenizer`"];
 
 
+res = TestReport["CalcTests.wl"];
+res["TestsFailed"]
+
+
 res = TestReport["ANB.wl"];
 res["TestsFailed"]
 

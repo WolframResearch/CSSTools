@@ -66,6 +66,10 @@ SetUsage[AdvancePosToNextSemicolonOrComma, "AdvancePosToNextSemicolonOrComma[pos
 SetUsage[AdvancePosToNextBlock,            "AdvancePosToNextBlock[pos$, l$, CSSTokens$] increments pos$ until a block CSS token is reached."];
 SetUsage[TrimWhitespaceTokens,             "TrimWhitespaceTokens[pos$, l$, CSSTokens$] removes any whitespace CSS tokens from the ends of the CSS token sequence."]
 
+SetUsage[CreateWhitespaceToken, "CreateWhitespaceToken[] creates a CSSToken expression of \"whitespace\" type."];
+SetUsage[CreateDelimToken,      "CreateDelimToken[$delim] creates a CSSToken expression of \"delim\" type with single string character $delim."];
+SetUsage[CreateParensToken,     "CreateParensToken[$children] creates a CSSToken expression of \"()\" type with \"Children\" value $children."];
+
 
 Begin["`Private`"]
 
@@ -862,14 +866,17 @@ untokenizeUnicodeRange[start_?NumericQ, stop_?NumericQ] :=
 (* 
 	The token string and unit utilities are necessary because the tokenizer does not convert any escape sequences. 
 	These utilities perform a string match test on a "normalized" CSS token string. 
-	The CSSToken "Type" is created by this package so does not require normalization. *)
+	The CSSToken "Type" is created by this package so does not require normalization. 
+	Special case is the * string as this is the universal search in StringMatchQ and must be escaped. *)
 TokenTypeIs[s_,    CSSToken[KeyValuePattern["Type" -> t_?StringQ]]] :=  StringMatchQ[t, s, IgnoreCase -> False]
 TokenTypeIsNot[s_, CSSToken[KeyValuePattern["Type" -> t_?StringQ]]] := !StringMatchQ[t, s, IgnoreCase -> False]
 TokenTypeIs[___] := False
 TokenTypeIsNot[___] := False
 
-TokenStringIs[s_,    CSSToken[KeyValuePattern["String" -> t_?StringQ]]] :=  StringMatchQ[CSSNormalizeEscapes @ t, s, IgnoreCase -> True]
-TokenStringIsNot[s_, CSSToken[KeyValuePattern["String" -> t_?StringQ]]] := !StringMatchQ[CSSNormalizeEscapes @ t, s, IgnoreCase -> True]
+TokenStringIs["*",    CSSToken[KeyValuePattern["String" -> t_?StringQ]]] :=  StringMatchQ[CSSNormalizeEscapes @ t, "\\*", IgnoreCase -> True]
+TokenStringIs[s_,     CSSToken[KeyValuePattern["String" -> t_?StringQ]]] :=  StringMatchQ[CSSNormalizeEscapes @ t, s, IgnoreCase -> True]
+TokenStringIsNot["*", CSSToken[KeyValuePattern["String" -> t_?StringQ]]] := !StringMatchQ[CSSNormalizeEscapes @ t, "\\*", IgnoreCase -> True]
+TokenStringIsNot[s_,  CSSToken[KeyValuePattern["String" -> t_?StringQ]]] := !StringMatchQ[CSSNormalizeEscapes @ t, s, IgnoreCase -> True]
 TokenStringIs[___] := False
 TokenStringIsNot[___] := False
 
@@ -906,6 +913,14 @@ SetAttributes[TrimWhitespaceTokens, HoldAll];
 TrimWhitespaceTokens[pos_, l_, tokens_] := (
 	pos = l; If[TokenTypeIs["whitespace", tokens[[pos]]], RetreatPosAndSkipWhitespace[pos, l, tokens]]; l = pos;
 	pos = 1; If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];)
+	
+
+CreateWhitespaceToken[] := CSSToken[<|"Type" -> "whitespace", "String" -> " "|>]
+CreateWhitespaceToken[__] := Failure["NoToken", <|"MessageTemplate" -> "Could not create whitespace token."|>]
+CreateDelimToken[s_?StringQ] := CSSToken[<|"Type" -> "delim", "String" -> s|>] /; StringLength[s] == 1
+CreateDelimToken[___] := Failure["NoToken", <|"MessageTemplate" -> "Could not create delim token."|>]
+CreateParensToken[tokens:{__?CSSTokenQ}] := CSSToken[<|"Type" -> "()", "Children" -> tokens|>]
+CreateParensToken[___] := Failure["NoToken", <|"MessageTemplate" -> "Could not create () token."|>]
 
 (* ::Section:: *)
 (*Package End*)

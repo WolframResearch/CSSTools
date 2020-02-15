@@ -149,20 +149,20 @@ DownValues[consumeProperty] =
 						"Namespaces" -> declaredNamespaces|>|>					
 				],
 				
-			(* any use of calc() must be resolved at compute time (CSSCascade/CSSInheritance) unless a parse error is detected *)
+			(* calc() is usually resolved at compute time (CSSCascade/CSSInheritance) unless a parse error is detected or can be unambiguously made a number *)
 			HoldPattern[
 				Condition[consumeProperty[prop_String, tokens:{__?CSSTokenQ}, opts:OptionsPattern[]], !FreeQ[tokens, TokenPatternString["calc", "function"]]]
 			] :>
-				Module[{calcCheck, failPosition},
-					calcCheck = parseCalcFunctionToken[#, {}]& /@ Extract[tokens, Position[tokens, TokenPatternString["calc", "function"]]];
-					failPosition = FirstPosition[Replace[calcCheck, x_Failure :> x["MessageParameters"]["Type"], 1], "Parse", {}, 1];
-					If[failPosition =!= {},
-						Extract[calcCheck, failPosition]
-						,
-						<|"CSSResolveValueAtComputeTime" -> <|
-							"String"     -> CSSUntokenize[tokens],
-							"Property"   -> prop,
-							"Namespaces" -> OptionValue["Namespaces"]|>|>
+				Module[{calcCheck},
+					calcCheck = Catch[calcReduce /@ Extract[tokens, Position[tokens, TokenPatternString["calc", "function"]]]];
+					Which[
+						FailureQ[calcCheck], calcCheck,
+						Position[calcCheck, TokenPatternString["calc", "function"]] === {}, consumeProperty[prop, calcCheck],
+						True,
+							<|"CSSResolveValueAtComputeTime" -> <|
+								"String"     -> CSSUntokenize[calcCheck],
+								"Property"   -> prop,
+								"Namespaces" -> OptionValue["Namespaces"]|>|>
 					]
 				],
 			
@@ -462,52 +462,519 @@ parseAttrFunctionToken[t_?CSSTokenQ, namespaces_] :=
 	
 	
 (* ========== Parsing calc() function ========== *)
-ClearAll[calcFailureNoDefinition, calcFailureRecursion];
-calcFailureNotCalcFunction = 
-	Failure["UnexpectedToken", <|
-		"MessageTemplate"   -> "Expected a calc() function token.", 
-		"MessageParameters" -> <|"Type" -> "Parse"|>|>];
+(* this should probably go into Tokenize package *)
+HighlightUntokenize[tokens:{__?CSSTokenQ}, highlightPositions_] := 
+	Module[{highlights},
+		highlights = 
+			Replace[
+				#,
+				CSSToken[kvp:KeyValuePattern[{"String" -> s_}]] :> CSSToken[<|kvp, "String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)"|>]
+			]& /@ Extract[tokens, highlightPositions];
+		CSSUntokenize @ ReplacePart[tokens, Thread[highlightPositions -> highlights]]			
+	]
+			
+calcGetPositionOfDeepestMultiplicationOrDivision[tokens:{__?CSSTokenQ}] := 
+	First[ReverseSortBy[Length] @ Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim", "String" -> "*" | "/"}]]], None]
 
-reduceNestedCalcFunctionsToParens[t_?CSSTokenQ] :=
-	Module[{tokens, calcToken, calcPosition, calcCheck, l},
-		If[TokenTypeIsNot["function", t] || TokenStringIsNot["calc", t], Return @ calcFailureNotCalcFunction];
-			
-		tokens = t["Children"];
-		(* replace calc() from the deepest instance to the most shallow and check for failures at each step *)
-		(* Position is sorted depth-first, which is good because we should substitute the deepest calc() instances first. *)
-		calcPosition = FirstPosition[tokens, TokenPatternString["calc", "function"], None];
-		l = Length[tokens];
-		While[calcPosition =!= None,
-			calcToken = Extract[tokens, calcPosition];
-			
-			(* do token replacement *)
-			calcCheck = CSSToken[<|"Type" -> "()", "Children" -> calcToken["Children"]|>];
-			tokens = ReplacePart[tokens, calcPosition -> calcCheck];
-			calcPosition = FirstPosition[tokens, TokenPatternString["calc", "function"], None];
-			l = Length[tokens];
+calcReduce[inputToken_?CSSTokenQ] :=
+	Module[{tokens, currentDepthPosition, tokensAtDepth, opPosition, tokenCheck, wrapperPosition, wrapperToken, pos, l},
+		(* check that input token is a calc() function *)
+		If[TokenTypeIs["function", inputToken] && TokenStringIs["calc", inputToken], 
+			tokens = inputToken["Children"];
+			,
+			Throw @ 
+				Failure["BadParse", <|
+					"MessageTemplate" -> "Expected calc() function token.", 
+					"MessageParameters" -> <||>, 
+					"Token" -> inputToken|>]
 		];
-		Replace[t, CSSToken[kvp:KeyValuePattern[{"Children" -> _}]] :> CSSToken[<|kvp, "Children" -> tokens|>]]
+		
+		(* check for only valid operators *)
+		opPosition = Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim"}]]];
+		opPosition = Pick[opPosition, !MatchQ[#, "+" | "-" | "*" | "/"]& /@ Through[Extract[tokens, opPosition]["String"]]];
+		If[opPosition =!= {}, 
+			Throw @ 
+				Failure["BadParse", <|
+					"MessageTemplate" -> "calc() contains unexpected operators.", 
+					"MessageParameters" -> <||>, 
+					"Expr" -> HighlightUntokenize[tokens, opPosition]|>]];
+		
+		(* check for only valid values *)
+		tokenCheck = Position[tokens, CSSToken[KeyValuePattern[{"Type" -> Except["delim" | "whitespace" | "percentage" | "number" | "dimension"]}]]];
+		tokenCheck = Pick[tokenCheck, Not[Or[TokenTypeIs["function", #] && TokenStringIs["calc", #], TokenTypeIs["()", #]]]& /@ Extract[tokens, tokenCheck]];
+		If[tokenCheck =!= {}, 
+			Throw @ 
+				Failure["BadParse", <|
+					"MessageTemplate" -> "calc() contains unexpected tokens.", 
+					"MessageParameters" -> <||>, 
+					"Expr" -> HighlightUntokenize[tokens, opPosition]|>]];
+			
+		(* perform reduction of calc() expression *)
+		opPosition = calcGetPositionOfDeepestMultiplicationOrDivision[tokens];
+		While[opPosition =!= None && currentDepthPosition =!= None,
+			currentDepthPosition = Most @ opPosition;
+			If[currentDepthPosition === {},
+				tokensAtDepth = tokens;
+				,
+				tokensAtDepth = Extract[tokens, currentDepthPosition];
+			];
+			tokensAtDepth = calcResolveMultiplicationAndDivisionAtConstantTokenDepth[tokensAtDepth];
+			(*Echo[CSSUntokenize[tokensAtDepth], "MD"];*)
+			tokensAtDepth = calcResolveAdditionAndSubtractionAtConstantTokenDepth[tokensAtDepth];
+			(*Echo[CSSUntokenize[tokensAtDepth], "AS"];*)
+			If[currentDepthPosition =!= {},
+				tokens = ReplacePart[tokens, currentDepthPosition -> tokensAtDepth];
+				wrapperPosition = Drop[currentDepthPosition, -2];
+				wrapperToken = Extract[tokens, wrapperPosition];
+				If[TokenTypeIs["function", wrapperToken] && TokenStringIs["calc", wrapperToken],
+					tokens = 
+						ReplacePart[
+							tokens, 
+							wrapperPosition -> Replace[wrapperToken, CSSToken[kvp:KeyValuePattern[{"Children" -> c_}]] :> CreateParensToken[c]]];
+				]
+				,
+				tokens = tokensAtDepth;
+				currentDepthPosition = None (* stop While loop *)
+			];
+			(*Echo[CSSUntokenize[tokens]];*)
+			opPosition = calcGetPositionOfDeepestMultiplicationOrDivision[tokens];
+		];
+		(* in case the calc expression is already flat and has no multiplication, do addition/subtraction *)
+		tokens = calcResolveAdditionAndSubtractionAtConstantTokenDepth[tokens];
+		
+		(* reduce nested parens, normalize addition signs, and keep as calc() if reduction has more than one term *)
+		tokens = calcReduceParens[tokens];
+		tokens = calcNormalizeSigns[tokens];
+		opPosition = Flatten @ Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim", "String" -> "+" | "-"}]]];
+		If[Length[opPosition] > 0, 
+			CSSToken[<|"Type" -> "function", "String" -> "calc", "Children" -> tokens|>]
+			,
+			pos = 1; l = Length[tokens]; TrimWhitespaceTokens[pos, l, tokens];
+			tokens[[pos]]
+		]
 	]
 	
+calcReduceParens[inputTokens:{__?CSSTokenQ}] :=
+	Module[{tokens = inputTokens, pos},
+		(* replace calc() or () from the deepest instance to the most shallow and check for failures at each step *)
+		(* Position is sorted depth-first, which is good because we should substitute the deepest calc() instances first. *)
+		pos = FirstPosition[tokens, TokenPatternString["calc", "function"] | CSSToken[KeyValuePattern[{"Type" -> "()"}]], None];
+		While[pos =!= None,
+			(* do token replacement *)
+			tokens = Flatten @ ReplacePart[tokens, pos -> Extract[tokens, pos]["Children"]];
+			pos = FirstPosition[tokens, TokenPatternString["calc", "function"] | CSSToken[KeyValuePattern[{"Type" -> "()"}]], None];
+		];
+		tokens
+	]
+	
+calcNormalizeSigns[inputTokens:{__?CSSTokenQ}] :=
+	Module[{tokens = inputTokens, pos, l = Length[inputTokens]},
+		(* replace "- -n" with "+ n" or "+ -n" with "- n" *)
+		pos = Flatten @ Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim", "String" -> "+" | "-"}]]];
+		Do[
+			
+			Which[
+				TokenStringIs["+", tokens[[i]]] && i + 2 <= l && Negative[tokens[[i + 2]]["Value"]], 
+					tokens[[i]] = CreateDelimToken["-"];
+					tokens[[i + 2]] = calcChangeSignOfToken[tokens[[i + 2]]]
+				,
+				TokenStringIs["-", tokens[[i]]] && i + 2 <= l && Negative[tokens[[i + 2]]["Value"]], 
+					tokens[[i]] = CreateDelimToken["+"];
+					tokens[[i + 2]] = calcChangeSignOfToken[tokens[[i + 2]]]
+				,
+				True, Null
+			];
+			,
+			{i, pos}
+		];
+		tokens
+	]		
 
-parseCalcFunctionToken[t_?CSSTokenQ] :=
-	Module[{pos = 1, tokens, l, leftValue, rightValue, operator},
-		If[Not[(TokenTypeIs["function", t] && TokenStringIs["calc", t]) || TokenTypeIs["()", t]], Return @ calcFailureNotCalcFunction];
+(* multiplication *)
+calcMultiplyToString[v1_ ,v2_] := With[{v = v1*v2}, With[{vv = ToString[If[!IntegerQ[v], N[v], v]]}, If[StringEndsQ[vv, "."], vv <> "0", vv]]]
+
+calcMultiplyNumberByNumberToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> v1_}]], rightToken:CSSToken[KeyValuePattern[{"Value" -> v2_}]]] := 
+	First @ CSSTokenize[calcMultiplyToString[v1, v2]]
+	
+calcMultiplyNumberByPercentageToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> v1_}]], rightToken:CSSToken[KeyValuePattern[{"Value" -> v2_}]]] := 
+	First @ CSSTokenize[calcMultiplyToString[v1, v2] <> "%"]
+	
+calcMultiplyNumberByDimensionToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> v1_}]], rightToken:CSSToken[KeyValuePattern[{"Value" -> v2_, "Unit" -> u_}]]] := 
+	First @ CSSTokenize[calcMultiplyToString[v1, v2] <> u]
+
+(* in some cases we must distribute the multiplication through the parenthesized grouping *)
+calcMultiplyNumberByParensToken[numberToken_, parenToken_] :=
+	(* This function is called at a point where the paren contents have already been simplified as far as possible. *)
+	CSSToken[<|
+		"Type" -> "()", 
+		"Children" -> (If[TokenTypeIs["dimension" | "percentage" | "number", #], calcResolveMultiplication[numberToken, #], #]& /@ parenToken["Children"])|>]
+	
+
+calcResolveMultiplication[leftToken_, rightToken_] :=
+	Which[
+		TokenTypeIs["number", leftToken] && TokenTypeIs["number", rightToken],     calcMultiplyNumberByNumberToken[leftToken, rightToken],
+		TokenTypeIs["number", leftToken] && TokenTypeIs["percentage", rightToken], calcMultiplyNumberByPercentageToken[leftToken, rightToken],
+		TokenTypeIs["percentage", leftToken] && TokenTypeIs["number", rightToken], calcMultiplyNumberByPercentageToken[leftToken, rightToken],
+		TokenTypeIs["number", leftToken] && TokenTypeIs["dimension", rightToken],  calcMultiplyNumberByDimensionToken[leftToken, rightToken],
+		TokenTypeIs["dimension", leftToken] && TokenTypeIs["number", rightToken],  calcMultiplyNumberByDimensionToken[rightToken, leftToken],
+		TokenTypeIs["number", leftToken] && TokenTypeIs["()", rightToken],         calcMultiplyNumberByParensToken[leftToken, rightToken],
+		TokenTypeIs["()", leftToken] && TokenTypeIs["number", rightToken],         calcMultiplyNumberByParensToken[rightToken, leftToken],
+		True,                                                                      $Failed 				
+	]
+	
+(* division *)
+calcDivideToString[v1_ ,v2_] := With[{v = v1/v2}, With[{vv = ToString[If[!IntegerQ[v], N[v], v]]}, If[StringEndsQ[vv, "."], vv <> "0", vv]]]
+
+calcDivideNumberByNumberToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> v1_}]], rightToken:CSSToken[KeyValuePattern[{"Value" -> v2_}]]] := 
+	First @ CSSTokenize[calcDivideToString[v1, v2]]
+
+calcDividePercentageByNumberToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> v1_}]], rightToken:CSSToken[KeyValuePattern[{"Value" -> v2_}]]] := 
+	First @ CSSTokenize[calcDivideToString[v1, v2] <> "%"]
+	
+calcDivideDimensionByNumberToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> v1_, "Unit" -> u1_}]], rightToken:CSSToken[KeyValuePattern[{"Value" -> v2_}]]] := 
+	First @ CSSTokenize[calcDivideToString[v1, v2] <> u1]
+
+(* in some cases we must distribute the division through the parenthesized grouping *)
+calcDivideParensByNumberToken[parenToken:CSSToken[KeyValuePattern[{"Type" -> "()"}]], numberToken:CSSToken[KeyValuePattern[{"Value" -> v1_}]]] :=
+	(* This function is called at a point where the paren contents have already been simplified as far as possible. *)
+	CSSToken[<|
+		"Type" -> "()", 
+		"Children" -> (If[TokenTypeIs["dimension" | "percentage" | "number", #], calcResolveDivision[#, numberToken], #]& /@ parenToken["Children"])|>]
+
+calcResolveDivision[leftToken_, rightToken_] :=
+	Which[
+		TokenTypeIs["number", leftToken] && TokenTypeIs["number", rightToken],     calcDivideNumberByNumberToken[leftToken, rightToken],
+		TokenTypeIs["percentage", leftToken] && TokenTypeIs["number", rightToken], calcDividePercentageByNumberToken[leftToken, rightToken],
+		TokenTypeIs["dimension", leftToken] && TokenTypeIs["number", rightToken],  calcDivideDimensionByNumberToken[leftToken, rightToken],
+		TokenTypeIs["()", leftToken] && TokenTypeIs["number", rightToken],         calcDivideParensByNumberToken[leftToken, rightToken],
+		True,                                                                      $Failed 				
+	]
+	
+calcResolveMultiplicationAndDivisionAtConstantTokenDepth[inputTokens:{__?CSSTokenQ}] :=
+	Module[{tokens = inputTokens, opPositions, opPosition, numberOfSiblings, leftToken, leftTokenIndex, rightToken, rightTokenIndex, i, j, try},
+		(*opPosition = calcGetPositionOfDeepestMultiplicationOrDivision[tokens];*)
+		(* resolve deepest operators first *)
+		opPositions = Reverse @ Flatten @ Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim", "String" -> "*" | "/"}]], {1}];
+		numberOfSiblings = Length[inputTokens];
+		Do[
+			If[MatchQ[i, 1 | numberOfSiblings], 
+				Throw @ 
+					Failure["BadParse", <|
+						"MessageTemplate" -> "calc() * and / operator must have a value on either side.", 
+						"MessageParameters" -> <||>, 
+						"Expr" -> HighlightUntokenize[tokens, {opPosition}]|>]
+				, 
+				j = i; RetreatPosAndSkipWhitespace[j, 1, tokens];
+				leftTokenIndex = j; leftToken = tokens[[j]];
+				j = i; AdvancePosAndSkipWhitespace[j, numberOfSiblings, tokens];
+				rightTokenIndex = j; rightToken = tokens[[j]];
+				If[TokenStringIs["*", tokens[[i]]],
+					try = calcResolveMultiplication[leftToken, rightToken];
+					If[FailureQ[try], 
+						Throw @ 
+							Failure["BadParse", <|
+								"MessageTemplate" -> "calc() * operator must have at least one number on a side.", 
+								"MessageParameters" -> <||>, 
+								"Expr" -> HighlightUntokenize[tokens, Table[j, {j, leftTokenIndex, rightTokenIndex, 1}]]|>]
+					]
+					,
+					try = calcResolveDivision[leftToken, rightToken];
+					If[FailureQ[try], 
+						Throw @ 
+							Failure["BadParse", <|
+								"MessageTemplate" -> "calc() / operator must have a number on the right side.", 
+								"MessageParameters" -> <||>, 
+								"Expr" -> HighlightUntokenize[tokens, Table[j, {j, leftTokenIndex, rightTokenIndex, 1}]]|>]
+					]
+				];
+				tokens[[leftTokenIndex]] = try; tokens[[leftTokenIndex + 1 ;; rightTokenIndex]] = Nothing;
+			]
+			,
+			{i, opPositions}
+		];
+		tokens		
+	]
+	
+(* addition *)
+(* unitless numbers added to dimensions are not allowed (only allowed as factors in multiplication and division)*)
+calcAddToString[v1_ ,v2_] := With[{v = v1+v2}, With[{vv = ToString[If[!IntegerQ[v], N[v], v]]}, If[StringEndsQ[vv, "."], vv <> "0", vv]]]
+
+calcAddNumberToNumberToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> v1_}]], rightToken:CSSToken[KeyValuePattern[{"Value" -> v2_}]]] := 
+	First @ CSSTokenize[calcAddToString[v1, v2]]
+
+calcAddPercentageToPercentageToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> v1_}]], rightToken:CSSToken[KeyValuePattern[{"Value" -> v2_}]]] := 
+	First @ CSSTokenize[calcAddToString[v1, v2] <> "%"]
+
+(* Dimensions of matching type e.g. <length> such as px and cm can be added together as separate terms *)
+calcAddDimensionToDimensionToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> v1_, "Unit" -> u1_}]], rightToken:CSSToken[KeyValuePattern[{"Value" -> v2_, "Unit" -> u2_}]]] := 
+	Which[
+		StringMatchQ[u1, u2, IgnoreCase -> True], First @ CSSTokenize[calcAddToString[v1, v2] <> u1],
+		parseType[u1] === parseType[u2],          
+			CSSToken[<|
+				"Type" -> "()", 
+				"Children" -> {
+					leftToken, 
+					CSSToken[<|"Type" -> "whitespace", "String" -> " "|>], 
+					CSSToken[<|"Type" -> "delim", "String" -> "+"|>], 
+					CSSToken[<|"Type" -> "whitespace", "String" -> " "|>], 
+					rightToken}|>],
+		True, $Failed
+	]
+
+(* in some cases we must distribute the addition through the parenthesized grouping *)
+(* This function is called at a point where the paren contents have already been simplified as far as possible, may contain both dimension and percentage tokens. *)
+(* case z + (x + y - w) so must take sign into account and z can be negative *)
+calcAddTokenToParensToken[numberToken_, parenToken_] :=
+	Module[{pChildren = parenToken["Children"], typePosition},	
+		(* add to matching type within paren's children *)
+		(* first try for the matching type, then percentage/dimension combo *)
+		Which[
+			TokenTypeIs["dimension", numberToken],  
+				typePosition = FirstPosition[pChildren, _?(TokenTypeIs["dimension", #] && StringMatchQ[numberToken["Unit"], #["Unit"], IgnoreCase -> True]&), {None}, {1}][[1]];
+				If[typePosition =!= None, 
+					Return @ 
+						CreateParensToken @ 
+							ReplacePart[
+								pChildren, 
+								{
+									typePosition -> 
+										If[calcTokenIsSubtracted[typePosition, pChildren], 
+											calcSubtractDimensionFromDimensionToken[numberToken, Extract[pChildren, typePosition]]
+											, 
+											calcAddDimensionToDimensionToken[numberToken, Extract[pChildren, typePosition]]
+										],
+									(typePosition - 2) -> CreateDelimToken["+"]
+								}]];
+				
+				typePosition = FirstPosition[pChildren, _?(TokenTypeIs["dimension", #]&), {None}, {1}][[1]];
+				If[typePosition =!= None,
+					Return @
+						If[parseType[numberToken["Unit"]] === parseType[Extract[pChildren, typePosition]["Unit"]],          
+							CreateParensToken @ Join[pChildren, {CreateWhitespaceToken[], CreateDelimToken["+"], CreateWhitespaceToken[], numberToken}]
+							,
+							$Failed]];
+				
+				typePosition = FirstPosition[pChildren, _?(TokenTypeIs["percentage", #]&), {None}, {1}][[1]];
+				If[typePosition =!= None, 
+					Return @ CreateParensToken @ Join[pChildren, {CreateWhitespaceToken[], CreateDelimToken["+"], CreateWhitespaceToken[], numberToken}]];
+					
+				$Failed
+			,
+			TokenTypeIs["percentage", numberToken], 
+				typePosition = FirstPosition[pChildren, _?(TokenTypeIs["percentage", #]&), {None}, {1}][[1]];
+				If[typePosition =!= None, 
+					Return @ 
+						CreateParensToken @ 
+							ReplacePart[
+								pChildren, 
+								{
+									typePosition -> 
+										If[calcTokenIsSubtracted[typePosition, pChildren], 
+											calcSubtractPercentageFromPercentageToken[numberToken, Extract[pChildren, typePosition]]
+											, 
+											calcAddPercentageToPercentageToken[numberToken, Extract[pChildren, typePosition]]
+										],
+									(typePosition - 2) -> CreateDelimToken["+"]
+								}]];
+				
+				typePosition = FirstPosition[pChildren, _?(TokenTypeIs["dimension", #]&), {None}, {1}][[1]];
+				If[typePosition =!= None,
+					Return @ CreateParensToken @ Join[pChildren, {CreateWhitespaceToken[], CreateDelimToken["+"], CreateWhitespaceToken[], numberToken}]];
+					
+				$Failed
+			,
+			True, $Failed
+		]
+	]
+
+calcAddParensTokenToParensToken[parenTokenLeft_, parenTokenRight_] :=
+	CreateParensToken @ Join[parenTokenLeft["Children"], {CreateWhitespaceToken[], CreateDelimToken["+"], CreateWhitespaceToken[]}, parenTokenRight["Children"]]
 		
-		tokens = Length[t["Children"]];
-		l = Length[tokens];
-		pos = 1;
-		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
-		 
-		Switch[tokens[[pos]]["Type"],
-			"dimension",  Null,
-			"number",     Null,
-			"percentage", Null,
-			"()",         parseCalcFunctionToken[tokens[[pos]]],
-			"function",   parseCalcFunctionToken[tokens[[pos]]],
-			_,            Null
-		]; 
+calcResolveAddition[leftToken_, rightToken_] :=
+	Which[
+		TokenTypeIs["number", leftToken] && TokenTypeIs["number", rightToken],                          calcAddNumberToNumberToken[leftToken, rightToken],
+		TokenTypeIs["percentage", leftToken] && TokenTypeIs["percentage", rightToken],                  calcAddPercentageToPercentageToken[leftToken, rightToken],
+		TokenTypeIs["dimension", leftToken] && TokenTypeIs["dimension", rightToken],                    calcAddDimensionToDimensionToken[leftToken, rightToken],
+		TokenTypeIs["dimension" | "percentage" | "number", leftToken] && TokenTypeIs["()", rightToken], calcAddTokenToParensToken[leftToken, rightToken],
+		TokenTypeIs["()", leftToken] && TokenTypeIs["dimension" | "percentage" | "number", rightToken], calcAddTokenToParensToken[rightToken, leftToken],
+		TokenTypeIs["()", leftToken] && TokenTypeIs["()", rightToken],                                  calcAddParensTokenToParensToken[leftToken, rightToken],
+		True,                                                                                           $Failed
+	]
+
+(* subtraction *)
+calcChangeSignOfToken[t_?CSSTokenQ] :=
+	Replace[
+		t, 
+ 		CSSToken[kvp:KeyValuePattern[{"String" -> s_, "Value" -> v_}]] :> 
+ 			CSSToken[<|kvp, "String" -> Which[StringStartsQ[s, "-"], StringDrop[s, 1], StringStartsQ[s, "+"], "-" <> StringDrop[s, 1], True, "-" <> s], "Value" -> -v|>]]
+
+calcTokenIsSubtracted[tokenPos_, tokens:{__?CSSTokenQ}] :=
+	Module[{pos = tokenPos},
+		(* look left for first delim token *)
+		RetreatPosAndSkipWhitespace[pos, 1, tokens];
+		Which[
+			pos < 1,                                                                  False,
+			TokenTypeIs["whitespace", tokens[[pos]]],                                 False,
+			TokenTypeIs["delim", tokens[[pos]]] && TokenStringIs["-", tokens[[pos]]], True,
+			TokenTypeIs["delim", tokens[[pos]]] && TokenStringIs["+", tokens[[pos]]], False,
+			True,                                     
+				Throw @ 
+					Failure["BadParse", <|
+						"MessageTemplate" -> "calc() expression contains unrecognized operator.", 
+						"MessageParameters" -> <||>, 
+						"Expr" -> HighlightUntokenize[tokens, {1}]|>]
+		]
+	]
+
+calcSubtractToString[v1_ ,v2_] := With[{v = v1-v2}, With[{vv = ToString[If[!IntegerQ[v], N[v], v]]}, If[StringEndsQ[vv, "."], vv <> "0", vv]]]
+
+calcSubtractNumberFromNumberToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> v1_}]], rightToken:CSSToken[KeyValuePattern[{"Value" -> v2_}]]] := 
+	First @ CSSTokenize[calcSubtractToString[v1, v2]]
+
+calcSubtractPercentageFromPercentageToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> v1_}]], rightToken:CSSToken[KeyValuePattern[{"Value" -> v2_}]]] := 
+	First @ CSSTokenize[calcSubtractToString[v1, v2] <> "%"]
+
+calcSubtractDimensionFromDimensionToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> v1_, "Unit" -> u1_}]], rightToken:CSSToken[KeyValuePattern[{"Value" -> v2_, "Unit" -> u2_}]]] := 
+	Which[
+		StringMatchQ[u1, u2, IgnoreCase -> True], First @ CSSTokenize[calcSubtractToString[v1, v2] <> u1],
+		parseType[u1] === parseType[u2],          
+			CSSToken[<|
+				"Type" -> "()", 
+				"Children" -> {
+					leftToken, 
+					CSSToken[<|"Type" -> "whitespace", "String" -> " "|>], 
+					CSSToken[<|"Type" -> "delim", "String" -> "-"|>], 
+					CSSToken[<|"Type" -> "whitespace", "String" -> " "|>], 
+					rightToken}|>],
+		True, $Failed
+	]
+
+(* in some cases we must distribute the addition through the parenthesized grouping *)
+(* case (x + y - w) - z *)
+calcSubtractTokenFromParensToken[numberToken_, parenToken_] := 
+	Module[{pChildren = parenToken["Children"]},	
+		(* change sign of token then add *)
+		pChildren[[1]] = calcChangeSignOfToken[pChildren[[1]]];
+		calcAddTokenToParensToken[numberToken, CreateParensToken @ pChildren]
+	]
+
+(* case z - (x + y - w) *)
+calcSubtractParensTokenFromToken[numberToken_, parenToken_] :=
+	Module[{pChildren = parenToken["Children"]},	
+		(* distribute the sign then add *)
+		pChildren = 
+			Replace[
+				pChildren, 
+				{
+					CSSToken[<|"Type" -> "delim", "String" -> "-"|>] -> CSSToken[<|"Type" -> "delim", "String" -> "+"|>],
+					CSSToken[<|"Type" -> "delim", "String" -> "+"|>] -> CSSToken[<|"Type" -> "delim", "String" -> "-"|>]}, 
+				{1}];
+		pChildren[[1]] = calcChangeSignOfToken[pChildren[[1]]];
+ 		calcAddTokenToParensToken[numberToken, CreateParensToken @ pChildren]		
+	]
+	
+calcSubtractParensTokenFromParensToken[parenTokenLeft_, parenTokenRight_] :=
+	Module[{pChildren = parenTokenRight["Children"]},	
+		(* distribute the sign then add *)
+		pChildren = 
+			Replace[
+				pChildren, 
+				{
+					CSSToken[<|"Type" -> "delim", "String" -> "-"|>] -> CSSToken[<|"Type" -> "delim", "String" -> "+"|>],
+					CSSToken[<|"Type" -> "delim", "String" -> "+"|>] -> CSSToken[<|"Type" -> "delim", "String" -> "-"|>]}, 
+				{1}];
+		pChildren[[1]] = calcChangeSignOfToken[pChildren[[1]]];
+ 		calcAddParensTokenToParensToken[parenTokenLeft, CreateParensToken @ pChildren]		
+	]
+
+calcResolveSubtraction[leftToken_, rightToken_] :=
+	Which[
+		TokenTypeIs["number", leftToken] && TokenTypeIs["number", rightToken],                          calcSubtractNumberFromNumberToken[leftToken, rightToken],
+		TokenTypeIs["percentage", leftToken] && TokenTypeIs["percentage", rightToken],                  calcSubtractPercentageFromPercentageToken[leftToken, rightToken],
+		TokenTypeIs["dimension", leftToken] && TokenTypeIs["dimension", rightToken],                    calcSubtractDimensionFromDimensionToken[leftToken, rightToken],
+		TokenTypeIs["dimension" | "percentage" | "number", leftToken] && TokenTypeIs["()", rightToken], calcSubtractParensTokenFromToken[leftToken, rightToken],
+		TokenTypeIs["()", leftToken] && TokenTypeIs["dimension" | "percentage" | "number", rightToken], calcSubtractTokenFromParensToken[leftToken, rightToken],
+		TokenTypeIs["()", leftToken] && TokenTypeIs["()", rightToken],                                  calcSubtractParensTokenFromParensToken[leftToken, rightToken],
+		True,                                                                                           $Failed 		
+	]
+
+calcResolveAdditionAndSubtractionAtConstantTokenDepth[inputTokens:{__?CSSTokenQ}] :=
+	Module[{tokens = inputTokens, opPositions, numberOfSiblings, leftToken, leftTokenIndex, rightToken, rightTokenIndex, i, j, try, nOps, nTerms, termPattern},
+		opPositions = Flatten @ Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim", "String" -> "+" | "-"}]], {1}];
+		numberOfSiblings = Length[inputTokens];
+		termPattern = x_?CSSTokenQ /; Or[TokenTypeIs["function", x] && TokenStringIs["calc", x], TokenTypeIs["dimension" | "percentage" | "number" | "()", x]];
 		
+		(* check that operators appear between numbers/percentages/dimensions *)
+		nOps = Count[tokens, x_?CSSTokenQ /; TokenTypeIs["delim", x] && TokenStringIs["+"|"-", x]];
+		nTerms = Count[tokens, termPattern];
+		If[nTerms - 1 != nOps,
+			Throw @
+				Failure["BadParse", <|
+					"MessageTemplate" -> "calc() appears to be missing an operator.", 
+					"MessageParameters" -> <||>, 
+					"Expr" -> HighlightUntokenize[tokens, Position[tokens, termPattern]]|>]
+		];
+		
+		(* loop over opPositions *)
+		Do[
+			If[MatchQ[i, 1 | numberOfSiblings] || TokenTypeIsNot["whitespace", inputTokens[[i - 1]]] || TokenTypeIsNot["whitespace", inputTokens[[i + 1]]], 
+				Throw @ 
+					Failure["BadParse", <|
+						"MessageTemplate" -> "calc() + and - operator must have whitespace on either side.", 
+						"MessageParameters" -> <||>, 
+						"Expr" -> HighlightUntokenize[tokens, {i}]|>]
+				, 
+				j = i; RetreatPosAndSkipWhitespace[j, 1, tokens];
+				leftTokenIndex = j; leftToken = tokens[[j]];
+				j = i; AdvancePosAndSkipWhitespace[j, numberOfSiblings, tokens];
+				rightTokenIndex = j; rightToken = tokens[[j]];
+				(* leave the addition/subtraction intact if trying to add percentage and dimension, or two dimensions of matching type but not exact unit match *)
+				If[
+					Or[
+						TokenTypeIs["percentage", leftToken] && TokenTypeIs["dimension", rightToken], 
+						TokenTypeIs["dimension", leftToken] && TokenTypeIs["percentage", rightToken],
+						And[
+							TokenTypeIs["dimension", leftToken] && TokenTypeIs["dimension", rightToken],
+							parseType[leftToken["Unit"]] === parseType[rightToken["Unit"]],
+							!StringMatchQ[leftToken["Unit"], rightToken["Unit"], IgnoreCase -> True]]]
+					,
+					Null
+					,  
+					Which[
+						TokenStringIs["+", tokens[[i]]],
+							try = calcResolveAddition[leftToken, rightToken];
+							If[FailureQ[try], 
+								Throw @ 
+									Failure["BadParse", <|
+										"MessageTemplate" -> "calc() + operator must have a dimension or percentage on each side.", 
+										"MessageParameters" -> <||>, 
+										"Expr" -> HighlightUntokenize[tokens, Table[j, {j, leftTokenIndex, rightTokenIndex, 1}]]|>]
+							]
+						,
+						TokenStringIs["-", tokens[[i]]],
+							try = calcResolveSubtraction[leftToken, rightToken];
+							If[FailureQ[try], 
+								Throw @ 
+									Failure["BadParse", <|
+										"MessageTemplate" -> "calc() - operator must have a dimension or percentage on each side.", 
+										"MessageParameters" -> <||>, 
+										"Expr" -> HighlightUntokenize[tokens, Table[j, {j, leftTokenIndex, rightTokenIndex, 1}]]|>]
+							]
+						,
+						True,
+							Throw @ 
+								Failure["BadParse", <|
+									"MessageTemplate" -> "calc() contains unknown operator.", 
+									"MessageParameters" -> <||>, 
+									"Expr" -> HighlightUntokenize[tokens, i]|>]
+					];
+					tokens[[rightTokenIndex]] = try; tokens[[leftTokenIndex ;; rightTokenIndex - 1]] = CSSToken[<|"Type" -> "error", "String" -> "REMOVE"|>];
+				]
+			]
+			,
+			{i, opPositions}
+		];
+		DeleteCases[tokens, CSSToken[KeyValuePattern[{"Type" -> "error", "String" -> "REMOVE"}]], {1}]		
 	]
 	
 	

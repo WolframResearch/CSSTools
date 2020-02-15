@@ -3240,7 +3240,7 @@ parseSingleMargin[prop_String, token_?CSSTokenQ] := parseSingleMargin[prop, toke
 				_,      unrecognizedKeyWordFailure @ prop
 			],
 		"dimension",  parseLength @ token,
-		"number",     token["Value"],
+		"number",     parseZero @ token,
 		"percentage", parsePercentage @ token,
 		_,            unrecognizedValueFailure @ prop
 	]
