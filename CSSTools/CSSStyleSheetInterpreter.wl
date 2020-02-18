@@ -1282,22 +1282,32 @@ CSSCascade[
 				* introduces rem dimension i.e. "root ems"; these can't resolve in CSSCascade and should instead scale with CurentValue[$FrontEnd, FontSize]
 		*)
 				
-		If[DownValues[CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList] =!= {}, 
+		(* custom properties must resolve first *)
+		If[DownValues[CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList] =!= {},
+			declarations = CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList[declarations]
+		];
+		
+		(* attr() functions resolve; only works in CSSCascade if attr() contains fallback value *)
+		If[DownValues[CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsInDeclarationList] =!= {},
+			declarations = 
+				CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsInDeclarationList[
+					declarations, 
+					CSSTools`CSSSelectors3`Private`createEmptyTarget[]]
+		];
 			
-			(* custom properties must resolve first *)
-			If[DownValues[CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList] =!= {},
-				declarations = CSSTools`CSSCustomProperties1`Private`replaceVarFunctionsInDeclarationList[declarations]
-			];
+		Module[{itemsToResolve},
+			itemsToResolve = Flatten @ Position[(AssociationQ[#] && KeyExistsQ[#, "CSSResolveValueAtComputeTime"])& /@ declarations[[All, "Interpretation"]], True];
 			
-			Module[{itemsToResolve},
-				itemsToResolve = Flatten @ Position[(AssociationQ[#] && KeyExistsQ[#, "CSSResolveValueAtComputeTime"])& /@ declarations[[All, "Interpretation"]], True];
-				Do[
-					declarations[[i, "Interpretation"]] = 
-						consumeProperty[
-							declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "Property"]], 
-							CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]]],
-					{i, itemsToResolve}]
-			]
+			(* 
+				consumeProperty has been overloaded to handle e.g. attr() and calc() 
+				If these are detected then the property DownValues should occur. If 
+			*)
+			Do[
+				declarations[[i, "Interpretation"]] = 
+					consumeProperty[
+						declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "Property"]], 
+						CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]]],
+				{i, itemsToResolve}]
 		];
 		
 		(* assemble declarations into FE options *)
@@ -1342,6 +1352,7 @@ cssCascadeDeclarations[
 				MatchQ[inputSelectorList, _?ListQ], inputSelectorList,
 				True,                               {inputSelectorList}
 			];
+		Echo[selectorList, "sel list"];
 		
 		(* start by filtering the data by the given list of selectors; ordering is maintained *)
 		(* exceptions: @page rules *)
@@ -1354,6 +1365,7 @@ cssCascadeDeclarations[
  			Select[
  				CSSData, 
   				MatchQ[#Selector["Sequence"], Alternatives @@ Through[sel["Sequence"]]] &];
+  		Echo[dataSubset, "data subset"];
   		
   		(* gather all declarations, ordered by specificity unless that process is switched off *)
 		If[TrueQ @ OptionValue["IgnoreSpecificity"],

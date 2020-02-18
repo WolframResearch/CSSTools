@@ -76,7 +76,7 @@ DownValues[consumeProperty] =
 							CSSUntokenize[tokens]
 						]|>|>,
 						
-			(* any use of var() must be resolved at compute time (CSSInheritance) unless a parse error is detected *)
+			(* any use of var() must be resolved at compute time (CSSCascade/CSSInheritance) unless a parse error is detected *)
 			HoldPattern[
 				Condition[consumeProperty[prop_String, tokens:{__?CSSTokenQ}, opts:OptionsPattern[]], !FreeQ[tokens, TokenPatternString["var", "function"]]]
 			] :>
@@ -225,16 +225,20 @@ replaceVarFunctionWithTokens[tokensInput:{__?CSSTokenQ}, replacements_] :=
 	]
 	
 replaceVarFunctionsInDeclarationList[declarationsInput_?ListQ] :=
-	Module[{check, customPropertyDefinitions, itemsToResolve, declarations = declarationsInput},
+	Module[{check, customPropertyDefinitions, itemsToResolve, declarations = declarationsInput, try},
 		check = declarations[[All, "Interpretation"]];
 		customPropertyDefinitions = (#Name -> #Value)& /@ Flatten @ Values @ Pick[check, (AssociationQ[#] && KeyExistsQ[#, "CSSCustomPropertyDefinition"])& /@ check];
 		itemsToResolve = Flatten @ Position[(AssociationQ[#] && KeyExistsQ[#, "CSSResolveValueAtComputeTime"])& /@ check, True];
 		Do[
-			declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]] = 
-				CSSUntokenize @ 
-					replaceVarFunctionWithTokens[
-							CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]], 
-							customPropertyDefinitions];
+			try = 
+				replaceVarFunctionWithTokens[
+					CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]],
+					customPropertyDefinitions];
+			If[FailureQ[try],
+				declarations[[i, "Interpretation"]] = try
+				,
+				declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]] = CSSUntokenize @	try
+			]
 			,
 			{i, itemsToResolve}];
 		declarations

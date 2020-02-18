@@ -1555,7 +1555,7 @@ CSSTarget /: MakeBoxes[s:CSSTarget[a_?AssociationQ], StandardForm] :=
 
 
 (* ::Subsection::Closed:: *)
-(*CSSSelectorQ*)
+(*CSSTargetQ*)
 
 
 CSSTarget /: CSSTargetQ[CSSTarget[a_?AssociationQ]] := 
@@ -1568,6 +1568,8 @@ CSSTarget /: CSSTargetQ[CSSTarget[a_?AssociationQ]] :=
 		KeyExistsQ[a, "ID"],
 		KeyExistsQ[a, "CaseSensitive"]]
 CSSTargetQ[___] := False
+
+createEmptyTarget[] := CSSTarget[<|"Type" -> "", "Namespace" -> "", "Position" -> {}, "Attributes" -> <||>, "ID" -> "", "CaseSensitive" -> <||>|>]
 
 
 (* ::Subsection::Closed:: *)

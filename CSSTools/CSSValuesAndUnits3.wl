@@ -156,8 +156,21 @@ DownValues[consumeProperty] =
 				Module[{calcCheck},
 					calcCheck = Catch[calcReduce /@ Extract[tokens, Position[tokens, TokenPatternString["calc", "function"]]]];
 					Which[
-						FailureQ[calcCheck], calcCheck,
-						Position[calcCheck, TokenPatternString["calc", "function"]] === {}, consumeProperty[prop, calcCheck],
+						(* parse failure *)
+						FailureQ[calcCheck], 
+							calcCheck,
+						
+						(* parses directly to dimension|percentage|number *)
+						(* consumeProperty eventually checks whether numeric values and/or percentages are compatible with property value *)
+						Position[calcCheck, TokenPatternString["calc", "function"]] === {}, 
+							consumeProperty[prop, calcCheck], 
+						
+						(* good parse that contains calc(% + dimension), but percentage is incompatible with property value *)
+						Position[calcCheck, TokenPatternString["*", "percentage"]] =!= {} && !MemberQ[CSSPropertyData[prop, "Values"], "<percentage>"],
+							Failure["UnexpectedParse", <|
+								"MessageTemplate"   -> "Property `Prop` does not support percentages.", 
+								"MessageParameters" -> <|"Prop" -> prop|>|>],
+								
 						True,
 							<|"CSSResolveValueAtComputeTime" -> <|
 								"String"     -> CSSUntokenize[calcCheck],
@@ -303,178 +316,50 @@ consumeDefaultNamespacePrefix[pos_, l_, tokens_, namespaces_] :=
 
 
 (* ::Subsection::Closed:: *)
-(*Parsing*)
-
-
-(* ========== Parsing attr() function ========== *)
-ClearAll[attrFailureBadAttrName, attrFailureBadNamespace, attrFailureUnknownUnitType];
-attrFailureNotAttrFunction = 
-	Failure["UnexpectedToken", <|
-		"MessageTemplate"   -> "Expected an attr() function token.", 
-		"MessageParameters" -> <|"Type" -> "Parse"|>|>];
-		
-attrFailureBadAttrName[token_] := 
-	Failure["UnexpectedToken", <|
-		"MessageTemplate"   -> "Expected an ident token for the attribute name.", 
-		"MessageParameters" -> <|"Type" -> "Parse"|>,
-		"Type"              -> token|>];
-		
-attrFailureBadNamespace[ns_] := 
-	Failure["UnexpectedToken", <|
-		"MessageTemplate"   -> "Undeclared namespace.", 
-		"MessageParameters" -> <|"Type" -> "Parse"|>,
-		"Namespace"         -> ns|>];
-		
-attrFailureUnknownUnitType[unit_] := 
-	Failure["UnexpectedToken", <|
-		"MessageTemplate"   -> "Unknown attribute unit or type.", 
-		"MessageParameters" -> <|"Type" -> "Parse"|>,
-		"Type"              -> unit|>];
-		
-attrFailureNoComma =
-	Failure["UnexpectedToken", <|
-		"MessageTemplate" -> "Expected a comma token before the fallback value.",
-		"MessageParameters" -> <|"Type" -> "Parse"|>|>];
-
-attrFailureMissingFallback =
-	Failure["UnexpectedToken", <|
-		"MessageTemplate" -> "Missing fallback value.",
-		"MessageParameters" -> <|"Type" -> "Parse"|>|>];
-
-attrFailureInvalidFallback =
-	Failure["UnexpectedToken", <|
-		"MessageTemplate" -> "Invalid fallback value.",
-		"MessageParameters" -> <|"Type" -> "Parse"|>|>];
-		
-attrFailureFallbackContainsAttrFunctions =
-	Failure["UnexpectedToken", <|
-		"MessageTemplate" -> "Fallback cannot contain additional attr() functions.",
-		"MessageParameters" -> <|"Type" -> "Parse"|>|>];
-
-
-(*attributeFallbackDefaults[type_String] :=
-	Switch[type,
-		"string",  "",
-		"color",   Dynamic[CurrentValue[FontColor]],
-		"url",     CSSToken[<|"Type" -> "url", "String" -> "", "Quotes" -> "\""|>],
-		"%",       CSSToken[<|"Type" -> "percentage", "String" -> "0",   "Value" -> 0,  "ValueType" -> "integer"|>],
-		"number",  CSSToken[<|"Type" -> "number",     "String" -> "0.0", "Value" -> 0., "ValueType" -> type|>],
-		"integer", CSSToken[<|"Type" -> "number",     "String" -> "0",   "Value" -> 0,  "ValueType" -> type|>],
-		_,         CSSToken[<|"Type" -> "dimension",  "String" -> "0",   "Value" -> 0,  "ValueType" -> "integer", "Unit" -> type|>]
-	]*)
-	
-attributeFallbackDefaults[type_String] :=
-	Switch[type,
-		"string",  "", (* to be interpreted later as "" *)
-		"color",   "currentColor",
-		"url",     "\"\"", (* to be interpreted later as url("") *)
-		"%",       "0%",
-		"number",  "0.0",
-		"integer", "0",
-		_,         "0" <> type
-	]
-
-parseAttrFunctionToken[t_?CSSTokenQ, namespaces_] :=
-	Module[{pos, l, tokens, ns, attribName, typeOrUnit, fallback, defaultNS},
-		If[TokenTypeIsNot["function", t] || TokenStringIsNot["attr", t], Return @ attrFailureNotAttrFunction];
-		
-		tokens = t["Children"];
-		pos = 1; 
-		l = Length[tokens];
-		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
-		
-		(* ==== get attr-name which may have a namespace ==== *)
-		ns = Missing["NotFound"];
-		Switch[tokens[[pos]]["Type"],
-			"ident",
-				(* check whether ident is a namespace *)
-				If[isNamespace[pos, l, tokens], ns = consumeNamespacePrefix[pos, l, tokens, namespaces]];
-				If[FailureQ[ns], Return @ ns],
-			"delim",
-				Switch[tokens[[pos]]["String"],
-					"*", 
-						(* check whether universal selector is the namespace *)
-						If[isNamespace[pos, l, tokens], pos++; pos++; ns = All, Return @ attrFailureBadAttrName["*"]],
-					"|", 
-						(* check whether the namespace declaration is followed by ident *)
-						If[isNoNamespace[pos, l, tokens], pos++; ns = None,	Return @ attrFailureBadAttrName["|"]],
-					_, 
-						Return @ attrFailureBadAttrName[tokens[[pos]]["String"]]
-				],
-			_, Return @ attrFailureBadAttrName[tokens[[pos]]["String"]]
-		];
-		
-		(* check attr() namespace against declared namespaces *)
-		defaultNS = FirstCase[namespaces, _?(Function[#Default === True])];
-		Which[
-			MissingQ[ns] &&  MissingQ[defaultNS], Null, (* no namespace in attr() and no namespace declared *) (* pretty common *)
-			MissingQ[ns] && !MissingQ[defaultNS], Null, (* attr() takes on default namespace *)
-			MatchQ[ns, None | All],               Null, (* None or All attr() namespace is always allowed *)
-			True, 
-				If[MissingQ[FirstCase[namespaces, _?(Function[#Prefix === ns])]], Return @ attrFailureBadNamespace[ns]]
-		]; 
-		
-		(* get attribute name *)
-		If[pos > l || TokenTypeIsNot["ident", tokens[[pos]]], Return @ attrFailureBadAttrName[tokens[[pos]]["Type"]]];
-		attribName = tokens[[pos]]["String"];
-		AdvancePosAndSkipWhitespace[pos, l, tokens];
-		
-		(* ==== get optional type or unit ==== *)
-		If[pos <= l && TokenTypeIs["ident", tokens[[pos]]],
-			typeOrUnit = CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"];
-			AdvancePosAndSkipWhitespace[pos, l, tokens];
-			,
-			typeOrUnit = "string"
-		];
-		If[!StringMatchQ[
-			typeOrUnit, 
-			Alternatives[
-				"string", "color", "url", "integer", "number", "length", 
-				"em", "ex", "ch", "rem", "vw", "vh", "vmin", "vmax", "in", "cm", "mm", "px", "pc", "pt", "q",
-				"frequency", "hz", "khz",	"time", "s", "ms", "angle", "deg", "grad", "rad", "turns", "%"]],
-			Return @ attrFailureUnknownUnitType[typeOrUnit]
-		];
-		
-		(* ==== check for fallback syntax, which could still lead to a failure ==== *)
-		(* if nothing but whitespace remains, then the value is good to go with a default fallback value*)
-		If[(pos > l) || (pos == l && TokenTypeIs["whitespace", tokens[[pos]]]), 
-			fallback = attributeFallbackDefaults[typeOrUnit];
-			Return @ <|"NamespacePrefix" -> ns, "AttributeName" -> attribName, "Type" -> typeOrUnit, "Fallback" -> fallback|>
-		];
-		
-		(* comma must be present for a non-default fallback to exist *)
-		If[TokenTypeIsNot["comma", tokens[[pos]]], Return @ attrFailureNoComma];
-		AdvancePosAndSkipWhitespace[pos, l, tokens]; 
-		If[(pos > l) || (pos == l && TokenTypeIs["whitespace", tokens[[pos]]]), Return @ attrFailureMissingFallback];
-		If[!FreeQ[tokens[[pos ;; ]], CSSToken[KeyValuePattern[{"Type" -> "function", "String" -> "attr"}]]],
-			Return @ attrFailureFallbackContainsAttrFunctions
-		];
-		fallback = tokens[[pos]];
-		AdvancePosAndSkipWhitespace[pos, l, tokens];
-		
-		(* success if only whitespace remains, otherwise it's an invalid fallback *)
-		If[(pos > l) || (pos == l && TokenTypeIs["whitespace", tokens[[pos]]]), 
-			<|"NamespacePrefix" -> ns, "AttributeName" -> attribName, "Type" -> typeOrUnit, "Fallback" -> CSSUntokenize @ fallback|>
-			,
-			attrFailureInvalidFallback
-		]		
-	]
+(*calc()*)
 	
 	
-(* ========== Parsing calc() function ========== *)
 (* this should probably go into Tokenize package *)
 HighlightUntokenize[tokens:{__?CSSTokenQ}, highlightPositions_] := 
 	Module[{highlights},
 		highlights = 
 			Replace[
 				#,
-				CSSToken[kvp:KeyValuePattern[{"String" -> s_}]] :> CSSToken[<|kvp, "String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)"|>]
+				{
+					CSSToken[kvp:KeyValuePattern[{"Type" -> "dimension", "String" -> s_, "Unit" -> u_}]] :> 
+						CSSToken[<|kvp, 
+							"String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)",
+							"Unit"   -> "\!\(\*StyleBox[\"" <> u <> "\",Background->RGBColor[1,1,0]]\)"|>],
+					CSSToken[kvp:KeyValuePattern[{"Type" -> "percentage", "String" -> s_}]] :> 
+						CSSToken[<|kvp, 
+							"String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)",
+							"Unit"   -> "\!\(\*StyleBox[\"%\",Background->RGBColor[1,1,0]]\)"|>],
+					CSSToken[kvp:KeyValuePattern[{"String" -> s_}]] :> CSSToken[<|kvp, "String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)"|>]}
 			]& /@ Extract[tokens, highlightPositions];
 		CSSUntokenize @ ReplacePart[tokens, Thread[highlightPositions -> highlights]]			
 	]
 			
 calcGetPositionOfDeepestMultiplicationOrDivision[tokens:{__?CSSTokenQ}] := 
 	First[ReverseSortBy[Length] @ Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim", "String" -> "*" | "/"}]]], None]
+
+$Debug = False;
+
+calcCreateValue[inputToken_?CSSTokenQ] :=
+	Module[{tokens, currentDepthPosition, tokensAtDepth, opPosition, tokenCheck, wrapperPosition, wrapperToken, pos, l},
+		(* check that input token is a calc() function *)
+		If[TokenTypeIs["function", inputToken] && TokenStringIs["calc", inputToken], 
+			tokens = inputToken["Children"];
+			,
+			Throw @ 
+				Failure["BadParse", <|
+					"MessageTemplate" -> "Expected calc() function token.", 
+					"MessageParameters" -> <||>, 
+					"Token" -> inputToken|>]
+		];
+		
+		tokenCheck = Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "dimension" | "percentage" | "number"}]]];
+		(*TODO: finish this function to return value that FE understands *)
+	]
 
 calcReduce[inputToken_?CSSTokenQ] :=
 	Module[{tokens, currentDepthPosition, tokensAtDepth, opPosition, tokenCheck, wrapperPosition, wrapperToken, pos, l},
@@ -488,6 +373,7 @@ calcReduce[inputToken_?CSSTokenQ] :=
 					"MessageParameters" -> <||>, 
 					"Token" -> inputToken|>]
 		];
+		If[$Debug, Echo["calc() function check"]];
 		
 		(* check for only valid operators *)
 		opPosition = Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim"}]]];
@@ -498,6 +384,7 @@ calcReduce[inputToken_?CSSTokenQ] :=
 					"MessageTemplate" -> "calc() contains unexpected operators.", 
 					"MessageParameters" -> <||>, 
 					"Expr" -> HighlightUntokenize[tokens, opPosition]|>]];
+		If[$Debug, Echo["calc() operator check"]];
 		
 		(* check for only valid values *)
 		tokenCheck = Position[tokens, CSSToken[KeyValuePattern[{"Type" -> Except["delim" | "whitespace" | "percentage" | "number" | "dimension"]}]]];
@@ -508,6 +395,7 @@ calcReduce[inputToken_?CSSTokenQ] :=
 					"MessageTemplate" -> "calc() contains unexpected tokens.", 
 					"MessageParameters" -> <||>, 
 					"Expr" -> HighlightUntokenize[tokens, opPosition]|>]];
+		If[$Debug, Echo["calc() value check"]];
 			
 		(* perform reduction of calc() expression *)
 		opPosition = calcGetPositionOfDeepestMultiplicationOrDivision[tokens];
@@ -519,9 +407,9 @@ calcReduce[inputToken_?CSSTokenQ] :=
 				tokensAtDepth = Extract[tokens, currentDepthPosition];
 			];
 			tokensAtDepth = calcResolveMultiplicationAndDivisionAtConstantTokenDepth[tokensAtDepth];
-			(*Echo[CSSUntokenize[tokensAtDepth], "MD"];*)
+			If[$Debug, Echo[CSSUntokenize[tokensAtDepth], "MD"]];
 			tokensAtDepth = calcResolveAdditionAndSubtractionAtConstantTokenDepth[tokensAtDepth];
-			(*Echo[CSSUntokenize[tokensAtDepth], "AS"];*)
+			If[$Debug, Echo[CSSUntokenize[tokensAtDepth], "AS"]];
 			If[currentDepthPosition =!= {},
 				tokens = ReplacePart[tokens, currentDepthPosition -> tokensAtDepth];
 				wrapperPosition = Drop[currentDepthPosition, -2];
@@ -536,7 +424,7 @@ calcReduce[inputToken_?CSSTokenQ] :=
 				tokens = tokensAtDepth;
 				currentDepthPosition = None (* stop While loop *)
 			];
-			(*Echo[CSSUntokenize[tokens]];*)
+			If[$Debug, Echo[CSSUntokenize[tokens]]];
 			opPosition = calcGetPositionOfDeepestMultiplicationOrDivision[tokens];
 		];
 		(* in case the calc expression is already flat and has no multiplication, do addition/subtraction *)
@@ -910,7 +798,7 @@ calcResolveAdditionAndSubtractionAtConstantTokenDepth[inputTokens:{__?CSSTokenQ}
 		If[nTerms - 1 != nOps,
 			Throw @
 				Failure["BadParse", <|
-					"MessageTemplate" -> "calc() appears to be missing an operator.", 
+					"MessageTemplate" -> If[nTerms - 1 > nOps, "calc() appears to be missing an operator.", "calc() has too many operators."], 
 					"MessageParameters" -> <||>, 
 					"Expr" -> HighlightUntokenize[tokens, Position[tokens, termPattern]]|>]
 		];
@@ -929,26 +817,35 @@ calcResolveAdditionAndSubtractionAtConstantTokenDepth[inputTokens:{__?CSSTokenQ}
 				j = i; AdvancePosAndSkipWhitespace[j, numberOfSiblings, tokens];
 				rightTokenIndex = j; rightToken = tokens[[j]];
 				(* leave the addition/subtraction intact if trying to add percentage and dimension, or two dimensions of matching type but not exact unit match *)
-				If[
+				Which[
 					Or[
 						TokenTypeIs["percentage", leftToken] && TokenTypeIs["dimension", rightToken], 
 						TokenTypeIs["dimension", leftToken] && TokenTypeIs["percentage", rightToken],
 						And[
-							TokenTypeIs["dimension", leftToken] && TokenTypeIs["dimension", rightToken],
+							TokenTypeIs["dimension", leftToken], TokenTypeIs["dimension", rightToken],
 							parseType[leftToken["Unit"]] === parseType[rightToken["Unit"]],
-							!StringMatchQ[leftToken["Unit"], rightToken["Unit"], IgnoreCase -> True]]]
-					,
-					Null
-					,  
+							!StringMatchQ[leftToken["Unit"], rightToken["Unit"], IgnoreCase -> True]]],
+					Null,
+					
+					And[
+						TokenTypeIs["dimension", leftToken], TokenTypeIs["dimension", rightToken],
+						parseType[leftToken["Unit"]] =!= parseType[rightToken["Unit"]]],
+					Throw @ 
+						Failure["BadParse", <|
+							"MessageTemplate" -> "calc() cannot add or subtract incompatible types.", 
+							"MessageParameters" -> <||>, 
+							"Expr" -> HighlightUntokenize[tokens, {{leftTokenIndex}, {rightTokenIndex}}]|>],  
+					
+					True,
 					Which[
 						TokenStringIs["+", tokens[[i]]],
 							try = calcResolveAddition[leftToken, rightToken];
 							If[FailureQ[try], 
 								Throw @ 
 									Failure["BadParse", <|
-										"MessageTemplate" -> "calc() + operator must have a dimension or percentage on each side.", 
+										"MessageTemplate" -> "calc() + operator must have compatible terms on each side.", 
 										"MessageParameters" -> <||>, 
-										"Expr" -> HighlightUntokenize[tokens, Table[j, {j, leftTokenIndex, rightTokenIndex, 1}]]|>]
+										"Expr" -> HighlightUntokenize[tokens, {{leftTokenIndex}, {rightTokenIndex}}]|>]
 							]
 						,
 						TokenStringIs["-", tokens[[i]]],
@@ -956,9 +853,9 @@ calcResolveAdditionAndSubtractionAtConstantTokenDepth[inputTokens:{__?CSSTokenQ}
 							If[FailureQ[try], 
 								Throw @ 
 									Failure["BadParse", <|
-										"MessageTemplate" -> "calc() - operator must have a dimension or percentage on each side.", 
+										"MessageTemplate" -> "calc() - operator must have a compatible terms on each side.", 
 										"MessageParameters" -> <||>, 
-										"Expr" -> HighlightUntokenize[tokens, Table[j, {j, leftTokenIndex, rightTokenIndex, 1}]]|>]
+										"Expr" -> HighlightUntokenize[tokens, {{leftTokenIndex}, {rightTokenIndex}}]|>]
 							]
 						,
 						True,
@@ -979,10 +876,212 @@ calcResolveAdditionAndSubtractionAtConstantTokenDepth[inputTokens:{__?CSSTokenQ}
 	
 	
 (* ::Subsection::Closed:: *)
-(*Token Replacing*)
+(*rem unit*)
 
 
-(* ========== attr() replacment ========== *)
+getPositionOfNearestRemDimensionToken[tokens_] := 
+	FirstPosition[
+		tokens, 
+		CSSToken[KeyValuePattern[{"Type" -> "dimension", "Unit" -> _String?(StringQ[#] && StringMatchQ[CSSNormalizeEscapes @ #, "rem", IgnoreCase -> True]&)}]],
+		None]
+
+replaceRemDimensionWithTokens[tokensInput:{__?CSSTokenQ}, rootFontSizeValue_, rootFontSizeDimension_] :=
+	Module[{tokens = tokensInput, remPosition, remToken},
+		(* If the root does not define FontSize, then wait to use fallback rem value when parsing lengths *)
+		If[rootFontSizeValue === None || rootFontSizeDimension === None, Return @ tokens];
+		
+		(* with a root FontSize, then replace throughout *)
+		remPosition = getPositionOfNearestRemDimensionToken[tokens];
+		While[remPosition =!= None,
+			remToken = Extract[tokens, remPosition];
+			remToken = 
+				Replace[
+					remToken, 
+					CSSToken[kvp:KeyValuePattern[{"Value" -> v_}]] :> 
+						With[{new = v*rootFontSizeValue}, 
+							CSSToken[<|kvp, "Unit" -> rootFontSizeDimension, "String" -> ToString[new], "Value" -> new, "ValueType" -> If[IntegerQ[new], "integer", "number"]|>]]];
+			
+			tokens = ReplacePart[tokens, remPosition -> remToken];
+			remPosition = getPositionOfNearestRemDimensionToken[tokens];
+		];
+		tokens
+	]
+	
+replaceRemDimensionsInDeclarationList[declarationsInput_?ListQ, rootFontSizeValue_, rootFontSizeDimension_] :=
+	Module[{check, itemsToResolve, declarations = declarationsInput},
+		check = declarations[[All, "Interpretation"]];
+		itemsToResolve = Flatten @ Position[(AssociationQ[#] && KeyExistsQ[#, "CSSResolveValueAtComputeTime"])& /@ check, True];
+		Do[
+			declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]] = 
+				CSSUntokenize @ 
+					replaceRemDimensionWithTokens[
+							CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]], 
+							rootFontSizeValue,
+							rootFontSizeDimension];
+			,
+			{i, itemsToResolve}];
+		declarations
+	]
+
+
+(* ::Subsection::Closed:: *)
+(*attr()*)
+
+
+ClearAll[attrFailureBadAttrName, attrFailureBadNamespace, attrFailureUnknownUnitType];
+attrFailureNotAttrFunction = 
+	Failure["UnexpectedToken", <|
+		"MessageTemplate"   -> "Expected an attr() function token.", 
+		"MessageParameters" -> <|"Type" -> "Parse"|>|>];
+		
+attrFailureBadAttrName[token_] := 
+	Failure["UnexpectedToken", <|
+		"MessageTemplate"   -> "Expected an ident token for the attribute name.", 
+		"MessageParameters" -> <|"Type" -> "Parse"|>,
+		"Type"              -> token|>];
+		
+attrFailureBadNamespace[ns_] := 
+	Failure["UnexpectedToken", <|
+		"MessageTemplate"   -> "Undeclared namespace.", 
+		"MessageParameters" -> <|"Type" -> "Parse"|>,
+		"Namespace"         -> ns|>];
+		
+attrFailureUnknownUnitType[unit_] := 
+	Failure["UnexpectedToken", <|
+		"MessageTemplate"   -> "Unknown attribute unit or type.", 
+		"MessageParameters" -> <|"Type" -> "Parse"|>,
+		"Type"              -> unit|>];
+		
+attrFailureNoComma =
+	Failure["UnexpectedToken", <|
+		"MessageTemplate" -> "Expected a comma token before the fallback value.",
+		"MessageParameters" -> <|"Type" -> "Parse"|>|>];
+
+attrFailureMissingFallback =
+	Failure["UnexpectedToken", <|
+		"MessageTemplate" -> "Missing fallback value.",
+		"MessageParameters" -> <|"Type" -> "Parse"|>|>];
+
+attrFailureInvalidFallback =
+	Failure["UnexpectedToken", <|
+		"MessageTemplate" -> "Invalid fallback value.",
+		"MessageParameters" -> <|"Type" -> "Parse"|>|>];
+		
+attrFailureFallbackContainsAttrFunctions =
+	Failure["UnexpectedToken", <|
+		"MessageTemplate" -> "Fallback cannot contain additional attr() functions.",
+		"MessageParameters" -> <|"Type" -> "Parse"|>|>];
+
+
+(*attributeFallbackDefaults[type_String] :=
+	Switch[type,
+		"string",  "",
+		"color",   Dynamic[CurrentValue[FontColor]],
+		"url",     CSSToken[<|"Type" -> "url", "String" -> "", "Quotes" -> "\""|>],
+		"%",       CSSToken[<|"Type" -> "percentage", "String" -> "0",   "Value" -> 0,  "ValueType" -> "integer"|>],
+		"number",  CSSToken[<|"Type" -> "number",     "String" -> "0.0", "Value" -> 0., "ValueType" -> type|>],
+		"integer", CSSToken[<|"Type" -> "number",     "String" -> "0",   "Value" -> 0,  "ValueType" -> type|>],
+		_,         CSSToken[<|"Type" -> "dimension",  "String" -> "0",   "Value" -> 0,  "ValueType" -> "integer", "Unit" -> type|>]
+	]*)
+	
+attributeFallbackDefaults[type_String] :=
+	Switch[type,
+		"string",  "", (* to be interpreted later as "" *)
+		"color",   "currentColor",
+		"url",     "\"\"", (* to be interpreted later as url("") *)
+		"%",       "0%",
+		"number",  "0.0",
+		"integer", "0",
+		_,         "0" <> type
+	]
+
+parseAttrFunctionToken[t_?CSSTokenQ, namespaces_] :=
+	Module[{pos, l, tokens, ns, attribName, typeOrUnit, fallback, defaultNS},
+		If[TokenTypeIsNot["function", t] || TokenStringIsNot["attr", t], Return @ attrFailureNotAttrFunction];
+		
+		tokens = t["Children"];
+		pos = 1; 
+		l = Length[tokens];
+		If[TokenTypeIs["whitespace", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens]];
+		
+		(* ==== get attr-name which may have a namespace ==== *)
+		ns = Missing["NotFound"];
+		Switch[tokens[[pos]]["Type"],
+			"ident",
+				(* check whether ident is a namespace *)
+				If[isNamespace[pos, l, tokens], ns = consumeNamespacePrefix[pos, l, tokens, namespaces]];
+				If[FailureQ[ns], Return @ ns],
+			"delim",
+				Switch[tokens[[pos]]["String"],
+					"*", 
+						(* check whether universal selector is the namespace *)
+						If[isNamespace[pos, l, tokens], pos++; pos++; ns = All, Return @ attrFailureBadAttrName["*"]],
+					"|", 
+						(* check whether the namespace declaration is followed by ident *)
+						If[isNoNamespace[pos, l, tokens], pos++; ns = None,	Return @ attrFailureBadAttrName["|"]],
+					_, 
+						Return @ attrFailureBadAttrName[tokens[[pos]]["String"]]
+				],
+			_, Return @ attrFailureBadAttrName[tokens[[pos]]["String"]]
+		];
+		
+		(* check attr() namespace against declared namespaces *)
+		defaultNS = FirstCase[namespaces, _?(Function[#Default === True])];
+		Which[
+			MissingQ[ns] &&  MissingQ[defaultNS], Null, (* no namespace in attr() and no namespace declared *) (* pretty common *)
+			MissingQ[ns] && !MissingQ[defaultNS], Null, (* attr() takes on default namespace *)
+			MatchQ[ns, None | All],               Null, (* None or All attr() namespace is always allowed *)
+			True, 
+				If[MissingQ[FirstCase[namespaces, _?(Function[#Prefix === ns])]], Return @ attrFailureBadNamespace[ns]]
+		]; 
+		
+		(* get attribute name *)
+		If[pos > l || TokenTypeIsNot["ident", tokens[[pos]]], Return @ attrFailureBadAttrName[tokens[[pos]]["Type"]]];
+		attribName = tokens[[pos]]["String"];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		
+		(* ==== get optional type or unit ==== *)
+		If[pos <= l && TokenTypeIs["ident", tokens[[pos]]],
+			typeOrUnit = CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"];
+			AdvancePosAndSkipWhitespace[pos, l, tokens];
+			,
+			typeOrUnit = "string"
+		];
+		If[!StringMatchQ[
+			typeOrUnit, 
+			Alternatives[
+				"string", "color", "url", "integer", "number", "length", 
+				"em", "ex", "ch", "rem", "vw", "vh", "vmin", "vmax", "in", "cm", "mm", "px", "pc", "pt", "q",
+				"frequency", "hz", "khz",	"time", "s", "ms", "angle", "deg", "grad", "rad", "turns", "%"]],
+			Return @ attrFailureUnknownUnitType[typeOrUnit]
+		];
+		
+		(* ==== check for fallback syntax, which could still lead to a failure ==== *)
+		(* if nothing but whitespace remains, then the value is good to go with a default fallback value*)
+		If[(pos > l) || (pos == l && TokenTypeIs["whitespace", tokens[[pos]]]), 
+			fallback = attributeFallbackDefaults[typeOrUnit];
+			Return @ <|"NamespacePrefix" -> ns, "AttributeName" -> attribName, "Type" -> typeOrUnit, "Fallback" -> fallback|>
+		];
+		
+		(* comma must be present for a non-default fallback to exist *)
+		If[TokenTypeIsNot["comma", tokens[[pos]]], Return @ attrFailureNoComma];
+		AdvancePosAndSkipWhitespace[pos, l, tokens]; 
+		If[(pos > l) || (pos == l && TokenTypeIs["whitespace", tokens[[pos]]]), Return @ attrFailureMissingFallback];
+		If[!FreeQ[tokens[[pos ;; ]], CSSToken[KeyValuePattern[{"Type" -> "function", "String" -> "attr"}]]],
+			Return @ attrFailureFallbackContainsAttrFunctions
+		];
+		fallback = tokens[[pos]];
+		AdvancePosAndSkipWhitespace[pos, l, tokens];
+		
+		(* success if only whitespace remains, otherwise it's an invalid fallback *)
+		If[(pos > l) || (pos == l && TokenTypeIs["whitespace", tokens[[pos]]]), 
+			<|"NamespacePrefix" -> ns, "AttributeName" -> attribName, "Type" -> typeOrUnit, "Fallback" -> CSSUntokenize @ fallback|>
+			,
+			attrFailureInvalidFallback
+		]		
+	]
+	
+
 badAttrFailure[type_, value_] := 
 	Failure["BadAttr", <|
 		"MessageTemplate" -> "Attribute value `Value` does not match provided type `Type`.", 
@@ -1076,69 +1175,25 @@ replaceAttrFunctionsWithTokens[tokensInput:{__?CSSTokenQ}, element_?CSSTargetQ, 
 	];
 	
 replaceAttrFunctionsInDeclarationList[declarationsInput_?ListQ, element_?CSSTargetQ] :=
-	Module[{check, itemsToResolve, declarations = declarationsInput, ssNamespaces},
+	Module[{check, itemsToResolve, declarations = declarationsInput, ssNamespaces, try},
 		check = declarations[[All, "Interpretation"]];
 		itemsToResolve = Flatten @ Position[(AssociationQ[#] && KeyExistsQ[#, "CSSResolveValueAtComputeTime"])& /@ check, True];
 		Do[
 			ssNamespaces = declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "Namespaces"]];
-			declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]] = 
-				CSSUntokenize @ 
-					replaceAttrFunctionsWithTokens[
-							CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]], 
-							element,
-							ssNamespaces];
+			try = 
+				replaceAttrFunctionsWithTokens[
+					CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]], 
+					element,
+					ssNamespaces];
+			If[FailureQ[try],
+				declarations[[i, "Interpretation"]] = try
+				,
+				declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]] =	CSSUntokenize @ try
+			];
 			,
 			{i, itemsToResolve}];
 		declarations
 	]
-	
-	
-(* ========== rem unit replacment ========== *)
-getPositionOfNearestRemDimensionToken[tokens_] := 
-	FirstPosition[
-		tokens, 
-		CSSToken[KeyValuePattern[{"Type" -> "dimension", "Unit" -> _String?(StringQ[#] && StringMatchQ[CSSNormalizeEscapes @ #, "rem", IgnoreCase -> True]&)}]],
-		None]
-
-replaceRemDimensionWithTokens[tokensInput:{__?CSSTokenQ}, rootFontSizeValue_, rootFontSizeDimension_] :=
-	Module[{tokens = tokensInput, remPosition, remToken},
-		(* If the root does not define FontSize, then wait to use fallback rem value when parsing lengths *)
-		If[rootFontSizeValue === None || rootFontSizeDimension === None, Return @ tokens];
-		
-		(* with a root FontSize, then replace throughout *)
-		remPosition = getPositionOfNearestRemDimensionToken[tokens];
-		While[remPosition =!= None,
-			remToken = Extract[tokens, remPosition];
-			remToken = 
-				Replace[
-					remToken, 
-					CSSToken[kvp:KeyValuePattern[{"Value" -> v_}]] :> 
-						With[{new = v*rootFontSizeValue}, 
-							CSSToken[<|kvp, "Unit" -> rootFontSizeDimension, "String" -> ToString[new], "Value" -> new, "ValueType" -> If[IntegerQ[new], "integer", "number"]|>]]];
-			
-			tokens = ReplacePart[tokens, remPosition -> remToken];
-			remPosition = getPositionOfNearestRemDimensionToken[tokens];
-		];
-		tokens
-	]
-	
-replaceRemDimensionsInDeclarationList[declarationsInput_?ListQ, rootFontSizeValue_, rootFontSizeDimension_] :=
-	Module[{check, itemsToResolve, declarations = declarationsInput},
-		check = declarations[[All, "Interpretation"]];
-		itemsToResolve = Flatten @ Position[(AssociationQ[#] && KeyExistsQ[#, "CSSResolveValueAtComputeTime"])& /@ check, True];
-		Do[
-			declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]] = 
-				CSSUntokenize @ 
-					replaceRemDimensionWithTokens[
-							CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]], 
-							rootFontSizeValue,
-							rootFontSizeDimension];
-			,
-			{i, itemsToResolve}];
-		declarations
-	]
-
-	
 	
 	
 End[] (* End Private Context *)
