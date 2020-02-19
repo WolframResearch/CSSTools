@@ -361,20 +361,11 @@ calcCreateValue[inputToken_?CSSTokenQ] :=
 		(*TODO: finish this function to return value that FE understands *)
 	]
 
-calcReduce[inputToken_?CSSTokenQ] :=
-	Module[{tokens, currentDepthPosition, tokensAtDepth, opPosition, tokenCheck, wrapperPosition, wrapperToken, pos, l},
-		(* check that input token is a calc() function *)
-		If[TokenTypeIs["function", inputToken] && TokenStringIs["calc", inputToken], 
-			tokens = inputToken["Children"];
-			,
-			Throw @ 
-				Failure["BadParse", <|
-					"MessageTemplate" -> "Expected calc() function token.", 
-					"MessageParameters" -> <||>, 
-					"Token" -> inputToken|>]
-		];
-		If[$Debug, Echo["calc() function check"]];
-		
+
+calcReduce[inputToken_?CSSTokenQ /; TokenTypeIs["dimension" | "percentage" | "number", inputToken]] := inputToken
+
+calcReduce[inputToken_?CSSTokenQ /; tokenIsParenOrCalc[inputToken]] :=
+	Module[{tokens = inputToken["Children"], currentDepthPosition, tokensAtDepth, opPosition, tokenCheck, wrapperPosition, wrapperToken, pos, l},
 		(* check for only valid operators *)
 		opPosition = Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim"}]]];
 		opPosition = Pick[opPosition, !MatchQ[#, "+" | "-" | "*" | "/"]& /@ Through[Extract[tokens, opPosition]["String"]]];
@@ -388,7 +379,7 @@ calcReduce[inputToken_?CSSTokenQ] :=
 		
 		(* check for only valid values *)
 		tokenCheck = Position[tokens, CSSToken[KeyValuePattern[{"Type" -> Except["delim" | "whitespace" | "percentage" | "number" | "dimension"]}]]];
-		tokenCheck = Pick[tokenCheck, Not[Or[TokenTypeIs["function", #] && TokenStringIs["calc", #], TokenTypeIs["()", #]]]& /@ Extract[tokens, tokenCheck]];
+		tokenCheck = Pick[tokenCheck, Not[tokenIsParenOrCalc[#]]& /@ Extract[tokens, tokenCheck]];
 		If[tokenCheck =!= {}, 
 			Throw @ 
 				Failure["BadParse", <|
@@ -429,7 +420,8 @@ calcReduce[inputToken_?CSSTokenQ] :=
 		];
 		(* in case the calc expression is already flat and has no multiplication, do addition/subtraction *)
 		tokens = calcResolveAdditionAndSubtractionAtConstantTokenDepth[tokens];
-		
+		If[$Debug, Echo[CSSUntokenize[tokens], "AS"]];
+			
 		(* reduce nested parens, normalize addition signs, and keep as calc() if reduction has more than one term *)
 		tokens = calcReduceParens[tokens];
 		tokens = calcNormalizeSigns[tokens];
@@ -441,6 +433,21 @@ calcReduce[inputToken_?CSSTokenQ] :=
 			tokens[[pos]]
 		]
 	]
+	
+calcReduce[inputToken_?CSSTokenQ] := 
+	Throw @
+		Failure["BadParse", <|
+			"MessageTemplate" -> "calc() contains unexpected tokens.", 
+			"MessageParameters" -> <||>, 
+			"Expr" -> CSSUntokenize[inputToken]|>]
+			
+calcReduce[x___] := 
+	Throw @
+		Failure["BadParse", <|
+			"MessageTemplate" -> "Atempted to reduce unexpected expression.", 
+			"MessageParameters" -> <||>, 
+			"Expr" -> {x}|>]
+			
 	
 calcReduceParens[inputTokens:{__?CSSTokenQ}] :=
 	Module[{tokens = inputTokens, pos},
@@ -496,7 +503,12 @@ calcMultiplyNumberByParensToken[numberToken_, parenToken_] :=
 	CSSToken[<|
 		"Type" -> "()", 
 		"Children" -> (If[TokenTypeIs["dimension" | "percentage" | "number", #], calcResolveMultiplication[numberToken, #], #]& /@ parenToken["Children"])|>]
-	
+
+calcMultiplyParensByParensToken[leftToken_, rightToken_] :=
+	Module[{leftChildren = leftToken["Children"], rightChildren = rightToken["Children"]},
+		(* at least one of the two parens must be a pure number! *)
+		$Failed
+	]
 
 calcResolveMultiplication[leftToken_, rightToken_] :=
 	Which[
@@ -505,8 +517,9 @@ calcResolveMultiplication[leftToken_, rightToken_] :=
 		TokenTypeIs["percentage", leftToken] && TokenTypeIs["number", rightToken], calcMultiplyNumberByPercentageToken[leftToken, rightToken],
 		TokenTypeIs["number", leftToken] && TokenTypeIs["dimension", rightToken],  calcMultiplyNumberByDimensionToken[leftToken, rightToken],
 		TokenTypeIs["dimension", leftToken] && TokenTypeIs["number", rightToken],  calcMultiplyNumberByDimensionToken[rightToken, leftToken],
-		TokenTypeIs["number", leftToken] && TokenTypeIs["()", rightToken],         calcMultiplyNumberByParensToken[leftToken, rightToken],
-		TokenTypeIs["()", leftToken] && TokenTypeIs["number", rightToken],         calcMultiplyNumberByParensToken[rightToken, leftToken],
+		TokenTypeIs["number", leftToken] && tokenIsParenOrCalc[rightToken],        calcMultiplyNumberByParensToken[leftToken, rightToken],
+		tokenIsParenOrCalc[leftToken] && TokenTypeIs["number", rightToken],        calcMultiplyNumberByParensToken[rightToken, leftToken],
+		tokenIsParenOrCalc[leftToken] && tokenIsParenOrCalc[rightToken],           calcMultiplyParensByParensToken[leftToken, rightToken],
 		True,                                                                      $Failed 				
 	]
 	
@@ -529,12 +542,13 @@ calcDivideParensByNumberToken[parenToken:CSSToken[KeyValuePattern[{"Type" -> "()
 		"Type" -> "()", 
 		"Children" -> (If[TokenTypeIs["dimension" | "percentage" | "number", #], calcResolveDivision[#, numberToken], #]& /@ parenToken["Children"])|>]
 
+(* Interestingly the online CSS validator says e.g. 3px/(2) is invalid, so we also do not simplify the RHS of division to a number *)
 calcResolveDivision[leftToken_, rightToken_] :=
 	Which[
 		TokenTypeIs["number", leftToken] && TokenTypeIs["number", rightToken],     calcDivideNumberByNumberToken[leftToken, rightToken],
 		TokenTypeIs["percentage", leftToken] && TokenTypeIs["number", rightToken], calcDividePercentageByNumberToken[leftToken, rightToken],
 		TokenTypeIs["dimension", leftToken] && TokenTypeIs["number", rightToken],  calcDivideDimensionByNumberToken[leftToken, rightToken],
-		TokenTypeIs["()", leftToken] && TokenTypeIs["number", rightToken],         calcDivideParensByNumberToken[leftToken, rightToken],
+		tokenIsParenOrCalc[leftToken] && TokenTypeIs["number", rightToken],        calcDivideParensByNumberToken[leftToken, rightToken],
 		True,                                                                      $Failed 				
 	]
 	
@@ -556,6 +570,14 @@ calcResolveMultiplicationAndDivisionAtConstantTokenDepth[inputTokens:{__?CSSToke
 				leftTokenIndex = j; leftToken = tokens[[j]];
 				j = i; AdvancePosAndSkipWhitespace[j, numberOfSiblings, tokens];
 				rightTokenIndex = j; rightToken = tokens[[j]];
+				If[tokenIsParenOrCalc[leftToken], 
+					try = Catch @ calcReduce[leftToken];
+					If[FailureQ[try], Throw @ try, leftToken = try]
+				];
+				If[tokenIsParenOrCalc[rightToken], 
+					try = Catch @ calcReduce[rightToken];
+					If[FailureQ[try], Throw @ try, rightToken = try]
+				];
 				If[TokenStringIs["*", tokens[[i]]],
 					try = calcResolveMultiplication[leftToken, rightToken];
 					If[FailureQ[try], 
@@ -675,18 +697,29 @@ calcAddTokenToParensToken[numberToken_, parenToken_] :=
 		]
 	]
 
+(* TODO: do type checking on all terms *)
+(* Special case of calc(<length> + <percentage>) + calc(<length> + <percentage>) *)
 calcAddParensTokenToParensToken[parenTokenLeft_, parenTokenRight_] :=
-	CreateParensToken @ Join[parenTokenLeft["Children"], {CreateWhitespaceToken[], CreateDelimToken["+"], CreateWhitespaceToken[]}, parenTokenRight["Children"]]
+	Module[{leftTokens = parenTokenLeft["Children"]},
+		(* check left paren for relevant tokens *)
+		CreateParensToken @ Join[parenTokenLeft["Children"], {CreateWhitespaceToken[], CreateDelimToken["+"], CreateWhitespaceToken[]}, parenTokenRight["Children"]]
+	]
+
+tokenIsParenOrCalc[token_?CSSTokenQ] :=
+	Or[
+		TokenTypeIs["()", token],
+		And[TokenTypeIs["function", token], TokenStringIs["calc", token]]]
+tokenIsParenOrCalc[___] := False
 		
 calcResolveAddition[leftToken_, rightToken_] :=
 	Which[
-		TokenTypeIs["number", leftToken] && TokenTypeIs["number", rightToken],                          calcAddNumberToNumberToken[leftToken, rightToken],
-		TokenTypeIs["percentage", leftToken] && TokenTypeIs["percentage", rightToken],                  calcAddPercentageToPercentageToken[leftToken, rightToken],
-		TokenTypeIs["dimension", leftToken] && TokenTypeIs["dimension", rightToken],                    calcAddDimensionToDimensionToken[leftToken, rightToken],
-		TokenTypeIs["dimension" | "percentage" | "number", leftToken] && TokenTypeIs["()", rightToken], calcAddTokenToParensToken[leftToken, rightToken],
-		TokenTypeIs["()", leftToken] && TokenTypeIs["dimension" | "percentage" | "number", rightToken], calcAddTokenToParensToken[rightToken, leftToken],
-		TokenTypeIs["()", leftToken] && TokenTypeIs["()", rightToken],                                  calcAddParensTokenToParensToken[leftToken, rightToken],
-		True,                                                                                           $Failed
+		TokenTypeIs["number", leftToken] && TokenTypeIs["number", rightToken],                           calcAddNumberToNumberToken[leftToken, rightToken],
+		TokenTypeIs["percentage", leftToken] && TokenTypeIs["percentage", rightToken],                   calcAddPercentageToPercentageToken[leftToken, rightToken],
+		TokenTypeIs["dimension", leftToken] && TokenTypeIs["dimension", rightToken],                     calcAddDimensionToDimensionToken[leftToken, rightToken],
+		TokenTypeIs["dimension" | "percentage" | "number", leftToken] && tokenIsParenOrCalc[rightToken], calcAddTokenToParensToken[leftToken, rightToken],
+		tokenIsParenOrCalc[leftToken] && TokenTypeIs["dimension" | "percentage" | "number", rightToken], calcAddTokenToParensToken[rightToken, leftToken],
+		tokenIsParenOrCalc[leftToken] && tokenIsParenOrCalc[rightToken],                                 calcAddParensTokenToParensToken[leftToken, rightToken],
+		True,                                                                                            $Failed
 	]
 
 (* subtraction *)
@@ -777,13 +810,13 @@ calcSubtractParensTokenFromParensToken[parenTokenLeft_, parenTokenRight_] :=
 
 calcResolveSubtraction[leftToken_, rightToken_] :=
 	Which[
-		TokenTypeIs["number", leftToken] && TokenTypeIs["number", rightToken],                          calcSubtractNumberFromNumberToken[leftToken, rightToken],
-		TokenTypeIs["percentage", leftToken] && TokenTypeIs["percentage", rightToken],                  calcSubtractPercentageFromPercentageToken[leftToken, rightToken],
-		TokenTypeIs["dimension", leftToken] && TokenTypeIs["dimension", rightToken],                    calcSubtractDimensionFromDimensionToken[leftToken, rightToken],
-		TokenTypeIs["dimension" | "percentage" | "number", leftToken] && TokenTypeIs["()", rightToken], calcSubtractParensTokenFromToken[leftToken, rightToken],
-		TokenTypeIs["()", leftToken] && TokenTypeIs["dimension" | "percentage" | "number", rightToken], calcSubtractTokenFromParensToken[leftToken, rightToken],
-		TokenTypeIs["()", leftToken] && TokenTypeIs["()", rightToken],                                  calcSubtractParensTokenFromParensToken[leftToken, rightToken],
-		True,                                                                                           $Failed 		
+		TokenTypeIs["number", leftToken] && TokenTypeIs["number", rightToken],                           calcSubtractNumberFromNumberToken[leftToken, rightToken],
+		TokenTypeIs["percentage", leftToken] && TokenTypeIs["percentage", rightToken],                   calcSubtractPercentageFromPercentageToken[leftToken, rightToken],
+		TokenTypeIs["dimension", leftToken] && TokenTypeIs["dimension", rightToken],                     calcSubtractDimensionFromDimensionToken[leftToken, rightToken],
+		TokenTypeIs["dimension" | "percentage" | "number", leftToken] && tokenIsParenOrCalc[rightToken], calcSubtractParensTokenFromToken[leftToken, rightToken],
+		tokenIsParenOrCalc[leftToken] && TokenTypeIs["dimension" | "percentage" | "number", rightToken], calcSubtractTokenFromParensToken[leftToken, rightToken],
+		tokenIsParenOrCalc[leftToken] && tokenIsParenOrCalc[rightToken],                                 calcSubtractParensTokenFromParensToken[leftToken, rightToken],
+		True,                                                                                            $Failed 		
 	]
 
 calcResolveAdditionAndSubtractionAtConstantTokenDepth[inputTokens:{__?CSSTokenQ}] :=
@@ -802,6 +835,14 @@ calcResolveAdditionAndSubtractionAtConstantTokenDepth[inputTokens:{__?CSSTokenQ}
 					"MessageParameters" -> <||>, 
 					"Expr" -> HighlightUntokenize[tokens, Position[tokens, termPattern]]|>]
 		];
+		If[nTerms == 1,
+			leftToken = Extract[tokens, FirstPosition[tokens, termPattern]];
+			If[tokenIsParenOrCalc[leftToken], 
+				try = Catch @ calcReduce[leftToken];
+				If[FailureQ[try], Throw @ try, leftToken = try]
+			];
+			tokens = {leftToken}
+		];
 		
 		(* loop over opPositions *)
 		Do[
@@ -816,6 +857,14 @@ calcResolveAdditionAndSubtractionAtConstantTokenDepth[inputTokens:{__?CSSTokenQ}
 				leftTokenIndex = j; leftToken = tokens[[j]];
 				j = i; AdvancePosAndSkipWhitespace[j, numberOfSiblings, tokens];
 				rightTokenIndex = j; rightToken = tokens[[j]];
+				If[tokenIsParenOrCalc[leftToken], 
+					try = Catch @ calcReduce[leftToken];
+					If[FailureQ[try], Throw @ try, leftToken = try]
+				];
+				If[tokenIsParenOrCalc[rightToken], 
+					try = Catch @ calcReduce[rightToken];
+					If[FailureQ[try], Throw @ try, rightToken = try]
+				];
 				(* leave the addition/subtraction intact if trying to add percentage and dimension, or two dimensions of matching type but not exact unit match *)
 				Which[
 					Or[

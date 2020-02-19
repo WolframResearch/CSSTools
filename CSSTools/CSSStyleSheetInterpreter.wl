@@ -1294,6 +1294,14 @@ CSSCascade[
 					declarations, 
 					CSSTools`CSSSelectors3`Private`createEmptyTarget[]]
 		];
+		
+		(* calc() functions resolve to single value if possible *)
+		If[DownValues[CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsInDeclarationList] =!= {},
+			declarations = 
+				CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsInDeclarationList[
+					declarations, 
+					CSSTools`CSSSelectors3`Private`createEmptyTarget[]]
+		];
 			
 		Module[{itemsToResolve},
 			itemsToResolve = Flatten @ Position[(AssociationQ[#] && KeyExistsQ[#, "CSSResolveValueAtComputeTime"])& /@ declarations[[All, "Interpretation"]], True];
