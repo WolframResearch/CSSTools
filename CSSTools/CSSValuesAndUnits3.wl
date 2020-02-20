@@ -425,7 +425,7 @@ calcReduce[inputToken_?CSSTokenQ /; tokenIsParenOrCalc[inputToken]] :=
 		(* reduce nested parens, normalize addition signs, and keep as calc() if reduction has more than one term *)
 		tokens = calcReduceParens[tokens];
 		tokens = calcNormalizeSigns[tokens];
-		opPosition = Flatten @ Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim", "String" -> "+" | "-"}]]];
+		opPosition = Flatten @ Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim", "String" -> "+" | "-"}]], {1}];
 		If[Length[opPosition] > 0, 
 			CSSToken[<|"Type" -> "function", "String" -> "calc", "Children" -> tokens|>]
 			,
@@ -463,27 +463,36 @@ calcReduceParens[inputTokens:{__?CSSTokenQ}] :=
 	]
 	
 calcNormalizeSigns[inputTokens:{__?CSSTokenQ}] :=
-	Module[{tokens = inputTokens, pos, l = Length[inputTokens]},
+	Module[{tokens = inputTokens, pos, l = Length[inputTokens], rightTokenIndex},
 		(* replace "- -n" with "+ n" or "+ -n" with "- n" *)
-		pos = Flatten @ Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim", "String" -> "+" | "-"}]]];
+		pos = Flatten @ Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim", "String" -> "+" | "-"}]], {1}];
 		Do[
-			
-			Which[
-				TokenStringIs["+", tokens[[i]]] && i + 2 <= l && Negative[tokens[[i + 2]]["Value"]], 
-					tokens[[i]] = CreateDelimToken["-"];
-					tokens[[i + 2]] = calcChangeSignOfToken[tokens[[i + 2]]]
-				,
-				TokenStringIs["-", tokens[[i]]] && i + 2 <= l && Negative[tokens[[i + 2]]["Value"]], 
-					tokens[[i]] = CreateDelimToken["+"];
-					tokens[[i + 2]] = calcChangeSignOfToken[tokens[[i + 2]]]
-				,
-				True, Null
-			];
+			rightTokenIndex = i; AdvancePosAndSkipWhitespace[rightTokenIndex, l, tokens]; 
+			If[Negative[tokens[[rightTokenIndex]]["Value"]],
+				tokens[[i]] = CreateDelimToken[If[TokenStringIs["+", tokens[[i]]], "-", "+"]];
+				tokens[[rightTokenIndex]] = calcChangeSignOfToken[tokens[[rightTokenIndex]]]
+			]
 			,
 			{i, pos}
 		];
 		tokens
-	]		
+	]
+
+calcAbsorbSigns[inputTokens:{__?CSSTokenQ}] :=
+	Module[{tokens = inputTokens, pos, l = Length[inputTokens], rightTokenIndex},
+		(* replace "- n" with "+ -n" or "- -n" with "+ n" *)
+		pos = Flatten @ Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim", "String" -> "+" | "-"}]], {1}];
+		Do[
+			rightTokenIndex = i; AdvancePosAndSkipWhitespace[rightTokenIndex, l, tokens]; 
+			If[TokenStringIs["-", tokens[[i]]],
+				tokens[[i]] = CreateDelimToken["+"];
+				tokens[[rightTokenIndex]] = calcChangeSignOfToken[tokens[[rightTokenIndex]]]
+			]
+			,
+			{i, pos}
+		];
+		tokens
+	]
 
 (* multiplication *)
 calcMultiplyToString[v1_ ,v2_] := With[{v = v1*v2}, With[{vv = ToString[If[!IntegerQ[v], N[v], v]]}, If[StringEndsQ[vv, "."], vv <> "0", vv]]]
@@ -504,11 +513,7 @@ calcMultiplyNumberByParensToken[numberToken_, parenToken_] :=
 		"Type" -> "()", 
 		"Children" -> (If[TokenTypeIs["dimension" | "percentage" | "number", #], calcResolveMultiplication[numberToken, #], #]& /@ parenToken["Children"])|>]
 
-calcMultiplyParensByParensToken[leftToken_, rightToken_] :=
-	Module[{leftChildren = leftToken["Children"], rightChildren = rightToken["Children"]},
-		(* at least one of the two parens must be a pure number! *)
-		$Failed
-	]
+calcMultiplyParensByParensToken[leftToken_, rightToken_] := $Failed (* at least one of the two parens must be a pure number! *)
 
 calcResolveMultiplication[leftToken_, rightToken_] :=
 	Which[
@@ -536,13 +541,15 @@ calcDivideDimensionByNumberToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> 
 	First @ CSSTokenize[calcDivideToString[v1, v2] <> u1]
 
 (* in some cases we must distribute the division through the parenthesized grouping *)
-calcDivideParensByNumberToken[parenToken:CSSToken[KeyValuePattern[{"Type" -> "()"}]], numberToken:CSSToken[KeyValuePattern[{"Value" -> v1_}]]] :=
+calcDivideParensByNumberToken[parenToken:CSSToken[KeyValuePattern[{"Children" -> c_}]], numberToken:CSSToken[KeyValuePattern[{"Value" -> v1_}]]] :=
 	(* This function is called at a point where the paren contents have already been simplified as far as possible. *)
 	CSSToken[<|
 		"Type" -> "()", 
-		"Children" -> (If[TokenTypeIs["dimension" | "percentage" | "number", #], calcResolveDivision[#, numberToken], #]& /@ parenToken["Children"])|>]
+		"Children" -> (If[TokenTypeIs["dimension" | "percentage" | "number", #], calcResolveDivision[#, numberToken], #]& /@ c)|>]
 
-(* Interestingly the online CSS validator says e.g. 3px/(2) is invalid, so we also do not simplify the RHS of division to a number *)
+(* 
+	Interestingly the online CSS validator says e.g. 3px/(2) is invalid, so we also do not simplify the RHS of division to a number.
+	However, we recursively reduce any calc() or () groupings so we can still parse this! *)
 calcResolveDivision[leftToken_, rightToken_] :=
 	Which[
 		TokenTypeIs["number", leftToken] && TokenTypeIs["number", rightToken],     calcDivideNumberByNumberToken[leftToken, rightToken],
@@ -553,11 +560,11 @@ calcResolveDivision[leftToken_, rightToken_] :=
 	]
 	
 calcResolveMultiplicationAndDivisionAtConstantTokenDepth[inputTokens:{__?CSSTokenQ}] :=
-	Module[{tokens = inputTokens, opPositions, opPosition, numberOfSiblings, leftToken, leftTokenIndex, rightToken, rightTokenIndex, i, j, try},
+	Module[{tokens = inputTokens, opPositions, opPosition, numberOfSiblings, leftToken, leftTokenIndex, rightToken, rightTokenIndex, i, try},
 		(*opPosition = calcGetPositionOfDeepestMultiplicationOrDivision[tokens];*)
 		(* resolve deepest operators first *)
 		opPositions = Reverse @ Flatten @ Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim", "String" -> "*" | "/"}]], {1}];
-		numberOfSiblings = Length[inputTokens];
+		numberOfSiblings = Length[tokens];
 		Do[
 			If[MatchQ[i, 1 | numberOfSiblings], 
 				Throw @ 
@@ -566,10 +573,8 @@ calcResolveMultiplicationAndDivisionAtConstantTokenDepth[inputTokens:{__?CSSToke
 						"MessageParameters" -> <||>, 
 						"Expr" -> HighlightUntokenize[tokens, {opPosition}]|>]
 				, 
-				j = i; RetreatPosAndSkipWhitespace[j, 1, tokens];
-				leftTokenIndex = j; leftToken = tokens[[j]];
-				j = i; AdvancePosAndSkipWhitespace[j, numberOfSiblings, tokens];
-				rightTokenIndex = j; rightToken = tokens[[j]];
+				leftTokenIndex = i;  RetreatPosAndSkipWhitespace[leftTokenIndex, 1, tokens];                 leftToken = tokens[[leftTokenIndex]];
+				rightTokenIndex = i; AdvancePosAndSkipWhitespace[rightTokenIndex, numberOfSiblings, tokens]; rightToken = tokens[[rightTokenIndex]];
 				If[tokenIsParenOrCalc[leftToken], 
 					try = Catch @ calcReduce[leftToken];
 					If[FailureQ[try], Throw @ try, leftToken = try]
@@ -622,12 +627,7 @@ calcAddDimensionToDimensionToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> 
 		parseType[u1] === parseType[u2],          
 			CSSToken[<|
 				"Type" -> "()", 
-				"Children" -> {
-					leftToken, 
-					CSSToken[<|"Type" -> "whitespace", "String" -> " "|>], 
-					CSSToken[<|"Type" -> "delim", "String" -> "+"|>], 
-					CSSToken[<|"Type" -> "whitespace", "String" -> " "|>], 
-					rightToken}|>],
+				"Children" -> {leftToken, CreateWhitespaceToken[], CreateDelimToken["+"], CreateWhitespaceToken[], rightToken}|>],
 		True, $Failed
 	]
 
@@ -635,26 +635,27 @@ calcAddDimensionToDimensionToken[leftToken:CSSToken[KeyValuePattern[{"Value" -> 
 (* This function is called at a point where the paren contents have already been simplified as far as possible, may contain both dimension and percentage tokens. *)
 (* case z + (x + y - w) so must take sign into account and z can be negative *)
 calcAddTokenToParensToken[numberToken_, parenToken_] :=
-	Module[{pChildren = parenToken["Children"], typePosition},	
+	Module[{pChildren = parenToken["Children"], typePosition, opPosition},	
 		(* add to matching type within paren's children *)
 		(* first try for the matching type, then percentage/dimension combo *)
 		Which[
 			TokenTypeIs["dimension", numberToken],  
 				typePosition = FirstPosition[pChildren, _?(TokenTypeIs["dimension", #] && StringMatchQ[numberToken["Unit"], #["Unit"], IgnoreCase -> True]&), {None}, {1}][[1]];
 				If[typePosition =!= None, 
+					opPosition = typePosition; RetreatPosAndSkipWhitespace[opPosition, 1, pChildren];
 					Return @ 
 						CreateParensToken @ 
 							ReplacePart[
 								pChildren, 
-								{
-									typePosition -> 
-										If[calcTokenIsSubtracted[typePosition, pChildren], 
-											calcSubtractDimensionFromDimensionToken[numberToken, Extract[pChildren, typePosition]]
-											, 
-											calcAddDimensionToDimensionToken[numberToken, Extract[pChildren, typePosition]]
-										],
-									(typePosition - 2) -> CreateDelimToken["+"]
-								}]];
+								If[calcTokenIsSubtracted[typePosition, pChildren], 
+									{
+										typePosition -> calcSubtractDimensionFromDimensionToken[numberToken, Extract[pChildren, typePosition]],
+										opPosition -> CreateDelimToken["+"]}
+									,
+									typePosition -> calcAddDimensionToDimensionToken[numberToken, Extract[pChildren, typePosition]]
+								]
+							]
+				];
 				
 				typePosition = FirstPosition[pChildren, _?(TokenTypeIs["dimension", #]&), {None}, {1}][[1]];
 				If[typePosition =!= None,
@@ -673,19 +674,20 @@ calcAddTokenToParensToken[numberToken_, parenToken_] :=
 			TokenTypeIs["percentage", numberToken], 
 				typePosition = FirstPosition[pChildren, _?(TokenTypeIs["percentage", #]&), {None}, {1}][[1]];
 				If[typePosition =!= None, 
+					opPosition = typePosition; RetreatPosAndSkipWhitespace[opPosition, 1, pChildren];
 					Return @ 
 						CreateParensToken @ 
 							ReplacePart[
 								pChildren, 
-								{
-									typePosition -> 
-										If[calcTokenIsSubtracted[typePosition, pChildren], 
-											calcSubtractPercentageFromPercentageToken[numberToken, Extract[pChildren, typePosition]]
-											, 
-											calcAddPercentageToPercentageToken[numberToken, Extract[pChildren, typePosition]]
-										],
-									(typePosition - 2) -> CreateDelimToken["+"]
-								}]];
+								If[calcTokenIsSubtracted[typePosition, pChildren], 
+									{
+										typePosition -> calcSubtractPercentageFromPercentageToken[numberToken, Extract[pChildren, typePosition]],
+										opPosition -> CreateDelimToken["+"]}
+									,
+									typePosition -> calcAddPercentageToPercentageToken[numberToken, Extract[pChildren, typePosition]]
+								]
+							]
+				];
 				
 				typePosition = FirstPosition[pChildren, _?(TokenTypeIs["dimension", #]&), {None}, {1}][[1]];
 				If[typePosition =!= None,
@@ -700,9 +702,18 @@ calcAddTokenToParensToken[numberToken_, parenToken_] :=
 (* TODO: do type checking on all terms *)
 (* Special case of calc(<length> + <percentage>) + calc(<length> + <percentage>) *)
 calcAddParensTokenToParensToken[parenTokenLeft_, parenTokenRight_] :=
-	Module[{leftTokens = parenTokenLeft["Children"]},
-		(* check left paren for relevant tokens *)
-		CreateParensToken @ Join[parenTokenLeft["Children"], {CreateWhitespaceToken[], CreateDelimToken["+"], CreateWhitespaceToken[]}, parenTokenRight["Children"]]
+	Module[{leftTokens = parenTokenLeft["Children"], rightToken = parenTokenRight, valPositions},
+		(* convert subtraction to adding negative values *)
+		leftTokens = calcAbsorbSigns[leftTokens];
+		
+		(* add each left-value one at a time to the set of right-values *)
+		(* only search shallowly (level spec 1) as the token group should be flat *)
+		valPositions = Position[leftTokens, CSSToken[KeyValuePattern[{"Type" -> "dimension" | "percentage"}]], {1}];
+		Do[
+			
+			rightToken = calcAddTokenToParensToken[Extract[leftTokens, i], rightToken],
+			{i, valPositions}];
+		rightToken
 	]
 
 tokenIsParenOrCalc[token_?CSSTokenQ] :=
@@ -761,12 +772,7 @@ calcSubtractDimensionFromDimensionToken[leftToken:CSSToken[KeyValuePattern[{"Val
 		parseType[u1] === parseType[u2],          
 			CSSToken[<|
 				"Type" -> "()", 
-				"Children" -> {
-					leftToken, 
-					CSSToken[<|"Type" -> "whitespace", "String" -> " "|>], 
-					CSSToken[<|"Type" -> "delim", "String" -> "-"|>], 
-					CSSToken[<|"Type" -> "whitespace", "String" -> " "|>], 
-					rightToken}|>],
+				"Children" -> {leftToken, CreateWhitespaceToken[], CreateDelimToken["-"], CreateWhitespaceToken[], rightToken}|>],
 		True, $Failed
 	]
 
@@ -820,10 +826,10 @@ calcResolveSubtraction[leftToken_, rightToken_] :=
 	]
 
 calcResolveAdditionAndSubtractionAtConstantTokenDepth[inputTokens:{__?CSSTokenQ}] :=
-	Module[{tokens = inputTokens, opPositions, numberOfSiblings, leftToken, leftTokenIndex, rightToken, rightTokenIndex, i, j, try, nOps, nTerms, termPattern},
+	Module[{tokens = inputTokens, opPositions, numberOfSiblings, leftToken, leftTokenIndex, rightToken, rightTokenIndex, i, try, nOps, nTerms, termPattern},
 		opPositions = Flatten @ Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim", "String" -> "+" | "-"}]], {1}];
 		numberOfSiblings = Length[inputTokens];
-		termPattern = x_?CSSTokenQ /; Or[TokenTypeIs["function", x] && TokenStringIs["calc", x], TokenTypeIs["dimension" | "percentage" | "number" | "()", x]];
+		termPattern = x_?CSSTokenQ /; Or[TokenTypeIs["function", x] && TokenStringIs["calc", x], TokenTypeIs["()" | "dimension" | "percentage" | "number", x]];
 		
 		(* check that operators appear between numbers/percentages/dimensions *)
 		nOps = Count[tokens, x_?CSSTokenQ /; TokenTypeIs["delim", x] && TokenStringIs["+"|"-", x]];
@@ -836,7 +842,7 @@ calcResolveAdditionAndSubtractionAtConstantTokenDepth[inputTokens:{__?CSSTokenQ}
 					"Expr" -> HighlightUntokenize[tokens, Position[tokens, termPattern]]|>]
 		];
 		If[nTerms == 1,
-			leftToken = Extract[tokens, FirstPosition[tokens, termPattern]];
+			leftToken = Extract[tokens, FirstPosition[tokens, termPattern, None, {1}]];
 			If[tokenIsParenOrCalc[leftToken], 
 				try = Catch @ calcReduce[leftToken];
 				If[FailureQ[try], Throw @ try, leftToken = try]
@@ -853,10 +859,8 @@ calcResolveAdditionAndSubtractionAtConstantTokenDepth[inputTokens:{__?CSSTokenQ}
 						"MessageParameters" -> <||>, 
 						"Expr" -> HighlightUntokenize[tokens, {i}]|>]
 				, 
-				j = i; RetreatPosAndSkipWhitespace[j, 1, tokens];
-				leftTokenIndex = j; leftToken = tokens[[j]];
-				j = i; AdvancePosAndSkipWhitespace[j, numberOfSiblings, tokens];
-				rightTokenIndex = j; rightToken = tokens[[j]];
+				leftTokenIndex = i;  RetreatPosAndSkipWhitespace[leftTokenIndex, 1, tokens];                 leftToken = tokens[[leftTokenIndex]];
+				rightTokenIndex = i; AdvancePosAndSkipWhitespace[rightTokenIndex, numberOfSiblings, tokens]; rightToken = tokens[[rightTokenIndex]];
 				If[tokenIsParenOrCalc[leftToken], 
 					try = Catch @ calcReduce[leftToken];
 					If[FailureQ[try], Throw @ try, leftToken = try]

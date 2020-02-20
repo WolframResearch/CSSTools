@@ -66,6 +66,9 @@ Test[StringMatchQ[CSSUntokenize @ Catch @ CSSTools`CSSValuesAndUnits3`Private`ca
 (* complicated example with parenthetical grouping *)
 Test[StringMatchQ[CSSUntokenize @ Catch @ CSSTools`CSSValuesAndUnits3`Private`calcReduce[First[CSSTokenize["calc(5px + 2*calc(100%/3 - 21px/2)/3)"]]], "calc(22.2222% - 2.0px)"], True]
 
+(* corner case of required grouping with subtraction *)
+Test[StringMatchQ[CSSUntokenize @ Catch @ CSSTools`CSSValuesAndUnits3`Private`calcReduce[First[CSSTokenize["calc(calc(2% - 2px) - calc(4% - 5px))"]]], "calc(-2% + 3px)"], True]
+
 (* each term should have an operator in between (checked after multiplication resolves) *)
 TestMatch[Catch @ CSSTools`CSSValuesAndUnits3`Private`calcReduce[First[CSSTokenize["calc(3px+10%)"]]], _Failure]
 
