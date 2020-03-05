@@ -13,11 +13,14 @@ unrecognizedKeyWordFailure;
 unrecognizedValueFailure;
 parseAngle;
 parseCounter;
+parseFrequency;
 parseLength;
 parseLengthNonRelative;
-parseResolution;
 parseNumber;
+parsePercentage;
+parseResolution;
 parseSingleColor;
+parseTime;
 parseURI;
 
 

@@ -7,7 +7,8 @@ BeginPackage["CSSTools`CSSValuesAndUnits3`", {"CSSTools`"}]
 	---> various tokenizer functions e.g. CSSToken, CSSTokenQ, CSSUntokenize *)
 (* CSSPropertyInterpreter` 
 	---> defines consumeProperty 
-	---> provides CSSPropertyData *)
+	---> provides CSSPropertyData 
+	---> defines parseLength (new definition added here) *)
 
 Needs["CSSTools`CSSTokenizer`"];   
 Needs["CSSTools`CSSPropertyInterpreter`"];
@@ -29,7 +30,104 @@ Begin["`Private`"] (* Begin Private Context *)
 		* any attr() in a property value effectively keeps the entire value from parsing
 		* at compute time the value can fail to parse after substitution  
 	*)
-	
+
+
+(* The DownValue for consuming attr() referencing and calc() in properties needs to come early in order to override existing behavior. *)
+DownValues[consumeProperty] = 
+	Join[
+		{
+			(* 
+				Any use of attr() must be resolved at inheritance (CSSInheritance) unless a parse error is detected.
+				It can technically be resolved at CSSCascade, but only if the "Targets" key is present.
+				If no "Target" key is present or the "Target" value is an empty list, then all attr() instances will use the fallback value. *)
+			HoldPattern[
+				Condition[consumeProperty[prop_String, tokens:{__?CSSTokenQ}, opts:OptionsPattern[]], !FreeQ[tokens, TokenPatternString["attr", "function"]]]
+			] :>
+				Module[{checkedEntries, failPosition, declaredNamespaces},
+					(* check: parse failures; includes namespace prefix check and check for additional attr() in fallback *)
+					(* recall Namespaces format is {<|"Prefix" -> "A", "Namespace" -> "www.A.com", "Default" -> False|>, ...}*)
+					declaredNamespaces = OptionValue["Namespaces"];
+					checkedEntries = parseAttrFunctionToken[#, declaredNamespaces]& /@ Extract[tokens, Position[tokens, TokenPatternString["attr", "function"]]];
+					failPosition = FirstPosition[checkedEntries, _Failure, {}];
+					If[failPosition =!= {}, Return @ Extract[checkedEntries, failPosition]];
+					
+					(* check: type is appropriate for the given property *)
+					checkedEntries = typeCheck[prop, #]& /@ checkedEntries;
+					failPosition = FirstPosition[checkedEntries, _Failure, {}];
+					If[failPosition =!= {}, Return @ Extract[checkedEntries, failPosition]];
+					
+					(* check: fallback value is appropriate for the given property *)
+					(* check: if the property value has more than just the attr() function, then the fallback value matches the type *)
+					checkedEntries = fallbackTypeCheck[prop, #, Length[tokens]]& /@ checkedEntries;
+					failPosition = FirstPosition[checkedEntries, _Failure, {}];
+					If[failPosition =!= {}, Return @ Extract[checkedEntries, failPosition]];
+					
+					<|"CSSResolveValueAtComputeTime" -> <|
+						"String"     -> CSSUntokenize[tokens], 
+						"Property"   -> prop, 
+						"Namespaces" -> declaredNamespaces|>|>					
+				],
+				
+			(* calc() is usually resolved at compute time (CSSCascade/CSSInheritance) unless a parse error is detected or can be unambiguously made a number *)
+			HoldPattern[
+				Condition[consumeProperty[prop_String, inputTokens:{__?CSSTokenQ}, opts:OptionsPattern[]], !FreeQ[inputTokens, TokenPatternString["calc", "function"]]]
+			] :>
+				Module[{tokens = inputTokens, calcPositions, calcCheck},
+					(* calc() can appear anywhere, but only take the shallowest versions if there are nested calc expressions *)
+					calcPositions = SortBy[Length] @ Position[tokens, TokenPatternString["calc", "function"]];
+					calcPositions = DeleteDuplicates[calcPositions, #1 === #2[[;; Length[#1]]]&];
+					
+					calcCheck = Catch[calcReduce /@ Extract[tokens, calcPositions]];
+					If[FailureQ[calcCheck], Return @ calcCheck];
+					
+					(* substitute reduced calc() expressions back into token sequence *)
+					tokens = ReplacePart[tokens, Thread[calcPositions -> calcCheck]];
+					
+					Which[
+						(* parses directly to dimension|percentage|number *)
+						(* consumeProperty eventually checks whether numeric values and/or percentages are compatible with property value *)
+						Position[tokens, TokenPatternString["calc", "function"]] === {}, 
+							consumeProperty[prop, tokens], 
+						
+						(* good parse that contains calc(% + dimension), but percentage is incompatible with property value *)
+						Position[tokens, TokenPatternString["*", "percentage"]] =!= {} && !MemberQ[CSSPropertyData[prop, "Values"], "<percentage>"],
+							Failure["UnexpectedParse", <|
+								"MessageTemplate"   -> "Property `Prop` does not support percentages.", 
+								"MessageParameters" -> <|"Prop" -> prop|>|>],
+								
+						True,
+							<|"CSSResolveValueAtComputeTime" -> <|
+								"String"     -> CSSUntokenize[tokens],
+								"Property"   -> prop,
+								"Namespaces" -> OptionValue["Namespaces"]|>|>
+					]
+				],
+			
+			(* 
+				Any use of rem units must be resolved at compute time as it involves the root element of the XML document.
+				If no document is present (e.g. using CSSCascade) then the fallback is the FE's default font size i.e. CurrentValue[$FrontEnd, FontSize].
+				The logic is a little tricky: during compute-value-time we add to any rem dimension token an additional "Interpretation" key.
+				This new key-value contains the fully resolved FE-interpreted value (usually involving Dynamic). 
+				When consumeProperty is eventually used, the interpreted value is extracted using a special parseLength rule defined in this package. *)
+			HoldPattern[
+				Condition[
+					consumeProperty[prop_String, tokens:{__?CSSTokenQ}, opts:OptionsPattern[]], 
+					And[
+						!TrueQ[RemIsResolved],
+						!FreeQ[tokens, CSSToken[KeyValuePattern[{"Type" -> "dimension", "Unit" -> _String?(StringQ[#] && StringMatchQ[CSSNormalizeEscapes @ #, "rem", IgnoreCase -> True]&)}]]]]]
+			] :>
+				<|"CSSResolveValueAtComputeTime" -> <|
+					"String"     -> CSSUntokenize[tokens],
+					"Property"   -> prop,
+					"Namespaces" -> OptionValue["Namespaces"]|>|>
+		},
+		DownValues[consumeProperty]]
+
+
+(* ::Subsection::Closed:: *)
+(*Utilities *)
+
+
 parseType[s_String] :=
 	Switch[s, 
 		"string",  "<string>",
@@ -116,85 +214,6 @@ fallbackTypeCheck[prop_?StringQ, a_?AssociationQ, length_] :=
 	]
 
 
-(* The DownValue for consuming attr() referencing and calc() in properties needs to come early in order to override existing behavior. *)
-DownValues[consumeProperty] = 
-	Join[
-		{
-			(* any use of attr() must be resolved at inheritance (CSSInheritance) unless a parse error is detected *)
-			HoldPattern[
-				Condition[consumeProperty[prop_String, tokens:{__?CSSTokenQ}, opts:OptionsPattern[]], !FreeQ[tokens, TokenPatternString["attr", "function"]]]
-			] :>
-				Module[{checkedEntries, failPosition, declaredNamespaces},
-					(* check: parse failures; includes namespace prefix check and check for additional attr() in fallback *)
-					(* recall Namespaces format is {<|"Prefix" -> "A", "Namespace" -> "www.A.com", "Default" -> False|>, ...}*)
-					declaredNamespaces = OptionValue["Namespaces"];
-					checkedEntries = parseAttrFunctionToken[#, declaredNamespaces]& /@ Extract[tokens, Position[tokens, TokenPatternString["attr", "function"]]];
-					failPosition = FirstPosition[checkedEntries, _Failure, {}];
-					If[failPosition =!= {}, Return @ Extract[checkedEntries, failPosition]];
-					
-					(* check: type is appropriate for the given property *)
-					checkedEntries = typeCheck[prop, #]& /@ checkedEntries;
-					failPosition = FirstPosition[checkedEntries, _Failure, {}];
-					If[failPosition =!= {}, Return @ Extract[checkedEntries, failPosition]];
-					
-					(* check: fallback value is appropriate for the given property *)
-					(* check: if the property value has more than just the attr() function, then the fallback value matches the type *)
-					checkedEntries = fallbackTypeCheck[prop, #, Length[tokens]]& /@ checkedEntries;
-					failPosition = FirstPosition[checkedEntries, _Failure, {}];
-					If[failPosition =!= {}, Return @ Extract[checkedEntries, failPosition]];
-					
-					<|"CSSResolveValueAtComputeTime" -> <|
-						"String"     -> CSSUntokenize[tokens], 
-						"Property"   -> prop, 
-						"Namespaces" -> declaredNamespaces|>|>					
-				],
-				
-			(* calc() is usually resolved at compute time (CSSCascade/CSSInheritance) unless a parse error is detected or can be unambiguously made a number *)
-			HoldPattern[
-				Condition[consumeProperty[prop_String, tokens:{__?CSSTokenQ}, opts:OptionsPattern[]], !FreeQ[tokens, TokenPatternString["calc", "function"]]]
-			] :>
-				Module[{calcCheck},
-					calcCheck = Catch[calcReduce /@ Extract[tokens, Position[tokens, TokenPatternString["calc", "function"]]]];
-					Which[
-						(* parse failure *)
-						FailureQ[calcCheck], 
-							calcCheck,
-						
-						(* parses directly to dimension|percentage|number *)
-						(* consumeProperty eventually checks whether numeric values and/or percentages are compatible with property value *)
-						Position[calcCheck, TokenPatternString["calc", "function"]] === {}, 
-							consumeProperty[prop, calcCheck], 
-						
-						(* good parse that contains calc(% + dimension), but percentage is incompatible with property value *)
-						Position[calcCheck, TokenPatternString["*", "percentage"]] =!= {} && !MemberQ[CSSPropertyData[prop, "Values"], "<percentage>"],
-							Failure["UnexpectedParse", <|
-								"MessageTemplate"   -> "Property `Prop` does not support percentages.", 
-								"MessageParameters" -> <|"Prop" -> prop|>|>],
-								
-						True,
-							<|"CSSResolveValueAtComputeTime" -> <|
-								"String"     -> CSSUntokenize[calcCheck],
-								"Property"   -> prop,
-								"Namespaces" -> OptionValue["Namespaces"]|>|>
-					]
-				],
-			
-			(* any use of rem units must be resolved at compute time as it involves the root element of the XML document *)
-			HoldPattern[
-				Condition[
-					consumeProperty[prop_String, tokens:{__?CSSTokenQ}, opts:OptionsPattern[]], 
-					And[
-						!TrueQ[RemIsResolved],
-						!FreeQ[tokens, CSSToken[KeyValuePattern[{"Type" -> "dimension", "Unit" -> _String?(StringQ[#] && StringMatchQ[CSSNormalizeEscapes @ #, "rem", IgnoreCase -> True]&)}]]]]]
-			] :>
-				<|"CSSResolveValueAtComputeTime" -> <|
-					"String"     -> CSSUntokenize[tokens],
-					"Property"   -> prop,
-					"Namespaces" -> OptionValue["Namespaces"]|>|>
-		},
-		DownValues[consumeProperty]]
-
-
 (* ::Subsection::Closed:: *)
 (* new dimension definitions *)
 
@@ -231,8 +250,19 @@ parseLength[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?Num
 			_,      Failure["UnexpectedParse", <|"Message" -> "Unrecognized length unit."|>]
 		]
 	]
+
+(* 
+	This definition allows us to sneak non-simple calc() expressions (that are effectively 'dimension' type) through the consumeProperty parsing. 
+	We can also sneak in units that are of 'rem' unit type with proper interpretation via an added "Interpretation" key-value pair.
+	The def has to come early to short-circuit the general case. 
+	It works because elsewhere in this package we define a 'dimension' CSSToken that includes the "Interpretation" key not found in other such tokens. *)
+DownValues[parseLength] = 
+	Join[
+		{HoldPattern[parseLength[CSSToken[KeyValuePattern[{"Type" -> "dimension", "Interpretation" -> i_}]], inFontSize_:False]] :> i}, 
+		DownValues[parseLength]]
+
 	
-(* deg, grad, rad are already defined in CSS 2.1 *)
+(* deg, grad, rad are already defined in CSS 2.1. New definition for 'turn'. *)
 parseAngle[t:CSSToken[KeyValuePattern[{"Type" -> "dimension", "Value" -> val_?NumericQ, "Unit" -> _}]]] /; TokenUnitIs["turn", t] := val*360
 
 (* <frequency>, <time>, <percentage> etc. also already defined in CSS 2.1 *)
@@ -345,7 +375,7 @@ calcGetPositionOfDeepestMultiplicationOrDivision[tokens:{__?CSSTokenQ}] :=
 $Debug = False;
 
 calcCreateValue[inputToken_?CSSTokenQ] :=
-	Module[{tokens, currentDepthPosition, tokensAtDepth, opPosition, tokenCheck, wrapperPosition, wrapperToken, pos, l},
+	Module[{tokens, pos, values},
 		(* check that input token is a calc() function *)
 		If[TokenTypeIs["function", inputToken] && TokenStringIs["calc", inputToken], 
 			tokens = inputToken["Children"];
@@ -356,9 +386,15 @@ calcCreateValue[inputToken_?CSSTokenQ] :=
 					"MessageParameters" -> <||>, 
 					"Token" -> inputToken|>]
 		];
-		
-		tokenCheck = Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "dimension" | "percentage" | "number"}]]];
-		(*TODO: finish this function to return value that FE understands *)
+		tokens = calcAbsorbSigns[tokens];
+		pos = Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "dimension" | "percentage"}]], {1}];
+		values = If[TokenTypeIs["percentage", #], parsePercentage[#], parseLength[#]]& /@ Extract[tokens, pos];
+		If[FreeQ[values, Dynamic], 
+			Plus @@ values
+			,
+			values = Thread[If[Head[#] =!= Dynamic, Dynamic[#], #]& /@ values, Dynamic];
+			Replace[values, Dynamic[{x___}] :> Dynamic[Plus[x]]]
+		]
 	]
 
 
@@ -927,54 +963,47 @@ calcResolveAdditionAndSubtractionAtConstantTokenDepth[inputTokens:{__?CSSTokenQ}
 		DeleteCases[tokens, CSSToken[KeyValuePattern[{"Type" -> "error", "String" -> "REMOVE"}]], {1}]		
 	]
 	
-	
-(* ::Subsection::Closed:: *)
-(*rem unit*)
 
-
-getPositionOfNearestRemDimensionToken[tokens_] := 
-	FirstPosition[
-		tokens, 
-		CSSToken[KeyValuePattern[{"Type" -> "dimension", "Unit" -> _String?(StringQ[#] && StringMatchQ[CSSNormalizeEscapes @ #, "rem", IgnoreCase -> True]&)}]],
-		None]
-
-replaceRemDimensionWithTokens[tokensInput:{__?CSSTokenQ}, rootFontSizeValue_, rootFontSizeDimension_] :=
-	Module[{tokens = tokensInput, remPosition, remToken},
-		(* If the root does not define FontSize, then wait to use fallback rem value when parsing lengths *)
-		If[rootFontSizeValue === None || rootFontSizeDimension === None, Return @ tokens];
+(* 
+	The only reason this would be called is if calc() could not previously simplify due to either
+	1. internal attr() or var() functions
+	2. mixed types e.g. calc(2px + 2%) 
+	The strategy is to reduce these to a dimension token so that they pass the subsequent consumeProperty parse,
+	then take out the interpreted value. *)
+replaceCalcFunctionsWithTokens[tokens:{__?CSSTokenQ}, prop_?StringQ] := 
+	Module[{calcPositions, calcCheck, temp},
+		(* first attempt to reduce calc() expressions to a single token *)
+		(* calc() can appear anywhere, but only take the shallowest versions if there are nested calc expressions *)
+		calcPositions = SortBy[Length] @ Position[tokens, TokenPatternString["calc", "function"]];
+		calcPositions = DeleteDuplicates[calcPositions, #1 === #2[[;; Length[#1]]]&];
 		
-		(* with a root FontSize, then replace throughout *)
-		remPosition = getPositionOfNearestRemDimensionToken[tokens];
-		While[remPosition =!= None,
-			remToken = Extract[tokens, remPosition];
-			remToken = 
-				Replace[
-					remToken, 
-					CSSToken[kvp:KeyValuePattern[{"Value" -> v_}]] :> 
-						With[{new = v*rootFontSizeValue}, 
-							CSSToken[<|kvp, "Unit" -> rootFontSizeDimension, "String" -> ToString[new], "Value" -> new, "ValueType" -> If[IntegerQ[new], "integer", "number"]|>]]];
-			
-			tokens = ReplacePart[tokens, remPosition -> remToken];
-			remPosition = getPositionOfNearestRemDimensionToken[tokens];
-		];
-		tokens
-	]
-	
-replaceRemDimensionsInDeclarationList[declarationsInput_?ListQ, rootFontSizeValue_, rootFontSizeDimension_] :=
-	Module[{check, itemsToResolve, declarations = declarationsInput},
-		check = declarations[[All, "Interpretation"]];
-		itemsToResolve = Flatten @ Position[(AssociationQ[#] && KeyExistsQ[#, "CSSResolveValueAtComputeTime"])& /@ check, True];
-		Do[
-			declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]] = 
-				CSSUntokenize @ 
-					replaceRemDimensionWithTokens[
-							CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]], 
-							rootFontSizeValue,
-							rootFontSizeDimension];
-			,
-			{i, itemsToResolve}];
-		declarations
-	]
+		calcCheck = Catch[calcReduce /@ Extract[tokens, calcPositions]];
+		If[FailureQ[calcCheck], Return @ calcCheck];
+		
+		(* substitute reduced calc() expressions back into token sequence *)
+		temp = ReplacePart[tokens, Thread[calcPositions -> calcCheck]];
+		
+		Which[
+			(* case of good parse that contains calc(% + dimension), but percentage is incompatible with property value *)
+			Position[temp, TokenPatternString["*", "percentage"]] =!= {} && !MemberQ[CSSPropertyData[prop, "Values"], "<percentage>"],
+				Failure["UnexpectedParse", <|
+					"MessageTemplate"   -> "Property `Prop` does not support percentages.", 
+					"MessageParameters" -> <|"Prop" -> prop|>|>],
+					
+			True,
+				(* 
+					Hide cases like calc(2% + 2px) within dimension tokens so they can get past consumeProperty.
+					Set token "Value" to 1 to also get past any negative length checks. (This is starting to seem hacky...)
+					Later a new definition for parseLength (defined in this package) will property extract the interpreted value. *)
+				calcCheck = 
+					If[TokenTypeIs["function", #] && TokenStringIs["calc", #], 
+						CSSToken[<|"Type" -> "dimension", "String" -> CSSUntokenize @ #, "Value" -> 1, "Unit" -> "", "Interpretation" -> calcCreateValue[#]|>]
+						,
+						#
+					]& /@ calcCheck;
+				ReplacePart[tokens, Thread[calcPositions -> calcCheck]]
+		]
+	]	
 
 
 (* ::Subsection::Closed:: *)
@@ -1174,10 +1203,31 @@ parseAttrFromType[type_, value_] :=
 		]
 	]
 
+(* case of no targets *)
+replaceAttrFunctionsWithTokens[tokensInput:{__?CSSTokenQ}, None, ssNamespaces_] :=
+	Module[{tokens = tokensInput, attrPosition, attrToken, attrCheck, attrValue, temp},
+		(* replace attr() from the deepest instance to the most shallow and check for failures at each step *)
+		(* Position is sorted depth-first, which is good because we should substitute the deepest attr() instances first. *)
+		attrPosition = FirstPosition[tokens, TokenPatternString["attr", "function"], None];
+		While[attrPosition =!= None,
+			attrToken = Extract[tokens, attrPosition];
+			
+			(* parse attr() function to <|"NamespacePrefix" -> _, "AttributeName" -> _, "Type" -> _, "Fallback" -> _|> *)
+			attrCheck = parseAttrFunctionToken[attrToken, ssNamespaces]; 
+			If[FailureQ[attrCheck], Return @ attrCheck];
+			
+			(* get attr() fallback value *)
+			temp = parseAttrFromType[attrCheck["Type"], attrCheck["Fallback"]];
+			If[FailureQ[temp], Return @ temp, attrValue = temp];
+			
+			tokens = ReplacePart[tokens, attrPosition -> Unevaluated[Sequence @@ CSSTokenize[attrValue]]];
+			attrPosition = FirstPosition[tokens, TokenPatternString["attr", "function"], None];
+		];
+		tokens
+	]
 
 replaceAttrFunctionsWithTokens[tokensInput:{__?CSSTokenQ}, element_?CSSTargetQ, ssNamespaces_] :=
 	Module[{tokens = tokensInput, attrPosition, attrToken, attrCheck, attrNS, attrValue, elementAttributeNamePosition, elementAttributeNamespace, elementAttributeValue, temp},
-		
 		(* replace attr() from the deepest instance to the most shallow and check for failures at each step *)
 		(* Position is sorted depth-first, which is good because we should substitute the deepest attr() instances first. *)
 		attrPosition = FirstPosition[tokens, TokenPatternString["attr", "function"], None];
@@ -1226,27 +1276,6 @@ replaceAttrFunctionsWithTokens[tokensInput:{__?CSSTokenQ}, element_?CSSTargetQ, 
 		];
 		tokens
 	];
-	
-replaceAttrFunctionsInDeclarationList[declarationsInput_?ListQ, element_?CSSTargetQ] :=
-	Module[{check, itemsToResolve, declarations = declarationsInput, ssNamespaces, try},
-		check = declarations[[All, "Interpretation"]];
-		itemsToResolve = Flatten @ Position[(AssociationQ[#] && KeyExistsQ[#, "CSSResolveValueAtComputeTime"])& /@ check, True];
-		Do[
-			ssNamespaces = declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "Namespaces"]];
-			try = 
-				replaceAttrFunctionsWithTokens[
-					CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]], 
-					element,
-					ssNamespaces];
-			If[FailureQ[try],
-				declarations[[i, "Interpretation"]] = try
-				,
-				declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]] =	CSSUntokenize @ try
-			];
-			,
-			{i, itemsToResolve}];
-		declarations
-	]
 	
 	
 End[] (* End Private Context *)

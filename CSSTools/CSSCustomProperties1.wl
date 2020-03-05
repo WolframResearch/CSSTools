@@ -57,7 +57,8 @@ DownValues[consumeProperty] =
 			] :>
 				<|"CSSCustomPropertyDefinition" -> <|
 					"Name"  -> prop, 
-					"Value" -> Nothing|>|>,
+					"Value" -> Nothing,
+					"Namespaces" -> OptionValue["Namespaces"]|>|>,
 					
 			(* normal custom property definition *)
 			HoldPattern[
@@ -74,7 +75,8 @@ DownValues[consumeProperty] =
 							]
 							,
 							CSSUntokenize[tokens]
-						]|>|>,
+						],
+					"Namespaces" -> OptionValue["Namespaces"]|>|>,
 						
 			(* any use of var() must be resolved at compute time (CSSCascade/CSSInheritance) unless a parse error is detected *)
 			HoldPattern[
@@ -184,9 +186,7 @@ parseVarFunctionToken[token_?CSSTokenQ, replacements_] :=
 	
 
 (* ========== var() function substitution ========== *)
-
-(* check for recursive definitions; return cycles/self-loops if any found *)
-customPropertyDefinitionCycles[replacements:{Rule[_?StringQ, _?StringQ]...}] :=
+customPropertyRelationshipGraph[replacements:{Rule[_?StringQ, _?StringQ]...}] := 
 	Module[{reps, newRules},
 		(* find all var() token instances in the custom property replacement rules; get the names; ignore Failures as these should be removed during other parsing *)
 		reps = CSSTokenize /@ replacements[[All, 2]];
@@ -194,9 +194,16 @@ customPropertyDefinitionCycles[replacements:{Rule[_?StringQ, _?StringQ]...}] :=
 		newRules = 
 			With[{choices = FreeQ[#, Failure]& /@ newRules},
 				Flatten[Thread /@ Thread[Rule[Pick[replacements[[All, 1]], choices], Pick[newRules, choices]]]]];
-				
+		Graph[newRules]
+	]
+
+
+(* check for recursive definitions; return cycles/self-loops if any found *)
+customPropertyDefinitionCycles[replacements:{Rule[_?StringQ, _?StringQ]...}] :=
+	Module[{g},
 		(* make a graph and check for looping structures *)
-		With[{g = Graph[newRules]}, Join[(*cycles*)FindCycle[g, Infinity, All], (*self loops*)EdgeList[g, _?(#[[1]] === #[[2]]&)]]]
+		g = customPropertyRelationshipGraph[replacements];
+		Join[(*cycles*)FindCycle[g, Infinity, All], (*self loops*)EdgeList[g, _?(#[[1]] === #[[2]]&)]]
 	]
 
 replaceVarFunctionWithTokens[tokensInput:{__?CSSTokenQ}, replacements_] :=
@@ -221,31 +228,196 @@ replaceVarFunctionWithTokens[tokensInput:{__?CSSTokenQ}, replacements_] :=
 			varPosition = FirstPosition[tokens, TokenPatternString["var", "function"], None];
 			l = Length[tokens];
 		];
-		tokens
+		tokens //. HoldPattern[{a___, Sequence[b__], c___}] :> {a, b, c} (* flatten any Sequence held within Association *)
 	]
+
+
+(* ================= CSSCustomPropertyDefinition replacement if they contain other functions ================= *)
+(*
+	CSS is almost frustratingly flexible. A CSS custom property declaration e.g. --varName:varValue can itself have
+	other resolvable functions in its property value. Moreover, @media declarations can re-define the property
+	based on some condition. So what do we do?
 	
-replaceVarFunctionsInDeclarationList[declarationsInput_?ListQ] :=
-	Module[{check, customPropertyDefinitions, itemsToResolve, declarations = declarationsInput, try},
-		check = declarations[[All, "Interpretation"]];
-		customPropertyDefinitions = (#Name -> #Value)& /@ Flatten @ Values @ Pick[check, (AssociationQ[#] && KeyExistsQ[#, "CSSCustomPropertyDefinition"])& /@ check];
-		itemsToResolve = Flatten @ Position[(AssociationQ[#] && KeyExistsQ[#, "CSSResolveValueAtComputeTime"])& /@ check, True];
+	We need to resolve the property definitions before we can substitute them elsewhere in the CSS.
+	
+	Resolving calc() and attr() (from CSSValuesAndUnits) is relatively simple to do in comparison to resolving other var() functions.
+	Recall that var() functions can contain dependencies that could lead to infinite recursion. Thus, we create
+	a dependency graph and check it for loops. If no loops exist, then the substitution order is determined by   
+	following the directed graph.
+	
+	If there are multiple property declarations with the same property name (recall the prop name is case sensitive),
+	then we follow each definition as it makes substitutions into subsequent custom properties. Any conditions on 
+	said definition are joined with any other conditions that are encountered along the way.
+	
+	In a sense we have a multi-verse scenario: any custom property definition is resolved to its logical conclusion, 
+	but there could be many such conclusions. After each branch in the chain is fully resolved, we merge them all
+	back together. It often ends up duplicating the custom property definitions, but each one is also often unique in its 
+	stated conditions. Even if there is no uniqueness of condition, the cascade-order has not been affected by the duplications,
+	so the correct value can be found by assembling all definitions together with their conditions.
+	
+	Assembling duplicate props with conditions is normally handled by CSSTools`CSSStyleSheetInterpreter`Private`assembleWithConditions.
+	
+	There are further consequences to this approach. Now that we have duplicate custom properties with varying conditions, 
+	any substitution into a var() function will ultimately pass those conditions on. This bloat will slow down the FE
+	as it attempts to resolve all the conditions, but that is the world we live in. In practice it is better to work with
+	"simplified" CSS in that all media conditions have first been excised before running CSSCascade or CSSInheritance.
+*)
+Options[resolveCSSCustomPropertyDefinition] = {"PropertyIsCaseSensitive" -> False}
+resolveCSSCustomPropertyDefinition[CSSDataSubset_, scope_, opts:OptionsPattern[]] :=
+	Module[{replacements, cycles, localSubset = CSSDataSubset, graph, customProp, localDecs, propLoop, result, tmp, pos},
+		(* check for dependency loops. Remove any dependent properties, but issue a warning. *)
+		replacements = getAllVarReplacementRules[localSubset];
+		graph = Graph[customPropertyRelationshipGraph[replacements], VertexLabels -> Automatic];
+		cycles = Join[(*cycles*)FindCycle[graph, Infinity, All], (*self loops*)EdgeList[graph, _?(#[[1]] === #[[2]]&)]];
+		If[cycles =!= {}, Echo[varFailureRecursion /@ cycles, "CSS custom property recursion detected:"]];
 		Do[
-			try = 
-				replaceVarFunctionWithTokens[
-					CSSTokenize @ declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]],
-					customPropertyDefinitions];
-			If[FailureQ[try],
-				declarations[[i, "Interpretation"]] = try
-				,
-				declarations[[i, "Interpretation", "CSSResolveValueAtComputeTime", "String"]] = CSSUntokenize @	try
-			]
+			If[!ListQ[cycles[[i]]], cycles[[i]] = {cycles[[i]]}];
+			pos = Position[localSubset, KeyValuePattern[{"Property" -> Alternatives @@ cycles[[i]][[All, 1]]}]];
+			Do[localSubset[[Sequence @@ j]] = <|localSubset[[Sequence @@ j]], "Interpretation" -> varFailureRecursion[cycles[[i]]]|>, {j, pos}]
 			,
-			{i, itemsToResolve}];
-		declarations
+			{i, 1, Length[cycles], 1}
+		];
+		replacements = getAllVarReplacementRules[localSubset];
+		graph = Graph[customPropertyRelationshipGraph[replacements], VertexLabels -> Automatic];
+		
+		(* Which property should we evaluate first? Assuming there's no dependency loops, start with the property that is the source of all others *)
+		customProp = First[Pick[VertexList[graph], 0 === #& /@ VertexOutDegree[graph]], None];
+		
+		(* get all cascade-ordered declarations, remove ones with parse failures *)
+		localDecs = CSSTools`CSSStyleSheetInterpreter`Private`cssCascadeDeclarations[scope, localSubset, All, opts];
+		localDecs = DeleteCases[localDecs, KeyValuePattern[{"Interpretation" -> _?FailureQ}]];
+		
+		(* tokenize CSSCustomPropertyDefinition instances and add tokens as a new key *)
+		Do[
+			tmp = localDecs[[i]];
+			If[KeyExistsQ[tmp["Interpretation"], "CSSCustomPropertyDefinition"], 
+				AssociateTo[tmp["Interpretation", "CSSCustomPropertyDefinition"], "Tokens" -> CSSTokenize[tmp["Value"]]]];
+			localDecs[[i]] = tmp
+			,
+			{i, Length[localDecs]}];
+			
+		(* 
+			If there are multiple prop definitions, then we need to follow each to its end state.
+			This could incur recursive function calls, which is OK as each duplication makes a same-length copy of the declarations. 
+			To keep cascade-ordering, transpose all same-length "chains" together and delete duplicate declarations. *)
+		propLoop = Flatten @ Position[localDecs, KeyValuePattern[{"Property" -> customProp}], {1}];
+		Do[localDecs[[i]] = reduceDeclarationWithoutVar[localDecs[[i]]], {i, propLoop}];
+		If[propLoop === {}, 
+			result = localDecs
+			,
+			result = followChainToEnd[graph, localDecs, #]& /@ propLoop;
+			result = Transpose[result] // Flatten // DeleteDuplicates;
+		];
+		
+		(* clean up any modifications made to the declarations in the scope of this function *)
+		Do[
+			If[KeyExistsQ[result[[i, "Interpretation"]], "CSSCustomPropertyDefinition"], 
+				tmp = CSSUntokenize @ result[[i, "Interpretation", "CSSCustomPropertyDefinition", "Tokens"]];
+				result[[i, "Interpretation", "CSSCustomPropertyDefinition", "Value"]] = tmp;
+				result[[i, "Value"]] = tmp;
+			]
+			, 
+			{i, Length[result]}];
+		Do[
+			If[ListQ[result[[i, "Condition"]]], 
+				result[[i, "Condition"]] = 
+					Replace[
+						Thread[DeleteCases[result[[i, "Condition"]], None], Hold], 
+						{
+							Hold[{x___}] :> If[Length[{x}] > 1, Hold[And[x]], Hold[x]], 
+							{} -> None}]]
+			, 
+			{i, Length[result]}];
+		tmp = Select[result, KeyExistsQ[#Interpretation, "CSSCustomPropertyDefinition"]&];
+		{result, <|
+			"Property" -> #["Interpretation", "CSSCustomPropertyDefinition", "Name"], 
+			"Value" -> #["Interpretation", "CSSCustomPropertyDefinition", "Value"], 
+			"Condition" -> #Condition|> & /@ tmp}
+]
+
+getAllVarReplacementRules[CSSDataSubset_] :=
+	Module[{customPropertyDefinitions},
+		customPropertyDefinitions = Flatten[CSSDataSubset[[All, "Block"]]][[All, "Interpretation"]];
+		customPropertyDefinitions = Pick[customPropertyDefinitions, (AssociationQ[#] && KeyExistsQ[#, "CSSCustomPropertyDefinition"])& /@ customPropertyDefinitions];
+		(#Name -> #Value)& /@ Flatten @ Values @ customPropertyDefinitions
 	]
 
+followChainToEnd[currentGraph_Graph, currentDeclarations_, propPosition_] :=
+	Module[{replaceParts, localDecs = currentDeclarations, replaceLoop, parts, graph = currentGraph, customProp, propLoop = {}, tokens, result = currentDeclarations},
+		customProp = localDecs[[propPosition]]["Property"];
+		
+		(* 
+			Find positions where we need to replace the custom prop with new values.
+			Each declaration may call the same var() function multiple times, so group them under the same declaration index. *)
+		replaceParts = 
+			GroupBy[
+				Position[
+					localDecs, 
+					Condition[
+						CSSToken[KeyValuePattern[{"Type" -> "function", "String" -> s_?StringQ /; StringMatchQ[s, "var", IgnoreCase -> True], "Children" -> c_}]],
+						Position[c, CSSToken[KeyValuePattern[{"Type" -> "ident", "String" -> customProp}]]] =!= {}]], 
+				First -> Rest];
+		
+		(* 
+			Only continue down the chain if there's a valid substitution to make.
+			If at any time we detect that no more var() functions appear in the property value, reduce all other calc() and attr() functions. *)
+		If[replaceParts =!= <||>,
+			(* reduce property value if no var() functions are found in its value *)
+			localDecs[[propPosition]] = reduceDeclarationWithoutVar[localDecs[[propPosition]]];
+			
+			replaceLoop = Keys[replaceParts];
+			tokens = localDecs[[propPosition, "Interpretation", "CSSCustomPropertyDefinition", "Tokens"]];
+			
+			(* every substitution location gets replaced by the same token sequence *)
+			parts = 
+				Table[
+					reduceDeclarationWithoutVar[
+						ReplacePart[localDecs[[replaceLoopIndex]],
+							Join[
+								{{Key["Condition"]} -> combineConditions[localDecs[[replaceLoopIndex, "Condition"]], localDecs[[propPosition, "Condition"]]]},
+								Thread[replaceParts[replaceLoopIndex] -> Unevaluated @ Sequence @@ tokens]]
+						] //. HoldPattern[{a___, Sequence[b__], c___}] :> {a, b, c}]
+					,
+					{replaceLoopIndex, replaceLoop}];
+			localDecs = Flatten @ ReplacePart[localDecs, Thread[replaceLoop -> parts]];
+			
+			(* move backwards along the custom prop replacement graph *)
+			graph = VertexDelete[graph, customProp];
+			customProp = First[Pick[VertexList[graph], 0 === #& /@ VertexOutDegree[graph]], None];
+			propLoop = Flatten @ Position[localDecs, KeyValuePattern[{"Property" -> customProp}], {1}];
+			Do[localDecs[[i]] = reduceDeclarationWithoutVar[localDecs[[i]]], {i, propLoop}];
+			
+			(* recursively continue this process until reaching the end of the chain *)
+			result = followChainToEnd[graph, localDecs, #]& /@ propLoop;
+			result = Transpose[result] // Flatten // DeleteDuplicates;
+		];
+		result
+	]
 	
+reduceDeclarationWithoutVar[dec_?AssociationQ] :=
+	Module[{d = dec, funcPositions, token, try},
+		If[Position[d, t_?CSSTokenQ /; TokenStringIs["var", t]] === {},
+			funcPositions = Position[d, t_?CSSTokenQ /; TokenStringIs["attr" | "calc", t]];
+			Do[
+				token = Extract[d, funcPos];
+				try = Catch @ 
+					Which[
+						TokenStringIs["calc", token], CSSTools`CSSValuesAndUnits3`Private`replaceCalcFunctionsWithTokens[{token}, "prop"],
+						TokenStringIs["attr", token], CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsWithTokens[{token}, d["Element"], d["CustomPropertyDefinition", "Namespaces"]],
+						True,                         Failure["BadParse", <|"MessageTemplate" -> "Could not find expected function token."|>]
+					];
+				If[FailureQ[try], 
+					d["Interpretation"] = try
+					,
+					d = ReplacePart[d, funcPos -> Unevaluated[Sequence @@ try]] //. HoldPattern[{a___, Sequence[b__], c___}] :> {a, b, c}
+				]
+				,
+				{funcPos, funcPositions}]
+		];
+		d
+	]
 
+combineConditions[cOld_, cAdd_] := DeleteDuplicates @ Sort @ Flatten @ {cOld, cAdd}
 
 
 End[] (* End Private Context *)
