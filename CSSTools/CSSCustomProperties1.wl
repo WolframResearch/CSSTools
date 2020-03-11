@@ -220,11 +220,11 @@ replaceVarFunctionWithTokens[tokensInput:{__?CSSTokenQ}, replacements_] :=
 			
 			(* check for recursion *)
 			name = getCustomPropertyNameFromVarFunction[varToken];
-			If[!FreeQ[cycles, name], Return @ varFailureRecursion[Pick[cycles, !FreeQ[#, name]& /@ cycles]]];
+			If[!FreeQ[cycles, name], Throw @ varFailureRecursion[Pick[cycles, !FreeQ[#, name]& /@ cycles]]];
 			
 			(* do token replacement *)
 			varCheck = parseVarFunctionToken[varToken, replacements];
-			If[FailureQ[varCheck], Return @ varCheck, tokens = ReplacePart[tokens, varPosition -> Unevaluated[Sequence @@ varCheck]]];
+			If[FailureQ[varCheck], Throw @ varCheck, tokens = ReplacePart[tokens, varPosition -> Unevaluated[Sequence @@ varCheck]]];
 			varPosition = FirstPosition[tokens, TokenPatternString["var", "function"], None];
 			l = Length[tokens];
 		];
@@ -262,7 +262,7 @@ replaceVarFunctionWithTokens[tokensInput:{__?CSSTokenQ}, replacements_] :=
 	as it attempts to resolve all the conditions, but that is the world we live in. In practice it is better to work with
 	"simplified" CSS in that all media conditions have first been excised before running CSSCascade or CSSInheritance.
 *)
-Options[resolveCSSCustomPropertyDefinition] = {"PropertyIsCaseSensitive" -> False}
+Options[resolveCSSCustomPropertyDefinition] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False, "PropertyIsCaseSensitive" -> False};
 resolveCSSCustomPropertyDefinition[CSSDataSubset_, scope_, opts:OptionsPattern[]] :=
 	Module[{replacements, cycles, localSubset = CSSDataSubset, graph, customProp, localDecs, propLoop, result, tmp, pos},
 		(* check for dependency loops. Remove any dependent properties, but issue a warning. *)
@@ -290,7 +290,7 @@ resolveCSSCustomPropertyDefinition[CSSDataSubset_, scope_, opts:OptionsPattern[]
 		(* tokenize CSSCustomPropertyDefinition instances and add tokens as a new key *)
 		Do[
 			tmp = localDecs[[i]];
-			If[KeyExistsQ[tmp["Interpretation"], "CSSCustomPropertyDefinition"], 
+			If[AssociationQ[tmp["Interpretation"]] && KeyExistsQ[tmp["Interpretation"], "CSSCustomPropertyDefinition"], 
 				AssociateTo[tmp["Interpretation", "CSSCustomPropertyDefinition"], "Tokens" -> CSSTokenize[tmp["Value"]]]];
 			localDecs[[i]] = tmp
 			,
@@ -311,7 +311,7 @@ resolveCSSCustomPropertyDefinition[CSSDataSubset_, scope_, opts:OptionsPattern[]
 		
 		(* clean up any modifications made to the declarations in the scope of this function *)
 		Do[
-			If[KeyExistsQ[result[[i, "Interpretation"]], "CSSCustomPropertyDefinition"], 
+			If[AssociationQ[result[[i, "Interpretation"]]] && KeyExistsQ[result[[i, "Interpretation"]], "CSSCustomPropertyDefinition"], 
 				tmp = CSSUntokenize @ result[[i, "Interpretation", "CSSCustomPropertyDefinition", "Tokens"]];
 				result[[i, "Interpretation", "CSSCustomPropertyDefinition", "Value"]] = tmp;
 				result[[i, "Value"]] = tmp;
@@ -328,7 +328,7 @@ resolveCSSCustomPropertyDefinition[CSSDataSubset_, scope_, opts:OptionsPattern[]
 							{} -> None}]]
 			, 
 			{i, Length[result]}];
-		tmp = Select[result, KeyExistsQ[#Interpretation, "CSSCustomPropertyDefinition"]&];
+		tmp = Select[result, AssociationQ[#Interpretation] && KeyExistsQ[#Interpretation, "CSSCustomPropertyDefinition"]&];
 		{result, <|
 			"Property" -> #["Interpretation", "CSSCustomPropertyDefinition", "Name"], 
 			"Value" -> #["Interpretation", "CSSCustomPropertyDefinition", "Value"], 
@@ -403,7 +403,7 @@ reduceDeclarationWithoutVar[dec_?AssociationQ] :=
 				try = Catch @ 
 					Which[
 						TokenStringIs["calc", token], CSSTools`CSSValuesAndUnits3`Private`replaceCalcFunctionsWithTokens[{token}, "prop"],
-						TokenStringIs["attr", token], CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsWithTokens[{token}, d["Element"], d["CustomPropertyDefinition", "Namespaces"]],
+						TokenStringIs["attr", token], CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsWithTokens[{token}, d["Element"], d["Interpretation", "CustomPropertyDefinition", "Namespaces"]],
 						True,                         Failure["BadParse", <|"MessageTemplate" -> "Could not find expected function token."|>]
 					];
 				If[FailureQ[try], 

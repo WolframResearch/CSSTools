@@ -48,11 +48,13 @@ DownValues[consumeProperty] =
 					(* recall Namespaces format is {<|"Prefix" -> "A", "Namespace" -> "www.A.com", "Default" -> False|>, ...}*)
 					declaredNamespaces = OptionValue["Namespaces"];
 					checkedEntries = parseAttrFunctionToken[#, declaredNamespaces]& /@ Extract[tokens, Position[tokens, TokenPatternString["attr", "function"]]];
+					If[TrueQ[$Debug], Echo[{declaredNamespaces, checkedEntries}, "namespaces + first check"]];					
 					failPosition = FirstPosition[checkedEntries, _Failure, {}];
 					If[failPosition =!= {}, Return @ Extract[checkedEntries, failPosition]];
 					
 					(* check: type is appropriate for the given property *)
 					checkedEntries = typeCheck[prop, #]& /@ checkedEntries;
+					If[TrueQ[$Debug], Echo[checkedEntries, "2nd check"]];
 					failPosition = FirstPosition[checkedEntries, _Failure, {}];
 					If[failPosition =!= {}, Return @ Extract[checkedEntries, failPosition]];
 					
@@ -129,19 +131,19 @@ DownValues[consumeProperty] =
 
 
 parseType[s_String] :=
-	Switch[s, 
+	Switch[ToLowerCase @ CSSNormalizeEscapes @ s, 
 		"string",  "<string>",
 		"color",   "<color>",
 		"url",     "<funciri>", 
 		"%",       "<percentage>",
 		"number",  "<number>",
 		"integer", "<integer>",
-		"em" | "rem" | "ex" | "ch" | "vw" | "vh" | "vmin" | "vmax" | "in" | "cm" | "pc" | "mm" | "pt" | "px" | "q", "<length>",
-		"hz" | "khz",                     "<frequency>",
-		"s" | "ms",                       "<time>",
-		"deg" | "grad" | "rad" | "turns", "<angle>",
-		"dpi" | "dpcm" | "dppx",          "<resolution>",
-		_,                                None
+		"length" | "em" | "rem" | "ex" | "ch" | "vw" | "vh" | "vmin" | "vmax" | "in" | "cm" | "pc" | "mm" | "pt" | "px" | "q", "<length>",
+		"frequencey" | "hz" | "khz",                 "<frequency>",
+		"time" | "s" | "ms" ,                        "<time>",
+		"angle" | "deg" | "grad" | "rad" | "turns" , "<angle>",
+		"dpi" | "dpcm" | "dppx",                     "<resolution>",
+		_,                                           None
 	]
 	
 typeCheck[_, x_Failure] := x	
@@ -1209,6 +1211,9 @@ replaceAttrFunctionsWithTokens[tokensInput:{__?CSSTokenQ}, None, ssNamespaces_] 
 		(* replace attr() from the deepest instance to the most shallow and check for failures at each step *)
 		(* Position is sorted depth-first, which is good because we should substitute the deepest attr() instances first. *)
 		attrPosition = FirstPosition[tokens, TokenPatternString["attr", "function"], None];
+		
+		If[TrueQ[$Debug], Echo[attrPosition, "CVT: do attr replacement; position"]];
+		
 		While[attrPosition =!= None,
 			attrToken = Extract[tokens, attrPosition];
 			

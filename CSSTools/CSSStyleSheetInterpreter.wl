@@ -126,21 +126,27 @@ SetAttributes[consumeRulesets, HoldFirst];
 consumeRulesets[pos_, l_, tokens_, namespaces_, allowAtRule_:True] :=
 	Module[{lRulesets, rulesets, i = 1},
 		lRulesets = Count[tokens, CSSToken[KeyValuePattern["Type" -> "{}"]], {1}]; (* upper bound of possible rulesets *)
+		If[TrueQ @ $Debug, Echo[lRulesets, "number of rule sets in block"]];
 		rulesets = ConstantArray[0, lRulesets]; (* container for processed rulesets *)
-		While[pos < l,
-			If[TrueQ @ $Debug, Echo[pos, "position before rule"]];
-			Which[
-				(* any at-rule *)
-				allowAtRule && TokenTypeIs["at-keyword", tokens[[pos]]], 
-					If[TrueQ @ $Debug, Echo[tokens[[pos]], "consuming at rule"]]; 
-					rulesets[[i]] = consumeAtRule[pos, l, tokens, namespaces];
-					i++,
-				
-				(* bad ruleset: missing a selector *)
-				TokenTypeIs["{}", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens], 
-				
-				(* anything else treated as a ruleset *)
-				True, rulesets[[i]] = consumeRuleset[pos, l, tokens, namespaces]; i++;
+		If[TrueQ @ $Debug, Echo[tokens, "tokens in declaration block"]];
+		If[lRulesets == 0,
+			Return @ {}
+			,
+			While[pos < l,
+				If[TrueQ @ $Debug, Echo[pos, "position before rule"]];
+				Which[
+					(* any at-rule *)
+					allowAtRule && TokenTypeIs["at-keyword", tokens[[pos]]], 
+						If[TrueQ @ $Debug, Echo[tokens[[pos]], "consuming at rule"]]; 
+						rulesets[[i]] = consumeAtRule[pos, l, tokens, namespaces];
+						i++,
+					
+					(* bad ruleset: missing a selector *)
+					TokenTypeIs["{}", tokens[[pos]]], AdvancePosAndSkipWhitespace[pos, l, tokens], 
+					
+					(* anything else treated as a ruleset *)
+					True, rulesets[[i]] = consumeRuleset[pos, l, tokens, namespaces]; i++;
+				];
 			];
 		];
 		DeleteCases[rulesets, 0, {1}]
@@ -323,7 +329,7 @@ consumeAtMediaRule[pos_, l_, tokens_, namespaces_] :=
 				{CSSToken[KeyValuePattern["Type" -> "comma"]]}];
 		queries = consumeMediaQuery /@ queries;
 		If[AnyTrue[queries, _?FailureQ], Return @ FirstCase[queries, _?FailureQ]];
-		(* a media query list is true of any component is true, and false only if all are false, so combine into Or *)
+		(* a media query list is true if any component is true, and false only if all are false, so combine into Or *)
 		queries = Thread[Or @@ queries, Hold];
 		
 		If[TokenTypeIsNot["{}", tokens[[pos]]], Return @ Failure["BadMedia", <|"Message" -> "Expected @media block."|>]];
@@ -819,7 +825,7 @@ frameStyleOptionQ[___] := False
 modifyValueToDirective = (* value modification function for assembleWithConditions of directives *)
 	Function[{v, dummy},
 		Module[{value = v},
-			If[!MissingQ[value],
+			If[AssociationQ[value],
 				If[KeyExistsQ[value, "Style"] && value["Style"] === None && Length[value] > 1, value = KeyDropFrom[value, "Style"]];
 				Directive @@ Values @ value
 				,
@@ -958,7 +964,11 @@ assemble[
 				MapThread[
 					If[MatchQ[#1, Hold[Automatic]], Nothing, #2 -> If[FreeQ[#1, Which], First @ #1, Dynamic @@ #1]]&, 
 					{{family, size, style, weight}, {FontFamily, FontSize, FontSlant, FontWeight}}],
-				{FontVariations -> <|"CapsType" -> If[FreeQ[variant, Which], First @ variant, Dynamic @@ variant]|>}
+				If[variant === Hold[Automatic], 
+					{}
+					,
+					{FontVariations -> <|"CapsType" -> If[FreeQ[variant, Which], First @ variant, Dynamic @@ variant]|>}
+				]
 			]
 			,
 			Function[{y},
@@ -1184,21 +1194,29 @@ reduceAtComputeValueTime[dec_?AssociationQ, customPropertiesWithCondition_?ListQ
 				CSSTools`CSSCustomProperties1`Private`getCustomPropertyNameFromVarFunction,
 				Extract[dec, Position[dec, Condition[t_?CSSTokenQ, TokenTypeIs["function", t] && TokenStringIs["var", t]]]]];
 		
+		If[TrueQ @ $Debug, Echo[dec, "CVT: declaration"]];
+		If[TrueQ @ $Debug, Echo[customProps, "CVT: customProps"]];
+				
 		(* get every complete set of custom props; there are n-factorial combinations *)
 		If[Length[customProps] > 0, 
 			customPropSets = Flatten[Outer[List, Sequence @@ Function[{x}, Select[customPropertiesWithCondition, #Property === x &]] /@ customProps], Length[customProps] - 1];
+			If[customPropSets === {}, customPropSets = {{}}];
 			,
 			customPropSets = {{}};
 		];
 		
+		If[TrueQ @ $Debug, Echo[customPropSets, "CVT: customPropSets"]];
+		
 		(* set up rem font sizes *)
 		If[Length[remFontSizesWithCondition] == 0, fontsizes = {None}, fontsizes = remFontSizesWithCondition];
 		
-		DeleteCases[_?FailureQ, Flatten @ Table[doSingleCaseAtComputeValueTime[dec, customPropertiesWithCondition, i, j], {i, customPropSets}, {j, fontsizes}]]
+		If[TrueQ @ $Debug, Echo[fontsizes, "CVT: fontsizes"]];
+				
+		DeleteCases[Flatten @ Table[doSingleCaseAtComputeValueTime[dec, customPropertiesWithCondition, i, j], {i, customPropSets}, {j, fontsizes}], _?FailureQ]
 	]
 	
 doSingleCaseAtComputeValueTime[dec_?AssociationQ, customPropertiesWithCondition_, customPropSet_, remFontSizeWithCondition_] :=
-	Module[{keep, remove, try, newCondition1, newCondition2, fontsize, customPropSubset},
+	Module[{keep, remove, try, newCondition1, newCondition2, fontsize, customPropSubset, tokens, pos, l},
 		(* choose a set of props. Keep those in place and remove duplicate props elsewhere in the customPropertiesWithCondition list. *)
 		keep = Flatten @ Position[customPropertiesWithCondition, Alternatives @@ customPropSet];
 		remove = Complement[Position[customPropertiesWithCondition, Alternatives @@ customPropSet[[All, "Property"]]][[All, 1]], keep];
@@ -1206,15 +1224,19 @@ doSingleCaseAtComputeValueTime[dec_?AssociationQ, customPropertiesWithCondition_
 		newCondition1 = Sort @ Union @ Flatten[convertConditionToList /@ customPropertiesWithCondition[[keep, "Condition"]]];
 		
 		(* get the font-size value and its condition *)
+		If[TrueQ @ $Debug, Echo[remFontSizeWithCondition, "CVT: rem fontsize with condition"]];
 		If[remFontSizeWithCondition === None, 
 			fontsize = None; newCondition2 = {None};
 			, 
 			fontsize = remFontSizeWithCondition["Value"]; newCondition2 = convertConditionToList[remFontSizeWithCondition["Condition"]];
 		];
 		
+		If[TrueQ[$Debug], Echo[{fontsize, customPropSubset}, "CVT single case: fontsize + prop set"]];
+		
 		(* reduce declaration to a simplified expression *)
 		try = reduceAtComputeValueTimeDoReplacements[dec, (#Property -> #Value)& /@ customPropSubset, fontsize];
-		If[FailureQ[try], Echo[try, "Failed to reduce declaration."]; Return @ try];
+		If[TrueQ[$Debug], Echo[try, "CVT single case: after all replacements"]];
+		If[FailureQ[try["Interpretation"]], Echo[try, "Failed to reduce declaration."]; Return @ try];
 		
 		(* clean up declaration: combine conditions *)
 		try["Condition"] = combineConditions[try["Condition"], {newCondition1, newCondition2}];
@@ -1228,7 +1250,12 @@ doSingleCaseAtComputeValueTime[dec_?AssociationQ, customPropertiesWithCondition_
 		
 		(* clean up declaration: reduce property value to string and re-interpret *)
 		try["Value"] = StringTrim @ CSSUntokenize[try[["Interpretation", "CSSResolveValueAtComputeTime", "Tokens"]]];
-		try["Interpretation"] = consumeProperty[try["Property"], try[["Interpretation", "CSSResolveValueAtComputeTime", "Tokens"]]];
+		tokens = try[["Interpretation", "CSSResolveValueAtComputeTime", "Tokens"]];
+		pos = 1; l = Length[tokens]; TrimWhitespaceTokens[pos, l, tokens];
+		
+		If[TrueQ[$Debug], Echo[{pos, l, tokens}, "CVT single case: pos, l, tokens"]];
+		
+		try["Interpretation"] = consumeProperty[try["Property"], tokens[[pos ;; l]]];
 		try
 	]
 
@@ -1256,32 +1283,43 @@ reduceAtComputeValueTimeDoReplacements[dec_?AssociationQ, customPropertyDefiniti
 					Or[
 						TokenTypeIs["function", t] && TokenStringIs["attr" | "calc" | "var", t],
 						TokenTypeIs["dimension", t] && TokenUnitIs["rem", t] && !KeyExistsQ[First[t], "Interpretation"]]]];
+		
+		If[TrueQ[$Debug], Echo[funcPositions, "CVT: do replacement; funcPositions"]];
+		
 		Do[
 			token = Extract[d, funcPosIndex];
+			If[TrueQ[$Debug], Echo[token, "CVT: do replacement; token"]];
 			try = Catch @ 
 				Which[
 					TokenTypeIs["function", token],
 						Which[
 							TokenStringIs["var",  token], CSSTools`CSSCustomProperties1`Private`replaceVarFunctionWithTokens[{token}, customPropertyDefinitions],
 							TokenStringIs["calc", token], CSSTools`CSSValuesAndUnits3`Private`replaceCalcFunctionsWithTokens[{token}, d["Property"]],
-							TokenStringIs["attr", token], CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsWithTokens[{token}, d["Element"], d["CustomPropertyDefinition", "Namespaces"]],
+							TokenStringIs["attr", token], CSSTools`CSSValuesAndUnits3`Private`replaceAttrFunctionsWithTokens[{token}, d["Element"], d["Interpretation", "CSSResolveValueAtComputeTime", "Namespaces"]],
 							True,                         Failure["BadParse", <|"MessageTemplate" -> "Could not find expected function token."|>]
 						],
 					TokenTypeIs["dimension", token] && TokenUnitIs["rem", token] && !KeyExistsQ[First[token], "Interpretation"],
 						{Replace[token, 
 							CSSToken[<|"Type" -> "dimension", "String" -> s_, "Value" -> v_, "ValueType" -> t_, "Unit" -> u_|>] :>
-								CSSToken[<|"Type" -> "dimension", "String" -> s, "Value" -> v, "ValueType" -> t, "Unit" -> u, 
-									"Interpretation" -> If[MatchQ[remFontSize, _Dynamic], Replace[remFontSize, Dynamic[x___] :> Dynamic[v*(x)]], remFontSize]|>]]},
+								CSSToken[<|"Type" -> "dimension", "String" -> s, "Value" -> v, "ValueType" -> t, "Unit" -> u,
+									If[MatchQ[remFontSize, None], 
+										Nothing
+										,
+										"Interpretation" -> If[MatchQ[remFontSize, _Dynamic], Replace[remFontSize, Dynamic[x___] :> Dynamic[v*(x)]], v*remFontSize]
+									]|>]]},
 					True, 
 						Throw @ Failure["UnexpectedState", <|"MessageTemplate" -> "Expected compute-time parameter."|>]
 				];
 			If[FailureQ[try], 
-				d["Interpretation"] = try
+				d["Interpretation"] = try; Break[]
 				,
 				d = ReplacePart[d, funcPosIndex -> Unevaluated[Sequence @@ try]] //. HoldPattern[{a___, Sequence[b__], c___}] :> {a, b, c}
 			]
 			,
 			{funcPosIndex, funcPositions}];
+			
+		If[TrueQ[$Debug], Echo[d, "CVT: do replacement; done"]];
+		
 		d
 	]
 	
@@ -1422,31 +1460,44 @@ CSSCascade[
 			,
 			{j, Length[CSSDataSubset]}
 		];
-			
+		
+		If[TrueQ @ $Debug, Echo[CSSDataSubset, "CSSCascade data subset before compute-value-time"]];
+
 		(* custom property definitions must fully resolve first *) 
 		(* This function also reduces the rulesets to just a list of cascade-order declarations *)
-		{declarations, customPropertyDefinitions} = CSSTools`CSSCustomProperties1`Private`resolveCSSCustomPropertyDefinition[CSSDataSubset, scope];
-			
+		{declarations, customPropertyDefinitions} = CSSTools`CSSCustomProperties1`Private`resolveCSSCustomPropertyDefinition[CSSDataSubset, scope, opts];
+		
 		(* tokenize CSSResolveValueAtComputeTime instances and add tokens as a new key *)
 		Do[
 			temp = declarations[[i]];
-			If[KeyExistsQ[temp["Interpretation"], "CSSResolveValueAtComputeTime"], 
+			If[AssociationQ[temp["Interpretation"]] && KeyExistsQ[temp["Interpretation"], "CSSResolveValueAtComputeTime"], 
 				AssociateTo[temp["Interpretation", "CSSResolveValueAtComputeTime"], "Tokens" -> CSSTokenize[temp["Value"]]]];
 			declarations[[i]] = temp
 			,
 			{i, Length[declarations]}
 		];
-			
+		
+		If[TrueQ @ $Debug, Echo[customPropertyDefinitions, "CSSCascade custom props"]];
+		If[TrueQ @ $Debug, Echo[declarations, "CSSCascade declarations before compute-value-time"]];
+		
 		(* resolve the compute-time declarations *)	
 		(* note that reduceAtComputeValueTime calls consumeProperty to produce a fully resolved "Interpretation" *)
 		itemsToResolve = Flatten @ Position[(AssociationQ[#] && KeyExistsQ[#, "CSSResolveValueAtComputeTime"])& /@ declarations[[All, "Interpretation"]], True];
-		Do[declarations[[j]] = reduceAtComputeValueTime[declarations[[j]], customPropertyDefinitions, {}], {j, itemsToResolve}];
+		(* 
+			'rem' cannot resolve within CSSCascade because it does not have access to the :root properties. 
+			Regardlesss, set the RemIsResolved flag to True in order to avoid the consumeProperty DownValue that pre-empts rem-containing property values *)
+		Block[{CSSTools`CSSValuesAndUnits3`Private`RemIsResolved = True},
+			Do[declarations[[j]] = reduceAtComputeValueTime[declarations[[j]], customPropertyDefinitions, {}], {j, itemsToResolve}];
+		];
 			
+		If[TrueQ @ $Debug, Echo[declarations, "CSSCascade declarations after compute-value-time"]];
+		
 		(* clean up anything added to declarations during compute-time processing *)
 		declarations = KeyDrop["Element"] /@ Flatten[declarations];
 		
 		(* assemble declarations into FE options *)
 		resolvedOptions = Flatten[assemble[#, scope, declarations, "PropertyIsCaseSensitive" -> OptionValue["PropertyIsCaseSensitive"]]& /@ usedProps];
+		If[TrueQ @ $Debug, Echo[resolvedOptions, "resolved options"]];
 		Flatten @ 
 			Which[
 				MatchQ[scope, Box | All],
@@ -1516,8 +1567,8 @@ cssCascadeDeclarations[
   				declarations, 
   				kvp:KeyValuePattern[{
   					"Property" -> s_?StringQ /; StringMatchQ[s, Alternatives @@ shorthandProperties, IgnoreCase -> True], 
-  					"Interpretation" -> int_, "Important" -> imp_, "Condition" -> con_}
-  				] :> Sequence @@ (<|#, "Important" -> imp, "Condition" -> con|> & /@ int), {1}];
+  					"Interpretation" -> int_}
+  				] :> Sequence @@ (<|#, KeyDrop[kvp, {"Property", "Value", "Interpretation"}]|>& /@ int), {1}];
   		
 		(* add @page declarations; they should only apply at Notebook scope *)
 		(* FIXME: in paged module 3 the pages have their own specificity. Page specificity has not been implemented *)
@@ -1755,12 +1806,19 @@ CSSInheritance[target_?CSSTargetQ, scope_, CSSData_?validCSSDataQ, opts:OptionsP
 			(* tokenize CSSResolveValueAtComputeTime instances and add tokens as a new key *)
 			Do[
 				temp = declarations[[i]];
-				If[KeyExistsQ[temp["Interpretation"], "CSSResolveValueAtComputeTime"], 
+				If[AssociationQ[temp["Interpretation"]] && KeyExistsQ[temp["Interpretation"], "CSSResolveValueAtComputeTime"], 
 					AssociateTo[temp["Interpretation", "CSSResolveValueAtComputeTime"], "Tokens" -> CSSTokenize[temp["Value"]]]];
 				declarations[[i]] = temp
 				,
 				{i, Length[declarations]}];
 			
+			If[TrueQ @ $Debug, Echo["generation " <> ToString[i]]];
+			If[TrueQ @ $Debug, Echo[customPropertyDefinitions, "CSSInheritance new custom props from this generation"]];
+			If[TrueQ @ $Debug, Echo[declarations, "CSSInheritance declarations before compute-value-time"]];
+			
+			(* add any inherited custom props *)
+			customPropertyDefinitions = Join[customPropertyDefinitions, Select[generations[[i]], StringStartsQ[#Property, "--"]&]];
+		
 			(* compute root font-size 'rem' *)
 			If[i == 1,
 				(* get indices of font-size declaration *)
@@ -1794,22 +1852,29 @@ CSSInheritance[target_?CSSTargetQ, scope_, CSSData_?validCSSDataQ, opts:OptionsP
 			(* append the current generation's declarations with the previous generations's inheritable ones *)
 			inheritableProps = Union @ Flatten @ generations[[i]][[All, "Property"]];
 			inheritableProps = Pick[inheritableProps, (Or @@ Through[inheritedPropertyRules[#]])& /@ inheritableProps];
+			
+			If[TrueQ @ $Debug, Echo[inheritableProps, "props inherited from previous generation"]];
+			
 			generations[[i+1]] = Join[declarations, Select[generations[[i]], MatchQ[#Property, Alternatives @@ inheritableProps]&]];
 			,
 			{i, Length[lineage]}
 		];
 		
+		If[TrueQ @ $Debug, Echo[generations, "all generations"]];
+		
 		(* resolve any 'inherit' keywords of the last generation; multiple conditioned declarations can be pulled from a previous generation *)
 		itemsToResolve = Flatten @ Position[generations[[-1]], KeyValuePattern[{"Property" -> _, "Value" -> s_ /; StringQ[s] && StringMatchQ[s, "inherit", IgnoreCase -> True]}]];
 		Do[
 			temp = resolveInheritKeyword[generations, generations[[-1, i, "Property"]], case];
-			generations[[-1, i]] = temp, {i, itemsToResolve}];
+			generations[[-1, i]] = temp
+			, 
+			{i, itemsToResolve}];
 		generations[[-1]] = Flatten[generations[[-1]]];
 		
-		(* gather property names; combine LRBT shorthand properties *)
+		(* gather property names; combine shorthand properties *)
 		props = Union @ generations[[-1, All, "Property"]];
 		If[!case, props = Union @ ToLowerCase @ props];
-		props = Union @ StringReplace[props, {StartOfString ~~ p:("border"|"margin"|"outline"|"padding"|"font"|"list-style"|"background") ~~ __ :> p}];
+		props = Union @ StringReplace[props, {StartOfString ~~ p:(Alternatives @@ SortBy[StringLength] @ shorthandProperties) ~~ __ :> p}];
 		
 		(* assemble declarations into FE options *)
 		resolvedOptions = Flatten[assemble[#, scope, generations[[-1]], "PropertyIsCaseSensitive" -> case]& /@ props];

@@ -94,7 +94,7 @@ consumeMediaQuery[tokens:{___?CSSTokenQ}] :=
 			,
 			(* attempt to consume entire token sequence as a <media-condition> *)
 			value1 = Catch @ consumeMediaCondition[tokens];
-			If[FailureQ[value1], Throw @ Failure[value1[[1]], If[KeyExistsQ[value1[[2]], "Parsed"], KeyDrop[value1[[2]], "Parsed"], value1[[2]]]]]
+			If[FailureQ[value1], Throw @ Failure[value1[[1]], If[AssociationQ[value1[[2]]] && KeyExistsQ[value1[[2]], "Parsed"], KeyDrop[value1[[2]], "Parsed"], value1[[2]]]]]
 			
 		];
 		(* add possible overall negation *)
