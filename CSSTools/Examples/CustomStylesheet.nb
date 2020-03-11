@@ -3,22 +3,22 @@
 (*** Wolfram Notebook File ***)
 (* http://www.wolfram.com/nb *)
 
-(* CreatedBy='Mathematica 12.0' *)
+(* CreatedBy='Mathematica 12.1' *)
 
 (*CacheID: 234*)
 (* Internal cache information:
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     34665,        628]
-NotebookOptionsPosition[     33430,        607]
-NotebookOutlinePosition[     33793,        622]
-CellTagsIndexPosition[     33750,        619]
+NotebookDataLength[     34671,        629]
+NotebookOptionsPosition[     33375,        607]
+NotebookOutlinePosition[     33798,        623]
+CellTagsIndexPosition[     33755,        620]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
 Notebook[{
-Cell[StyleData[StyleDefinitions -> "Default.nb"],ExpressionUUID->"f23498d0-4fcd-4fa0-9a02-fb7c2eb557e4"],
+Cell[StyleData[StyleDefinitions -> "Default.nb"],ExpressionUUID->"49ec781e-eab2-4e44-8639-926302bae929"],
 
 Cell[StyleData["Notebook"],
  BackgroundAppearance->Image[CompressedData["
@@ -517,37 +517,36 @@ zsAZOANn4AycgTNwhv+rM/wL3KL6dw==
        "BasicSchema" -> 
        Association[
         "CreateDate" -> 
-         DateObject[{2011, 9, 23, 20, 14, 5.}, "Instant", "Gregorian", -5.], 
+         DateObject[{2011, 9, 23, 20, 14, 5.}, "Instant", "Gregorian", -7.], 
          "CreatorTool" -> "Adobe Fireworks CS5 11.0.0.484 Windows", 
          "ModifyDate" -> 
          DateObject[{2011, 9, 23, 20, 14, 24.}, "Instant", 
-           "Gregorian", -5.]]], "Comments" -> 
+           "Gregorian", -7.]]], "Comments" -> 
      Association[
       "Creation Time" -> 
-       DateObject[{2019, 10, 10, 11, 12, 47.5809484`9.430007955262136}, 
-         "Instant", "Gregorian", -5.], "Software" -> "Adobe Fireworks CS5"]]],
- BackgroundAppearanceOptions->Automatic,
+       DateObject[{2020, 3, 11, 10, 3, 6.0818169`8.536608313871445}, 
+         "Instant", "Gregorian", -7.], "Software" -> "Adobe Fireworks CS5"]]],
  FontColor->RGBColor[
    Rational[223, 255], 
    Rational[227, 255], 
    Rational[2, 5]],
  Background->RGBColor[0, 0, 
-   Rational[139, 255]],ExpressionUUID->"41e01236-7477-4e55-889d-47e759fa18fb"],
+   Rational[139, 255]],ExpressionUUID->"ec6d00f9-2097-418f-be10-6f37eb286a1d"],
 
 Cell[StyleData["h1"],
- FontSize->24.,
+ FontSize->32,
  FontWeight->Bold,
  FontColor->RGBColor[
    Rational[223, 255], 
    Rational[227, 255], 
-   Rational[2, 5]],ExpressionUUID->"a8a5b815-5c14-46cc-bcf5-d25dcc9ea012"],
+   Rational[2, 5]],ExpressionUUID->"f533ab7c-cf0b-4377-93a8-ba1e59fdc076"],
 
 Cell[StyleData["h2"],
  FontFamily->"Arial",
- FontSize->9.,
+ FontSize->12,
  FontSlant->Italic,
  FontColor->RGBColor[
-  1, 0, 0],ExpressionUUID->"e9affe0e-0fb6-4f79-a5ef-f87b2eec493e"],
+  1, 0, 0],ExpressionUUID->"73d7dead-b757-46db-ac02-698e175ba35c"],
 
 Cell[StyleData["question"],
  CellFrame->{{
@@ -555,13 +554,15 @@ Cell[StyleData["question"],
     Dynamic[1 CurrentValue["FontXHeight"]]}, {
     Dynamic[1 CurrentValue["FontXHeight"]], 
     Dynamic[1 CurrentValue["FontXHeight"]]}},
- CellMargins->{{15., 
+ CellMargins->{{20, 
     Scaled[
-     Rational[1, 2]]}, {7.5, 3.75}},
- CellFrameMargins->{{Automatic, Automatic}, {0, Automatic}},
+     Rational[1, 2]]}, {10, 5}},
+ CellFrameMargins->{{2, 
+    Dynamic[1 CurrentValue[FontSize]]}, {0, Automatic}},
  CellFrameStyle->{{
     Directive[
-     RGBColor[1, 0, 0]], 
+     RGBColor[1, 0, 0], 
+     Dashing[{}]], 
     Directive[
      Dynamic[
       CurrentValue[FontColor]], 
@@ -575,7 +576,6 @@ Cell[StyleData["question"],
       CurrentValue[FontColor]], 
      Dashing[{}]]}},
  CounterIncrements->{"question"},
- FontVariations->{"CapsType"->"SmallCaps"},
  FontColor->RGBColor[
    Rational[223, 255], 
    Rational[227, 255], 
@@ -584,31 +584,32 @@ Cell[StyleData["question"],
    Rational[1, 255], 0.2],
  DisplayFunction -> (RowBox[{
     CounterBox[
-    "question"]}]& ),ExpressionUUID->"98e75164-82a7-48a1-8049-e6a4c0b7c19e"],
+    "question"]}]& ),ExpressionUUID->"1506a5ea-79ab-4d7b-8bb0-8a11bd47452f"],
 
 Cell[StyleData["questionSpecial", StyleDefinitions -> StyleData["question"]],
  FontColor->RGBColor[
    Rational[48, 85], 
    Rational[14, 15], 
-   Rational[48, 85]],ExpressionUUID->"9a8700d6-f6c7-4af8-b96d-5eaaa8b7e3d0"],
+   Rational[48, 85]],ExpressionUUID->"93547451-01e2-4150-9505-03fa70516483"],
 
 Cell[StyleData["p"],
  FontFamily->"Times New Roman",
- FontSize->15.,
+ FontSize->20,
  FontColor->RGBColor[
    Rational[14, 15], 
    Rational[14, 15], 
-   Rational[14, 15]],ExpressionUUID->"00d41384-1101-4908-9d35-bc793a430571"],
+   Rational[14, 15]],ExpressionUUID->"797a1af5-37c8-433a-9dda-ae5249f88f12"],
 
 Cell[StyleData["li"],
  CellDingbat->"\[FilledSquare]",
  FontColor->RGBColor[
-  1, 1, 1],ExpressionUUID->"ffb4a0f7-9099-4dab-85e4-310fe4f75ba9"]
+  1, 1, 1],ExpressionUUID->"711a29dd-6188-4504-a371-49379fbe4028"]
 },
-WindowSize->{775, 872},
+WindowSize->{776, 872},
 WindowMargins->{{564, Automatic}, {Automatic, 54}},
-FrontEndVersion->"12.0 for Microsoft Windows (64-bit) (April 8, 2019)",
-StyleDefinitions->"PrivateStylesheetFormatting.nb"
+FrontEndVersion->"12.1 for Microsoft Windows (64-bit) (February 29, 2020)",
+StyleDefinitions->"PrivateStylesheetFormatting.nb",
+ExpressionUUID->"38a59e15-8003-4cc3-a823-18133741dc55"
 ]
 (* End of Notebook Content *)
 
@@ -621,15 +622,15 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[558, 20, 104, 0, 70, 49, 0, "StyleData", "StyleDefinitions", "",ExpressionUUID->"f23498d0-4fcd-4fa0-9a02-fb7c2eb557e4"],
-Cell[665, 22, 30787, 512, 70, 27, 0, "StyleData", "Notebook", "All",ExpressionUUID->"41e01236-7477-4e55-889d-47e759fa18fb"],
-Cell[31455, 536, 201, 6, 70, 21, 0, "StyleData", "h1", "All",ExpressionUUID->"a8a5b815-5c14-46cc-bcf5-d25dcc9ea012"],
-Cell[31659, 544, 167, 5, 70, 21, 0, "StyleData", "h2", "All",ExpressionUUID->"e9affe0e-0fb6-4f79-a5ef-f87b2eec493e"],
-Cell[31829, 551, 1014, 35, 70, 27, 0, "StyleData", "question", "All",ExpressionUUID->"98e75164-82a7-48a1-8049-e6a4c0b7c19e",
+Cell[558, 20, 104, 0, 40, 49, 0, "StyleData", "StyleDefinitions", "",ExpressionUUID->"49ec781e-eab2-4e44-8639-926302bae929"],
+Cell[665, 22, 30743, 511, 824, 27, 0, "StyleData", "Notebook", "All",ExpressionUUID->"ec6d00f9-2097-418f-be10-6f37eb286a1d"],
+Cell[31411, 535, 200, 6, 61, 21, 0, "StyleData", "h1", "All",ExpressionUUID->"f533ab7c-cf0b-4377-93a8-ba1e59fdc076"],
+Cell[31614, 543, 167, 5, 40, 21, 0, "StyleData", "h2", "All",ExpressionUUID->"73d7dead-b757-46db-ac02-698e175ba35c"],
+Cell[31784, 550, 1005, 36, 62, 27, 0, "StyleData", "question", "All",ExpressionUUID->"1506a5ea-79ab-4d7b-8bb0-8a11bd47452f",
  CounterIncrements->{"question"}],
-Cell[32846, 588, 220, 4, 70, 77, 0, "StyleData", "questionSpecial", "All",ExpressionUUID->"9a8700d6-f6c7-4af8-b96d-5eaaa8b7e3d0"],
-Cell[33069, 594, 211, 6, 70, 20, 0, "StyleData", "p", "All",ExpressionUUID->"00d41384-1101-4908-9d35-bc793a430571"],
-Cell[33283, 602, 143, 3, 70, 21, 0, "StyleData", "li", "All",ExpressionUUID->"ffb4a0f7-9099-4dab-85e4-310fe4f75ba9"]
+Cell[32792, 588, 220, 4, 62, 77, 0, "StyleData", "questionSpecial", "All",ExpressionUUID->"93547451-01e2-4150-9505-03fa70516483"],
+Cell[33015, 594, 210, 6, 47, 20, 0, "StyleData", "p", "All",ExpressionUUID->"797a1af5-37c8-433a-9dda-ae5249f88f12"],
+Cell[33228, 602, 143, 3, 40, 21, 0, "StyleData", "li", "All",ExpressionUUID->"711a29dd-6188-4504-a371-49379fbe4028"]
 }
 ]
 *)
