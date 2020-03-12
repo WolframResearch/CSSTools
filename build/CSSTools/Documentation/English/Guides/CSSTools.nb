@@ -3,17 +3,17 @@
 (*** Wolfram Notebook File ***)
 (* http://www.wolfram.com/nb *)
 
-(* CreatedBy='Mathematica 12.0' *)
+(* CreatedBy='Mathematica 12.1' *)
 
 (*CacheID: 234*)
 (* Internal cache information:
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     12274,        348]
-NotebookOptionsPosition[      8299,        265]
-NotebookOutlinePosition[     10111,        308]
-CellTagsIndexPosition[     10068,        305]
+NotebookDataLength[     12891,        372]
+NotebookOptionsPosition[      8801,        288]
+NotebookOutlinePosition[     10610,        330]
+CellTagsIndexPosition[     10567,        327]
 WindowTitle->CSSTools
 WindowFrame->Normal*)
 
@@ -39,7 +39,9 @@ Cell[BoxData[GridBox[{
        Documentation`HelpLookup[
        "paclet:CSSTools/ref/CSSSelector"], "\<\"CSSSelectorQ\"\>":>
        Documentation`HelpLookup[
-       "paclet:CSSTools/ref/CSSSelectorQ"], "\<\"CSSTargets\"\>":>
+       "paclet:CSSTools/ref/CSSSelectorQ"], "\<\"CSSTargetQ\"\>":>
+       Documentation`HelpLookup[
+       "paclet:CSSTools/ref/CSSTargetQ"], "\<\"CSSTargets\"\>":>
        Documentation`HelpLookup[
        "paclet:CSSTools/ref/CSSTargets"], "\<\"ExtractCSSFromXML\"\>":>
        Documentation`HelpLookup[
@@ -109,7 +111,7 @@ CSSTools.html"], StandardForm]], "Input", TextClipboardType -> "PlainText"]},
            URL[
             StringJoin[
              If[
-              TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$6096], 
+              TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$5892], 
               "http://reference.wolfram.com/system-modeler/", 
               "http://reference.wolfram.com/language/"], 
              "CSSTools/guide/CSSTools", ".html"]], None}]}]},
@@ -129,7 +131,7 @@ Cell["CSSTools", "GuideTitle",
 Cell["\<\
 Cascading Style Sheets (CSS) is a stylesheet language used for describing the \
 presentation of a document written in markup language like HTML and XML. \
-Wolfram Desktop also uses stylesheets, though the specifications differ. This \
+Wolfram Desktop also uses stylesheets though the specifications differ. This \
 package provides tools for importing and processing CSS to be used within \
 Wolfram Desktop's stylesheet system.\
 \>", "GuideAbstract",
@@ -155,13 +157,14 @@ Cell["Importing CSS", "GuideFunctionsSubsection",
 
 Cell[TextData[{
  Cell[BoxData[
-  TemplateBox[{Cell[
-     TextData["Import"]],"paclet:ref/Import"},
+  TemplateBox[{
+    Cell[
+     TextData["Import"]], "paclet:ref/Import"},
    "RefLink",
    BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
  " ",
  StyleBox["\[LongDash]", "GuideEmDash"],
- " Supports \"CSS\" file types: Import[",
+ " Supports the \"CSS\" file type: Import[",
  Cell[BoxData[
   StyleBox["path", "TI"]], "InlineFormula"],
  ", \"CSS\"]"
@@ -170,8 +173,10 @@ Cell[TextData[{
 
 Cell[TextData[{
  Cell[BoxData[
-  TemplateBox[{Cell[
-     TextData["ExtractCSSFromXML"]],"paclet:CSSTools/ref/ExtractCSSFromXML"},
+  TemplateBox[{
+    Cell[
+     TextData["ExtractCSSFromXML"]], "paclet:CSSTools/ref/ExtractCSSFromXML"},
+   
    "RefLink",
    BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
  " ",
@@ -191,21 +196,23 @@ Cell["Processing CSS", "GuideFunctionsSubsection",
 
 Cell[TextData[{
  Cell[BoxData[
-  TemplateBox[{Cell[
-     TextData["CSSCascade"]],"paclet:CSSTools/ref/CSSCascade"},
+  TemplateBox[{
+    Cell[
+     TextData["CSSCascade"]], "paclet:CSSTools/ref/CSSCascade"},
    "RefLink",
    BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
  " ",
  StyleBox["\[LongDash]", "GuideEmDash"],
  " follows the CSS cascade algorithm and converts interpreted CSS styles to \
-Notebook/Cell/Box options"
+Notebook, Cell, or Box options"
 }], "GuideText",
  CellID->47789317],
 
 Cell[TextData[{
  Cell[BoxData[
-  TemplateBox[{Cell[
-     TextData["CSSInheritance"]],"paclet:CSSTools/ref/CSSInheritance"},
+  TemplateBox[{
+    Cell[
+     TextData["CSSInheritance"]], "paclet:CSSTools/ref/CSSInheritance"},
    "RefLink",
    BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
  " ",
@@ -225,8 +232,9 @@ Cell["Searching SymbolicXML", "GuideFunctionsSubsection",
 
 Cell[TextData[{
  Cell[BoxData[
-  TemplateBox[{Cell[
-     TextData["CSSSelector"]],"paclet:CSSTools/ref/CSSSelector"},
+  TemplateBox[{
+    Cell[
+     TextData["CSSSelector"]], "paclet:CSSTools/ref/CSSSelector"},
    "RefLink",
    BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
  " ",
@@ -237,8 +245,9 @@ Cell[TextData[{
 
 Cell[TextData[{
  Cell[BoxData[
-  TemplateBox[{Cell[
-     TextData["CSSSelectorQ"]],"paclet:CSSTools/ref/CSSSelectorQ"},
+  TemplateBox[{
+    Cell[
+     TextData["CSSSelectorQ"]], "paclet:CSSTools/ref/CSSSelectorQ"},
    "RefLink",
    BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
  " ",
@@ -249,15 +258,29 @@ Cell[TextData[{
 
 Cell[TextData[{
  Cell[BoxData[
-  TemplateBox[{Cell[
-     TextData["CSSTargets"]],"paclet:CSSTools/ref/CSSTargets"},
+  TemplateBox[{
+    Cell[
+     TextData["CSSTargets"]], "paclet:CSSTools/ref/CSSTargets"},
    "RefLink",
    BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
  " ",
  StyleBox["\[LongDash]", "GuideEmDash"],
- " provides target information of CSS selector acting on XML"
+ " provides target information of a CSS selector acting on an XML document"
 }], "GuideText",
- CellID->2444546]
+ CellID->2444546],
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{
+    Cell[
+     TextData["CSSTargetQ"]], "paclet:CSSTools/ref/CSSTargetQ"},
+   "RefLink",
+   BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
+ " ",
+ StyleBox["\[LongDash]", "GuideEmDash"],
+ " returns True if expression is a CSS target object"
+}], "GuideText",
+ CellID->399786665]
 }, Open  ]]
 }, Open  ]],
 
@@ -277,7 +300,7 @@ TaggingRules->{
          BaseStyle -> {"Link", "DockedLinkTrail"}]}]}}, ColumnAlignments -> 
     Left], "ExampleCounter" -> 1, "NeedPlatMsgIn" -> None, "RootCaptions" -> 
   "", "Metadata" -> {
-   "built" -> "{2019, 10, 10, 11, 15, 10.5198114}", 
+   "built" -> "{2020, 3, 12, 10, 53, 20.0513796}", 
     "history" -> {"0.0", "", "", ""}, "context" -> "CSSTools`", 
     "keywords" -> {}, "specialkeywords" -> {}, 
     "tutorialcollectionlinks" -> {}, "index" -> True, "label" -> 
@@ -285,14 +308,13 @@ TaggingRules->{
     "None", "summary" -> 
     "Cascading Style Sheets (CSS) is a stylesheet language used for \
 describing the presentation of a document written in markup language like \
-HTML and XML. Wolfram Desktop also uses stylesheets, though the \
-specifications differ. This package provides tools for importing and \
-processing CSS to be used within Wolfram Desktop's stylesheet system.", 
-    "synonyms" -> {}, "tabletags" -> 
-    DocumentationBuild`Make`Private`tabletaggingrules$6014, "title" -> 
-    "CSSTools", "titlemodifier" -> "", "windowtitle" -> "CSSTools", "type" -> 
-    "Guide", "uri" -> "CSSTools/guide/CSSTools"}},
-FrontEndVersion->"12.0 for Microsoft Windows (64-bit) (April 8, 2019)",
+HTML and XML. Wolfram Desktop also uses stylesheets though the specifications \
+differ. This package provides tools for importing and processing CSS to be \
+used within Wolfram Desktop's stylesheet system.", "synonyms" -> {}, 
+    "tabletags" -> DocumentationBuild`Make`Private`tabletaggingrules$5809, 
+    "title" -> "CSSTools", "titlemodifier" -> "", "windowtitle" -> "CSSTools",
+     "type" -> "Guide", "uri" -> "CSSTools/guide/CSSTools"}},
+FrontEndVersion->"12.1 for Microsoft Windows (64-bit) (February 29, 2020)",
 StyleDefinitions->FrontEnd`FileName[{"Wolfram"}, "Reference.nb", 
   CharacterEncoding -> "UTF-8"]
 ]
@@ -307,49 +329,51 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[580, 21, 4132, 100, 70, "AnchorBarGrid",ExpressionUUID->"19683035-05f8-40fe-b224-3dce1ea9321e",
+Cell[580, 21, 4230, 102, 70, "AnchorBarGrid",ExpressionUUID->"ca29033f-4b55-418e-95f8-4c0eeeeb057a",
  CellID->1],
 Cell[CellGroupData[{
-Cell[4737, 125, 50, 1, 70, "GuideTitle",ExpressionUUID->"a2dfbf4b-a400-497d-b964-cad8f8e0772e",
+Cell[4835, 127, 50, 1, 70, "GuideTitle",ExpressionUUID->"a2dfbf4b-a400-497d-b964-cad8f8e0772e",
  CellID->942062912],
-Cell[4790, 128, 401, 7, 70, "GuideAbstract",ExpressionUUID->"b9255c52-39e9-48e0-bedb-b4fa7ec2beba",
+Cell[4888, 130, 400, 7, 70, "GuideAbstract",ExpressionUUID->"b9255c52-39e9-48e0-bedb-b4fa7ec2beba",
  CellID->2001916300]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[5228, 140, 137, 6, 70, "GuideReferenceSection",ExpressionUUID->"acf6196b-cb64-42c0-be13-fe5c16d471f7"],
-Cell[5368, 148, 31, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"a53d2c4e-0dd0-4b32-9283-7eda5cad12de"],
+Cell[5325, 142, 137, 6, 70, "GuideReferenceSection",ExpressionUUID->"f528261a-05e1-4999-b3ec-42952475a286"],
+Cell[5465, 150, 31, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"cc3a8f2f-ad96-4943-82bf-60e33fc8952a"],
 Cell[CellGroupData[{
-Cell[5424, 152, 69, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"8d817216-d113-4b36-bc3d-a0f25f4d05de",
+Cell[5521, 154, 69, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"8d817216-d113-4b36-bc3d-a0f25f4d05de",
  CellID->811494718],
-Cell[5496, 155, 373, 13, 70, "GuideText",ExpressionUUID->"dee08810-36bd-4ef8-b550-71bf497466fd",
+Cell[5593, 157, 382, 14, 70, "GuideText",ExpressionUUID->"dee08810-36bd-4ef8-b550-71bf497466fd",
  CellID->100541697],
-Cell[5872, 170, 341, 10, 70, "GuideText",ExpressionUUID->"fa3304e9-15e7-4c88-80b5-5c41585afd56",
+Cell[5978, 173, 351, 12, 70, "GuideText",ExpressionUUID->"fa3304e9-15e7-4c88-80b5-5c41585afd56",
  CellID->203374175]
 }, Open  ]],
-Cell[6228, 183, 58, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"92df8e96-2df7-4fb0-b6b7-28dfc06ca57c",
+Cell[6344, 188, 58, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"92df8e96-2df7-4fb0-b6b7-28dfc06ca57c",
  CellID->622275174],
 Cell[CellGroupData[{
-Cell[6311, 188, 69, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"5f8eaa5a-bc2f-4fac-88db-96866e681ff0",
+Cell[6427, 193, 69, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"5f8eaa5a-bc2f-4fac-88db-96866e681ff0",
  CellID->91319310],
-Cell[6383, 191, 378, 11, 70, "GuideText",ExpressionUUID->"22c8ab8e-8da0-47ea-8af6-3ed63aad5b8a",
+Cell[6499, 196, 389, 12, 70, "GuideText",ExpressionUUID->"22c8ab8e-8da0-47ea-8af6-3ed63aad5b8a",
  CellID->47789317],
-Cell[6764, 204, 322, 10, 70, "GuideText",ExpressionUUID->"9fff43cf-59ce-41dc-a1cd-c525790c844f",
+Cell[6891, 210, 328, 11, 70, "GuideText",ExpressionUUID->"9fff43cf-59ce-41dc-a1cd-c525790c844f",
  CellID->348206879]
 }, Open  ]],
-Cell[7101, 217, 57, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"97bc2ebf-8ed5-4a50-830d-bcb39efb1d4e",
+Cell[7234, 224, 57, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"97bc2ebf-8ed5-4a50-830d-bcb39efb1d4e",
  CellID->71783130],
 Cell[CellGroupData[{
-Cell[7183, 222, 77, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"3f2d20fc-7cdc-4adb-8fc5-a03b4a0fdbf4",
+Cell[7316, 229, 77, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"3f2d20fc-7cdc-4adb-8fc5-a03b4a0fdbf4",
  CellID->159396722],
-Cell[7263, 225, 309, 10, 70, "GuideText",ExpressionUUID->"76b7ff53-5475-4aac-af5f-dfa262a0aec6",
+Cell[7396, 232, 315, 11, 70, "GuideText",ExpressionUUID->"76b7ff53-5475-4aac-af5f-dfa262a0aec6",
  CellID->41288703],
-Cell[7575, 237, 333, 10, 70, "GuideText",ExpressionUUID->"a2cd85ab-f27a-4852-9806-a0247ac5cce9",
+Cell[7714, 245, 339, 11, 70, "GuideText",ExpressionUUID->"a2cd85ab-f27a-4852-9806-a0247ac5cce9",
  CellID->46073956],
-Cell[7911, 249, 334, 10, 70, "GuideText",ExpressionUUID->"3d3dc613-bae0-45a3-970e-a82dcf688d97",
- CellID->2444546]
+Cell[8056, 258, 354, 11, 70, "GuideText",ExpressionUUID->"3d3dc613-bae0-45a3-970e-a82dcf688d97",
+ CellID->2444546],
+Cell[8413, 271, 334, 11, 70, "GuideText",ExpressionUUID->"6ef07e31-cc99-4c06-84f5-6ec15c87c6b7",
+ CellID->399786665]
 }, Open  ]]
 }, Open  ]],
-Cell[8272, 263, 23, 0, 70, "FooterCell",ExpressionUUID->"f11ae7f8-9f1a-49fc-b41c-896f4ff35676"]
+Cell[8774, 286, 23, 0, 70, "FooterCell",ExpressionUUID->"fa08e128-cccc-48f9-ac7c-e8e6252018b6"]
 }
 ]
 *)
