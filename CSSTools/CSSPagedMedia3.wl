@@ -443,7 +443,10 @@ AssociateTo[CSSPropertyData,
 			"CSSInitialValue" -> "auto",
 			"InterpretedGlobalValues" -> <|
 				"inherit" -> <||>, (* no equivalent FE option *)
-				"initial" -> Missing["Not supported."]|>|>,
+				"initial" -> Missing["Not supported."]|>,
+			"Animatable" -> True,
+			"Values" -> {"auto", "<identifier>"},
+			"AppliesTo" -> "boxes that create class A break points"|>,
 		"bleed" -> <|
 			"Inherited" -> False,
 			"CSSInitialValue" -> "auto",

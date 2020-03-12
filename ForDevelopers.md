@@ -29,7 +29,9 @@ The other three files are always loaded first in order to define the core functi
 
 ## <a name="details-of-the-tokenizer"></a>Details of the tokenizer
 
-The tokenizer follows CSS Syntax Module Level 3. It also allows "ident" tokens to start with "--" for possible future use of [CSS Custom Properties for Cascading Variables Module Level 1](https://www.w3.org/TR/css-variables-1/). The tokenizer also does a small amount of parsing. In particular, brackets like `[]`, `{}` and `()` are matched into block tokens. These block tokens have a key "Children" whose value is a flat list of CSS tokens that are within the scope of the block. 
+The tokenizer follows CSS Syntax Module Level 3. It also allows "ident" tokens to start with "--" following [CSS Custom Properties for Cascading Variables Module Level 1](https://www.w3.org/TR/css-variables-1/). Additionally, though not a standard CSS features, the tokenizer does recognize URL syntax that includes [URL modifiers](https://www.w3.org/TR/css-values-3/#url-modifiers).
+
+The tokenizer also does a small amount of parsing. In particular, brackets like `[]`, `{}` and `()` are matched into block tokens. These block tokens have a key "Children" whose value is a flat list of CSS tokens that are within the scope of the block. 
 
 The tokenizer is not loaded when CSSTools loads but can be accessed via 
 ```
@@ -39,14 +41,14 @@ There are two functions that provide the tokenizing and the serialization: `CSST
 ```
 In[] := tokens = CSSTokenize["h1    {color:\\red}"]
 Out[] = {
-  CSSToken[<|"Type" -> "ident", "String" -> "h1", "RawString" -> "h1"|>], 
+  CSSToken[<|"Type" -> "ident", "String" -> "h1"|>], 
   CSSToken[<|"Type" -> "whitespace", "String" -> " "|>], 
   CSSToken[<|"Type" -> "{}", "Children" -> {
-    CSSToken[<|"Type" -> "ident", "String" -> "color", "RawString" -> "color"|>], 
+    CSSToken[<|"Type" -> "ident", "String" -> "color"|>], 
     CSSToken[<|"Type" -> "colon", "String" -> ":"|>], 
-    CSSToken[<|"Type" -> "ident", "String" -> "red", "RawString" -> "\\red"|>]}|>]}
+    CSSToken[<|"Type" -> "ident", "String" -> "\\red"|>]}|>]}
 ```
-The `"RawString"` key is used to store the unmodified original string, while the `"String"` key contains a "normalized" version of the string e.g. any escaped characters converted.
+The `"String"` key stores the unmodified original string. The exception is whitespace which is always normalized to a single space. The tokenizer package provides functions like `CSSNormalizeEscapes` to help process non-standard token strings.
 
 Use `CSSUntokenize` to serialize the tokens back into a string:
 ```
@@ -58,7 +60,7 @@ Following the CSS syntax module specification, a round-trip of `CSSUntokenize[CS
 In[] := tokens === CSSTokenize[CSSUntokenize[tokens]]
 Out[] = True
 ```
-To assist parsing of tokens functions like `CSSTokenQ`, `TokenTypeIs` and `AdvancePosAndSkipWhitespace` exist in the CSSTokenizer.wl package. These utility functions were not used in this simpler example. 
+To assist parsing of tokens, functions like `CSSTokenQ`, `TokenTypeIs` and `AdvancePosAndSkipWhitespace` exist in the CSSTokenizer.wl package. These utility functions were not used in this simpler example. 
 
 
 ## <a name="example-of-modifying-an-existing-parser"></a>Example of Modifying an Existing Parser
@@ -128,7 +130,10 @@ The color definitions from CSS Level 2 Revision 1 are limited in comparison with
 		        "CSSInitialValue" -> "black", (* CSS 2.1 did not define this *)
 		        "InterpretedGlobalValues" -> <|
  			        "inherit" -> FontColor -> Inherited,
-			        "initial" -> FontColor -> Black|>|>}]
+			        "initial" -> FontColor -> Black|>,
+                "Animatable" -> True,
+                "Values" -> {"<color>"},
+                "AppliesTo" -> All|>}]
         ...
 
 5. Add a new definition for `parseSingleColor`.
@@ -143,7 +148,7 @@ The color definitions from CSS Level 2 Revision 1 are limited in comparison with
 		        "ident",    parseSingleColorKeyWord[prop, token["String"]],
 		        "hash",     parseSingleColorHex[prop, token["String"]],
 		        "function", parseSingleColorFunction[prop, token],
-        		 _,          unrecognizedValueFailure @ prop]
+        		_,          unrecognizedValueFailure @ prop]
         ...
 
 6. Add the package to CSSTools.m after the loading of the main packages: ``Get["CSSTools`CSSColors4`"];``
