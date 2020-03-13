@@ -1,6 +1,6 @@
 # Contributing to CSSTools
 
-## Table of Contents
+## <a name="table-of-contents"></a>Table of Contents
 
 [Overview](#overview)
 
@@ -29,7 +29,7 @@ The other three files are always loaded first in order to define the core functi
 
 ## <a name="details-of-the-tokenizer"></a>Details of the tokenizer
 
-The tokenizer follows CSS Syntax Module Level 3. It also allows "ident" tokens to start with "--" following [CSS Custom Properties for Cascading Variables Module Level 1](https://www.w3.org/TR/css-variables-1/). Additionally, though not a standard CSS features, the tokenizer does recognize URL syntax that includes [URL modifiers](https://www.w3.org/TR/css-values-3/#url-modifiers).
+The tokenizer follows [CSS Syntax Module Level 3](https://www.w3.org/TR/css-syntax-3/). One noteworthy feature of this syntax is that "ident" tokens are allowed to start with two dashes "--" which allows for custom variables. See [CSS Custom Properties for Cascading Variables Module Level 1](https://www.w3.org/TR/css-variables-1/) for more details. An implemented extensions to this level 3 syntax, though not a standard CSS features, is that URLs can includes [URL modifiers](https://www.w3.org/TR/css-values-3/#url-modifiers).
 
 The tokenizer also does a small amount of parsing. In particular, brackets like `[]`, `{}` and `()` are matched into block tokens. These block tokens have a key "Children" whose value is a flat list of CSS tokens that are within the scope of the block. 
 
@@ -55,12 +55,29 @@ Use `CSSUntokenize` to serialize the tokens back into a string:
 In[] := CSSUntokenize[tokens]
 Out[] = "h1 {color:\\red}" 
 ```
-Following the CSS syntax module specification, a round-trip of `CSSUntokenize[CSSTokenize[...]` is not guaranteed to return the same initial string. The reason is that some characters like whitespace can be simplified without loss of information. However, `CSSTokenize[CSSUntokenize[CSSTokenize[...]]` must be the same as the original set of tokens.
+Following the CSS syntax module specification, a round-trip of `CSSUntokenize[CSSTokenize[...]` is not guaranteed to return the same initial string. The reason is that some characters like whitespace can be simplified without loss of information. However, token sequences must round-trip. Said differently, `CSSTokenize[CSSUntokenize[CSSTokenize[...]]` must be the same as the original set of tokens.
 ```
 In[] := tokens === CSSTokenize[CSSUntokenize[tokens]]
 Out[] = True
 ```
-To assist parsing of tokens, functions like `CSSTokenQ`, `TokenTypeIs` and `AdvancePosAndSkipWhitespace` exist in the CSSTokenizer.wl package. These utility functions were not used in this simpler example. 
+To assist parsing of tokens, functions like `CSSTokenQ`, `TokenTypeIs` and `AdvancePosAndSkipWhitespace` exist in the CSSTokenizer.wl package. Starting with the above token sequence, we can move along the sequence like so:
+```
+In[] := pos = 1; t = tokens[[pos]];
+
+In[] := CSSTokenQ[t]
+Out[] = True
+
+In[] := If[TokenTypeIs["ident", t], AdvancePosAndSkipWhitespace[pos, Length[tokens], tokens]]
+
+In[] := pos
+Out[] = 3
+```
+The `pos` variable tracks the position along the token sequence. At each position the token can be checked for correctness and processed accordingly. More details can be found in the CSSTokenizer.wl package.
+
+For the curious, the tokenizer has been validated using a number of unit tests. They can be found in this repo under CSSTools/Testing/Tokenizer.wl.
+
+
+[Back to top](#table-of-contents)
 
 
 ## <a name="example-of-modifying-an-existing-parser"></a>Example of Modifying an Existing Parser
@@ -167,6 +184,10 @@ The color definitions from CSS Level 2 Revision 1 are limited in comparison with
         Get["CSSTools`CSSMediaQueries4`"]         (* redefines consumeMediaQuery    (first defined in CSSStyleSheetInterpreter) *)
         ...
 
+For the curious, the color parser has been validated using a number of unit tests. They can be found in this repo under the directory CSSTools/Testing/ and include files GeneralColors.wl, HSLColors.wl and NamedColors.wl.
+
+[Back to top](#table-of-contents)
+
 
 ## <a name="example-of-adding-a-new-property"></a>Example of Adding a New Property
 
@@ -191,7 +212,7 @@ The [CSS Paged Media Module Level 3](https://www.w3.org/TR/css-page-3/) adds new
         Begin["`Private`"] (* Begin Private Context *) 
         ...
         
-2. In the sub-package (here CSSPagedMedia3.wl) create the new property consuming variant:
+2. In the sub-package (here CSSPagedMedia3.wl) create the new property consuming function. A property consumer has two arguments. The first is the property name. Though CSS is case-insensitive this first argument to the property consumer requires the canonicalized all-lower-case name. The second argument is the token sequence of the declaration's property value. Processing done within CSSStyleSheetInterpreter.wl has already trimmed any whitespace tokens. It makes processing the token sequence a little easier, such as this case, where only keywords are allowed so only one token is expected in the token sequence:
     
     _Somewhere within CSSPagedMedia3.wl_  
         
@@ -212,9 +233,9 @@ The [CSS Paged Media Module Level 3](https://www.w3.org/TR/css-page-3/) adds new
         	]
         ...
         
-    In the above code the functions `tooManyTokensFailure` and `parseLength` were used and come from the CSSPropretyInterpreter.wl package (publicly exposed).
+    In the above code the utility functions `tooManyTokensFailure` and `parseLength` were used and come from the CSSPropretyInterpreter.wl package (publicly exposed).
   
-3. Add to the CSSPropertyData to define the initial and inherited CSS values.
+3. Add to the CSSPropertyData to define the initial and inherited CSS values, as well as information on allowed data types, animatability, etc.:
 
     _Somewhere within CSSPagedMedia3.wl_  
 
@@ -238,4 +259,4 @@ The method of parsing of new properties is largely up to the contributer, but we
 
 3. return `Missing["Not supported."]` if the Wolfram Desktop front end can not currently use this feature
 
-
+[Back to top](#table-of-contents)
