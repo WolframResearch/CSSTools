@@ -70,6 +70,7 @@ SetUsage[CreateWhitespaceToken, "CreateWhitespaceToken[] creates a CSSToken expr
 SetUsage[CreateDelimToken,      "CreateDelimToken[$delim] creates a CSSToken expression of \"delim\" type with single string character $delim."];
 SetUsage[CreateParensToken,     "CreateParensToken[$children] creates a CSSToken expression of \"()\" type with \"Children\" value $children."];
 
+SetUsage[HighlightUntokenize, "HighlightUntokenize[{CSSToken$,...}, pos$] serializes CSS tokens into a string with positions pos$ highlighted."];
 
 Begin["`Private`"]
 
@@ -859,6 +860,27 @@ untokenizeUnicodeRange[start_?NumericQ, stop_?NumericQ] :=
 			True,                             "u+" <> startString <> "-" <> stopString]]
 
 
+(* Serialize a set of tokens with some tokens highlighted. *)
+HighlightUntokenize[tokens:{__?CSSTokenQ}, highlightPositions_] := 
+	Module[{highlights},
+		highlights = 
+			Replace[
+				#,
+				{
+					CSSToken[kvp:KeyValuePattern[{"Type" -> "dimension", "String" -> s_, "Unit" -> u_}]] :> 
+						CSSToken[<|kvp, 
+							"String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)",
+							"Unit"   -> "\!\(\*StyleBox[\"" <> u <> "\",Background->RGBColor[1,1,0]]\)"|>],
+					CSSToken[kvp:KeyValuePattern[{"Type" -> "percentage", "String" -> s_}]] :> 
+						CSSToken[<|kvp, 
+							"String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)",
+							"Unit"   -> "\!\(\*StyleBox[\"%\",Background->RGBColor[1,1,0]]\)"|>],
+					CSSToken[kvp:KeyValuePattern[{"String" -> s_}]] :> CSSToken[<|kvp, "String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)"|>]}
+			]& /@ Extract[tokens, highlightPositions];
+		CSSUntokenize @ ReplacePart[tokens, Thread[highlightPositions -> highlights]]			
+	]
+	
+	
 (* ::Subsection::Closed:: *)
 (*Utilities*)
 

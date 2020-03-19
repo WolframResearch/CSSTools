@@ -51,6 +51,7 @@ Get["CSSTools`CSSMediaQueries4`"]         (* redefines consumeMediaQuery    (fir
 Get["CSSTools`SVG11`"]                    (* adds consumeProperty definitions for SVG 1.1 *)
 Get["CSSTools`CSSValuesAndUnits3`"]       (* prepends consumeProperty definitions for values that contain attr() and calc() functions *)
 Get["CSSTools`CSSCustomProperties1`"]     (* prepends consumeProperty definitions for custom properties i.e. --* idents, and var() function *)
+Get["CSSTools`CSSImages3`"]               (* defines gradient images *)
 
 
 ImportExport`RegisterImport[
