@@ -24,7 +24,7 @@ CSSTools consists of packages that are designed to follow CSS module organizatio
 
 Additional packages are named after the corresponding CSS module. They are intended to modify existing functionality within the core packages.
 
-The other three files are always loaded first in order to define the core functionality. Additional packages are loaded after and modify or add to the core functions.
+The tokenizer is described below. The other three files are always loaded first in order to define the core functionality. Additional packages are loaded after the core set. These additional packages modify or add to the core functions.
 
 
 ## <a name="details-of-the-tokenizer"></a>Details of the tokenizer
