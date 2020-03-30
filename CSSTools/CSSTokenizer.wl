@@ -872,13 +872,15 @@ HighlightUntokenize[tokens:{__?CSSTokenQ}, highlightPositions_] :=
 							"String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)",
 							"Unit"   -> "\!\(\*StyleBox[\"" <> u <> "\",Background->RGBColor[1,1,0]]\)"|>],
 					CSSToken[kvp:KeyValuePattern[{"Type" -> "percentage", "String" -> s_}]] :> 
-						CSSToken[<|kvp, 
-							"String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)",
-							"Unit"   -> "\!\(\*StyleBox[\"%\",Background->RGBColor[1,1,0]]\)"|>],
+						CSSToken[<|kvp,
+							"Type" -> "dimension", (* change to dimension in order to highlight % sign *)
+							"String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)", 
+							"Unit" -> "\!\(\*StyleBox[\"%\",Background->RGBColor[1,1,0]]\)"|>],
 					CSSToken[kvp:KeyValuePattern[{"String" -> s_}]] :> CSSToken[<|kvp, "String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)"|>]}
 			]& /@ Extract[tokens, highlightPositions];
 		CSSUntokenize @ ReplacePart[tokens, Thread[highlightPositions -> highlights]]			
 	]
+HighlightUntokenize[tokens:{}, highlightPositions_] := "" 
 	
 	
 (* ::Subsection::Closed:: *)

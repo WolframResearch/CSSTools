@@ -349,27 +349,7 @@ consumeDefaultNamespacePrefix[pos_, l_, tokens_, namespaces_] :=
 
 (* ::Subsection::Closed:: *)
 (*calc()*)
-	
-	
-(* this should probably go into Tokenize package *)
-HighlightUntokenize[tokens:{__?CSSTokenQ}, highlightPositions_] := 
-	Module[{highlights},
-		highlights = 
-			Replace[
-				#,
-				{
-					CSSToken[kvp:KeyValuePattern[{"Type" -> "dimension", "String" -> s_, "Unit" -> u_}]] :> 
-						CSSToken[<|kvp, 
-							"String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)",
-							"Unit"   -> "\!\(\*StyleBox[\"" <> u <> "\",Background->RGBColor[1,1,0]]\)"|>],
-					CSSToken[kvp:KeyValuePattern[{"Type" -> "percentage", "String" -> s_}]] :> 
-						CSSToken[<|kvp, 
-							"String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)",
-							"Unit"   -> "\!\(\*StyleBox[\"%\",Background->RGBColor[1,1,0]]\)"|>],
-					CSSToken[kvp:KeyValuePattern[{"String" -> s_}]] :> CSSToken[<|kvp, "String" -> "\!\(\*StyleBox[\"" <> s <> "\",Background->RGBColor[1,1,0]]\)"|>]}
-			]& /@ Extract[tokens, highlightPositions];
-		CSSUntokenize @ ReplacePart[tokens, Thread[highlightPositions -> highlights]]			
-	]
+
 			
 calcGetPositionOfDeepestMultiplicationOrDivision[tokens:{__?CSSTokenQ}] := 
 	First[ReverseSortBy[Length] @ Position[tokens, CSSToken[KeyValuePattern[{"Type" -> "delim", "String" -> "*" | "/"}]]], None]

@@ -17,6 +17,7 @@ parseFrequency;
 parseLength;
 parseLengthNonRelative;
 parseNumber;
+parseZero;
 parsePercentage;
 parseResolution;
 parseSingleColor;
