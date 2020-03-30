@@ -8,7 +8,7 @@ The Wolfram Desktop front end uses its own stylesheet system and translation fro
 
 ### Installing the CSSTools release
 
-The CSSTools release comes in the form of a `.paclet` file, which contains the entire package and its documentation. Download the latest release from the [Github repo's releases page](). To install, run the following command in the Wolfram Language:
+The CSSTools release comes in the form of a `.paclet` file, which contains the entire package and its documentation. Download the latest release from [this latest release link](https://github.com/WolframResearch/CSSTools/releases/latest/download/CSSTools-1.2.1.paclet). To install, run the following command in the Wolfram Language:
 ```
 PacletInstall["/full/path/to/CSSTools.paclet"]
 ```
