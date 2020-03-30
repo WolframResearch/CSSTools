@@ -51,6 +51,7 @@ The hope is for CSSTools to be further developed by community support. Using the
 
 See the following files for more information:
 
+* [[video](https://www.wolfram.com/broadcast/video.php?v=2842)] [[notebook](https://files.wolframcdn.com/pub/www.wolfram.com/technology-conference/2019/Tuesday/2019KevinDailyCSSImport.nb)] Wolfram Technology Conference 2019 Presentation
 * [COPYING.md](COPYING.md) - CSSTools license
 * [CONTRIBUTING.md](CONTRIBUTING.md) - Guidelines for contributing to CSSTools
 * [ForDevelopers.md](ForDevelopers.md) - Walkthrough of how to contribute new features to CSSTools
