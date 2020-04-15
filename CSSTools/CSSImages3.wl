@@ -1,10 +1,8 @@
 (* Wolfram Language Package *)
 
 (* Expose these to top level *)
-CSSGradientConvertAngleToPositions;
-CSSGradientMakeBlendFromColorStops;
-CSSGradientConvertRadialPosition;
-CSSGradientConvertRadialDataRange;
+CSSLinearGradient;
+CSSRadialGradient;
 
 BeginPackage["CSSTools`CSSImages3`", {"CSSTools`"}]
 
@@ -94,7 +92,7 @@ consumeLengthPercentage[pos_, l_, tokens_] :=
 	]		
 
 consumeColorStop[pos_, l_, tokens:{__?CSSTokenQ}] :=
-	Module[{try, stopColor, stopPosition = None},
+	Module[{try, stopColor, stopPosition = Automatic},
 		(* stop position and stop color can occur in any order; stop position is optional *)
 		Which[
 			!FailureQ[try = parseSingleColor["gradient", tokens[[pos]]]],
@@ -220,14 +218,14 @@ performColorStopFixup[colorStopList_, gradientLineLength_] :=
 		csl = performColorStopFixupFixValues[#, gradientLineLength]& /@ csl;
 	
 		(* if the first or last color stops do not have a position, set them as endpoints*)
-		If[csl[[ 1, 1]] === None, csl[[ 1, 1]] = 0];
-		If[csl[[-1, 1]] === None, csl[[-1, 1]] = 1];
+		If[MatchQ[csl[[ 1, 1]], None | Automatic], csl[[ 1, 1]] = 0];
+		If[MatchQ[csl[[-1, 1]], None | Automatic], csl[[-1, 1]] = 1];
 		
 		(* if a stop or hint has a position smaller than one before it, make it the largest of all the ones before it *)
-		Do[csl[[i, 1]] = If[csl[[i, 1]] === None, csl[[i, 1]], Max[DeleteCases[csl[[ ;; i, 1]], None]]], {i, 1, Length[csl]}];
+		Do[csl[[i, 1]] = If[MatchQ[csl[[i, 1]], None | Automatic], csl[[i, 1]], Max[DeleteCases[csl[[ ;; i, 1]], None | Automatic]]], {i, 1, Length[csl]}];
 		
 		(* any runs of stops that still don't have values are evenly spaced *)
-		runs = Split[First /@ Position[csl, None], #1 === #2 - 1 &];
+		runs = Split[First /@ Position[csl, None | Automatic], #1 === #2 - 1 &];
 		Do[
 			temp = With[{l = csl[[First[#] - 1, 1]], r = csl[[Last[#] + 1, 1]]}, Range[l, r, (r - l)/(Length[#] + 1)]]& @ i;
 			If[Length[temp] == 1, temp = First[temp], temp = temp[[2 ;; -2]]];
@@ -250,17 +248,20 @@ performColorStopFixup[colorStopList_, gradientLineLength_] :=
 			{i, hints}
 		];
 		
-		(* correct corner case:
-			If the distance of the WL Blend function is 0, then the blend is only the left-most color.
-			This differs from the CSS spec which states a discontinuous transition should take place.
-			To modify the WL behavior, we prepend the first color slightly to the left of itself or zero. 
-			*)
-		If[csl[[-1, 1]] - csl[[1, 1]] == 0, PrependTo[csl, {Min[csl[[1, 1]] - 1, 0], csl[[1, 2]]}]];
-		
 		With[{c = csl}, Blend[c, #]&]
 	]
 	
-CSSGradientHint[percent_, {lp_, lc_}, {rp_, rc_}] := Sequence @@ Table[{lp + j*(rp - lp), Blend[{lc, rc}, j^Log[percent, 0.5]]}, {j, 0, 1, 0.01}]
+CSSGradientHint[percent_, {lp_, lc_}, {rp_, rc_}] := 
+	Module[{samplePoints, j},
+		If[percent == 0., Return @ {lp, rc}];
+		If[percent == 1., Return @ {rp, lc}];
+		
+		(* use WL Plot to recursively sample the transition curve, adding detail at larger curvature *)
+		samplePoints = Cases[Plot[j^Log[percent, 0.5], {j, 0, 1}], Line[x_] :> x, Infinity][[1, All, 1]];
+		If[!MatchQ[samplePoints, {__?NumericQ}], samplePoints = Table[j, {j, 0, 1, 0.001}]];
+		
+		Sequence @@ Table[{lp + j*(rp - lp), Blend[{lc, rc}, j^Log[percent, 0.5]]}, {j, samplePoints}]
+	]
 
 
 
@@ -281,7 +282,7 @@ consumeAngle[pos_, l_, tokens_] :=
 	]
 
 consumeSideOrCorner[pos_, l_, tokens:{__?CSSTokenQ}] :=
-	Module[{lr = None, tb = None},
+	Module[{lr = Automatic, tb = Automatic},
 		(* It is assumed the "to" token has already been consumed and whitespace skipped *)
 		(* Thus we _must_ have a direction token here *)
 		If[TokenTypeIsNot["ident", tokens[[pos]]], Throw @ missingDirectionFailure[]]; 
@@ -301,30 +302,32 @@ consumeSideOrCorner[pos_, l_, tokens:{__?CSSTokenQ}] :=
 		(* Only a valid, non-repeating ident token will move the position tracker forward *)
 		If[TokenTypeIs["ident", tokens[[pos]]],
 			Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"], 
-				"left",   If[lr === None, lr = Left;   AdvancePosAndSkipWhitespace[pos, l, tokens]],
-				"right",  If[lr === None, lr = Right;  AdvancePosAndSkipWhitespace[pos, l, tokens]],
-				"top",    If[tb === None, tb = Top;    AdvancePosAndSkipWhitespace[pos, l, tokens]],
-				"bottom", If[tb === None, tb = Bottom; AdvancePosAndSkipWhitespace[pos, l, tokens]],
+				"left",   If[lr === Automatic, lr = Left;   AdvancePosAndSkipWhitespace[pos, l, tokens]],
+				"right",  If[lr === Automatic, lr = Right;  AdvancePosAndSkipWhitespace[pos, l, tokens]],
+				"top",    If[tb === Automatic, tb = Top;    AdvancePosAndSkipWhitespace[pos, l, tokens]],
+				"bottom", If[tb === Automatic, tb = Bottom; AdvancePosAndSkipWhitespace[pos, l, tokens]],
 				_,        Throw @ missingDirectionFailure[]
 			]
 		];
 		
 		(* Return parsed side spec. Translates CSS spec to WL LinearGradientImage direction spec *)
 		Switch[{lr, tb},
-			{Left,  None},   {Right,  Left},
-			{Right, None},   {Left,   Right},
-			{None,  Top},    {Bottom, Top},
-			{None,  Bottom}, {Top,    Bottom},
+			{Left,      Automatic}, {Right,  Left},
+			{Right,     Automatic}, {Left,   Right},
+			{Automatic, Top},       {Bottom, Top},
+			{Automatic, Bottom},    {Top,    Bottom},
+			
 			{Left,  Top},    {{Right, Bottom}, {Left,  Top}},
 			{Right, Top},    {{Left,  Bottom}, {Right, Top}},
 			{Left,  Bottom}, {{Right, Top},    {Left,  Bottom}},
 			{Right, Bottom}, {{Left,  Top},    {Right, Bottom}},
+			
 			_,               Throw @ Failure["ImpossibleStateLGISOC", <|"MessageTemplate" -> "This error should not be possible."|>]
 		]
 	]
 
 consumeLinearGradientFunction[pos_, length_, tokens:{___?CSSTokenQ}] :=
-	Module[{l = length, try, direction = None, csl},
+	Module[{l = length, try, direction = Automatic, csl},
 		(* pre-checks *)
 		If[l == 0 || l == 1 && TokenTypeIs["whitespace", tokens[[1]]], 
 			Throw @ notEnoughTokensFailure[{"<color-stop>", "<comma>", "<color-stop>"}]
@@ -347,7 +350,7 @@ consumeLinearGradientFunction[pos_, length_, tokens:{___?CSSTokenQ}] :=
 			True, 
 				Null (* assume only color-stop-list is present *)	
 		];
-		If[direction =!= None,
+		If[direction =!= Automatic,
 			If[TokenTypeIs["comma", tokens[[pos]]], 
 				AdvancePosAndSkipWhitespace[pos, l, tokens]
 				,
@@ -361,34 +364,159 @@ consumeLinearGradientFunction[pos_, length_, tokens:{___?CSSTokenQ}] :=
 		If[pos > l, Throw @ notEnoughTokensFailure["<color-stop-list>"]];
 		csl = consumeColorStopList[pos, l, tokens];
 		
-		(* with every part parsed, combine results and interpret *)
+		{direction, csl}
+	]
+	
+	
+Options[CSSLinearGradient] = {"Repeating" -> False};
+SyntaxInformation[CSSLinearGradient] = {_, _, _, OptionsPattern[]};
+(*If[$Notebooks && Internal`CachedSystemInformation["FrontEnd", "VersionNumber"] > 10.0,
+	With[
+		{
+			list = {
+				"CSSLinearGradient" -> {
+					{None, {Bottom,Top}, {{Left,Bottom},{Top,Right}}, 45Degree}, 
+					{{{Scaled[0], Red}, {Scaled[1], Blue}}, {{Scaled[0], Yellow}, {Scaled[0.1], "Hint"}, {Scaled[1], Darker[Green]}}}, 
+					0}}},
+		FE`Evaluate[FEPrivate`AddSpecialArgCompletion[list]]
+	]
+]*)
+
+linearDirectionFailure[arg_] :=
+	Failure["CSSGradientFailure", <|
+		"MessageTemplate"   -> "The direction argument must be either Automatic, a numerical degree, or side to side directions.", 
+		"Input" -> arg,
+		"MessageParameters" -> <||>|>] 
+colorStopFailure1[arg_] :=
+	Failure["CSSGradientFailure", <|
+		"MessageTemplate"   -> "The color stop argument must be a list of at least two color stops.", 
+		"Input" -> arg,
+		"MessageParameters" -> <||>|>]
+colorStopFailure2[arg_] :=
+	Failure["CSSGradientFailure", <|
+		"MessageTemplate"   -> "The color stop argument has an invalid color stop or color hint.", 
+		"Input" -> arg,
+		"MessageParameters" -> <||>|>]
+colorStopFailure3[arg_, pos_] :=
+	Failure["CSSGradientFailure", <|
+		"MessageTemplate"   -> "A <color-hint> must come between two <color-stop> instances.", 
+		"Input" -> Join[If[pos == 1, {}, arg[[ ;; pos - 1]]], {Style[arg[[pos]], Background -> Yellow]}, If[pos == Length[arg], {}, arg[[pos + 1 ;;]]]],
+		"MessageParameters" -> <||>|>]
+imageSizeFailure[arg_] :=
+	Failure["CSSGradientFailure", <|
+		"MessageTemplate"   -> "The image size argument must be either Automatic, a number, or a pair of numbers.", 
+		"Input" -> arg,
+		"MessageParameters" -> <||>|>]
+
+
+CSSLinearGradient[direction_, colorStopList_, imageSize_, opts:OptionsPattern[]] := 
+	Module[{try, hintAllowed = True, is, blend, colors, convertedDirection, distances},
+		(* === direction checks === *)
+		If[
+			!MatchQ[
+				direction, 
+				Alternatives[
+					None | Automatic,
+					Times[_?NumericQ, Degree] | _?NumericQ,
+					{{Left, Top}, {Right, Bottom}} | {{Left, Bottom}, {Right, Top}} | {{Right, Bottom}, {Left, Top}} | {{Right, Top}, {Left, Bottom}},
+					{Left, Right} | {Right, Left},
+					{Top, Bottom} | {Bottom, Top}]],
+			Return @ linearDirectionFailure[direction]
+		];
 		
-		(* this is also a check for failure *)
-		try = CSSGradientMakeBlendFromColorStops[direction, csl, {150,150}];
+		(* === color stop checks === *) 
+		(* list length check *)
+		If[Not[And[ListQ[colorStopList], Length[colorStopList] > 1]], Return @ colorStopFailure1[colorStopList]];
+		
+		(* list format checks *)
+		try = 
+			Position[
+				colorStopList, 
+				Except[{Scaled[_?NumericQ] | _?NumericQ | None | Automatic, _?ColorQ} | {Scaled[_?NumericQ] | _?NumericQ, "Hint"}], 
+				{1}, 
+				Heads -> False];
+		If[Length[try] > 0, Return @ colorStopFailure2[First @ Extract[colorStopList, try]]];
+		
+		(* hint position check *)
+		If[colorStopList[[1, 2]] === "Hint", Return @ colorStopFailure3[colorStopList, 1]];
+		If[colorStopList[[-1, 2]] === "Hint", Return @ colorStopFailure3[colorStopList, Length[colorStopList]]];
+		Do[
+			If[colorStopList[[i, 2]] === "Hint", If[hintAllowed, hintAllowed = False, Return @ colorStopFailure3[colorStopList, i]]];
+			If[ColorQ[colorStopList[[i, 2]]], hintAllowed = True];
+			,
+			{i, 2, Length[colorStopList] - 1, 1}
+		];
+				
+		(* === image size checks === *)
+		is = 
+			Switch[imageSize,
+				Automatic,                {150, 150},
+				{_?NumericQ, _?NumericQ}, imageSize,
+				_?NumericQ,               {imageSize, imageSize},
+				_,                        Return @ imageSizeFailure[imageSize]
+			];
+		
+		(* === all argument checks passed tests === *)
+		(* 
+			Repeating linear gradients must first check for accurate gradient lengths, which could be zero. 
+			Implementation seems to be inconsistent across browsers, so we follow the degenerate radial case. *)
+		blend = CSSGradientMakeBlendFromColorStops[direction, colorStopList, is];
+		If[blend[[1, 1, -1, 1]] - blend[[1, 1, 1, 1]] == 0, 
+			If[TrueQ @ OptionValue["Repeating"],
+				colors = DeleteCases[colorStopList, {_, "Hint"}][[All, 2]];
+				Return @ ConstantImage[Blend[Join[{First[colors]}, Riffle[colors[[2 ;; -2]], colors[[2 ;; -2]]], {Last[colors]}]], is]
+				,
+				(* correct corner case:
+					If the distance of the WL Blend function is 0, then the blend misses the coloring from zero to the first color stop.
+					This differs from the CSS spec which states a discontinuous transition should take place.
+					To modify the WL behavior, we repeat the first color, prepended with a color stop position further to the left. *)
+				blend = With[{newBlend = Prepend[blend[[1, 1]], {blend[[1, 1, 1, 1]] - 1, blend[[1, 1, 1, 2]]}]}, Blend[newBlend, #]&];
+			]
+		];
 		
 		(* 
-			CSS has a special case when the gradient points to a corner. In this case, no matter the size
-			of the gradient image, the opposite corners have a constant color line between them. We mimic
-			this using the DataRange option. *)
-		With[{d = direction, c = csl},
-			Switch[d,
-				None,       
-					LinearGradientImage[{Top, Bottom} -> CSSGradientMakeBlendFromColorStops[d, c, #], #]&,
-				
-				_?NumericQ, 
-					LinearGradientImage[CSSGradientConvertAngleToPositions[d, #] -> CSSGradientMakeBlendFromColorStops[d, c, #], #]&,
-				
-				{{Left|Right, Top|Bottom}, {Left|Right, Top|Bottom}}, 
-					LinearGradientImage[d -> CSSGradientMakeBlendFromColorStops[d, c, #], #, DataRange -> {{0, 1}, {0, 1}}]&,
-				
-				_?ListQ,    
-					LinearGradientImage[d -> CSSGradientMakeBlendFromColorStops[d, c, #], #]&,
-				
-				_, 
-					Throw @ Failure["ImpossibleStateLGI", <|"MessageTemplate" -> "This error should not be possible."|>]
+			For repeating linear gradients we must rescale color functions that are less than 1 in scaled units, otherwise
+			we won't see the repeating pattern. *)
+		If[TrueQ @ OptionValue["Repeating"],
+			distances = blend[[1, 1]][[All, 1]]; (* these are in scaled units *)
+			colors = blend[[1, 1]][[All, 2]];
+			convertedDirection = 
+				Switch[direction,
+					_?NumericQ,       CSSGradientConvertAngleToPositions[direction, is],
+					None | Automatic, {{is[[1]]/2,   is[[2]]}, {is[[1]]/2,         0}}, (* same as {Top, Bottom} *)
+					
+					(* side-to-side *)
+					{Left, Right},    {{        0, is[[2]]/2}, {  is[[1]], is[[2]]/2}},
+					{Right, Left},    {{  is[[1]], is[[2]]/2}, {        0, is[[2]]/2}},
+					{Top, Bottom},    {{is[[1]]/2,   is[[2]]}, {is[[1]]/2,         0}},
+					{Bottom, Top},    {{is[[1]]/2,         0}, {is[[1]]/2,   is[[2]]}},
+					
+					{{Left, Top}, {Right, Bottom}}, CSSGradientConvertAngleToPositions[Degree*(ArcTan[is[[1]]/is[[2]]]*180/Pi +  90), is],
+					{{Right, Bottom}, {Left, Top}}, CSSGradientConvertAngleToPositions[Degree*(ArcTan[is[[1]]/is[[2]]]*180/Pi + 270), is],
+					{{Left, Bottom}, {Right, Top}}, CSSGradientConvertAngleToPositions[Degree*(ArcTan[is[[2]]/is[[1]]]*180/Pi      ), is],
+					{{Right, Top}, {Left, Bottom}}, CSSGradientConvertAngleToPositions[Degree*(ArcTan[is[[2]]/is[[1]]]*180/Pi + 180), is],
+					
+					(* fallthrough assumes position-to-position *)
+					_?ListQ,          direction
+				];
+			convertedDirection = {convertedDirection[[1]], convertedDirection[[1]] + (convertedDirection[[2]] - convertedDirection[[1]])*Last[distances]};
+			distances = Rescale[distances, {0, Last[distances]}];
+			blend = With[{b = Thread[{distances, colors}]}, Blend[b, #]&];
+			Return @ LinearGradientImage[N@convertedDirection, is, Padding -> "Periodic", ColorFunction -> blend]
+			,
+			(* 
+				CSS has a special case when the gradient points to a corner. In this case, no matter the size
+				of the gradient image, the opposite corners have a constant color line between them. We mimic
+				this using the DataRange option in the case of a non-repeating gradient. *)
+			Switch[direction,
+				None | Automatic,                                     LinearGradientImage[{Top, Bottom} -> blend, is],
+				_?NumericQ,                                           LinearGradientImage[CSSGradientConvertAngleToPositions[direction, is] -> blend, is],
+				{{Left|Right, Top|Bottom}, {Left|Right, Top|Bottom}}, LinearGradientImage[direction -> blend, is, DataRange -> {{0, 1}, {0, 1}}],
+				_?ListQ,                                              LinearGradientImage[direction -> blend, is]
 			]
 		]
 	]
+
 
 parseLinearGradientFunction[prop_String, token_?CSSTokenQ] :=
 	Module[{pos = 1, l, tokens, try},
@@ -400,6 +528,7 @@ parseLinearGradientFunction[prop_String, token_?CSSTokenQ] :=
 		tokens = token["Children"]; l = Length[tokens];
 		try = Catch @ consumeLinearGradientFunction[pos, l, tokens];
 		If[FailureQ[try], 
+			Return @ 
 			If[First[try] === "IncompleteParse",
 				Replace[try, 
 					Failure[s_, a_?AssociationQ] :> 
@@ -408,10 +537,35 @@ parseLinearGradientFunction[prop_String, token_?CSSTokenQ] :=
 				Replace[try, 
 				Failure[s_, a_?AssociationQ] :> 
 					Failure[s, <|a, "Expr" -> token["String"] <> "(" <> HighlightUntokenize[tokens, If[pos > l, {{pos-1}}, {{pos}}]] <> ")"|>]]
-			] 
-			,
-			try
-		]
+			]
+		];
+		
+		With[{d = try[[1]], csl = try[[2]]}, CSSLinearGradient[d, csl, #]&]
+	]
+	
+parseRepeatingLinearGradientFunction[prop_String, token_?CSSTokenQ] :=
+	Module[{pos = 1, l, tokens, try},
+		If[Not[TokenTypeIs["function", token] && TokenStringIs["repeating-linear-gradient", token]],
+			Return @ expectedFunctionFailure["repeating-linear-gradient"]
+		];
+		
+		(* prepare the function's token sequence *)
+		tokens = token["Children"]; l = Length[tokens];
+		try = Catch @ consumeLinearGradientFunction[pos, l, tokens];
+		If[FailureQ[try], 
+			Return @ 
+			If[First[try] === "IncompleteParse",
+				Replace[try, 
+					Failure[s_, a_?AssociationQ] :> 
+						Failure[s, <|a, "Expr" -> token["String"] <> "(" <> CSSUntokenize[tokens] <> "\!\(\*StyleBox[\" ...\",Background->RGBColor[1,1,0]]\)" <> ")"|>]]
+				,
+				Replace[try, 
+				Failure[s_, a_?AssociationQ] :> 
+					Failure[s, <|a, "Expr" -> token["String"] <> "(" <> HighlightUntokenize[tokens, If[pos > l, {{pos-1}}, {{pos}}]] <> ")"|>]]
+			]
+		];
+		
+		With[{d = try[[1]], csl = try[[2]]}, CSSLinearGradient[d, csl, #, "Repeating" -> True]&]
 	]
 
 
@@ -426,7 +580,7 @@ CSSGradientMakeBlendFromColorStops[direction_, colorstops_, imageSize:{w_, h_}] 
 		gradientLineLength = 
 			Switch[direction,
 				(* case: default top-to-bottom so use image height*)
-				None, imageSize[[2]], 
+				None | Automatic, imageSize[[2]], 
 				
 				(* case: angle*Degree *)
 				_?NumericQ,	EuclideanDistance @@ CSSGradientConvertAngleToPositions[direction, imageSize], 
@@ -440,7 +594,7 @@ CSSGradientMakeBlendFromColorStops[direction_, colorstops_, imageSize:{w_, h_}] 
 				{{_?NumericQ, _?NumericQ}, {_?NumericQ, _?NumericQ}}, EuclideanDistance @@ direction,
 				
 				(* fallthrough should not be possible *)
-				_, Throw @ Failure["BadParse", <|"MessageTemplate" -> "Direction should be None, a number, or sides."|>]
+				_, Throw @ Failure["BadParse", <|"MessageTemplate" -> "Direction should be Automatic, a number, or sides."|>]
 			];
 		performColorStopFixup[colorstops, gradientLineLength]
 	]
@@ -458,8 +612,8 @@ consumeRadialGradientEndingShape[pos_, l_, tokens:{__?CSSTokenQ}] :=
 			Switch[tokens[[pos]]["Type"],
 				"ident", 
 					Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
-						"circle",  "circle",
-						"ellipse", "ellipse",
+						"circle",  "Circle",
+						"ellipse", "Ellipse",
 						_,         Return @ $Failed (* soft error because <size> could also be an ident token *)
 					],
 				_, Return @ $Failed (* soft error *)
@@ -473,10 +627,10 @@ consumeRadialGradientSize[pos_, l_, tokens:{__?CSSTokenQ}] :=
 		try =
 			If[TokenTypeIs["ident", tokens[[pos]]],
 				Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
-					"closest-corner",  "closest-corner",
-					"closest-side",    "closest-side",
-					"farthest-corner", "farthest-corner",
-					"farthest-side",   "farthest-side",
+					"closest-corner",  "ClosestCorner",
+					"closest-side",    "ClosestSide",
+					"farthest-corner", "FarthestCorner",
+					"farthest-side",   "FarthestSide",
 					_,                 $Failed (* soft failure because <at-position> could follow with 'at' ident token *)
 				]
 				,
@@ -502,7 +656,7 @@ consumeRadialGradientSize[pos_, l_, tokens:{__?CSSTokenQ}] :=
 (* This is a 1- or 2-argument format of only ident tokens; if a missing 2nd arg then Center is implied *)
 (* [left|center|right] || [top|center|bottom] *)
 consumePositionType1[inputPos_, l_, tokens:{__?CSSTokenQ}] :=
-	Module[{pos = inputPos, leftright = None, topbottom = None},
+	Module[{pos = inputPos, leftright = Automatic, topbottom = Automatic},
 		If[TokenTypeIsNot["ident", tokens[[pos]]], Return @ $Failed];
 		
 		(* get first of {x, y} pair *)
@@ -524,24 +678,24 @@ consumePositionType1[inputPos_, l_, tokens:{__?CSSTokenQ}] :=
 			Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
 				"left",   
 					Switch[leftright, 
-						Center, AdvancePosAndSkipWhitespace[pos, l, tokens]; leftright = Left; topbottom = Center,
-						None,   AdvancePosAndSkipWhitespace[pos, l, tokens]; leftright = Left,
-						_,      Null
+						Center,    AdvancePosAndSkipWhitespace[pos, l, tokens]; leftright = Left; topbottom = Center,
+						Automatic, AdvancePosAndSkipWhitespace[pos, l, tokens]; leftright = Left,
+						_,         Null
 					],
 				"right",  
 					Switch[leftright, 
-						Center, AdvancePosAndSkipWhitespace[pos, l, tokens]; leftright = Right; topbottom = Center,
-						None,   AdvancePosAndSkipWhitespace[pos, l, tokens]; leftright = Right,
-						_,      Null
+						Center,    AdvancePosAndSkipWhitespace[pos, l, tokens]; leftright = Right; topbottom = Center,
+						Automatic, AdvancePosAndSkipWhitespace[pos, l, tokens]; leftright = Right,
+						_,         Null
 					],
 				"center",
-					If[topbottom === None, 
+					If[topbottom === Automatic, 
 						AdvancePosAndSkipWhitespace[pos, l, tokens]; topbottom = Center
 						,
 						AdvancePosAndSkipWhitespace[pos, l, tokens]; leftright = Center
 					],
-				"top",    If[topbottom === None, AdvancePosAndSkipWhitespace[pos, l, tokens]; topbottom = Top],
-				"bottom", If[topbottom === None, AdvancePosAndSkipWhitespace[pos, l, tokens]; topbottom = Bottom],
+				"top",    If[topbottom === Automatic, AdvancePosAndSkipWhitespace[pos, l, tokens]; topbottom = Top],
+				"bottom", If[topbottom === Automatic, AdvancePosAndSkipWhitespace[pos, l, tokens]; topbottom = Bottom],
 				_,        Null
 			]
 		];
@@ -556,7 +710,7 @@ consumePositionType1[inputPos_, l_, tokens:{__?CSSTokenQ}] :=
 (* This is a 1- or 2-argument format; if a missing 2nd arg then Center is implied *)
 (* [left|center|right|<length-percentage>] [top|center|bottom|<length-percentage>]? *)
 consumePositionType2[inputPos_, l_, tokens:{__?CSSTokenQ}] :=
-	Module[{pos = inputPos, leftright, topbottom, lengthpercentage = None},
+	Module[{pos = inputPos, leftright, topbottom, lengthpercentage = Automatic},
 		(* must start with a left/center/right position ident token or a <length-percentage> *)
 		Switch[tokens[[pos]]["Type"],
 			"ident",
@@ -572,7 +726,7 @@ consumePositionType2[inputPos_, l_, tokens:{__?CSSTokenQ}] :=
 			_,            Return @ $Failed (* soft error *)
 		];
 		If[FailureQ[lengthpercentage], Throw @ missingDirectionOrLengthFailure[] (* critical error *)];
-		If[lengthpercentage =!= None, leftright = lengthpercentage; lengthpercentage = None];
+		If[lengthpercentage =!= Automatic, leftright = lengthpercentage; lengthpercentage = Automatic];
 		AdvancePosAndSkipWhitespace[pos, l, tokens]; (* always advance if no error detected *)
 		
 		If[TrueQ[$Debug], Echo[{pos, l, If[pos > l, "EOF", tokens[[pos]]], leftright, topbottom, lengthpercentage}, "CPT2A"]];
@@ -593,7 +747,7 @@ consumePositionType2[inputPos_, l_, tokens:{__?CSSTokenQ}] :=
 			_,            inputPos = pos; Return @ {leftright, Center} 
 		];
 		If[FailureQ[lengthpercentage], Throw @ missingDirectionOrLengthFailure[] (* critical error *)];
-		If[lengthpercentage =!= None, topbottom = lengthpercentage];
+		If[lengthpercentage =!= Automatic, topbottom = lengthpercentage];
 		AdvancePosAndSkipWhitespace[pos, l, tokens]; (* always advance if no error detected *)
 		
 		If[TrueQ[$Debug], Echo[{pos, l, If[pos > l, "EOF", tokens[[pos]]], leftright, topbottom, lengthpercentage}, "CPT2B"]];
@@ -606,7 +760,7 @@ consumePositionType2[inputPos_, l_, tokens:{__?CSSTokenQ}] :=
 (* This is a 4-argument format *)
 (* [[left|right] <length-percentage>] && [[top|bottom] <length-percentage>] *)
 consumePositionType3[inputPos_, l_, tokens:{__?CSSTokenQ}] :=
-	Module[{pos = inputPos, leftright = None, topbottom = None, lengthpercentage = None},
+	Module[{pos = inputPos, leftright = Automatic, topbottom = Automatic, lengthpercentage = Automatic},
 		(* must start with a position ident token excluding "center" *)
 		If[TokenTypeIsNot["ident", tokens[[pos]]], Return @ $Failed];
 		Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
@@ -635,10 +789,10 @@ consumePositionType3[inputPos_, l_, tokens:{__?CSSTokenQ}] :=
 		If[pos > l, Return @ $Failed];
 		If[TokenTypeIsNot["ident", tokens[[pos]]], Return @ $Failed];
 		Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
-			"left",   If[leftright === None, leftright = {Left},   Return @ $Failed],
-			"right",  If[leftright === None, leftright = {Right},  Return @ $Failed],
-			"top",    If[topbottom === None, topbottom = {Top},    Return @ $Failed],
-			"bottom", If[topbottom === None, topbottom = {Bottom}, Return @ $Failed],
+			"left",   If[leftright === Automatic, leftright = {Left},   Return @ $Failed],
+			"right",  If[leftright === Automatic, leftright = {Right},  Return @ $Failed],
+			"top",    If[topbottom === Automatic, topbottom = {Top},    Return @ $Failed],
+			"bottom", If[topbottom === Automatic, topbottom = {Bottom}, Return @ $Failed],
 			_,        Return @ $Failed (* soft error *)
 		];
 		AdvancePosAndSkipWhitespace[pos, l, tokens];
@@ -671,7 +825,7 @@ consumePosition[pos_, l_, tokens:{__?CSSTokenQ}] :=
 	]
 
 consumeRadialGradientFunction[pos_, length_, tokens:{___?CSSTokenQ}] :=
-	Module[{try, csl, l = length, gradientSize = None, gradientPos = None, gradientEndingShape = None},
+	Module[{try, csl, l = length, gradientSize = Automatic, gradientPos = Automatic, gradientEndingShape = Automatic},
 		(* pre-checks *)
 		If[l == 0 || l == 1 && TokenTypeIs["whitespace", tokens[[1]]], 
 			Throw @ notEnoughTokensFailure[{"<color-stop>", "<comma>", "<color-stop>"}]];
@@ -704,25 +858,26 @@ consumeRadialGradientFunction[pos_, length_, tokens:{___?CSSTokenQ}] :=
 				Null (* assume <ending-shape> and/or <size> is not present *)	
 		];
 		
-		(* negative size values are not allowed *)
+		(* negative size values are not allowed; if no size is given then default to "FarthestCorner" *)
 		If[ListQ[gradientSize] && AnyTrue[gradientSize, If[MatchQ[#, Scaled[_]], Negative[First[#]], Negative[#]]&], Throw @ negativeSizeFailure[]];
+		If[gradientSize === Automatic, gradientSize = "FarthestCorner"];
 		
 		(* set ending shape if not specified, check shape for errors *)
-		If[gradientEndingShape === None,
-			gradientEndingShape = If[ListQ[gradientSize] && Length[gradientSize] == 1, "circle", "ellipse"]
+		If[gradientEndingShape === Automatic,
+			gradientEndingShape = If[ListQ[gradientSize] && Length[gradientSize] == 1, "Circle", "Ellipse"]
 		];
-		If[gradientEndingShape === "circle" && ListQ[gradientSize],
+		If[gradientEndingShape === "Circle" && ListQ[gradientSize],
 			Which[
 				MatchQ[gradientSize, {_Scaled}], pos--; Throw @ relativeSizeFailure[],
 				MatchQ[gradientSize, {_, _}],    pos--; Throw @ mismatchedSizeFailure[]
 			]
 		];
-		If[gradientEndingShape === "ellipse" && ListQ[gradientSize] && !MatchQ[gradientSize, {_, _}], pos--; Throw @ mismatchedSizeFailure[]];
+		If[gradientEndingShape === "Ellipse" && ListQ[gradientSize] && !MatchQ[gradientSize, {_, _}], pos--; Throw @ mismatchedSizeFailure[]];
 		
 		If[TrueQ[$Debug], Echo[{pos, l, If[pos > l, "EOF", tokens[[pos]]], gradientPos, gradientSize, gradientEndingShape}, "B"]];
 		
 		(* get optional 'at <position>' syntax *)
-		If[(gradientEndingShape =!= None || gradientSize =!= None) && pos > l, 
+		If[(gradientEndingShape =!= Automatic || gradientSize =!= Automatic) && pos > l, 
 			Throw @ notEnoughTokensFailure[{"<comma>", "<color-stop-list>"}]
 		];
 		
@@ -742,10 +897,10 @@ consumeRadialGradientFunction[pos_, length_, tokens:{___?CSSTokenQ}] :=
 		If[TrueQ[$Debug], Echo[{pos, l, If[pos > l, "EOF", tokens[[pos]]], gradientPos, gradientSize, gradientEndingShape}, "C"]];
 		
 		(* must have a comma before the color-stop-list *)
-		If[gradientPos =!= None && pos > l, 
+		If[gradientPos =!= Automatic && pos > l, 
 			Throw @ notEnoughTokensFailure[{"<comma>", "<color-stop-list>"}]
 		];
-		If[gradientEndingShape =!= None || gradientSize =!= None || gradientPos =!= None, 
+		If[gradientEndingShape =!= Automatic || gradientSize =!= Automatic || gradientPos =!= Automatic, 
 			If[TokenTypeIs["comma", tokens[[pos]]],
 				AdvancePosAndSkipWhitespace[pos, l, tokens]
 				,
@@ -761,10 +916,211 @@ consumeRadialGradientFunction[pos_, length_, tokens:{___?CSSTokenQ}] :=
 		If[pos > l, Throw @ notEnoughTokensFailure["<color-stop-list>"]];
 		csl = consumeColorStopList[pos, l, tokens];
 		
+		(* with every part parsed, combine results and interpret *)
 		
+		(* this is a check for failure *)
+		try = CSSGradientMakeBlendFromColorStops[{{0,0}, {1,0}}, csl, {150, 150}];
 		
-		{gradientPos, gradientSize, gradientEndingShape, csl}		
+		{gradientPos, gradientEndingShape, gradientSize, csl}
+		
+		(* 
+			The radial gradient in WL is RadialGradientImage. It naturally supports circular gradients.
+			Elliptical gradients are produced via the DataRange option. *)
+		(*With[{gp = gradientPos, gs = gradientSize, ges = gradientEndingShape, c = csl},
+			If[ges === "Circle",
+				With[{Global`position = CSSGradientConvertRadialPosition[gp, ges, gs, #]},
+					RadialGradientImage[
+						Global`position -> CSSGradientMakeBlendFromColorStops[EuclideanDistance @@ Global`position, c, #], 
+						#]
+				]&
+				,
+				With[{Global`position = CSSGradientConvertRadialPosition[gp, ges, gs, #]},
+					RadialGradientImage[
+						Global`position -> CSSGradientMakeBlendFromColorStops[EuclideanDistance @@ Global`position, c, #], 
+						#,
+						DataRange -> CSSGradientConvertRadialDataRange[gp, gs, #]]
+				]&
+			]
+		]*)
 	]
+	
+radialPositionFailure[arg_] :=
+	Failure["CSSGradientFailure", <|
+		"MessageTemplate"   -> "The position argument must be a side position, offset from a side position, or a coordinate.", 
+		"Input" -> arg,
+		"Examples" -> Alternatives @@ {{Left, Top}, {20, Scaled[0.1]}, {{Left, 10}, {Bottom, Scaled[0.2]}}},
+		"MessageParameters" -> <||>|>] 
+		
+radialShapeFailure[arg_] :=
+	Failure["CSSGradientFailure", <|
+		"MessageTemplate"   -> "The shape argument must be Automatic, \"Circle\" or \"Ellipse\".", 
+		"Input" -> arg,
+		"MessageParameters" -> <||>|>] 
+
+radialSizeFailure1[arg_] :=
+	Failure["CSSGradientFailure", <|
+		"MessageTemplate"   -> "A size argument keyword must be a either \"FarthestCorner\", \"ClosestCorner\", \"FarthestSide\", or \"ClosestSide\".", 
+		"Input" -> arg,
+		"MessageParameters" -> <||>|>] 
+		
+radialSizeFailure2[arg_] :=
+	Failure["CSSGradientFailure", <|
+		"MessageTemplate"   -> "A pair of numeric sizes are expected for elliptical gradients.", 
+		"Input" -> arg,
+		"MessageParameters" -> <||>|>] 
+
+radialSizeFailure3[arg_] :=
+	Failure["CSSGradientFailure", <|
+		"MessageTemplate"   -> "A circular gradient cannot must use an absolute size.", 
+		"Input" -> arg,
+		"MessageParameters" -> <||>|>] 
+
+wrongSizeFailure[arg_] :=
+	Failure["CSSGradientFailure", <|
+		"MessageTemplate"   -> "The size argument must be either Automatic, a single size, or a pair of sizes.", 
+		"Input" -> arg,
+		"MessageParameters" -> <||>|>] 
+	
+Options[CSSRadialGradient] = {"Repeating" -> False};
+CSSRadialGradient[startPosition_, inputShape_, inputSize_, colorStopList_, imageSize_, opts:OptionsPattern[]] := 
+	Module[{try, hintAllowed = True, is, shape, size, possibleEnds, convertedPosition, csl, dataRange},
+		possibleEnds = "FarthestCorner" | "ClosestCorner" | "FarthestSide" | "ClosestSide";
+		(* === starting position checks === *)
+		If[
+			!MatchQ[
+				startPosition, 
+				Alternatives[
+					{{Left | Right, Scaled[_?NumericQ] | _?NumericQ}, {Top | Bottom, Scaled[_?NumericQ] | _?NumericQ}},
+					{Scaled[_?NumericQ] | _?NumericQ | Left | Center | Right, Scaled[_?NumericQ] | _?NumericQ | Top | Center | Bottom}]],
+			Return @ radialPositionFailure[startPosition]
+		];
+		
+		(* === shape and size check === *)
+		Which[
+			inputSize === Automatic, (* default shape determines size *) 
+				size = "FarthestCorner"; 
+				shape = 
+					Switch[inputShape,
+						Automatic | "Ellipse", "Ellipse",
+						"Circle",              "Circle",
+						_,                     Return @ radialShapeFailure[inputShape]
+					]
+			,
+			inputShape === Automatic, (* size determines shape *)
+				Switch[inputSize,
+					_?NumericQ,         
+						If[Negative[inputSize], Return @ negativeSizeFailure[]];
+						shape = "Circle"; size = inputSize;
+					,
+					Scaled[_?NumericQ], 
+						Return @ radialSizeFailure3[inputSize]
+					,
+					{_?NumericQ | Scaled[_?NumericQ], _?NumericQ | Scaled[_?NumericQ]},
+						If[AnyTrue[inputSize, If[MatchQ[#, Scaled[_]], Negative[First[#]], Negative[#]]&], Return @ negativeSizeFailure[]];
+						shape = "Ellipse"; size = inputSize;						
+					,
+					_?StringQ,
+						If[!MatchQ[inputSize, possibleEnds], Return @ radialSizeFailure1[inputSize]];
+						shape = "Ellipse"; size = inputSize;
+					,
+					True,                        
+						wrongSizeFailure[inputSize]
+				]
+			,
+			True, (* shape must match size *)
+				Switch[inputShape,
+					"Circle", 
+						Switch[inputSize, 
+							_?NumericQ,         If[Negative[inputSize], Return @ negativeSizeFailure[]],
+							Scaled[_?NumericQ], Return @ radialSizeFailure3[inputSize],
+							_?StringQ,          If[!MatchQ[inputSize, possibleEnds], Return @ radialSizeFailure1[inputSize]],
+							_,                  Return @ mismatchedSizeFailure[]				
+						]
+					,
+					"Ellipse",
+						Switch[inputSize,
+							{_?NumericQ | Scaled[_?NumericQ], _?NumericQ | Scaled[_?NumericQ]},
+								If[AnyTrue[inputSize, If[MatchQ[#, Scaled[_]], Negative[First[#]], Negative[#]]&], Return @ negativeSizeFailure[]],
+							_?StringQ, If[!MatchQ[inputSize, possibleEnds], Return @ radialSizeFailure1[inputSize]],
+							_,         Return @ mismatchedSizeFailure[]
+						]
+					,
+					_, 
+						Return @ radialShapeFailure[inputShape]
+				];
+				shape = inputShape; size = inputSize;
+		];
+		
+		(* === color stop checks === *) 
+		(* list length check *)
+		If[Not[And[ListQ[colorStopList], Length[colorStopList] > 1]], Return @ colorStopFailure1[colorStopList]];
+		
+		(* list format checks *)
+		try = 
+			Position[
+				colorStopList, 
+				Except[{Scaled[_?NumericQ] | _?NumericQ | None | Automatic, _?ColorQ} | {Scaled[_?NumericQ] | _?NumericQ, "Hint"}], 
+				{1}, 
+				Heads -> False];
+		If[Length[try] > 0, Return @ colorStopFailure2[First @ Extract[colorStopList, try]]];
+		
+		(* hint position check *)
+		If[colorStopList[[ 1, 2]] === "Hint", Return @ colorStopFailure3[colorStopList, 1]];
+		If[colorStopList[[-1, 2]] === "Hint", Return @ colorStopFailure3[colorStopList, Length[colorStopList]]];
+		Do[
+			If[colorStopList[[i, 2]] === "Hint", If[hintAllowed, hintAllowed = False, Return @ colorStopFailure3[colorStopList, i]]];
+			If[ColorQ[colorStopList[[i, 2]]], hintAllowed = True];
+			,
+			{i, 2, Length[colorStopList] - 1, 1}
+		];
+		
+		(* === image size checks === *)
+		is = 
+			Switch[imageSize,
+				Automatic,                {150, 150},
+				{_?NumericQ, _?NumericQ}, imageSize,
+				_?NumericQ,               {imageSize, imageSize},
+				_,                        Return @ imageSizeFailure[imageSize]
+			];
+			
+		(* === all checks passed so make gradient ===*)
+		convertedPosition = Echo @ CSSGradientConvertRadialPosition[startPosition, shape, size, is];
+		
+		(* check for degenerate radial lengths; see section 3.2.3 of specification *)
+		(* 
+			In all cases (circle with 0 radius, ellipse with either zero width or zero height), the spec indicates
+			we should keep the gradient effectively correct in case zoom is applied. But zoom is only applicable in 
+			browsers, not the WL. 
+			In WL the image is fixed, so this will end up looking like a solid color (the last color stop). 
+			A repeating gradient will be a blend of all colors in the color stop list (with middle colors repeated). *)
+		If[EuclideanDistance @@ convertedPosition == 0, 
+			Return @ 
+				If[TrueQ @ OptionValue["Repeating"],
+					csl = DeleteCases[colorStopList, {_, "Hint"}][[All, 2]];
+					ConstantImage[Blend @ Join[{First[csl]}, Riffle[csl[[2 ;; -2]], csl[[2 ;; -2]]], {Last[csl]}], is]
+					,
+					ConstantImage[colorStopList[[-1, 2]], is]
+				]
+		];
+		
+		csl = CSSGradientMakeBlendFromColorStops[convertedPosition, colorStopList, is];
+		
+		If[shape === "Ellipse", 
+			dataRange = CSSGradientConvertRadialDataRange[startPosition, size, is];
+			If[TrueQ @ OptionValue["Repeating"],
+				RadialGradientImage[convertedPosition, is, ColorFunction -> csl, DataRange -> dataRange, Padding -> "Periodic"]
+				,
+				RadialGradientImage[convertedPosition, is, ColorFunction -> csl, DataRange -> dataRange]
+			]
+			,
+			If[TrueQ @ OptionValue["Repeating"],
+				RadialGradientImage[convertedPosition, is, ColorFunction -> csl, Padding -> "Periodic"]
+				,
+				RadialGradientImage[convertedPosition, is, ColorFunction -> csl]
+			]
+		]
+	]
+	
 	
 parseRadialGradientFunction[token_?CSSTokenQ] :=
 	Module[{try, pos = 1, l, tokens},
@@ -776,24 +1132,61 @@ parseRadialGradientFunction[token_?CSSTokenQ] :=
 		tokens = token["Children"]; l = Length[tokens];
 		try = Catch @ consumeRadialGradientFunction[pos, l, tokens];
 		If[FailureQ[try], 
-			Which[
-				First[try] === "IncompleteParse",
-					Replace[try, 
-						Failure[s_, a_?AssociationQ] :> 
-							Failure[s, <|a, "Expr" -> token["String"] <> "(" <> CSSUntokenize[tokens] <> "\!\(\*StyleBox[\" ...\",Background->RGBColor[1,1,0]]\)" <> ")"|>]]
-				,
-				First[try] === "BadParseAtStart",
-					Replace[try, 
-						Failure[s_, a_?AssociationQ] :> 
-							Failure[s, <|a, "Expr" -> token["String"] <> "(" <> HighlightUntokenize[tokens, List /@ Range[If[pos > l, pos-1, pos]]] <> ")"|>]]
-				,
-				True,
-					Replace[try, 
-						Failure[s_, a_?AssociationQ] :> 
-							Failure[s, <|a, "Expr" -> token["String"] <> "(" <> HighlightUntokenize[tokens, If[pos > l, {{pos-1}}, {{pos}}]] <> ")"|>]]
-			] 
-			,
-			try
+			Return @ 
+				Which[
+					First[try] === "IncompleteParse",
+						Replace[try, 
+							Failure[s_, a_?AssociationQ] :> 
+								Failure[s, <|a, "Expr" -> token["String"] <> "(" <> CSSUntokenize[tokens] <> "\!\(\*StyleBox[\" ...\",Background->RGBColor[1,1,0]]\)" <> ")"|>]]
+					,
+					First[try] === "BadParseAtStart",
+						Replace[try, 
+							Failure[s_, a_?AssociationQ] :> 
+								Failure[s, <|a, "Expr" -> token["String"] <> "(" <> HighlightUntokenize[tokens, List /@ Range[If[pos > l, pos-1, pos]]] <> ")"|>]]
+					,
+					True,
+						Replace[try, 
+							Failure[s_, a_?AssociationQ] :> 
+								Failure[s, <|a, "Expr" -> token["String"] <> "(" <> HighlightUntokenize[tokens, If[pos > l, {{pos-1}}, {{pos}}]] <> ")"|>]]
+				] 
+		];
+		
+		With[{startPos = try[[1]], shape = try[[2]], size = try[[3]], colorStopList = try[[4]]},
+			CSSRadialGradient[startPos, shape, size, colorStopList, #]&
+		]
+	]
+	
+parseRepeatingRadialGradientFunction[token_?CSSTokenQ] :=
+	Module[{try, pos = 1, l, tokens},
+		If[Not[TokenTypeIs["function", token] && TokenStringIs["repeating-radial-gradient", token]],
+			Return @ expectedFunctionFailure["repeating-radial-gradient"]
+		];
+		
+		(* consume the function's token sequence *)
+		tokens = token["Children"]; l = Length[tokens];
+		try = Catch @ consumeRadialGradientFunction[pos, l, tokens];
+		If[FailureQ[try], 
+			Return @ 
+				Which[
+					First[try] === "IncompleteParse",
+						Replace[try, 
+							Failure[s_, a_?AssociationQ] :> 
+								Failure[s, <|a, "Expr" -> token["String"] <> "(" <> CSSUntokenize[tokens] <> "\!\(\*StyleBox[\" ...\",Background->RGBColor[1,1,0]]\)" <> ")"|>]]
+					,
+					First[try] === "BadParseAtStart",
+						Replace[try, 
+							Failure[s_, a_?AssociationQ] :> 
+								Failure[s, <|a, "Expr" -> token["String"] <> "(" <> HighlightUntokenize[tokens, List /@ Range[If[pos > l, pos-1, pos]]] <> ")"|>]]
+					,
+					True,
+						Replace[try, 
+							Failure[s_, a_?AssociationQ] :> 
+								Failure[s, <|a, "Expr" -> token["String"] <> "(" <> HighlightUntokenize[tokens, If[pos > l, {{pos-1}}, {{pos}}]] <> ")"|>]]
+				] 
+		];
+		
+		With[{startPos = try[[1]], shape = try[[2]], size = try[[3]], colorStopList = try[[4]]},
+			CSSRadialGradient[startPos, shape, size, colorStopList, #, "Repeating" -> True]&
 		]
 	]
 
@@ -822,101 +1215,234 @@ convertPositionSpec[position:{x_, y_}, imageSize:{w_, h_}] :=
 			Bottom,    0,
 			Center,    h/2,
 			_,         y]}
-			
-getClosestSidePoint[pos:{x_, y_}, imageSize:{w_, h_}] :=
-	First[Extract[{{0, y}, {x, 0}, {w, y}, {x, h}}, Position[{x, y, w-x, h-y}, Min[{x, y, w-x, h-y}]]]]
-getFarthestSidePoint[pos:{x_, y_}, imageSize:{w_, h_}] :=
-	First[Extract[{{0, y}, {x, 0}, {w, y}, {x, h}}, Position[{x, y, w-x, h-y}, Max[{x, y, w-x, h-y}]]]]
-getClosestCornerPoint[pos:{x_, y_}, imageSize:{w_, h_}] := {If[x > w/2, w, 0], If[y > h/2, h, 0]}
-getFarthestCornerPoint[pos:{x_, y_}, imageSize:{w_, h_}] := {If[x > w/2, 0, w], If[y > h/2, 0, h]}
-		
-getRadialStartAndEndPositions[position_, size_, imageSize:{w_, h_}] :=
-	Module[{startPos, endPos},
-		startPos = convertPositionSpec[position, imageSize];
-		endPos =
-			Switch[size,
-				"closest-side",    getClosestSidePoint[startPos, imageSize],
-				"farthest-side",   getFarthestSidePoint[startPos, imageSize],
-				"closest-corner",  getClosestCornerPoint[startPos, imageSize],  (* not actually used *)
-				"farthest-corner", getFarthestCornerPoint[startPos, imageSize], (* not actually used *)
-				{_},               startPos + {size[[1]], 0}, (* cannot be a Scaled value from earlier checks *)
-				{_, _},            convertPositionSpec[size, imageSize]
-			];
-		{startPos, endPos}
+
+
+(* === circular gradients === *)
+
+(* 
+	The formulas involved assume that the origin is the center of the Image. 
+	Use of absoulte values is a convenience to minimize the number of cases. *)
+
+CSSGradientConvertRadialPosition[position_, "Circle", r_, imageSize:{w_, h_}] :=
+	Module[{x1, y1},
+		{x1, y1} = convertPositionSpec[position, imageSize];
+		{{x1, y1}, {x1, y1} + {r, 0}}
 	]
 
-CSSGradientConvertRadialPosition[position_, size_, imageSize:{w_, h_}] :=
-	getRadialStartAndEndPositions[position, size, imageSize]
+CSSGradientConvertRadialPosition[position_, "Circle", "ClosestSide", imageSize:{w_, h_}] :=
+	Module[{x0, y0, x1, y1, distanceToLeftRight, distanceToTopBottom},
+		{x1, y1} = convertPositionSpec[position, imageSize];
+		{x0, y0} = {x1, y1} - {w/2, h/2}; (* make start position relative to center of image *)
+		
+		distanceToLeftRight = w/2 - Abs[x0]; distanceToTopBottom = h/2 - Abs[y0]; 
+		If[distanceToLeftRight < distanceToTopBottom,
+			{{x1, y1}, {x1, y1} + {distanceToLeftRight, 0}}
+			,
+			{{x1, y1}, {x1, y1} + {0, distanceToTopBottom}}
+		]
+	]
 	
-CSSGradientConvertRadialPosition[position_, "closest-corner", imageSize:{w_, h_}] :=
-	{
-		imageSize/2, 
-		imageSize/2 + {EuclideanDistance @@ getRadialStartAndEndPositions[position, "closest-side", imageSize], 0}}
-
-(* only used if gradient is detected to be an ellipse *)
-(* elliptical gradients are always on axis, never rotated *)
-CSSGradientConvertRadialDataRange[position_, size_, imageSize:{w_, h_}] :=
-	Module[{dr = {{0, w}, {0, h}}, r, x1, y1, x2, y2, d, x0, y0, dx, dy, xp, yp},
-		{{x1, y1}, {x2, y2}} = getRadialStartAndEndPositions[position, size, imageSize];
-		r = EuclideanDistance[{x1, y1}, {x2, y2}];
+CSSGradientConvertRadialPosition[position_, "Circle", "FarthestSide", imageSize:{w_, h_}] :=
+	Module[{x0, y0, x1, y1, distanceToLeftRight, distanceToTopBottom},
+		{x1, y1} = convertPositionSpec[position, imageSize];
+		{x0, y0} = {x1, y1} - {w/2, h/2}; (* make start position relative to center of image *)
 		
-		Switch[size,
-			"closest-side",    
-				(* assumes starting position is not on an edge (degenerate case); find the other sides *)
-				Switch[{x2, y2},
-					{0 | w, _}, (* left or right side *)
-						If[y1 > h/2, 
-							d = h-y1-r; dr[[2, 1]] -= d; dr[[2, 2]] -= d; dr[[2, 1]] += h*d/(d+r)
-							,
-							d = y1-r;   dr[[2, 1]] += d; dr[[2, 2]] += d; dr[[2, 2]] -= h*d/(d+r)
-						], 
-					{_, 0 | h}, (* top or bottom side *)
-						If[x1 < w/2,
-							d = x1-r;   dr[[1, 1]] += d; dr[[1, 2]] += d; dr[[1, 2]] -= w*d/(d+r)
-							,
-							d = w-x1-r; dr[[1, 1]] -= d; dr[[1, 2]] -= d; dr[[1, 1]] += w*d/(d+r);
-						]
-				];
-				,
-			"farthest-side",   (*TODO: incorrect, fix this *)
-				Switch[{x2, y2},
-					{0 | w, _}, (* left or right side *)
-						If[y1 > h/2, 
-							d = Abs[y1-r];   dr[[2, 1]] -= d; dr[[2, 2]] -= d; dr[[2, 2]] += h*d/(d+r)
-							,
-							d = Abs[r-h+y1]; dr[[2, 1]] += d; dr[[2, 2]] += d; dr[[2, 1]] -= h*d/(d+r)
-						], 
-					{_, 0 | h}, (* top or bottom side *)
-						If[x1 < w/2,
-							d = Abs[w-x1-r]; dr[[1, 1]] += d; dr[[1, 2]] += d; dr[[1, 1]] -= w*d/(d+r)
-							,
-							d = Abs[x1-r];   dr[[1, 1]] -= d; dr[[1, 2]] -= d; dr[[1, 2]] += w*d/(d+r)
-						]
-				],
-			"closest-corner", 
-				{{x1, y1}, {x2, y2}} = getRadialStartAndEndPositions[position, "closest-side", imageSize];
-				r = EuclideanDistance[{x1, y1}, {x2, y2}]; 
-				{x0, y0} = {x1, y1} - {w/2, h/2}; (* make start position relative to center of image *)
-				dx = Sqrt[2](w/2 - Abs[x0]) - r;
-				dy = Sqrt[2](h/2 - Abs[y0]) - r;
-				xp = Abs[-(w/2)dx/(r+dx)]1.;
-				yp = Abs[-(h/2)dy/(r+dy)]1.;
-				dr = {{xp - x0*(w - 2*xp)/w, w - xp - x0*(w - 2*xp)/w}, {yp - y0*(h - 2*yp)/h, h - yp - y0*(h - 2*yp)/h}},
-			"farthest-corner", 
-				{{x1, y1}, {x2, y2}} = getRadialStartAndEndPositions[position, "farthest-side", imageSize];
-				r = EuclideanDistance[{x1, y1}, {x2, y2}]; 
-				{x0, y0} = {x1, y1} - {w/2, h/2}; (* make start position relative to center of image *)
-				dx = Sqrt[2](w/2 + Abs[x0]) - r;
-				dy = Sqrt[2](h/2 + Abs[y0]) - r;
-				xp = Abs[-(w/2)dx/(r+dx)]1.;
-				yp = Abs[-(h/2)dy/(r+dy)]1.;
-				dr = {{xp(* - 2*x0*(w/2-xp)/w*), w - xp(* - 2*x0*(w/2-xp)/w*)}, {yp(* - y0*(h - 2*yp)/h*), h - yp(* - y0*(h - 2*yp)/h*)}},
-			{_},               Null,
-			{_, _},            Null
-		];
-		dr
+		distanceToLeftRight = w/2 + Abs[x0]; distanceToTopBottom = h/2 + Abs[y0]; 
+		If[distanceToLeftRight < distanceToTopBottom,
+			{{x1, y1}, {x1, y1} + {0, distanceToTopBottom}}
+			,
+			{{x1, y1}, {x1, y1} + {distanceToLeftRight, 0}}
+		]
+	]
+	
+CSSGradientConvertRadialPosition[position_, "Circle", "ClosestCorner", imageSize:{w_, h_}] :=
+	Module[{x1, y1},
+		{x1, y1} = convertPositionSpec[position, imageSize];
+		Which[
+			x1 >= w/2 && y1 >= h/2, {{x1, y1}, {w, h}},
+			x1 >= w/2 && y1 <  h/2, {{x1, y1}, {w, 0}},
+			x1 <  w/2 && y1 >= h/2, {{x1, y1}, {0, h}},
+			x1 <  w/2 && y1 <  h/2, {{x1, y1}, {0, 0}}
+		]
+	]
+	
+CSSGradientConvertRadialPosition[position_, "Circle", "FarthestCorner", imageSize:{w_, h_}] :=
+	Module[{x1, y1},
+		{x1, y1} = convertPositionSpec[position, imageSize];
+		Which[
+			x1 >= w/2 && y1 >= h/2, {{x1, y1}, {0, 0}},
+			x1 >= w/2 && y1 <  h/2, {{x1, y1}, {0, h}},
+			x1 <  w/2 && y1 >= h/2, {{x1, y1}, {w, 0}},
+			x1 <  w/2 && y1 <  h/2, {{x1, y1}, {w, h}}
+		]
 	]
 
+
+(* === elliptical gradients === *)
+
+(* 
+	Elliptical gradients are always on axis, never rotated. WL supports circular gradients as the default.
+	To implement an elliptical gradient, then you must use the DataRange option to change the effective viewport.
+	Because the ImageSize remains fixed, if the DataRange (i.e. PlotRange) shrinks, then the circle's radius is 
+	stretched outward; if the PlotRange grows then the radius shrinks inward. This is a non-linear inverse relationship:
+		
+		To  move the radius R by a distance x, adjust the PlotRange by X: 
+		X=(-size/2)*x/(x+R)
+	
+	This assumes that the position of the circle is in the center of the image so no displacement occurs, only dilation.
+	'size' is either the horizontal 'w' (width) or vertical 'h' (height) of the ImageSize parameter.
+	
+	We must also position the circle. A consequence of first dilating the circle is that the x and/or y coordinates
+	become dilated as well. So to move a distance X along a dilated coordinate is a simple scaling based on the amount
+	of dilation. The scale factor is (size + 2*x)/size where x is the adjustment to the PlotRange (x could be negative).
+	
+	The closest-corner and farthest-corner cases are more involved. There are two constraints:
+		1. The aspect ratio of the ellipse must be the same as in the "closest-..." cases
+		2. The ellipse must pass through a corner of the box
+		
+		Fortunately the aspect ratio is easy to calculate when relative to the center of the box: 
+		A = (h/2 +/- Abs[y0])/(w/2 +/- Abs[x0])
+		
+	where {x0, y0} is the circle position relative to the center of the box. 'h' and 'w' are the ImageSize (box size).
+	The + sign is used for "farthest" and the - sign is used for "nearest". 
+	
+	Using the equation of an ellipse (x-x0)^2/rx^2 + (y-y0)^2/ry^2 == 1 and the aspect ratio, we solve for
+	the two radii of the ellipse:
+	
+		rx = Sqrt[2]*(w/2 +/- Abs[x0])	ry = Sqrt[2]*(h/2 +/- Abs[y0])
+		
+	The + sign is used for "farthest" and the - sign is used for "nearest". 
+		
+		
+	*)
+
+CSSGradientConvertRadialPosition[position_, "Ellipse", size:{{_, _}, {_, _}} | {_, _}, imageSize:{w_, h_}] :=
+	Module[{x0, y0, r, d, dilateVertically, pt},
+		{d, r, {x0, y0}, dilateVertically} = radialGradientEllipseData[position, size, imageSize];
+		pt = {w, h}/2;
+		pt += If[dilateVertically, {x0, (h+2*d)/h*y0}, {(w+2*d)/w*x0, y0}];
+		N @ {pt, pt + {r, 0}} (* bug in RadialGradientImage requires position to be numeric *)
+	]
+
+CSSGradientConvertRadialDataRange[position_, size:{{_, _}, {_, _}} | {_, _}, imageSize:{w_, h_}] :=
+	Module[{plotRange = {{0, w}, {0, h}}, dilateVertically, d, r, startPos},
+		{d, r, startPos, dilateVertically} = radialGradientEllipseData[position, size, imageSize];
+		If[dilateVertically, 
+			plotRange[[2, 1]] -= d; plotRange[[2, 2]] += d
+			, 
+			plotRange[[1, 1]] -= d; plotRange[[1, 2]] += d
+		];
+		N @ plotRange
+	]
+	
+radialGradientEllipseData[position_, size:{{_, _}, {_, _}} | {_, _}, imageSize:{w_, h_}] :=
+	Module[{x0, y0, x1, y1, rx, ry, r},
+		{x1, y1} = convertPositionSpec[position, imageSize];
+		{x0, y0} = {x1, y1} - {w/2, h/2}; (* make start position relative to center of image *)
+		{rx, ry} = convertPositionSpec[size, imageSize];
+		
+		If[rx > ry, 
+			r = ry; (* ry is the limiting distance *)
+			{r - rx, r, {x0, y0}, False}
+			,
+			r = rx; (* rx is the limiting distance *)
+			{r - ry, r, {x0, y0}, True}
+		]
+	]
+	
+CSSGradientConvertRadialPosition[position_, "Ellipse", size:"ClosestSide" | "FarthestSide", imageSize:{w_, h_}] :=
+	Module[{dilateVertically, d, r, pt, x0, y0},
+		{d, r, {x0, y0}, dilateVertically} = radialGradientEllipseData[position, size, imageSize];
+		pt = {w, h}/2;
+		pt += If[dilateVertically, {x0, (h+2*d)/h*y0}, {(w+2*d)/w*x0, y0}];
+		N @ {pt, pt + {r, 0}} (* bug in RadialGradientImage requires position to be numeric *)
+	]
+	
+CSSGradientConvertRadialDataRange[position_, size:"ClosestSide" | "FarthestSide", imageSize:{w_, h_}] :=
+	Module[{plotRange = {{0, w}, {0, h}}, dilateVertically, d, r, startPos},
+		{d, r, startPos, dilateVertically} = radialGradientEllipseData[position, size, imageSize];
+		If[dilateVertically, 
+			plotRange[[2, 1]] -= d; plotRange[[2, 2]] += d
+			, 
+			plotRange[[1, 1]] -= d; plotRange[[1, 2]] += d
+		];
+		N @ plotRange
+	]
+	
+radialGradientEllipseData[position_, "ClosestSide", imageSize:{w_, h_}] :=
+	Module[{x0,y0,x1, y1, distanceToLeftRight, distanceToTopBottom, r, dx, dy, x, y},
+		{x1, y1} = convertPositionSpec[position, imageSize];
+		{x0, y0} = {x1, y1} - {w/2, h/2}; (* make start position relative to center of image *)
+		
+		distanceToLeftRight = w/2 - Abs[x0]; distanceToTopBottom = h/2 - Abs[y0]; 
+		If[distanceToLeftRight < distanceToTopBottom,
+			(* need to dilate outwards in vertical direction *) 
+			r = distanceToLeftRight; dy = distanceToTopBottom - r; y = -h/2*dy/(dy+r);
+			{y, r, {x0, y0}, True}
+			,
+			(* need to dilate outwards in horizontal direction *) 
+			r = distanceToTopBottom; dx = distanceToLeftRight - r; x = -w/2*dx/(dx+r);
+			{x, r, {x0, y0}, False}
+		]
+	]
+
+radialGradientEllipseData[position_, "FarthestSide", imageSize:{w_, h_}] :=
+	Module[{x0,y0,x1, y1, distanceToLeftRight, distanceToTopBottom, r, dx, dy, x, y},
+		{x1, y1} = convertPositionSpec[position, imageSize];
+		{x0, y0} = {x1, y1} - {w/2, h/2}; (* make start position relative to center of image *)
+		
+		distanceToLeftRight = w/2 + Abs[x0]; distanceToTopBottom = h/2 + Abs[y0]; 
+		If[distanceToLeftRight < distanceToTopBottom,
+			(* need to dilate inwards in horizontal direction *) 
+			r = distanceToTopBottom; dx = distanceToLeftRight - r; x = -w/2*dx/(dx+r);
+			{x, r, {x0, y0}, False}
+			,
+			(* need to dilate inwards in vertical direction *) 
+			r = distanceToLeftRight; dy = distanceToTopBottom - r; y = -h/2*dy/(dy+r);
+			{y, r, {x0, y0}, True}
+		]
+	]
+
+CSSGradientConvertRadialPosition[position_, "Ellipse", size:"ClosestCorner" | "FarthestCorner", imageSize:{w_, h_}] :=
+	Module[{dx, dy, r, pt, x0, y0},
+		{{dx, dy}, r, {x0, y0}} = radialGradientEllipseData[position, size, imageSize];
+		pt = {w, h}/2;
+		pt += {(w+2*dx)/w*x0, (h+2*dy)/h*y0};
+		N @ {pt, pt + {r, 0}} (* bug in RadialGradientImage requires position to be numeric *)
+	]
+	
+CSSGradientConvertRadialDataRange[position_, size:"ClosestCorner" | "FarthestCorner", imageSize:{w_, h_}] :=
+	Module[{plotRange = {{0, w}, {0, h}}, dx, dy, r, startPos},
+		{{dx, dy}, r, startPos} = radialGradientEllipseData[position, size, imageSize];
+		plotRange[[2, 1]] -= dy; plotRange[[2, 2]] += dy; plotRange[[1, 1]] -= dx; plotRange[[1, 2]] += dx;
+		N @ plotRange
+	]
+
+radialGradientEllipseData[position_, "ClosestCorner", imageSize:{w_, h_}] :=
+	Module[{x0,y0,x1, y1, distanceToLeftRight, distanceToTopBottom, r, dx, dy, x, y},
+		{x1, y1} = convertPositionSpec[position, imageSize];
+		{x0, y0} = {x1, y1} - {w/2, h/2}; (* make start position relative to center of image *)
+		
+		distanceToLeftRight = w/2 - Abs[x0]; distanceToTopBottom = h/2 - Abs[y0]; 
+		r = If[distanceToLeftRight < distanceToTopBottom, distanceToLeftRight, distanceToTopBottom];
+		(* need to dilate outwards in both directions *) 
+		dx = Sqrt[2]*distanceToLeftRight - r; x = -w/2*dx/(dx+r);
+		dy = Sqrt[2]*distanceToTopBottom - r; y = -h/2*dy/(dy+r);
+		{{x, y}, r, {x0, y0}}
+	]
+	
+radialGradientEllipseData[position_, "FarthestCorner", imageSize:{w_, h_}] :=
+	Module[{x0,y0,x1, y1, distanceToLeftRight, distanceToTopBottom, r, dx, dy, x, y},
+		{x1, y1} = convertPositionSpec[position, imageSize];
+		{x0, y0} = {x1, y1} - {w/2, h/2}; (* make start position relative to center of image *)
+		
+		distanceToLeftRight = w/2 + Abs[x0]; distanceToTopBottom = h/2 + Abs[y0]; 
+		r = If[distanceToLeftRight < distanceToTopBottom, distanceToLeftRight, distanceToTopBottom];
+		(* need to dilate outwards in both directions *) 
+		dx = Sqrt[2]*distanceToLeftRight - r; x = -w/2*dx/(dx+r);
+		dy = Sqrt[2]*distanceToTopBottom - r; y = -h/2*dy/(dy+r);
+		{{x, y}, r, {x0, y0}}
+	]
 	
 
 End[] (* End Private Context *)
