@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     12891,        372]
-NotebookOptionsPosition[      8801,        288]
-NotebookOutlinePosition[     10610,        330]
-CellTagsIndexPosition[     10567,        327]
+NotebookDataLength[     14562,        423]
+NotebookOptionsPosition[      9945,        329]
+NotebookOutlinePosition[     11751,        371]
+CellTagsIndexPosition[     11708,        368]
 WindowTitle->CSSTools
 WindowFrame->Normal*)
 
@@ -35,7 +35,11 @@ Cell[BoxData[GridBox[{
         StripOnInput->False], {"\<\"CSSCascade\"\>":>Documentation`HelpLookup[
        "paclet:CSSTools/ref/CSSCascade"], "\<\"CSSInheritance\"\>":>
        Documentation`HelpLookup[
-       "paclet:CSSTools/ref/CSSInheritance"], "\<\"CSSSelector\"\>":>
+       "paclet:CSSTools/ref/CSSInheritance"], \
+"\<\"CSSLinearGradientImage\"\>":>Documentation`HelpLookup[
+       "paclet:CSSTools/ref/CSSLinearGradientImage"], \
+"\<\"CSSRadialGradientImage\"\>":>Documentation`HelpLookup[
+       "paclet:CSSTools/ref/CSSRadialGradientImage"], "\<\"CSSSelector\"\>":>
        Documentation`HelpLookup[
        "paclet:CSSTools/ref/CSSSelector"], "\<\"CSSSelectorQ\"\>":>
        Documentation`HelpLookup[
@@ -111,7 +115,7 @@ CSSTools.html"], StandardForm]], "Input", TextClipboardType -> "PlainText"]},
            URL[
             StringJoin[
              If[
-              TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$5892], 
+              TrueQ[DocumentationBuild`Make`Private`wsmlinkQ$5909], 
               "http://reference.wolfram.com/system-modeler/", 
               "http://reference.wolfram.com/language/"], 
              "CSSTools/guide/CSSTools", ".html"]], None}]}]},
@@ -281,6 +285,43 @@ Cell[TextData[{
  " returns True if expression is a CSS target object"
 }], "GuideText",
  CellID->399786665]
+}, Open  ]],
+
+Cell["\t", "GuideDelimiterSubsection",
+ CellID->294180157],
+
+Cell[CellGroupData[{
+
+Cell["Images Module", "GuideFunctionsSubsection",
+ CellID->262714310],
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{
+    Cell[
+     TextData["CSSLinearGradientImage"]], 
+    "paclet:CSSTools/ref/CSSLinearGradientImage"},
+   "RefLink",
+   BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
+ " ",
+ StyleBox["\[LongDash]", "GuideEmDash"],
+ " create a linear gradient following the CSS specification"
+}], "GuideText",
+ CellID->213621991],
+
+Cell[TextData[{
+ Cell[BoxData[
+  TemplateBox[{
+    Cell[
+     TextData["CSSRadialGradientImage"]], 
+    "paclet:CSSTools/ref/CSSRadialGradientImage"},
+   "RefLink",
+   BaseStyle->"InlineFunctionSans"]], "InlineFunctionSans"],
+ " ",
+ StyleBox["\[LongDash]", "GuideEmDash"],
+ " create a radial gradient following the CSS specification"
+}], "GuideText",
+ CellID->10494712]
 }, Open  ]]
 }, Open  ]],
 
@@ -300,7 +341,7 @@ TaggingRules->{
          BaseStyle -> {"Link", "DockedLinkTrail"}]}]}}, ColumnAlignments -> 
     Left], "ExampleCounter" -> 1, "NeedPlatMsgIn" -> None, "RootCaptions" -> 
   "", "Metadata" -> {
-   "built" -> "{2020, 3, 12, 10, 53, 20.0513796}", 
+   "built" -> "{2020, 5, 29, 11, 48, 22.7528943}", 
     "history" -> {"0.0", "", "", ""}, "context" -> "CSSTools`", 
     "keywords" -> {}, "specialkeywords" -> {}, 
     "tutorialcollectionlinks" -> {}, "index" -> True, "label" -> 
@@ -311,10 +352,10 @@ describing the presentation of a document written in markup language like \
 HTML and XML. Wolfram Desktop also uses stylesheets though the specifications \
 differ. This package provides tools for importing and processing CSS to be \
 used within Wolfram Desktop's stylesheet system.", "synonyms" -> {}, 
-    "tabletags" -> DocumentationBuild`Make`Private`tabletaggingrules$5809, 
+    "tabletags" -> DocumentationBuild`Make`Private`tabletaggingrules$5814, 
     "title" -> "CSSTools", "titlemodifier" -> "", "windowtitle" -> "CSSTools",
      "type" -> "Guide", "uri" -> "CSSTools/guide/CSSTools"}},
-FrontEndVersion->"12.1 for Microsoft Windows (64-bit) (February 29, 2020)",
+FrontEndVersion->"12.1 for Microsoft Windows (64-bit) (March 18, 2020)",
 StyleDefinitions->FrontEnd`FileName[{"Wolfram"}, "Reference.nb", 
   CharacterEncoding -> "UTF-8"]
 ]
@@ -329,51 +370,61 @@ CellTagsIndex->{}
 *)
 (*NotebookFileOutline
 Notebook[{
-Cell[580, 21, 4230, 102, 70, "AnchorBarGrid",ExpressionUUID->"ca29033f-4b55-418e-95f8-4c0eeeeb057a",
+Cell[580, 21, 4462, 106, 70, "AnchorBarGrid",ExpressionUUID->"7f834214-5c5e-4f51-a686-cf0ace1d7577",
  CellID->1],
 Cell[CellGroupData[{
-Cell[4835, 127, 50, 1, 70, "GuideTitle",ExpressionUUID->"a2dfbf4b-a400-497d-b964-cad8f8e0772e",
+Cell[5067, 131, 50, 1, 70, "GuideTitle",ExpressionUUID->"a2dfbf4b-a400-497d-b964-cad8f8e0772e",
  CellID->942062912],
-Cell[4888, 130, 400, 7, 70, "GuideAbstract",ExpressionUUID->"b9255c52-39e9-48e0-bedb-b4fa7ec2beba",
+Cell[5120, 134, 400, 7, 70, "GuideAbstract",ExpressionUUID->"b9255c52-39e9-48e0-bedb-b4fa7ec2beba",
  CellID->2001916300]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[5325, 142, 137, 6, 70, "GuideReferenceSection",ExpressionUUID->"f528261a-05e1-4999-b3ec-42952475a286"],
-Cell[5465, 150, 31, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"cc3a8f2f-ad96-4943-82bf-60e33fc8952a"],
+Cell[5557, 146, 137, 6, 70, "GuideReferenceSection",ExpressionUUID->"b0a2d984-e388-44ef-830c-1c218c32853f"],
+Cell[5697, 154, 31, 0, 70, "SectionHeaderSpacer",ExpressionUUID->"20324b3e-43c1-4c53-8592-f61387b2d25b"],
 Cell[CellGroupData[{
-Cell[5521, 154, 69, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"8d817216-d113-4b36-bc3d-a0f25f4d05de",
+Cell[5753, 158, 69, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"8d817216-d113-4b36-bc3d-a0f25f4d05de",
  CellID->811494718],
-Cell[5593, 157, 382, 14, 70, "GuideText",ExpressionUUID->"dee08810-36bd-4ef8-b550-71bf497466fd",
+Cell[5825, 161, 382, 14, 70, "GuideText",ExpressionUUID->"dee08810-36bd-4ef8-b550-71bf497466fd",
  CellID->100541697],
-Cell[5978, 173, 351, 12, 70, "GuideText",ExpressionUUID->"fa3304e9-15e7-4c88-80b5-5c41585afd56",
+Cell[6210, 177, 351, 12, 70, "GuideText",ExpressionUUID->"fa3304e9-15e7-4c88-80b5-5c41585afd56",
  CellID->203374175]
 }, Open  ]],
-Cell[6344, 188, 58, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"92df8e96-2df7-4fb0-b6b7-28dfc06ca57c",
+Cell[6576, 192, 58, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"92df8e96-2df7-4fb0-b6b7-28dfc06ca57c",
  CellID->622275174],
 Cell[CellGroupData[{
-Cell[6427, 193, 69, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"5f8eaa5a-bc2f-4fac-88db-96866e681ff0",
+Cell[6659, 197, 69, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"5f8eaa5a-bc2f-4fac-88db-96866e681ff0",
  CellID->91319310],
-Cell[6499, 196, 389, 12, 70, "GuideText",ExpressionUUID->"22c8ab8e-8da0-47ea-8af6-3ed63aad5b8a",
+Cell[6731, 200, 389, 12, 70, "GuideText",ExpressionUUID->"22c8ab8e-8da0-47ea-8af6-3ed63aad5b8a",
  CellID->47789317],
-Cell[6891, 210, 328, 11, 70, "GuideText",ExpressionUUID->"9fff43cf-59ce-41dc-a1cd-c525790c844f",
+Cell[7123, 214, 328, 11, 70, "GuideText",ExpressionUUID->"9fff43cf-59ce-41dc-a1cd-c525790c844f",
  CellID->348206879]
 }, Open  ]],
-Cell[7234, 224, 57, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"97bc2ebf-8ed5-4a50-830d-bcb39efb1d4e",
+Cell[7466, 228, 57, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"97bc2ebf-8ed5-4a50-830d-bcb39efb1d4e",
  CellID->71783130],
 Cell[CellGroupData[{
-Cell[7316, 229, 77, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"3f2d20fc-7cdc-4adb-8fc5-a03b4a0fdbf4",
+Cell[7548, 233, 77, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"3f2d20fc-7cdc-4adb-8fc5-a03b4a0fdbf4",
  CellID->159396722],
-Cell[7396, 232, 315, 11, 70, "GuideText",ExpressionUUID->"76b7ff53-5475-4aac-af5f-dfa262a0aec6",
+Cell[7628, 236, 315, 11, 70, "GuideText",ExpressionUUID->"76b7ff53-5475-4aac-af5f-dfa262a0aec6",
  CellID->41288703],
-Cell[7714, 245, 339, 11, 70, "GuideText",ExpressionUUID->"a2cd85ab-f27a-4852-9806-a0247ac5cce9",
+Cell[7946, 249, 339, 11, 70, "GuideText",ExpressionUUID->"a2cd85ab-f27a-4852-9806-a0247ac5cce9",
  CellID->46073956],
-Cell[8056, 258, 354, 11, 70, "GuideText",ExpressionUUID->"3d3dc613-bae0-45a3-970e-a82dcf688d97",
+Cell[8288, 262, 354, 11, 70, "GuideText",ExpressionUUID->"3d3dc613-bae0-45a3-970e-a82dcf688d97",
  CellID->2444546],
-Cell[8413, 271, 334, 11, 70, "GuideText",ExpressionUUID->"6ef07e31-cc99-4c06-84f5-6ec15c87c6b7",
+Cell[8645, 275, 334, 11, 70, "GuideText",ExpressionUUID->"6ef07e31-cc99-4c06-84f5-6ec15c87c6b7",
  CellID->399786665]
+}, Open  ]],
+Cell[8994, 289, 58, 1, 70, "GuideDelimiterSubsection",ExpressionUUID->"bd8319f4-05f5-4ea8-af26-0dfcea2bc15f",
+ CellID->294180157],
+Cell[CellGroupData[{
+Cell[9077, 294, 69, 1, 70, "GuideFunctionsSubsection",ExpressionUUID->"4fb25de5-3a55-44c3-ac83-960ebfc02839",
+ CellID->262714310],
+Cell[9149, 297, 370, 12, 70, "GuideText",ExpressionUUID->"06fc4090-62d9-461f-88f5-ac3889552ddc",
+ CellID->213621991],
+Cell[9522, 311, 369, 12, 70, "GuideText",ExpressionUUID->"a717bb5b-d598-4684-a4d2-2325577685ac",
+ CellID->10494712]
 }, Open  ]]
 }, Open  ]],
-Cell[8774, 286, 23, 0, 70, "FooterCell",ExpressionUUID->"fa08e128-cccc-48f9-ac7c-e8e6252018b6"]
+Cell[9918, 327, 23, 0, 70, "FooterCell",ExpressionUUID->"11fcd59d-4076-4526-9aa6-9cdcab774924"]
 }
 ]
 *)

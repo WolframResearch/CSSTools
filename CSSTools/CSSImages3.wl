@@ -707,7 +707,7 @@ doParseLinearGradientFunction[prop_String, token_?CSSTokenQ, isRepeating:(True |
 				]
 		];
 		
-		function = With[{d = try[[1]], csl = try[[2]]}, CSSLinearGradientImage[csl, d, #]&];
+		function = With[{d = If[ListQ[try[[1]]], Last[try[[1]]], try[[1]]], csl = try[[2]]}, CSSLinearGradientImage[csl, d, #]&];
 		If[isRepeating, Insert[function, "Repeating" -> True, {1, -1}], function]
 	]
 
