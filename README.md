@@ -2,13 +2,19 @@
 
 CSSTools is a package for importing [CSS](https://www.w3.org/Style/CSS/) files into the [Wolfram Language](https://www.wolfram.com/language/). CSSTools supports 11.0 and later versions of Wolfram Language deployments for the desktop, including [Wolfram Desktop](https://www.wolfram.com/desktop/) and [Mathematica](https://www.wolfram.com/mathematica/).
 
-The initial release of CSSTools contains the core [CSS Level 2 Revision 1](https://www.w3.org/TR/CSS2/) specification. The tokenizer follows the [CSS Syntax Module Level 3](https://www.w3.org/TR/css-syntax-3/) specification and the selectors follow [Selectors Level 3](https://www.w3.org/TR/selectors-3/). Some additional modules are included such as [CSS Namespaces Module Level 3](https://www.w3.org/TR/css-namespaces-3/), [CSS Colors Module Level 4](https://www.w3.org/TR/css-color-4/), [CSS Media Queries Level 4](https://www.w3.org/TR/mediaqueries-4/), [CSS Custom Properties for Cascading Variables Module Level 1](https://drafts.csswg.org/css-variables/) and [CSS Values and Units Module Level 3](https://www.w3.org/TR/css-values-3/).
+The initial release of CSSTools contains the core [CSS Level 2 Revision 1](https://www.w3.org/TR/CSS2/) specification. The tokenizer follows the [CSS Syntax Module Level 3](https://www.w3.org/TR/css-syntax-3/) specification and the selectors follow [Selectors Level 3](https://www.w3.org/TR/selectors-3/). Additional supported modules include:
+* [CSS Namespaces Module Level 3](https://www.w3.org/TR/css-namespaces-3/)
+* [CSS Colors Module Level 4](https://www.w3.org/TR/css-color-4/)
+* [CSS Media Queries Level 4](https://www.w3.org/TR/mediaqueries-4/)
+* [CSS Custom Properties for Cascading Variables Module Level 1](https://drafts.csswg.org/css-variables/)
+* [CSS Values and Units Module Level 3](https://www.w3.org/TR/css-values-3/)
+* [CSS Images Module Level 3](https://drafts.csswg.org/css-images-3)
 
-The Wolfram Desktop front end uses its own stylesheet system and translation from CSS to Wolfram Desktop is not one-to-one. Regardless, the goal is to conform with all included specifications as much as possible.  
+The Wolfram Desktop front end uses its own stylesheet system and translation from CSS to Wolfram Desktop is not one-to-one. Regardless, the goal is to conform with all included specifications as much as possible. The listed modules indicate which CSS properties can be validated while importing into Wolfram Desktop. Though the properties can be validated and imported, not all imported CSS properties have a corresponding option in the Wolfram Desktop front end.
 
 ### Installing the CSSTools release
 
-The CSSTools release comes in the form of a `.paclet` file, which contains the entire package and its documentation. Download the latest release from [this latest release link](https://github.com/WolframResearch/CSSTools/releases/latest/download/CSSTools-1.2.1.paclet). To install, run the following command in the Wolfram Language:
+The CSSTools release comes in the form of a `.paclet` file, which contains the entire package and its documentation. Download the latest release from [this latest release link](https://github.com/WolframResearch/CSSTools/releases/latest/download/CSSTools-1.3.0.paclet). To install, run the following command in the Wolfram Language:
 ```
 PacletInstall["/full/path/to/CSSTools.paclet"]
 ```
