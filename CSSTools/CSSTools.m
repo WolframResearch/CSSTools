@@ -35,6 +35,16 @@ CSSTarget[string$] parses string$ as the target XML object of a CSS selector. If
 SetUsage[CSSTargetQ, "\
 CSSTargetQ[CSSTarget$] returns True if CSSTarget$ is a valid CSSTarget object."];
 
+(* === CSSImages3` === *)
+SetUsage[CSSLinearGradientImage, "\
+CSSLinearGradientImage[{{pos$1, color$1}, {pos$2, color$2}, $$}] returns an image with values linearly changing from top to bottom following the CSS specification for color stops.
+CSSLinearGradientImage[{{pos$1, color$1}, {pos$2, color$2}, $$}, direction$] returns an image where the gradient points along direction$.
+CSSLinearGradientImage[$$, size$] returns a linear gradient image of the specified size$."];
+SetUsage[CSSRadialGradientImage, "\
+CSSRadialGradientImage[{{pos$1, color$1}, {pos$2, color$2}, $$}] returns an image with values linearly changing from the center to corners following the CSS specification for color stops.
+CSSRadialGradientImage[{{pos$1, color$1}, {pos$2, color$2}, $$}, startPosition$] returns an image where the gradient center is located at startPosition$.
+CSSRadialGradientImage[$$, size$] returns a radial gradient image of the specified size$."];
+
 (* ==== required System` functions ==== *)
 System`CellFrameStyle; 
 System`Box;

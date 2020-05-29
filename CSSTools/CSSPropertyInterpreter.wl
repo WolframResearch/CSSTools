@@ -278,7 +278,7 @@ AssociateTo[CSSPropertyData, {
 			"inherit" -> <|System`BackgroundAppearanceOptions -> Inherited|>,
 			"initial" -> <|System`BackgroundAppearanceOptions -> "NoRepeat"|>|>,
 		"Animatable" -> True,
-		"Values" -> {"<percentage>", "<length>", "left", "right", "center", "top", "bottom"},
+		"Values" -> {"<position>", "<percentage>", "<length>", "left", "right", "center", "top", "bottom"},
 		"AppliesTo" -> All,
 		"NumericThreshold" -> -Infinity|>,
 	"background-repeat" -> <|
@@ -1698,8 +1698,22 @@ parseSingleBG[prop_String, tokens:{__?CSSTokenQ}] :=
 								"Property"       -> "background-color",
 								"Value"          -> CSSUntokenize @ tokens[[pos]],
 								"Interpretation" -> <|Background -> parseSingleColor[prop, tokens[[pos]]]|>|>;,
-						(*TODO support gradients *)
-						"linear-gradient" | "repeating-linear-gradient" | "radial-gradient" | "repeating-radial-gradient" | "conic-gradient", 
+						"linear-gradient" | "repeating-linear-gradient" | "radial-gradient" | "repeating-radial-gradient", 
+							Echo["HERE"];
+							If[hasImage, Return @ repeatedPropValueFailure @ "background-image"];
+							hasImage = True; 
+							values["i"] = <|
+								"Property"       -> "background-image",
+								"Value"          -> CSSUntokenize @ tokens[[pos]],
+								"Interpretation" -> 
+									Switch[CSSNormalizeEscapes @ ToLowerCase @ tokens[[pos]]["String"],
+										"linear-gradient",           CSSTools`CSSImages3`Private`parseLinearGradientFunction[prop, tokens[[pos]]],
+										"repeating-linear-gradient", CSSTools`CSSImages3`Private`parseRepeatingLinearGradientFunction[prop, tokens[[pos]]],
+										"radial-gradient",           CSSTools`CSSImages3`Private`parseRadialGradientFunction[prop, tokens[[pos]]],
+										"repeating-radial-gradient", CSSTools`CSSImages3`Private`parseRepeatingRadialGradientFunction[prop, tokens[[pos]]]
+									]|>;,
+						(*TODO support conic gradients *)
+						"conic-gradient", 
 							If[hasImage, Return @ repeatedPropValueFailure @ "background-image"];
 							hasImage = True; 
 							values["i"] = <|
@@ -1842,12 +1856,12 @@ parseSingleBGImage[prop_String, token_?CSSTokenQ] :=
 			],
 		"function", 
 			Switch[CSSNormalizeEscapes @ ToLowerCase @ token["String"],
-				Alternatives[
-					"linear-gradient", "repeating-linear-gradient",
-					"radial-gradient", "repeating-radial-gradient", "conic-gradient"
-				],
-				   Missing["Not supported."],
-				_, invalidFunctionFailure @ CSSUntokenize @ token
+				"linear-gradient",           CSSTools`CSSImages3`Private`parseLinearGradientFunction[prop, token],
+				"repeating-linear-gradient", CSSTools`CSSImages3`Private`parseRepeatingLinearGradientFunction[prop, token],
+				"radial-gradient",           CSSTools`CSSImages3`Private`parseRadialGradientFunction[prop, token],
+				"repeating-radial-gradient", CSSTools`CSSImages3`Private`parseRepeatingRadialGradientFunction[prop, token],
+				"conic-gradient",            Missing["Not supported."],
+				_,                           invalidFunctionFailure @ CSSUntokenize @ token
 			],
 		"url", parseURI @ token["String"],
 		_,     unrecognizedValueFailure @ prop
