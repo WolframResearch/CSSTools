@@ -21,7 +21,7 @@ inheritedPropertyRules;
 (* CSSTools`
 	---> defines wrappers like CSSHeightMax *)
 (* Selectors3` 
-	---> defines CSSSelector function, consumeCSSSelector, convertXMLPositionToCSSTarget *)
+	---> defines CSSSelector function, consumeCSSSelector, convertXMLPositionToCSSSubject *)
 (* CSSTokenizer`
 	---> various tokenizer functions e.g. CSSTokenQ. TokenTypeIs
 	---> token position modifiers e.g. AdvancePosAndSkipWhitespace *)
@@ -32,6 +32,7 @@ Needs["CSSTools`CSSTokenizer`"];
 Needs["CSSTools`CSSSelectors3`"];
 Needs["CSSTools`CSSPropertyInterpreter`"];
 
+Unprotect["CSSTools`*"]
 
 Begin["`Private`"];
 
@@ -610,7 +611,7 @@ consumeDeclaration[decTokens:{__?CSSTokenQ}, namespaces_] :=
 
 
 expectedMainKeys      = {"Selector", "Block"};
-expectedMainKeysFull  = {"Selector", "Targets", "Block"};
+expectedMainKeysFull  = {"Selector", "Subjects", "Block"};
 expectedBlockKeys     = {"Property", "Value", "Important", "Condition"};
 expectedBlockKeysFull = {"Property", "Value", "Important", "Interpretation", "Condition"};
 
@@ -1407,6 +1408,7 @@ Arg2:
 *)	
 ClearAll[CSSCascade];
 Options[CSSCascade] = {"IgnoreSpecificity" -> False, "IgnoreImportance" -> False, "PropertyIsCaseSensitive" -> False};
+SyntaxInformation[CSSCascade] = {"ArgumentsPattern" -> {_, _, _, _, OptionsPattern[]}};
 
 CSSCascade::case = "A case-sensitive property matches the shorthand property `1`. Some case-sensitive values may be overwritten during shorthand expansion.";
 
@@ -1452,10 +1454,10 @@ CSSCascade[
   				MatchQ[#Selector["Sequence"], Alternatives @@ Through[selectorList["Sequence"]]] &];
   		If[CSSDataSubset === {}, Return @ {}];
   		
-  		(* if a CSSTarget exists, add the target element to each declaration in each rule in order for attr() values to correctly resolve wherever they appear *)
-  		(* due to ambiguity we only take the first target if found; if none are found then the attr() fallback value should be used automatically if it exists *)
+  		(* if a CSSSubject exists, add the subject element to each declaration in each rule in order for attr() values to correctly resolve wherever they appear *)
+  		(* due to ambiguity we only take the first subject if found; if none are found then the attr() fallback value should be used automatically if it exists *)
 		Do[
-			element = If[KeyExistsQ[CSSDataSubset[[j]], "Targets"], First[CSSDataSubset[[j, "Targets"]], None], None];
+			element = If[KeyExistsQ[CSSDataSubset[[j]], "Subjects"], First[CSSDataSubset[[j, "Subjects"]], None], None];
 			CSSDataSubset[[j, "Block"]] = <|#, "Element" -> element|>& /@ CSSDataSubset[[j, "Block"]];
 			,
 			{j, Length[CSSDataSubset]}
@@ -1604,7 +1606,7 @@ cssCascadeDeclarations[
 
 
 (* ::Subsection::Closed:: *)
-(*CSSTargets, ExtractCSSFromXML*)
+(*CSSSubjects, ExtractCSSFromXML*)
 
 
 (* ::Subsubsection::Closed:: *)
@@ -1632,14 +1634,17 @@ linkElementPattern[] :=
 		___
 	] :> loc
 
+(* The <style> tag could exist without the "type" attribute. *)
 styleElementPattern[] :=
 	XMLElement[
 		x_String | {_, x_String} /; StringMatchQ[x, "style", IgnoreCase -> True], 
-		{
-			___, 
-			(attr_String | {_, attr_String} /; StringMatchQ[attr, "type", IgnoreCase -> True]) -> 
-				(attrVal_String /; StringMatchQ[attrVal, "text/css", IgnoreCase -> True]), 
-			___}, 
+		Alternatives[
+			{
+				___, 
+				(attr_String | {_, attr_String} /; StringMatchQ[attr, "type", IgnoreCase -> True]) -> 
+					(attrVal_String /; StringMatchQ[attrVal, "text/css", IgnoreCase -> True]), 
+				___},
+			{}], 
 		{css_String}
 	] :> css
 		
@@ -1655,32 +1660,32 @@ styleAttributePattern[] :=
 
 
 (* ::Subsubsection::Closed:: *)
-(*CSSTargets extension to CSS data*)
+(*CSSSubjects extension to CSS data*)
 
 
-(* CSSTargets:
-	Generally applies a selector to an XML document and returns the positions where the selector targets.
+(* CSSSubjects:
+	Generally applies a selector to an XML document and returns the positions of the subjects of the selector.
 	It has two different scopes:
                CSSSelector  ---->  returns extractable positions, similar to Position syntax
-[defined here] CSSDataset   ---->  returns same dataset, but with added Targets column of extractable positions *)
+[defined here] CSSDataset   ---->  returns same dataset, but with added Subjects column of extractable positions *)
 (* normalize Dataset input *)
-CSSTargets[doc:XMLObject["Document"][___], CSSData_Dataset, wrapInDataset_:True] := 
-	CSSTargets[doc, Normal @ CSSData, wrapInDataset]
+CSSSubjects[doc:XMLObject["Document"][___], CSSData_Dataset, wrapInDataset_:True] := 
+	CSSSubjects[doc, Normal @ CSSData, wrapInDataset]
 
 (* main function *)
-CSSTargets[doc:XMLObject["Document"][___], CSSData_?validCSSDataQ, wrapInDataset_:True] :=
+CSSSubjects[doc:XMLObject["Document"][___], CSSData_?validCSSDataQ, wrapInDataset_:True] :=
 	If[TrueQ @ wrapInDataset, Dataset, Identity][
-		(* Rebuild the CSS data with the targets included. *)
+		(* Rebuild the CSS data with the subjects included. *)
 		MapThread[
 			<|
 				"Selector" -> #1["Selector"], 
-				"Targets"  -> #2, 
+				"Subjects"  -> #2, 
 				"Block"    -> #1["Block"]|>&,
-			{CSSData, CSSTargets[doc, #]& /@ CSSData[[All, "Selector"]]}] (* defined in CSSSelectors3 *)
+			{CSSData, CSSSubjects[doc, #]& /@ CSSData[[All, "Selector"]]}] (* defined in CSSSelectors3 *)
 	]
 		
-CSSTargets[_, CSSData_?validCSSDataQ, ___]      := Failure["BadDocument", <|"Message" -> "Invalid XML document."|>]
-CSSTargets[doc:XMLObject["Document"][___], ___] := Failure["BadData", <|"Message" -> "Invalid CSS."|>]
+CSSSubjects[_, CSSData_?validCSSDataQ, ___]      := Failure["BadDocument", <|"Message" -> "Invalid XML document."|>]
+CSSSubjects[doc:XMLObject["Document"][___], ___] := Failure["BadData", <|"Message" -> "Invalid CSS."|>]
 
 
 (* ::Subsubsection::Closed:: *)
@@ -1691,6 +1696,7 @@ CSSTargets[doc:XMLObject["Document"][___], ___] := Failure["BadData", <|"Message
 	*)
 Options[ExtractCSSFromXML] = {"RootDirectory" -> Automatic};
 ExtractCSSFromXML::nodir = "Directory `1` does not exist.";
+SyntaxInformation[ExtractCSSFromXML] = {"ArgumentsPattern" -> {_, OptionsPattern[]}};
 
 ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 	Module[
@@ -1714,12 +1720,12 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 		With[{bools =  # =!= $Failed& /@ externalSSContent},
 			externalSSPositions = Pick[externalSSPositions, bools];
 			externalSSContent = Pick[externalSSContent, bools];];
-		externalSSContent = CSSTargets[doc, #, False]& /@ externalSSContent;
+		externalSSContent = CSSSubjects[doc, #, False]& /@ externalSSContent;
 				
 		(* process internal style sheets given by <style> elements *)
 		internalSSPositions = Position[doc, First @ styleElementPattern[]];
 		internalSSContent = InternalCSS /@ Cases[doc, styleElementPattern[], Infinity];
-		internalSSContent = CSSTargets[doc, #, False]& /@ internalSSContent;
+		internalSSContent = CSSSubjects[doc, #, False]& /@ internalSSContent;
 		
 		(* process internal styles given by 'style' attributes *)
 		directStylePositions = Position[doc, First @ styleAttributePattern[]];
@@ -1728,13 +1734,13 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 			MapThread[
 				<|
 					"Selector" -> CSSSelector[<|"String" -> None, "Sequence" -> {}, "Specificity" -> {1, 0, 0, 0}|>], 
-					"Targets"  -> 
+					"Subjects"  -> 
 						(* TODO: this is so bad. These Block'ed variables should not be necessary. What should be done is
 						CSSSelectors re-worked to pass the document as a variable instead of lazy Block'ing. 
 						Moreover the namespace functions should be pulled into their own module namely CSS Namespaces Module Level 3 *)
 						Block[{CSSTools`CSSSelectors3`Private`$Document = doc, CSSTools`CSSSelectors3`Private`$DocumentNamespaces}, 
 							CSSTools`CSSSelectors3`Private`$DocumentNamespaces = getDocumentNamespaces[CSSTools`CSSSelectors3`Private`$Document];
-							{convertXMLPositionToCSSTarget[#1]}], 
+							{convertXMLPositionToCSSSubject[#1]}], 
 					"Block"    -> consumeDeclarationBlock[CSSTokenize @ #2, {}]|>&, 
 				{directStylePositions, directStyleContent}];
 		
@@ -1769,18 +1775,19 @@ ExtractCSSFromXML[doc:XMLObject["Document"][___], opts:OptionsPattern[]] :=
 
 ClearAll[CSSInheritance];
 Options[CSSInheritance] = {"PropertyIsCaseSensitive" -> False};
+SyntaxInformation[CSSInheritance] = {"ArgumentsPattern" -> {_, _, _, OptionsPattern[]}};
 
 (* normalize Dataset object *)
-CSSInheritance[target_?CSSTargetQ, scope_, CSSData_Dataset, opts:OptionsPattern[]] := CSSInheritance[target, scope, Normal @ CSSData, opts]
+CSSInheritance[subject_?CSSSubjectQ, scope_, CSSData_Dataset, opts:OptionsPattern[]] := CSSInheritance[subject, scope, Normal @ CSSData, opts]
 
 (* main function *)
-CSSInheritance[target_?CSSTargetQ, scope_, CSSData_?validCSSDataQ, opts:OptionsPattern[]] :=
+CSSInheritance[subject_?CSSSubjectQ, scope_, CSSData_?validCSSDataQ, opts:OptionsPattern[]] :=
 	Module[
 		{
-			lineage, CSSDataSubset, i, inheritableProps, declarations, case = OptionValue["PropertyIsCaseSensitive"], 
+			lineage, CSSDataSubset, i, inheritableProps, declarations, case = TrueQ[OptionValue["PropertyIsCaseSensitive"]], 
 			element, itemsToResolve, generations, resolvedOptions, props, temp, customPropertyDefinitions, pos,	rootFontSizes = {}},
 		(* get the position of all ancestors *)
-		lineage = Append[parents[target["Position"]], target["Position"]];
+		lineage = Append[parents[subject["Position"]], subject["Position"]];
 		generations = Table[{<|"Property" -> "dummy", "Value" -> "dummy", "Interpretation" -> Missing["Not supported."], "Important" -> False, "Condition" -> None|>}, Length[lineage] + 1];
 		
 		(* Perform inheritance at each remaining ancestor:
@@ -1788,12 +1795,12 @@ CSSInheritance[target_?CSSTargetQ, scope_, CSSData_?validCSSDataQ, opts:OptionsP
 			2. for any properties that do not have values, get them from the previous ancestor if possible 
 			3. repeat at each generation until a final set of properties is obtained *)
 		Do[
-			(* get all CSS data entries that target the input position *)
-			CSSDataSubset = Pick[CSSData, MemberQ[#, lineage[[i]]]& /@ (Through[#["Position"]]& /@ CSSData[[All, "Targets"]])];
+			(* get all CSS data entries that are the subject the input position *)
+			CSSDataSubset = Pick[CSSData, MemberQ[#, lineage[[i]]]& /@ (Through[#["Position"]]& /@ CSSData[[All, "Subjects"]])];
 			
-			(* add the target element to each declaration in each rule in order for attr() values to correctly resolve wherever they appear *)
+			(* add the subject element to each declaration in each rule in order for attr() values to correctly resolve wherever they appear *)
 			Do[
-				element = First[Select[CSSDataSubset[[j, "Targets"]], MatchQ[#["Position"], lineage[[i]]]&], None];
+				element = First[Select[CSSDataSubset[[j, "Subjects"]], MatchQ[#["Position"], lineage[[i]]]&], None];
 				CSSDataSubset[[j, "Block"]] = <|#, "Element" -> element|>& /@ CSSDataSubset[[j, "Block"]];
 				,
 				{j, Length[CSSDataSubset]}
@@ -1890,7 +1897,7 @@ CSSInheritance[target_?CSSTargetQ, scope_, CSSData_?validCSSDataQ, opts:OptionsP
 	]
 	
 CSSInheritance[position:{___?IntegerQ}, _] := 
-	Failure["BadData", <|"Message" -> "Invalid CSS data. CSS data must include specificity and target."|>]
+	Failure["BadData", <|"Message" -> "Invalid CSS data. CSS data must include specificity and subject."|>]
 
 
 parents[x:{__Integer}] := Most @ Reverse @ NestWhileList[Drop[#, -2]&, x, Length[#] > 2&]
@@ -1993,6 +2000,7 @@ ProcessToStylesheet[filepath_String, opts___] :=
 (* ::Section::Closed:: *)
 (*Package Footer*)
 
+Protect["CSSTools`*"]
 
 End[];
 EndPackage[];

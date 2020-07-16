@@ -1211,7 +1211,7 @@ replaceAttrFunctionsWithTokens[tokensInput:{__?CSSTokenQ}, None, ssNamespaces_] 
 		tokens
 	]
 
-replaceAttrFunctionsWithTokens[tokensInput:{__?CSSTokenQ}, element_?CSSTargetQ, ssNamespaces_] :=
+replaceAttrFunctionsWithTokens[tokensInput:{__?CSSTokenQ}, element_?CSSSubjectQ, ssNamespaces_] :=
 	Module[{tokens = tokensInput, attrPosition, attrToken, attrCheck, attrNS, attrValue, elementAttributeNamePosition, elementAttributeNamespace, elementAttributeValue, temp},
 		(* replace attr() from the deepest instance to the most shallow and check for failures at each step *)
 		(* Position is sorted depth-first, which is good because we should substitute the deepest attr() instances first. *)

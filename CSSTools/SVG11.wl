@@ -818,7 +818,7 @@ consumeProperty[prop:"fill", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] :=
 		value = 
 			Switch[tokens[[pos]]["Type"],
 				"url", parseURI @ tokens[[pos]]["String"], (* can reference a gradient or other image as a Texture *)
-				_,     parseSingleColor @ tokens[[pos]]
+				_,     parseSingleColor[prop, tokens[[pos]]]
 			];
 		If[FailureQ[value], value, <|"SVGFill" -> value|>]
 	]

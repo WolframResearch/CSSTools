@@ -6,44 +6,62 @@
 
 (* ::Text:: *)
 (*Author: Kevin Daily*)
-(*Date: 20190911*)
-(*Version: 1*)
+(*Date: 20200716*)
+(*Version: 1.3.1*)
 
 
-BeginPackage["CSSTools`", { "GeneralUtilities`"}]
+BeginPackage["CSSTools`"]
 (* Exported symbols added here with SymbolName::usage *) 
+
+Needs["GeneralUtilities`"]; (* for SetUsage *)
 
 (* ==== CSSStyleSheetInterpreter` ==== *)
 SetUsage[CSSCascade, "\
 CSSCascade[CSSProperty$, type$, CSSData$, CSSSelectorFilter] combines options that were interpreted from the CSS importer. \
 CSS declarations are merged following the CSS cascade and the resulting options are filtered by type$."];
+Attributes[CSSCascade] = {Protected, ReadProtected};
+
 SetUsage[ExtractCSSFromXML, "\
 ExtractCSSFromXML[XMLObject$] imports the CSS declarations within XMLObject$."];
-SetUsage[CSSTargets, "\
-CSSTargets[XMLObject$, CSSData$] applies the CSSData$ to the symbolic XML, \
-returning the CSSData$ with additional position and specificity information."];
+Attributes[ExtractCSSFromXML] = {Protected, ReadProtected};
+
+SetUsage[CSSSubjects, "\
+CSSSubjects[XMLObject$, CSSData$] applies the CSSData$ to the symbolic XML, returning the CSSData$ with the subjects of the selectors."];
+Attributes[CSSSubjects] = {Protected, ReadProtected};
+
 SetUsage[CSSInheritance, "\
-CSSInheritance[target$, type$, CSSData$] calculates the properties of the element at target$ including any inherited CSS properties."];
+CSSInheritance[CSSSubject$, type$, CSSData$] calculates the properties of the CSSSubject$ including any inherited CSS properties."];
+Attributes[CSSInheritance] = {Protected, ReadProtected};
 
 (* ==== Selectors3` ==== *)
 SetUsage[CSSSelector, "\
 CSSSelector[string$] parses string$ as a CSS selector. If valid it returns a CSSSelector object."];
+Attributes[CSSSelector] = {Protected, ReadProtected};
+
 SetUsage[CSSSelectorQ, "\
 CSSSelectorQ[CSSSelector$] returns True if CSSSelector$ is a valid CSSSelector object."];
-SetUsage[CSSTarget, "\
-CSSTarget[string$] parses string$ as the target XML object of a CSS selector. If valid it returns a CSSTarget object."];
-SetUsage[CSSTargetQ, "\
-CSSTargetQ[CSSTarget$] returns True if CSSTarget$ is a valid CSSTarget object."];
+Attributes[CSSSelectorQ] = {Protected, ReadProtected};
+
+SetUsage[CSSSubject, "\
+CSSSubject[string$] parses string$ as the XML object that is the subject of a CSS selector. If valid it returns a CSSSubject object."];
+Attributes[CSSSubject] = {Protected, ReadProtected};
+
+SetUsage[CSSSubjectQ, "\
+CSSSubjectQ[CSSSubject$] returns True if CSSSubject$ is a valid CSSSubject object."];
+Attributes[CSSSubjectQ] = {Protected, ReadProtected};
 
 (* === CSSImages3` === *)
 SetUsage[CSSLinearGradientImage, "\
 CSSLinearGradientImage[{{pos$1, color$1}, {pos$2, color$2}, $$}] returns an image with values linearly changing from top to bottom following the CSS specification for color stops.
 CSSLinearGradientImage[{{pos$1, color$1}, {pos$2, color$2}, $$}, direction$] returns an image where the gradient points along direction$.
 CSSLinearGradientImage[$$, size$] returns a linear gradient image of the specified size$."];
+Attributes[CSSLinearGradientImage] = {Protected, ReadProtected};
+
 SetUsage[CSSRadialGradientImage, "\
 CSSRadialGradientImage[{{pos$1, color$1}, {pos$2, color$2}, $$}] returns an image with values linearly changing from the center to corners following the CSS specification for color stops.
 CSSRadialGradientImage[{{pos$1, color$1}, {pos$2, color$2}, $$}, startPosition$] returns an image where the gradient center is located at startPosition$.
 CSSRadialGradientImage[$$, size$] returns a radial gradient image of the specified size$."];
+Attributes[CSSRadialGradientImage] = {Protected, ReadProtected};
 
 (* ==== required System` functions ==== *)
 System`CellFrameStyle; 
@@ -64,6 +82,8 @@ Get["CSSTools`CSSCustomProperties1`"]     (* prepends consumeProperty definition
 Get["CSSTools`CSSImages3`"]               (* defines gradient images *)
 
 
+Begin["`Private`"]
+
 ImportExport`RegisterImport[
 	"CSS",
 	{
@@ -76,5 +96,6 @@ ImportExport`RegisterImport[
 	{},
 	"AvailableElements" -> {"Elements", "RawData", "Interpreted", "Stylesheet"}]
 
+End[]
 EndPackage[]
 

@@ -40,7 +40,9 @@
 			
 (* This package is a utility package for the rest of CSSTools. *)
 
-BeginPackage["CSSTools`CSSTokenizer`", {"GeneralUtilities`"}] 
+BeginPackage["CSSTools`CSSTokenizer`"] 
+
+Needs["GeneralUtilities`"];
 
 SetUsage[RE,                  "RE[string$] returns the corresponding regular expression macro for CSS token patterns."];
 SetUsage[CSSNormalizeEscapes, "CSSNormalizeEscapes[string$] converts CSS escapes \\ such as code points to characters."];
@@ -49,12 +51,12 @@ SetUsage[CSSTokenQ,           "Returns True$ if the expression is a valid CSS to
 SetUsage[CSSTokenize,         "CSSTokenize[string$] converts string$ into a list of CSS tokens."];
 SetUsage[CSSUntokenize,       "CSSUntokenize[{CSSToken$...}] serializes CSS tokens into a string."];
 
-SetUsage[TokenTypeIs,      "TokenTypeIs[string$, CSSToken$] gives True if the type of the CSS token matches string$."];
-SetUsage[TokenTypeIsNot,   "TokenTypeIsNot[string$, CSSToken$] gives True if the type of the CSS token does not match string$."];
-SetUsage[TokenStringIs,    "TokenStringIs[string$, CSSToken$] gives True if the string content of the CSS token matches string$; case is ignored and escape sequences normalized."];
-SetUsage[TokenStringIsNot, "TokenStringIsNot[string$, CSSToken$] gives True if the string content of the CSS token does not match string$; case is ignored and escape sequences normalized."];
-SetUsage[TokenUnitIs,      "TokenUnitIs[string$, CSSToken$] gives True if the unit content of the CSS token matches string$; case is ignored and escape sequences normalized."];
-SetUsage[TokenUnitIsNot,   "TokenUnitIsNot[string$, CSSToken$] gives True if the unit content of the CSS token does not match string$; case is ignored and escape sequences normalized."];
+SetUsage[TokenTypeIs,        "TokenTypeIs[string$, CSSToken$] gives True if the type of the CSS token matches string$."];
+SetUsage[TokenTypeIsNot,     "TokenTypeIsNot[string$, CSSToken$] gives True if the type of the CSS token does not match string$."];
+SetUsage[TokenStringIs,      "TokenStringIs[string$, CSSToken$] gives True if the string content of the CSS token matches string$; case is ignored and escape sequences normalized."];
+SetUsage[TokenStringIsNot,   "TokenStringIsNot[string$, CSSToken$] gives True if the string content of the CSS token does not match string$; case is ignored and escape sequences normalized."];
+SetUsage[TokenUnitIs,        "TokenUnitIs[string$, CSSToken$] gives True if the unit content of the CSS token matches string$; case is ignored and escape sequences normalized."];
+SetUsage[TokenUnitIsNot,     "TokenUnitIsNot[string$, CSSToken$] gives True if the unit content of the CSS token does not match string$; case is ignored and escape sequences normalized."];
 SetUsage[TokenPatternString, "TokenPatternString[string$, type$] is a CSSToken pattern of CSSToken type type$ and the case-insensitive string string$."]
 
 SetUsage[AdvancePosAndSkipWhitespace,      "AdvancePosAndSkipWhitespace[pos$, l$, CSSTokens$] increments pos$, then increments pos$ further if any whitespace tokens are detected."];

@@ -17,6 +17,7 @@ BeginPackage["CSSTools`CSSImages3`", {"CSSTools`"}]
 Needs["CSSTools`CSSTokenizer`"];
 Needs["CSSTools`CSSPropertyInterpreter`"];
 
+Unprotect[CSSLinearGradientImage, CSSRadialGradientImage];
 
 Begin["`Private`"] (* Begin Private Context *) 
 
@@ -646,7 +647,7 @@ consumeLinearGradientFunction[pos_, length_, tokens:{___?CSSTokenQ}] :=
 
 
 Options[CSSLinearGradientImage] = {"Repeating" -> False};
-SyntaxInformation[CSSLinearGradientImage] = {_., _., _., OptionsPattern[]};
+SyntaxInformation[CSSLinearGradientImage] = {"ArgumentsPattern" -> {_., _., _., OptionsPattern[]}};
 
 
 (* ::Subsection::Closed:: *)
@@ -1773,6 +1774,7 @@ consumeProperty[prop:"image-rendering", tokens:{__?CSSTokenQ}, opts:OptionsPatte
 (* ::Section::Closed:: *)
 (*Footer*)
 
+Protect[CSSLinearGradientImage, CSSRadialGradientImage];
 
 End[] (* End Private Context *)
 

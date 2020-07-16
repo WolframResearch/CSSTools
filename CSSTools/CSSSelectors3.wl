@@ -7,10 +7,12 @@
 BeginPackage["CSSTools`CSSSelectors3`", {"CSSTools`"}];
 
 consumeCSSSelector;
-convertXMLPositionToCSSTarget;
+convertXMLPositionToCSSSubject;
 getDocumentNamespaces; (* This should reall be pulled out into its own module CSS Namespaces Module Level 3 *)
 
 Needs["CSSTools`CSSTokenizer`"];  
+
+Unprotect["CSSTools`*"];
 
 Begin["`Private`"];
 
@@ -1062,7 +1064,7 @@ selectPseudoClass[content:{{_Integer..}...}, "link"] := (* dynamic if link has N
 
 
 (* ::Subsubsection::Closed:: *)
-(*Target class*)
+(*:target class*)
 
 
 (* 
@@ -1422,6 +1424,8 @@ CSSSelector[s_?StringQ, opts:OptionsPattern[{"Namespaces" -> {}}]] :=
 				If[MatchQ[OptionValue["Namespaces"], {___}], OptionValue["Namespaces"], {}]];
 		consumeCSSSelector[CSSTokenize @ s, constructedNamespaces]
 	]
+	
+SyntaxInformation[CSSSelector] = {"ArgumentsPattern" -> {_, OptionsPattern[]}};
 
 
 (* ::Subsubsection::Closed:: *)
@@ -1465,14 +1469,15 @@ CSSSelector /: CSSSelectorQ[CSSSelector[a_?AssociationQ]] :=
 		KeyExistsQ[a, "Sequence"],
 		KeyExistsQ[a, "Specificity"]]
 CSSSelectorQ[___] := False
+SyntaxInformation[CSSSelectorQ] = {"ArgumentsPattern" -> {_}};
 
 
 (* ::Subsection::Closed:: *)
-(*CSSTarget*)
+(*CSSSubject*)
 
 
-(* CSSTarget:
-	Not to be confused with CSSTargets, CSSTarget is a symbolic representation of the XML element targetd by a selector.
+(* CSSSubject:
+	Not to be confused with CSSSubjects, CSSSubject is a symbolic representation of an XML element subject of a selector.
 	Its main addition to XMLElement is the compactness of representation on screen and the "Position" key.
 	Any XML children are ignored. *)		
 
@@ -1481,7 +1486,8 @@ CSSSelectorQ[___] := False
 (*Token access*)
 
 
-CSSTarget[a_?AssociationQ][key_] := a[key] 
+CSSSubject[a_?AssociationQ][key_] := a[key] 
+SyntaxInformation[CSSSubject] = {"ArgumentsPattern" -> {_}};
 
 
 (* ::Subsubsection::Closed:: *)
@@ -1496,9 +1502,9 @@ convertXMLAttributes[] :=
 
 (* ::Subsubsection:: *)
 (* Region Title *)
-convertXMLPositionToCSSTarget[position_, opts:OptionsPattern[CSSTargets]] :=
+convertXMLPositionToCSSSubject[position_, opts:OptionsPattern[CSSSubjects]] :=
 	Module[{temp, t, name, value},
-		temp = OptionValue[CSSTargets, {opts}, "CaseSensitive"];
+		temp = OptionValue[CSSSubjects, {opts}, "CaseSensitive"];
 		{t, name, value} =
 			Which[
 				temp === True,  {True, True, True},
@@ -1509,7 +1515,7 @@ convertXMLPositionToCSSTarget[position_, opts:OptionsPattern[CSSTargets]] :=
 			Extract[$Document, position],
 			{
 					XMLElement[{ns1_, type_}, attributes_, _] :> 
-						CSSTarget[<|
+						CSSSubject[<|
 							"Type"       -> type, 
 							"Namespace"  -> ns1, 
 							"Position"   -> position, 
@@ -1517,7 +1523,7 @@ convertXMLPositionToCSSTarget[position_, opts:OptionsPattern[CSSTargets]] :=
 							"ID"         -> OptionValue["ID"],
 							"CaseSensitive" -> <|"Type" -> t, "AttributeName" -> name, "AttributeValue" -> value|>|>],
 					XMLElement[type_, attributes_, _] :> 
-						CSSTarget[<|
+						CSSSubject[<|
 							"Type"       -> type,
 							"Namespace"  -> getNamespaceOfDocumentElement[position], 
 							"Position"   -> position, 
@@ -1533,7 +1539,7 @@ convertXMLPositionToCSSTarget[position_, opts:OptionsPattern[CSSTargets]] :=
 (*MakeBoxes*)
 
 
-CSSTarget /: MakeBoxes[s:CSSTarget[a_?AssociationQ], StandardForm] :=
+CSSSubject /: MakeBoxes[s:CSSSubject[a_?AssociationQ], StandardForm] :=
 	ToBoxes[
 		Interpretation[
 			Style[
@@ -1555,10 +1561,10 @@ CSSTarget /: MakeBoxes[s:CSSTarget[a_?AssociationQ], StandardForm] :=
 
 
 (* ::Subsection::Closed:: *)
-(*CSSTargetQ*)
+(*CSSSubjectQ*)
 
 
-CSSTarget /: CSSTargetQ[CSSTarget[a_?AssociationQ]] := 
+CSSSubject /: CSSSubjectQ[CSSSubject[a_?AssociationQ]] := 
 	And[
 		Length[a] === 6,
 		KeyExistsQ[a, "Type"],
@@ -1567,31 +1573,32 @@ CSSTarget /: CSSTargetQ[CSSTarget[a_?AssociationQ]] :=
 		KeyExistsQ[a, "Attributes"],
 		KeyExistsQ[a, "ID"],
 		KeyExistsQ[a, "CaseSensitive"]]
-CSSTargetQ[___] := False
+CSSSubjectQ[___] := False
 
-createEmptyTarget[] := CSSTarget[<|"Type" -> "", "Namespace" -> "", "Position" -> {}, "Attributes" -> <||>, "ID" -> "", "CaseSensitive" -> <||>|>]
+createEmptyXMLElement[] := CSSSubject[<|"Type" -> "", "Namespace" -> "", "Position" -> {}, "Attributes" -> <||>, "ID" -> "", "CaseSensitive" -> <||>|>]
 
 
 (* ::Subsection::Closed:: *)
-(*CSSTargets*)
+(*CSSSubjects*)
 
 
-(* CSSTargets:
+(* CSSSubjects:
 	Applies a selector to an XML document and returns the positions where the selector targets.
 	Similar to Position syntax, it takes an XML document as the first argument and scope as the second.
 	It has two different scopes:
 		CSSSelector  ---->  returns extractable positions, similar to Position syntax
-		CSSDataset   ---->  returns same dataset, but with added Targets column of extractable positions *)
-Options[CSSTargets] = {
+		CSSDataset   ---->  returns same dataset, but with added selector subjects column of extractable positions *)
+Options[CSSSubjects] = {
 	"ID" -> "id",
 	"CaseSensitive" -> {"Type" -> False, "AttributeName" -> False, "AttributeValue" -> False}};
+SyntaxInformation[CSSSubjects] = {"ArgumentsPattern" -> {_, _, OptionsPattern[]}};
 
 
 (* It returns the expression positions in the XML document after applying one or more CSS selectors. *)
-CSSTargets[doc:XMLObject["Document"][___], sel_?(Function[CSSSelectorQ[#] || StringQ[#]]), opts:OptionsPattern[]] :=
-	CSSTargets[doc, {sel}, opts]
+CSSSubjects[doc:XMLObject["Document"][___], sel_?(Function[CSSSelectorQ[#] || StringQ[#]]), opts:OptionsPattern[]] :=
+	CSSSubjects[doc, {sel}, opts]
 
-CSSTargets[doc:XMLObject["Document"][___], sel:{__?(Function[CSSSelectorQ[#] || StringQ[#]])}, opts:OptionsPattern[]] :=
+CSSSubjects[doc:XMLObject["Document"][___], sel:{__?(Function[CSSSelectorQ[#] || StringQ[#]])}, opts:OptionsPattern[]] :=
 	Block[
 		{
 			$Document, $Elements, 
@@ -1622,15 +1629,16 @@ CSSTargets[doc:XMLObject["Document"][___], sel:{__?(Function[CSSSelectorQ[#] || 
 		$IgnoreCase = <|"Type" -> !type, "AttributeName" -> !name, "AttributeValue" -> !value|>;
 		
 		temp = processFullSelector[sel2];
-		convertXMLPositionToCSSTarget[#, opts]& /@ Flatten[temp, 1]
+		convertXMLPositionToCSSSubject[#, opts]& /@ Flatten[temp, 1]
 	]
 
-CSSTargets[_, sel:{__?CSSSelectorQ}, ___] := Failure["BadDocument", <|"Message" -> "Invalid XML document."|>]
+CSSSubjects[_, sel:{__?CSSSelectorQ}, ___] := Failure["BadDocument", <|"Message" -> "Invalid XML document."|>]
 
 
 (* ::Section::Closed:: *)
 (*Package Footer*)
 
+Protect["CSSTools`*"];
 
 End[];
 EndPackage[];
