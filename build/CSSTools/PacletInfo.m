@@ -1,10 +1,10 @@
 (* Paclet Info File *)
 
-(* created 2020/03/12*)
+(* created 2020/07/16*)
 
 Paclet[
     Name -> "CSSTools",
-    Version -> "1.2.1",
+    Version -> "1.3.1",
     MathematicaVersion -> "11+",
     Description -> "Import and process CSS into Wolfram Language options.",
     Creator -> "Kevin Daily",
