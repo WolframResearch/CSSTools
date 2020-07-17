@@ -12,13 +12,10 @@ The CSSTools repo has two buildable components: the documentation and then the d
 
 
 ## How to build the CSSTools paclet
-1. If making any changes to the project, update the PacletInfo.m file's Version. 
+The paclet structure is self-contained within the project structure. The paclet is the subdirectory "CSSTools". Assuming all changes to the package files and documentation are complete:
+
+1. Update the PacletInfo.m file's Version. 
     If a bugfix, then add one to the 3rd decimal e.g. 1.0.1 --> 1.0.2.
     If a feature, then add one to the 2nd decimal e.g. 1.0.0 --> 1.1.0
-2. In Eclipse's Application Tools window, select the CSSTools project
-3. Click "Deploy Application"
-4. In the new dialog choose a folder to deploy the project to. 
-5. Select all the files from the project. The "Old" and "Testing" directories can be excluded from the deployment.
-6. Click "Next" then "Finish" to close the dialog.
-7. In Mathematica, run `PackPaclet[/path/to/deployed/application]` where the path is the location chosen in the previous step.
-8. The newly generated paclet will be in the parent location of the path in the previous step.
+2. In Mathematica 12.1 or newer run `CreatePacletArchive["<localRepo>/CSSTools"]`, else use `PackPaclet` instead.
+3. The newly generated paclet will be in the parent location of the path in the previous step.

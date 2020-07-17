@@ -74,7 +74,7 @@ Out[] = 3
 ```
 The `pos` variable tracks the position along the token sequence. At each position the token can be checked for correctness and processed accordingly. More details can be found in the CSSTokenizer.wl package.
 
-For the curious, the tokenizer has been validated using a number of unit tests. They can be found in this repo under CSSTools/Testing/Tokenizer.wl.
+For the curious, the tokenizer has been validated using a number of unit tests. They can be found in this repo under Testing/RunTests.wl.
 
 
 [Back to top](#table-of-contents)
@@ -184,7 +184,7 @@ The color definitions from CSS Level 2 Revision 1 are limited in comparison with
         Get["CSSTools`CSSMediaQueries4`"]         (* redefines consumeMediaQuery    (first defined in CSSStyleSheetInterpreter) *)
         ...
 
-For the curious, the color parser has been validated using a number of unit tests. They can be found in this repo under the directory CSSTools/Testing/ and include files GeneralColors.wl, HSLColors.wl and NamedColors.wl.
+For the curious, the color parser has been validated using a number of unit tests. They can be found in this repo under the directory Testing/ and include files GeneralColors.wl, HSLColors.wl and NamedColors.wl.
 
 [Back to top](#table-of-contents)
 
