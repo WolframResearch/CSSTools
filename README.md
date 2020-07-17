@@ -14,7 +14,7 @@ The Wolfram Desktop front end uses its own stylesheet system and translation fro
 
 ### Installing the CSSTools release
 
-The CSSTools release comes in the form of a `.paclet` file, which contains the entire package and its documentation. Download the latest release from [this latest release link](https://github.com/WolframResearch/CSSTools/releases/latest/download/CSSTools-1.3.0.paclet). To install, run the following command in the Wolfram Language:
+The CSSTools release comes in the form of a `.paclet` file, which contains the entire package and its documentation. Download the latest release from [this latest release link](https://github.com/WolframResearch/CSSTools/releases/latest/download/CSSTools-1.3.1.paclet). To install, run the following command in the Wolfram Language:
 ```
 PacletInstall["/full/path/to/CSSTools.paclet"]
 ```
@@ -58,7 +58,7 @@ The hope is for CSSTools to be further developed by community support. Using the
 See the following files for more information:
 
 * [[video](https://www.wolfram.com/broadcast/video.php?v=2842)] [[notebook](https://files.wolframcdn.com/pub/www.wolfram.com/technology-conference/2019/Tuesday/2019KevinDailyCSSImport.nb)] Wolfram Technology Conference 2019 Presentation
-* [COPYING.md](COPYING.md) - CSSTools license
-* [CONTRIBUTING.md](CONTRIBUTING.md) - Guidelines for contributing to CSSTools
-* [ForDevelopers.md](ForDevelopers.md) - Walkthrough of how to contribute new features to CSSTools
-* [HowToBuild.md](HowToBuild.md) - Instructions for building CSSTools as a paclet
+* [COPYING.md](ReadMeFiles/COPYING.md) - CSSTools license
+* [CONTRIBUTING.md](ReadMeFiles/CONTRIBUTING.md) - Guidelines for contributing to CSSTools
+* [ForDevelopers.md](ReadMeFiles/ForDevelopers.md) - Walkthrough of how to contribute new features to CSSTools
+* [HowToBuild.md](ReadMeFiles/HowToBuild.md) - Instructions for building CSSTools as a paclet
