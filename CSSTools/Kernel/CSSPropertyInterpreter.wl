@@ -2698,7 +2698,7 @@ consumeProperty[prop:"cursor", tokens:{__?CSSTokenQ}, opts:OptionsPattern[]] :=
 				"url", parseURI @ tokens[[pos]]["String"],
 				_,     unrecognizedValueFailure @ prop
 			];
-		If[FailureQ[value], value, With[{v = value}, <|"MouseAppearance" -> MouseAppearance[#, v]&|>]]
+		If[FailureQ[value], value, With[{v = value}, <|"MouseAppearance" -> (MouseAppearance[#, v]&)|>]]
 	]		
 
 
