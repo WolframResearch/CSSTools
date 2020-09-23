@@ -1259,7 +1259,7 @@ doCSSRadialGradientImage[startPosition_, inputShape_, inputSize_, colorStopList_
 						If[!MatchQ[inputSize, possibleEnds], Return @ radialSizeFailure1[inputSize]];
 						shape = "Ellipse"; size = inputSize;
 					,
-					True,                        
+					_,                        
 						wrongSizeFailure[inputSize]
 				]
 			,
